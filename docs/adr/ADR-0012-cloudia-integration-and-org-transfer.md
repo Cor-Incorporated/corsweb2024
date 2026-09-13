@@ -1,6 +1,6 @@
 # ADR-0012 Cloudia を Contact フォーム代用として corsweb に統合（org 移管・Cloudflare）
 
-## ステータス: Accepted (2026-07-10)
+## ステータス: Accepted (2026-07-10) / **一部撤回 2026-09-13**（フォーム fallback。ADR-0005 改訂節を参照）
 
 ## 背景
 - Cloudia（`terisuke/3d-emotional-chat-ai`）は別ドメイン・Netlify 想定・SNS 口調で、Contact 本線になっていない。
@@ -17,7 +17,7 @@
 |---|---|---|
 | リード API | `workers/contact-chat` | `/api/contact/*`。PII は submit でメールのみ |
 | リード UI | Cloudia | `/contact/` の主 UI。右下固定ボタンも可 |
-| フォーム | SSGFORM / ContactForm | **fallback のみ**（JS 無効・障害時） |
+| フォーム | SSGFORM / ContactForm | ~~**fallback のみ**（JS 無効・障害時）~~ → **撤回（2026-09-13）: 通常時は描画しない。JS 無効・障害時の fallback も持たない** （ADR-0005「2026-09-13 改訂: 問い合わせ導線の Cloudia 一本化」を参照） |
 | 3D アバター | Cloudia three/VRM | 任意。失敗してもチャット完走必須 |
 
 ### リポジトリ
@@ -40,7 +40,7 @@
 2. API 直結 + 埋め込み検証（Preview）
 3. org Transfer + CF ホスティング
 4. `/contact/` 主 UI 切替、`CONTACT_CHAT_ENABLED` 相当を Cloudia 本線に
-5. SSGFORM を fallback のみに降格、PP 更新
+5. ~~SSGFORM を fallback のみに降格~~ → **撤回（2026-09-13）: fallback としても残さない**、PP 更新 （ADR-0005「2026-09-13 改訂: 問い合わせ導線の Cloudia 一本化」を参照）
 6. 旧 Netlify URL をリダイレクトまたは停止
 
 ### 受付トーン・intent

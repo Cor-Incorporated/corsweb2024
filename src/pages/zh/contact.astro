@@ -28,7 +28,7 @@ const t = getTranslations(currentLocale);
     CONTACT_CHAT_ENABLED ? (
       <ContactChat />
     ) : CLOUDIA_CONTACT_PRIMARY_ENABLED ? (
-      /* 通常時: 導線は Cloudia と電話。フォームは出さない。
+      /* 通常時: 導線は Cloudia のみ（ADR-0005 §6 撤回・2026-09-13）。電話とフォームは出さない。
          ContactForm は下の切り戻し分岐（CLOUDIA_CONTACT_PRIMARY_ENABLED=false）に残しており、
          Cloudia 停止時にフラグ 1 つで非常口として復活させられる（config/contact.ts 参照）。 */
       <CloudiaContactEntry>

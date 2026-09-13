@@ -989,7 +989,7 @@
     "title": "Agenda del CEO",
     "description": "Esta es la agenda pública del CEO. Si desea programar una reunión, consulte los horarios disponibles y contáctenos.",
     "ariaLabel": "Calendario de agenda del CEO",
-    "note": "* Si no encuentra un horario adecuado, contáctenos por teléfono."
+    "note": "* Si no encuentra un horario adecuado, contáctenos a través de Cloudia, nuestro chat con IA."
   },
   "testimonials": {
     "title": "Experiencia Técnica",
@@ -1352,7 +1352,7 @@
       },
       {
         "label": "Forma de contacto",
-        "value": "Para las solicitudes de divulgación y similares (apartado 7), contáctenos en company@cor-jp.com adjuntando documentos que acrediten su identidad. Las reclamaciones y consultas relativas al tratamiento de información personal también se atienden a través de Cloudia (chat con IA) o por teléfono en nuestra página de contacto."
+        "value": "Para las solicitudes de divulgación y similares (apartado 7), contáctenos en company@cor-jp.com adjuntando documentos que acrediten su identidad. Las reclamaciones y consultas relativas al tratamiento de información personal también se atienden a través de Cloudia (chat con IA) en nuestra página de contacto."
       }
     ],
     "revisionTitle": "11. Modificación de la presente política",

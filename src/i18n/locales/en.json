@@ -989,7 +989,7 @@
     "title": "CEO Schedule",
     "description": "This is the CEO's public schedule. If you would like to schedule a meeting, please check available time slots and contact us.",
     "ariaLabel": "CEO Schedule Calendar",
-    "note": "* If you cannot find a suitable time, please contact us by phone."
+    "note": "* If you cannot find a suitable time, please contact us via Cloudia, our AI chat."
   },
   "testimonials": {
     "title": "Technical Expertise",
@@ -1352,7 +1352,7 @@
       },
       {
         "label": "How to contact",
-        "value": "For requests for disclosure and the like (Section 7), please contact us at company@cor-jp.com, attaching documents that verify your identity. Complaints and consultations regarding the handling of personal information are also accepted via Cloudia (AI chat) or by phone on our contact page."
+        "value": "For requests for disclosure and the like (Section 7), please contact us at company@cor-jp.com, attaching documents that verify your identity. Complaints and consultations regarding the handling of personal information are also accepted via Cloudia (AI chat) on our contact page."
       }
     ],
     "revisionTitle": "11. Revision of This Policy",
