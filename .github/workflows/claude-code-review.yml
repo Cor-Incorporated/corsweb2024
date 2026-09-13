@@ -1,8 +1,9 @@
 name: Claude Code Review
 
+# Disabled 2026-08-16: empty credentials made this job fail without reviewing
+# (Cor-Incorporated/persona-village-v2#801). Restore pull_request after secrets exist.
 on:
-  pull_request:
-    types: [opened, synchronize]
+  workflow_dispatch:
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"

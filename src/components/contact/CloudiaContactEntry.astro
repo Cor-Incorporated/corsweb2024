@@ -1,5 +1,6 @@
 ---
-import { getCurrentLocale } from '../../utils/i18n';
+import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
+import { getCurrentLocale, type Locale } from '../../utils/i18n';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const chatUrl = new URL('/contact/chat/', Astro.url);
@@ -7,6 +8,67 @@ chatUrl.searchParams.set('source', 'corsweb-contact-primary');
 chatUrl.searchParams.set('locale', currentLocale);
 const incomingIntent = Astro.url.searchParams.get('intent');
 if (incomingIntent) chatUrl.searchParams.set('intent', incomingIntent);
+
+// この <details> の中身は所在地と、（PUBLIC_GCAL_ID がある時だけ）代表スケジュールのカレンダー。
+// 問い合わせは Cloudia に一本化した（ADR-0005 §6 撤回・2026-09-13）ため、ここを「代替の連絡先」と
+// 名乗らせない。カレンダーが出ない環境では時間帯に触れない文言へ切り替え、中身と食い違わせない。
+// 他のキーは ja/非ja の2分岐のままだが、今回書き換えたこの2つは全ロケール分を用意する
+// （satisfies により、6言語目を足したときに翻訳漏れが型エラーになる）。
+type FallbackCopy = { title: string; description: string };
+const FALLBACK_WITH_CALENDAR = {
+  ja: {
+    title: '所在地・打ち合わせ可能な時間を見る',
+    description:
+      'お問い合わせはCloudia（AIチャット）で承っています。ここでは所在地と、打ち合わせ可能な時間帯をご確認いただけます。',
+  },
+  en: {
+    title: 'Our location and available times',
+    description:
+      'Inquiries are handled through Cloudia, our AI chat. Here you can check our location and the times we are available to meet.',
+  },
+  zh: {
+    title: '查看公司地址与可洽谈时间',
+    description:
+      '咨询请通过 AI 聊天助手 Cloudia 提出。此处可确认公司地址与可安排洽谈的时间段。',
+  },
+  ko: {
+    title: '소재지·미팅 가능 시간 보기',
+    description:
+      '문의는 AI 챗봇 Cloudia에서 받고 있습니다. 여기에서는 소재지와 미팅이 가능한 시간대를 확인하실 수 있습니다.',
+  },
+  es: {
+    title: 'Nuestra ubicación y horarios disponibles',
+    description:
+      'Las consultas se atienden a través de Cloudia, nuestro chat con IA. Aquí puede consultar nuestra ubicación y los horarios en que podemos reunirnos.',
+  },
+} as const satisfies Record<Locale, FallbackCopy>;
+
+const FALLBACK_WITHOUT_CALENDAR = {
+  ja: {
+    title: '所在地を見る',
+    description: 'お問い合わせはCloudia（AIチャット）で承っています。ここでは所在地をご確認いただけます。',
+  },
+  en: {
+    title: 'Our location',
+    description: 'Inquiries are handled through Cloudia, our AI chat. Here you can check our location.',
+  },
+  zh: {
+    title: '查看公司地址',
+    description: '咨询请通过 AI 聊天助手 Cloudia 提出。此处可确认公司地址。',
+  },
+  ko: {
+    title: '소재지 보기',
+    description: '문의는 AI 챗봇 Cloudia에서 받고 있습니다. 여기에서는 소재지를 확인하실 수 있습니다.',
+  },
+  es: {
+    title: 'Nuestra ubicación',
+    description: 'Las consultas se atienden a través de Cloudia, nuestro chat con IA. Aquí puede consultar nuestra ubicación.',
+  },
+} as const satisfies Record<Locale, FallbackCopy>;
+
+const fallbackCopy: FallbackCopy = CONTACT_CALENDAR_VISIBLE
+  ? FALLBACK_WITH_CALENDAR[currentLocale]
+  : FALLBACK_WITHOUT_CALENDAR[currentLocale];
 
 const copy =
   currentLocale === 'ja'
@@ -16,8 +78,6 @@ const copy =
         description:
           '相談モードと雑談モードを切り替えながら、Cor.へのご相談内容を整理できます。日本語・英語に対応しています。',
         cta: 'Cloudiaを開く',
-        fallbackTitle: 'お電話・日程調整を利用する',
-        fallbackDescription: 'AIチャットを利用できない場合は、お電話または日程調整からご連絡ください。',
       }
     : {
         eyebrow: 'Contact with Cloudia',
@@ -25,8 +85,6 @@ const copy =
         description:
           'Use consultation or casual conversation mode to organize your inquiry to Cor. Cloudia supports Japanese and English.',
         cta: 'Open Cloudia',
-        fallbackTitle: 'Call us or schedule a meeting',
-        fallbackDescription: 'If the AI chat is unavailable, please call us or book a time that suits you.',
       };
 const chatPath = `${chatUrl.pathname}${chatUrl.search}`;
 ---
@@ -48,14 +106,14 @@ const chatPath = `${chatUrl.pathname}${chatUrl.search}`;
   </div>
 </section>
 
-{/* open 必須: 中身は「Cloudia が使えないときの代替手段」（電話・日程調整）であり、
-    畳んだままだと Cloudia が開けない人にとって唯一の連絡先が初期状態で不可視になる。
+{/* open 必須: 中身は所在地と打ち合わせ可能な時間帯。問い合わせ自体は Cloudia に一本化して
+    いるが、会社の所在が初期状態で見えないのは信頼性を欠くため畳まない。
     以前ここに入っていたのはフォームだったため畳んでいたが、通常時フォームは出さない。 */}
 <details id="contact-form-fallback" open class="mx-auto max-w-3xl px-4 pb-12 sm:px-6 lg:px-8">
   <summary class="cursor-pointer rounded-2xl bg-primary-500/10 px-5 py-4 text-base font-semibold text-primary-950 outline-none transition hover:bg-primary-500/15 focus-visible:ring-2 focus-visible:ring-primary-600 dark:bg-primary-400/10 dark:text-primary-100 dark:hover:bg-primary-400/15">
-    {copy.fallbackTitle}
+    {fallbackCopy.title}
   </summary>
-  <p class="px-2 py-4 text-sm leading-6 text-primary-950/65 dark:text-primary-200/65">{copy.fallbackDescription}</p>
+  <p class="px-2 py-4 text-sm leading-6 text-primary-950/65 dark:text-primary-200/65">{fallbackCopy.description}</p>
   <div class="overflow-hidden rounded-3xl bg-primary-500/5 dark:bg-primary-400/5">
     <slot />
   </div>

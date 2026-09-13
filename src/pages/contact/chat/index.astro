@@ -1,22 +1,22 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../../utils/i18n';
+import { getCurrentLocale } from '../../../utils/i18n';
 
 const queryLocale = Astro.url.searchParams.get('locale');
 const currentLocale = queryLocale === 'en' ? 'en' : getCurrentLocale(Astro.url);
-const t = getTranslations(currentLocale);
-const contactUrl = getLocalizedUrl('/contact/', currentLocale);
+// このページは Cloudia SPA が配信されていないときだけ出る。ここから /contact/ へ戻すと
+// 「/contact/ の CTA → /contact/chat/ → /contact/ → …」の無限ループになるため、導線を張らずに
+// 終端させる（ランチャー内で開かれた場合は CloudiaLauncher 側のフォールバックが別途出る）。
+// 問い合わせは Cloudia に一本化しており（ADR-0005 §6 撤回・2026-09-13）、案内できる代替手段は無い。
+// ヘッダー/フッターの通常ナビは Layout が出すので、利用者は行き止まりにはならない。
 const copy = currentLocale === 'ja'
   ? {
       title: 'AIチャットを準備しています',
-      // 通常時フォームは出さないため、実在する手段（電話・日程調整）へ送る。
-      body: 'Cloudiaを開けない場合は、お電話または日程調整からご連絡ください。',
-      link: 'お問い合わせページを開く',
+      body: '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。',
     }
   : {
       title: 'The AI chat is unavailable',
-      body: 'If Cloudia cannot be opened, please call us or schedule a meeting.',
-      link: 'Open the contact page',
+      body: 'The AI chat cannot be reached right now. Please try again in a little while.',
     };
 ---
 
@@ -33,9 +33,5 @@ const copy = currentLocale === 'ja'
   <main class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6">
     <h1 class="text-3xl font-medium tracking-tight sm:text-4xl">{copy.title}</h1>
     <p class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">{copy.body}</p>
-    <a
-      href={contactUrl}
-      class="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300"
-    >{copy.link}</a>
   </main>
 </Layout>

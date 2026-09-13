@@ -23,7 +23,15 @@ test.describe('Cloudia contact routing', () => {
     expect(frameUrl.searchParams.get('source')).toBe('grift-lp-hero');
     expect(frameUrl.searchParams.get('locale')).toBe('ja');
     expect(frameUrl.searchParams.get('embed')).toBe('1');
+  });
 
+  // fallback リンクの intent/source 引き回しは /contact 以外でこそ効く仕様。
+  // /contact では自己リンクになるため導線を消している（CloudiaLauncher の同一ページ判定）ので、
+  // 検証は別ページで行う。ロケール別ルートも同時に確認する。
+  test('carries LP intent and source into the launcher fallback link off /contact', async ({
+    page,
+  }) => {
+    await page.goto(`/about/${query}`);
     const fallbackUrl = new URL(
       (await page.locator('[data-cloudia-fallback-link]').getAttribute('href')) ?? '',
       page.url()
@@ -32,6 +40,62 @@ test.describe('Cloudia contact routing', () => {
     expect(fallbackUrl.searchParams.get('intent')).toBe('grift-team-beta');
     expect(fallbackUrl.searchParams.get('source')).toBe('grift-lp-hero');
     expect(fallbackUrl.searchParams.get('locale')).toBe('ja');
+
+    await page.goto(`/en/about/${query}`);
+    const localizedUrl = new URL(
+      (await page.locator('[data-cloudia-fallback-link]').getAttribute('href')) ?? '',
+      page.url()
+    );
+    expect(localizedUrl.pathname).toBe('/en/contact/');
+  });
+
+  // 「お問い合わせページから開き直して」は、すでにそのページにいる利用者には従えない指示。
+  // 導線を消して終端文言に切り替える挙動を固定する（黙って自己リンクに戻らないように）。
+  // 直接 /contact/ を開くケースだけだと偽 green になる。サイト内リンクの大半は末尾スラッシュ無しの
+  // /contact で、ViewTransitions 遷移では location.pathname も /contact になるため、その経路も固定する。
+  for (const path of ['/contact/', '/contact']) {
+    test(`terminates instead of self-linking when already on the contact page (${path})`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(0);
+      await expect(page.locator('#cloudia-launcher-fallback p')).toContainText(
+        '時間をおいて再度お試しください'
+      );
+    });
+  }
+
+  test('terminates on /contact after a ViewTransitions navigation from another page', async ({
+    page,
+  }) => {
+    await page.goto('/about/');
+    // 遷移前（/about）では通常の案内とリンクがある。
+    await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(1);
+    // クライアント遷移だったことを証明する目印。フルリロードなら window が作り直されて消える。
+    // これが無いと、将来 data-astro-reload が付くなどして通常遷移になってもテストは緑のままになる。
+    const sentinel = `vt-${Date.now()}-${Math.random()}`;
+    await page.evaluate((value) => {
+      (window as unknown as { __vtSentinel?: string }).__vtSentinel = value;
+    }, sentinel);
+    // サイト内の実リンク（末尾スラッシュ無し /contact）をクリックしてクライアント遷移させる。
+    await page.locator('footer a[href="/contact"]').first().click();
+    await expect(page).toHaveURL(/\/contact\/?$/);
+    expect(
+      await page.evaluate(() => (window as unknown as { __vtSentinel?: string }).__vtSentinel)
+    ).toBe(sentinel);
+    // astro:page-load で再初期化され、/contact では導線が消えていること。
+    await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(0);
+    await expect(page.locator('#cloudia-launcher-fallback p')).toContainText(
+      '時間をおいて再度お試しください'
+    );
+  });
+
+  test('terminates in English on the localized contact page', async ({ page }) => {
+    await page.goto('/en/contact/');
+    await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(0);
+    await expect(page.locator('#cloudia-launcher-fallback p')).toContainText(
+      'try again in a little while'
+    );
   });
 
   test('opens and closes accessibly and restores focus', async ({ page }) => {
