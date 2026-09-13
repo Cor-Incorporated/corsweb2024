@@ -1,4 +1,5 @@
 ---
+import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 
 const currentLocale = getCurrentLocale(Astro.url);
@@ -8,8 +9,9 @@ const calendarId = import.meta.env.PUBLIC_GCAL_ID;
 const calendarTz = import.meta.env.PUBLIC_GCAL_TZ || 'Asia/Tokyo';
 const calendarParams = import.meta.env.PUBLIC_GCAL_PARAMS || '';
 
-// カレンダーIDが設定されていない場合は表示しない
-const showCalendar = !!calendarId;
+// カレンダーIDが設定されていない場合は表示しない（判定は config に集約。
+// CloudiaContactEntry の説明文が同じ条件を見るため、ここで独自判定しない）。
+const showCalendar = CONTACT_CALENDAR_VISIBLE;
 
 // カレンダーIDが設定されている場合のみURL構築
 let calendarSrc = '';

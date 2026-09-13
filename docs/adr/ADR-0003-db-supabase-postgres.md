@@ -11,7 +11,7 @@
 ## 決定
 - DB に **Supabase（Postgres・東京 `ap-northeast-1`）** を採用する（CMS コンテンツ用）。**既存の Supabase org を再利用**し、無料枠から開始する。
 - StudioCMS の **`db.dialect = 'postgresql'`** で接続する。Postgres 接続変数（`CMS_PG_DATABASE` / `CMS_PG_USER` / `CMS_PG_PASSWORD` / `CMS_PG_HOST` / `CMS_PG_PORT`、任意で `CMS_PG_CONNECTION_LIMIT`）を使用する（StudioCMS 公式 env 仕様で確認済）。SSR ランタイムからの接続は **Supabase pooler（コネクションプーラ）** を使用する。
-- **PII はここに置かない**（Contact の PII は ADR-0005 の段階移行方針に従い、Wave1 は SSGFORM、Wave2 は GCP 集約で国内管理）。
+- **PII はここに置かない**（Contact の PII は ADR-0005 の段階移行方針に従う。~~Wave1 は SSGFORM、Wave2 は GCP 集約で国内管理~~ → **この括弧内の記述は古い**: GCP 集約は ADR-0005 の 2026-07-10 改訂で撤回され、Contact は Cloudflare Workers `workers/contact-chat` に収束。SSGFORM フォームも 2026-09-13 改訂で fallback としても残さないことになった。PII の扱いの正本は ADR-0005 / ADR-0013 を参照）。
 - **接続情報（DATABASE_URL／各 key）は代表が事前に作成し、Secret Manager（GCP `cor-jp-web`）へ格納する。実装者は `secretAccessor` 権限で参照する**（最小権限・ISMS 整合）。env は Secret Manager 管理とし、リポジトリ・CI ログ・クライアントバンドルに平文露出させない。
 
 ## 理由

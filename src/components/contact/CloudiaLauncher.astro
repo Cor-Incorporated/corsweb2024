@@ -30,17 +30,22 @@ const copy =
         title: 'Cloudiaに相談する',
         close: '閉じる',
         // Cloudia が開けないときに出る唯一の導線。ここが実在しない手段を案内すると
-        // 「全部壊れている状況」で行き止まりになる（#290 の再演）。通常時はフォームを
-        // 出さないため、必ず実在する手段（電話・日程調整）があるページへ送る。
-        fallback: 'チャットを開けない場合は、お電話または日程調整からご連絡ください。',
+        // 「全部壊れている状況」で行き止まりになる（#290 の再演）。問い合わせは Cloudia に
+        // 一本化した（電話は CALL_CENTER_PHONE_VISIBLE=false で取り下げ、カレンダーは閲覧専用）。
+        // よってここでは別の手段ではなく、iframe ではなく単独ページで開き直す道を案内する。
+        fallback: 'この枠でチャットを開けない場合は、お問い合わせページから開き直してください。',
         fallbackLink: 'お問い合わせページを開く',
+        // すでにお問い合わせページを見ている場合、上の案内は従えない指示になる（自分自身へのリンク）。
+        // その時だけ導線を消してこの文言に差し替え、/contact/chat/ と同じく終端させる。
+        fallbackSamePage: '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。',
       }
     : {
         label: 'Chat with Cloudia',
         title: 'Chat with Cloudia',
         close: 'Close',
-        fallback: 'If the chat cannot be opened, please call us or schedule a meeting instead.',
+        fallback: 'If the chat will not open here, please reopen it from the contact page.',
         fallbackLink: 'Open the contact page',
+        fallbackSamePage: 'The AI chat cannot be reached right now. Please try again in a little while.',
       };
 ---
 
@@ -50,6 +55,7 @@ const copy =
   data-chat-path={embedChatPath}
   data-grift-handoff-origins={JSON.stringify(CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS)}
   data-grift-handoff-max-ttl-ms={CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS}
+  data-fallback-same-page={copy.fallbackSamePage}
 >
   <div
     id="cloudia-launcher-panel"
@@ -162,6 +168,25 @@ const copy =
     };
 
     applyIncomingContext();
+
+    // 「お問い合わせページから開き直して」は、すでにそのページにいる利用者には従えない指示。
+    // リロードしても同じ状態に戻るだけで、実質たらい回しになる（/contact/chat/ の H-A と同型）。
+    // リンク先が現在ページと同じなら導線を消し、終端の文言に差し替える。
+    const fallbackMessage = fallback.querySelector('p');
+    // 末尾スラッシュを揃えて比較する。サイト内のリンクは /contact（スラッシュ無し）が大半で、
+    // ViewTransitions で遷移すると location.pathname も /contact になる。一方リンク先は /contact/
+    // のため、素の完全一致だと最も通りやすい経路で自己リンクが残ってしまう。
+    // /contact/index.html のような明示的なインデックス表記も同じページとして扱う。
+    const normalizePath = (path) => {
+      const withoutIndex = path.replace(/\/index\.html$/, '/');
+      return withoutIndex.length > 1 ? withoutIndex.replace(/\/+$/, '') : withoutIndex;
+    };
+    const fallbackPath = normalizePath(new URL(fallbackLink.href, window.location.href).pathname);
+    if (fallbackPath === normalizePath(window.location.pathname)) {
+      fallbackLink.remove();
+      const samePageText = launcher.dataset.fallbackSamePage;
+      if (fallbackMessage && samePageText) fallbackMessage.textContent = samePageText;
+    }
 
     const showFallback = () => {
       if (!frameReady) fallback.classList.remove('hidden');
