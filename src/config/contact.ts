@@ -43,21 +43,27 @@ export const CONTACT_CALENDAR_VISIBLE = !!import.meta.env.PUBLIC_GCAL_ID;
 export const CLOUDIA_LAUNCHER_ENABLED = import.meta.env.PUBLIC_CLOUDIA_LAUNCHER_ENABLED !== 'false';
 
 // Cloudia iframe から受け取る Grift 公開ポータル URL の許可 origin。
-// Preview を追加する場合は、path や query を含まない HTTPS origin をカンマ区切りで指定する。
+// 本番は既定 origin のみ。Preview 追加時は PUBLIC_SITE_ENV=preview を明示したうえで、
+// path や query を含まない HTTPS origin をカンマ区切りで指定する。
 const DEFAULT_GRIFT_HANDOFF_ORIGIN = 'https://app.griftai.org';
 
-export const CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS = 24 * 60 * 60 * 1000;
+// Browserへ渡す一回限りのexchange codeは、case/share-linkの寿命とは別に最大5分。
+export const CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS = 5 * 60 * 1000;
 
 function normalizeAllowedHttpsOrigin(value: string): string | null {
   try {
-    const url = new URL(value.trim());
+    const candidate = value.trim();
+    const url = new URL(candidate);
     if (
       url.protocol !== 'https:' ||
       url.username ||
       url.password ||
+      url.port ||
       url.pathname !== '/' ||
       url.search ||
-      url.hash
+      url.hash ||
+      candidate.includes('*') ||
+      candidate !== url.origin
     ) {
       return null;
     }
@@ -68,6 +74,10 @@ function normalizeAllowedHttpsOrigin(value: string): string | null {
 }
 
 export function getCloudiaGriftHandoffAllowedOrigins(): readonly string[] {
+  if ((import.meta.env.PUBLIC_SITE_ENV || '').toLowerCase() !== 'preview') {
+    return [DEFAULT_GRIFT_HANDOFF_ORIGIN];
+  }
+
   const configured = (import.meta.env.PUBLIC_GRIFT_HANDOFF_ALLOWED_ORIGINS || '')
     .split(',')
     .map(normalizeAllowedHttpsOrigin)

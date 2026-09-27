@@ -6,6 +6,7 @@ import {
   getEmailProvider,
   getConversationExcerptText,
   getInternalCcRecipients,
+  getReceiptSummaryText,
   sendInquiryEmail,
   sendReceiptEmail,
 } from '../email';
@@ -210,6 +211,16 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
     expect(body).not.toContain('genuine');
     expect(body).not.toContain('contract-dev');
     expect(body).toContain('受託で業務システム開発');
+  });
+
+  it('画面で確認済みの要約は内部風の単語を含んでも本人receiptで同一文面を保つ', () => {
+    const confirmed = '相談目的: intent 設計を含む業務フローの改善';
+    expect(getReceiptSummaryText({
+      ...inquiry,
+      summaryText: confirmed,
+      conversationSummary: confirmed,
+      summaryConfirmed: true,
+    })).toBe(confirmed);
   });
 
   it('本人向け受付確認は流入経路・連絡理由を表示できるが内部タグは含めない', () => {

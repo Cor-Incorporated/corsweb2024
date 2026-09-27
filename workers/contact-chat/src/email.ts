@@ -131,6 +131,10 @@ export function getSummaryText(inquiry: NormalizedInquiry): string {
 /** 本人向けには社内分類を出さない。要約が無い場合も構造化リードだけを使う。 */
 export function getReceiptSummaryText(inquiry: NormalizedInquiry): string {
   const canonical = canonicalizeSummaryText(inquiry.summaryText || inquiry.conversationSummary || '');
+  // A visitor-confirmed handoff summary is already PII/secret checked at the
+  // Worker boundary. Preserve it byte-for-byte after canonical normalization,
+  // even when ordinary prose contains words such as "intent" or "相談目的".
+  if (inquiry.summaryConfirmed && canonical && canonical === maskSensitiveContent(canonical)) return canonical;
   const containsInternalLabel = /\b(?:genuine|sales|spam|classification|intent|source|utm)\b|(?:分類|相談目的)\s*[:：]/i.test(canonical);
   if (canonical && !containsInternalLabel && canonical === maskSensitiveContent(canonical)) return canonical;
   const lead = inquiry.structuredLead || {};

@@ -5,6 +5,7 @@ import {
   MAX_MESSAGES,
   normalizeInquiry,
   normalizeConversationSummary,
+  normalizeConfirmedSummaryText,
   normalizeIntent,
   maskMessagesForLlm,
   maskSensitiveContent,
@@ -284,6 +285,44 @@ describe('normalizeInquiry — /submit 検証＋ハニーポット', () => {
     const r = normalizeConversationSummary('Cloudia: こんにちは\nUser: 機密ではない相談です\n続きの本文');
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.text).toBe('');
+  });
+
+  it.each([
+    ['visitor', 'visitor: I need an estimate\nCloudia: What is the target date?'],
+    ['Cloudia', 'Cloudia: ご相談内容を教えてください\nuser: 業務改善です'],
+    ['訪問者', '訪問者：見積もりを希望します\nクラウディア：承知しました'],
+  ])('確認済み要約でも%sラベル付き生会話を拒否する', (_label, text) => {
+    const r = normalizeConfirmedSummaryText({
+      version: 1,
+      locale: 'ja',
+      intent: 'contract-dev',
+      classification: 'genuine',
+      readyForContact: true,
+      stage: 'ready',
+      structuredLead: { purpose: '業務改善' },
+      text,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.status).toBe(400);
+  });
+
+  it.each([
+    'Cloudiaを活用した問い合わせ対応の改善を相談したい',
+    '訪問者向けポータルを刷新し、概算見積もりを確認したい',
+    '導入対象: Cloudia / 目的: 顧客対応の効率化',
+  ])('通常の確認済み要約は製品名・対象語を含んでも受理する: %s', (text) => {
+    const r = normalizeConfirmedSummaryText({
+      version: 1,
+      locale: 'ja',
+      intent: 'contract-dev',
+      classification: 'genuine',
+      readyForContact: true,
+      stage: 'ready',
+      structuredLead: { purpose: '業務改善' },
+      text,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.text).toBe(text);
   });
 });
 

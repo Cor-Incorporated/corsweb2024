@@ -1,6 +1,6 @@
 name = "cor-contact-chat"
 main = "src/index.ts"
-compatibility_date = "2025-01-09"
+compatibility_date = "2026-07-14"
 compatibility_flags = ["nodejs_compat"]
 # cor-jp.com ゾーンを持つアカウント（Company@cor-jp.com）。yomimono と同一アカウント。
 account_id = "9973f2d2304b58a1f90d4d9409e9f8cc"
@@ -8,6 +8,13 @@ account_id = "9973f2d2304b58a1f90d4d9409e9f8cc"
 # cor-jp.com の /api/contact* だけをこの Worker に流す（HP本体は Firebase のまま）。
 # 問い合わせウィジェットは cor-jp.com 上に置かれ、同一オリジンで叩く（CORSなし）。
 routes = [{ pattern = "cor-jp.com/api/contact/*", zone_name = "cor-jp.com" }]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[version_metadata]
+binding = "CF_VERSION_METADATA"
 
 [triggers]
 crons = ["*/15 * * * *"]
@@ -23,6 +30,18 @@ VERTEX_MODEL = "gemini-3.5-flash"
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
 CONTACT_CC_EMAILS = "company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com"
 CONTACT_FROM_EMAIL = "noreply@cor-jp.com"
+# productionはCor同一originだけを許可し、Preview用CORS定数を参照しない。
+CONTACT_SITE_ENV = "production"
+# コード先行リリース中は false。widget hostname制限・secret・WAF・E2E完了後の承認変更でのみ true にする。
+TURNSTILE_REQUIRED = "false"
+# Siteverify response の hostname をこの値と完全一致で照合する（wildcard/suffix matchなし）。
+TURNSTILE_ALLOWED_HOSTNAMES = "cor-jp.com,www.cor-jp.com"
+# ADR-0016 Grift handoff。API originはデプロイ先確定後に設定し、両系の検証完了までfalseを維持する。
+GRIFT_HANDOFF_ENABLED = "false"
+GRIFT_API_ORIGIN = ""
+GRIFT_PUBLIC_URL_ORIGINS = "https://app.griftai.org"
+CLOUDIA_RELEASE_ID = ""
+CLOUDIA_CANDIDATE_SHA = ""
 
 # D1 stores redacted session metadata and encrypted, short-lived submit data.
 [[d1_databases]]
@@ -47,6 +66,13 @@ dead_letter_queue = "cor-contact-notifications-dlq"
 name = "cor-contact-chat-preview"
 routes = []
 
+[env.preview.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.preview.version_metadata]
+binding = "CF_VERSION_METADATA"
+
 [env.preview.triggers]
 crons = ["*/15 * * * *"]
 
@@ -58,6 +84,15 @@ VERTEX_MODEL = "gemini-3.5-flash"
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
 CONTACT_CC_EMAILS = "company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com"
 CONTACT_FROM_EMAIL = "noreply@cor-jp.com"
+# src/security.tsのchecked-in exact Pages originを許可する唯一の環境。
+CONTACT_SITE_ENV = "preview"
+TURNSTILE_REQUIRED = "false"
+TURNSTILE_ALLOWED_HOSTNAMES = "cloudia-contact.pages.dev"
+GRIFT_HANDOFF_ENABLED = "false"
+GRIFT_API_ORIGIN = ""
+GRIFT_PUBLIC_URL_ORIGINS = "https://app.griftai.org"
+CLOUDIA_RELEASE_ID = ""
+CLOUDIA_CANDIDATE_SHA = ""
 
 [[env.preview.d1_databases]]
 binding = "DB"
@@ -81,6 +116,8 @@ dead_letter_queue = "cor-contact-notifications-preview-dlq"
 #   VERTEX_GATEWAY_URL  ... Cloud Run Gatewayの /generateContent URL
 #   VERTEX_GATEWAY_SECRET ... Gatewayと共有するHMAC secret
 #   RESEND_API_KEY      ... Resend のAPIキー（/submit の送信に必須。未設定なら 503 fail closed）
-#   TURNSTILE_SECRET    ... Cloudflare Turnstile のシークレット（任意。未設定なら検証スキップ＝fail open）
+#   TURNSTILE_SECRET    ... Cloudflare Turnstile のシークレット（TURNSTILE_REQUIRED=true では必須）
+#   CLOUDIA_HANDOFF_AUTH_TOKEN ... Cloudia→Grift Bearer token（handoff有効時に必須）
 # ↑ 選択したプロバイダの認証情報が未設定だと /chat を拒否（fail closed）。
 #   RESEND_API_KEY 未設定だと /submit を 503（本物の問い合わせを握り潰さない）。
+#   Grift設定不足・4xx/5xx・timeout・不正応答は /submit を失敗させず handoff=fallback。

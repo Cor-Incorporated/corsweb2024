@@ -17,7 +17,12 @@ describe('CONTACT_INTENTS parity with src/config/site.ts', () => {
     expect(keys).toEqual([...CONTACT_INTENTS]);
   });
 
-  it('AUTO_HANDOFF_INTENTS は contract-dev のみ', () => {
-    expect([...AUTO_HANDOFF_INTENTS]).toEqual(['contract-dev']);
+  it('AUTO_HANDOFF_INTENTS は横断契約の4 intent', () => {
+    expect([...AUTO_HANDOFF_INTENTS]).toEqual([
+      'contract-dev',
+      'grift-team-beta',
+      'grift-paid-trial',
+      'estimate-audit',
+    ]);
   });
 });

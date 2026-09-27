@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import worker, { extractJsonObject, normalizeCompanyNameReply, parseChatResult } from '../index';
-import { resetRateLimits } from '../security';
+import { resetRateLimits, TURNSTILE_EXPECTED_ACTION } from '../security';
 import type { Env } from '../types';
 import { decryptText, encryptText } from '../storage';
 import { PRESS_FIXTURES, PRESS_INTENT } from './press-fixtures';
@@ -158,6 +158,7 @@ const ENV = {
   ANTHROPIC_API_KEY: '',
   RESEND_API_KEY: '',
   TURNSTILE_SECRET: '',
+  CONTACT_SITE_ENV: 'production',
   CONTACT_TO_EMAIL: 'info@cor-jp.com',
   CONTACT_FROM_EMAIL: 'noreply@cor-jp.com',
 } as unknown as Env;
@@ -272,6 +273,60 @@ describe('worker.fetch — ハンドラレベル', () => {
       ENV,
     );
     expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true });
+  });
+
+  it('handoff有効時のhealthはcorsweb candidateと実Worker versionをbody/headerで一致させる', async () => {
+    const env = {
+      ...ENV,
+      GRIFT_HANDOFF_ENABLED: 'true',
+      CLOUDIA_CANDIDATE_SHA: '1e76662e149d448babe59c4353317bf3dbdf8e13',
+      CLOUDIA_RELEASE_ID: 'cloudia-uat-20260714-r1',
+      CF_VERSION_METADATA: {
+        id: '72d7c891-dde3-4df6-9f40-d7f7ed950a77',
+        timestamp: '2026-07-14T10:59:43.055Z',
+      },
+    } as Env;
+    const res = await worker.fetch(new Request('https://cor-jp.com/api/contact/health'), env);
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual([
+      'candidate_sha', 'generated_at', 'release_id', 'revision', 'service', 'status',
+    ]);
+    expect(body).toMatchObject({
+      status: 'ok',
+      service: 'contact-chat',
+      candidate_sha: env.CLOUDIA_CANDIDATE_SHA,
+      revision: env.CF_VERSION_METADATA?.id,
+      release_id: env.CLOUDIA_RELEASE_ID,
+      generated_at: env.CF_VERSION_METADATA?.timestamp,
+    });
+    expect(res.headers.get('x-cloudia-grift-candidate-sha')).toBe(body.candidate_sha);
+    expect(res.headers.get('x-cloudia-grift-revision')).toBe(body.revision);
+    expect(res.headers.get('x-cloudia-grift-generated-at')).toBe(body.generated_at);
+    expect(res.headers.get('x-cloudia-grift-release-id')).toBe(body.release_id);
+  });
+
+  it.each([
+    ['candidate SHA', { CLOUDIA_CANDIDATE_SHA: 'short' }],
+    ['release ID', { CLOUDIA_RELEASE_ID: 'contains whitespace' }],
+    ['version metadata', { CF_VERSION_METADATA: { id: 'not-a-version', timestamp: 'invalid' } }],
+  ])('handoff有効時のhealthは不正な%sで503 fail-closed', async (_label, override) => {
+    const env = {
+      ...ENV,
+      GRIFT_HANDOFF_ENABLED: 'true',
+      CLOUDIA_CANDIDATE_SHA: '1e76662e149d448babe59c4353317bf3dbdf8e13',
+      CLOUDIA_RELEASE_ID: 'cloudia-uat-20260714-r1',
+      CF_VERSION_METADATA: {
+        id: '72d7c891-dde3-4df6-9f40-d7f7ed950a77',
+        timestamp: '2026-07-14T10:59:43.055Z',
+      },
+      ...override,
+    } as Env;
+    const res = await worker.fetch(new Request('https://cor-jp.com/api/contact/health'), env);
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({ error: 'release metadata unavailable' });
+    expect(res.headers.get('x-cloudia-grift-candidate-sha')).toBeNull();
   });
 
   it('JSON でない content-type は 400', async () => {
@@ -359,7 +414,12 @@ describe('worker.fetch — ハンドラレベル', () => {
     // siteverify が呼ばれていないことも確認する（fetch をスパイ）。
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
-    const envWithTurnstile = { ...ENV, TURNSTILE_SECRET: 'secret' } as unknown as Env;
+    const envWithTurnstile = {
+      ...ENV,
+      TURNSTILE_REQUIRED: 'true',
+      TURNSTILE_SECRET: 'secret',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'cor-jp.com',
+    } as unknown as Env;
     const res = await worker.fetch(
       post('/api/contact/chat', { messages: [{ role: 'user', content: 'hi' }] }, {
         'cf-connecting-ip': '198.51.100.20',
@@ -371,6 +431,174 @@ describe('worker.fetch — ハンドラレベル', () => {
     expect(res.status).toBe(503);
     // siteverify(Turnstile) が呼ばれていないこと（/chat では検証しない）。
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('submit: required-on で secret 欠落は 503、email/Griftへ進まない', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const env = {
+      ...ENV,
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_REQUIRED: 'true',
+      TURNSTILE_SECRET: '',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'cor-jp.com',
+    } as unknown as Env;
+    const res = await worker.fetch(post('/api/contact/submit', {
+      name: '太郎',
+      email: 'taro@example.com',
+      message: '相談です',
+      turnstileToken: 'token',
+    }, { 'cf-connecting-ip': '198.51.100.31' }), env);
+    expect(res.status).toBe(503);
+    expect(JSON.stringify(await res.json())).toContain('Turnstile');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('submit: required-on で token 欠落は 400、Siteverify/email/Griftへ進まない', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const env = {
+      ...ENV,
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_REQUIRED: 'true',
+      TURNSTILE_SECRET: 'secret',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'cor-jp.com',
+    } as unknown as Env;
+    const res = await worker.fetch(post('/api/contact/submit', {
+      name: '太郎',
+      email: 'taro@example.com',
+      message: '相談です',
+    }, { 'cf-connecting-ip': '198.51.100.32' }), env);
+    expect(res.status).toBe(400);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('submit: Cloudiaの旧action turnstile-spin-v1は受け入れない', async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      challenge_ts: new Date().toISOString(),
+      hostname: 'cor-jp.com',
+      'error-codes': [],
+      action: 'turnstile-spin-v1',
+    }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const env = {
+      ...ENV,
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_REQUIRED: 'true',
+      TURNSTILE_SECRET: 'secret',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'cor-jp.com',
+    } as unknown as Env;
+    const res = await worker.fetch(post('/api/contact/submit', {
+      name: '太郎',
+      email: 'taro@example.com',
+      message: '相談です',
+      turnstileToken: 'old-action-token',
+    }, { 'cf-connecting-ip': '198.51.100.33' }), env);
+    expect(res.status).toBe(403);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('submit: Turnstile拒否時はD1・Queue・メール・Griftを一切実行しない', async () => {
+    const db = new Proxy({}, {
+      get() {
+        throw new Error('D1 must not be accessed before Turnstile succeeds');
+      },
+    });
+    const queueSend = vi.fn(async () => {
+      throw new Error('Queue must not be accessed before Turnstile succeeds');
+    });
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
+      if (url !== 'https://challenges.cloudflare.com/turnstile/v0/siteverify') {
+        throw new Error('email/Grift must not be accessed before Turnstile succeeds');
+      }
+      return new Response(JSON.stringify({
+        success: true,
+        challenge_ts: new Date().toISOString(),
+        hostname: 'cor-jp.com',
+        'error-codes': [],
+        action: 'wrong-action',
+      }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const env = {
+      ...ENV,
+      DB: db,
+      CONTACT_NOTIFICATIONS: { send: queueSend },
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_REQUIRED: 'true',
+      TURNSTILE_SECRET: 'server-secret',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'cor-jp.com',
+      GRIFT_HANDOFF_ENABLED: 'true',
+      GRIFT_API_ORIGIN: 'https://grift.example.test',
+      CLOUDIA_HANDOFF_AUTH_TOKEN: 'handoff-secret',
+    } as unknown as Env;
+
+    const res = await worker.fetch(post('/api/contact/submit', {
+      name: '太郎',
+      email: 'taro@example.com',
+      message: '相談です',
+      turnstileToken: 'token',
+    }, { 'cf-connecting-ip': '198.51.100.35' }), env);
+
+    expect(res.status).toBe(403);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(queueSend).not.toHaveBeenCalled();
+  });
+
+  it('submit: 同じtokenの重複送信はtimeout-or-duplicateで再メールしない', async () => {
+    let siteverifyCalls = 0;
+    let resendCalls = 0;
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : input.toString();
+      if (url.includes('/turnstile/v0/siteverify')) {
+        siteverifyCalls += 1;
+        return new Response(JSON.stringify(siteverifyCalls === 1 ? {
+          success: true,
+          challenge_ts: new Date().toISOString(),
+          hostname: 'cor-jp.com',
+          'error-codes': [],
+          action: TURNSTILE_EXPECTED_ACTION,
+        } : {
+          success: false,
+          'error-codes': ['timeout-or-duplicate'],
+        }), { status: 200 });
+      }
+      if (url === 'https://api.resend.com/emails') {
+        resendCalls += 1;
+        return new Response(JSON.stringify({ id: `re_${resendCalls}` }), { status: 200 });
+      }
+      throw new Error('unexpected fetch target');
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const env = {
+      ...ENV,
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_REQUIRED: 'true',
+      TURNSTILE_SECRET: 'secret',
+      TURNSTILE_ALLOWED_HOSTNAMES: 'cor-jp.com',
+    } as unknown as Env;
+    const payload = {
+      idempotencyKey: 'duplicate-turnstile-submit',
+      name: '太郎',
+      email: 'taro@example.com',
+      message: '相談です',
+      turnstileToken: 'single-use-token',
+    };
+
+    const first = await worker.fetch(post('/api/contact/submit', payload, {
+      'cf-connecting-ip': '198.51.100.34',
+    }), env);
+    const duplicate = await worker.fetch(post('/api/contact/submit', payload, {
+      'cf-connecting-ip': '198.51.100.34',
+    }), env);
+
+    expect(first.status).toBe(200);
+    expect(duplicate.status).toBe(400);
+    expect(siteverifyCalls).toBe(2);
+    expect(resendCalls).toBe(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
   });
 
   it('submit: RESEND_API_KEY 未設定は 503 fail closed', async () => {
@@ -441,7 +669,7 @@ describe('worker.fetch — ハンドラレベル', () => {
     expect((await res.json() as { receiptId?: string }).receiptId).toMatch(/^COR-/);
   });
 
-  it('submit: D1 sessionのstructuredLeadを正本としてbrowser payloadを上書きする', async () => {
+  it('submit: 同意なしでもD1 sessionの要約・routing・structuredLeadを正本にする', async () => {
     const calls: Array<{ sql: string; bindings: unknown[] }> = [];
     const trustedLead = {
       purpose: '社内AI基盤のPoC',
@@ -456,10 +684,22 @@ describe('worker.fetch — ハンドラレベル', () => {
             calls.push({ sql, bindings });
             return {
               first: async <T>() => {
-                if (sql.includes('SELECT summary_text, structured_lead_json')) {
+                if (sql.includes('FROM contact_sessions') && sql.includes("status = 'active'")) {
                   return {
+                    session_id: 'session-1',
+                    intent: 'contract-dev',
+                    mode: 'intake',
+                    locale: 'ja',
+                    source: 'cloudia',
+                    stage: 'ready',
+                    turn_count: 2,
+                    classification: 'genuine',
                     summary_text: 'server summary',
                     structured_lead_json: JSON.stringify(trustedLead),
+                    missing_fields_json: '[]',
+                    conversation_excerpt_ciphertext: encryptedEmptyExcerpt,
+                    updated_at: 1_700_000_000,
+                    expires_at: 4_000_000_000,
                   } as T;
                 }
                 if (sql.includes('SELECT session_id, conversation_excerpt_ciphertext')) {
@@ -472,7 +712,7 @@ describe('worker.fetch — ハンドラレベル', () => {
           },
         };
       },
-      batch: async () => undefined,
+      batch: async (statements: D1PreparedStatement[]) => statements.map(() => ({ meta: { changes: 1 } })),
     };
     const queueSend = vi.fn(async () => undefined);
     const env = {
@@ -489,14 +729,20 @@ describe('worker.fetch — ハンドラレベル', () => {
       name: '太郎',
       email: 'taro@example.com',
       message: '相談です',
-      summaryText: 'browser forged summary',
+      intent: 'press-speaking-other',
+      source: 'browser-forged-source',
+      summaryText: 'browser confirmed summary',
       structuredLead: { discoverySource: 'browser', contactReason: 'forged' },
     }, { 'cf-connecting-ip': '198.51.100.21' }), env);
     expect(res.status).toBe(200);
     const insert = calls.find((call) => call.sql.includes('INSERT INTO submission_intake'));
     expect(insert).toBeDefined();
-    expect(JSON.parse(String(insert?.bindings[13]))).toEqual(trustedLead);
-    await expect(decryptText('storage-secret', String(insert?.bindings[8]))).resolves.toBe('server summary');
+    expect(JSON.parse(String(insert?.bindings[14]))).toEqual(trustedLead);
+    expect(insert?.bindings[12]).toBe('contract-dev');
+    expect(insert?.bindings[13]).toBe('cloudia');
+    expect(insert?.bindings[16]).toBe('genuine');
+    await expect(decryptText('storage-secret', String(insert?.bindings[9])))
+      .resolves.toBe('server summary');
     expect(queueSend).toHaveBeenCalledTimes(2);
   });
 });

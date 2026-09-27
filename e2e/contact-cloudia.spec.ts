@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 const query = '?intent=grift-team-beta&source=grift-lp-hero&utm_source=grift&utm_medium=cta';
+const griftPortalOrigin = 'https://app.griftai.org';
+const griftPortalPath = '/chat/portal';
+const exchangeCode = 'Ma_XZhn01UsAfQRYmYxXD9KZVzK0bKQCSv0nZFbofUM';
+const griftHandoffUrl = `${griftPortalOrigin}${griftPortalPath}#exchange_code=${exchangeCode}`;
 
 test.describe('Cloudia contact routing', () => {
   test('keeps LP intent and source in the primary link and launcher iframe', async ({ page }) => {
@@ -155,14 +159,13 @@ test.describe('Cloudia contact routing', () => {
   test('navigates only for an unexpired, exact Grift portal handoff from its iframe', async ({
     page,
   }) => {
-    const handoffUrl = 'https://app.griftai.org/chat/portal/opaque-token_123.~';
     await page.route('https://app.griftai.org/**', async (route) => {
       await route.fulfill({ contentType: 'text/html', body: '<title>Grift portal</title>' });
     });
     await page.goto('/contact/');
 
     await Promise.all([
-      page.waitForURL(handoffUrl),
+      page.waitForURL(griftHandoffUrl),
       page.evaluate(
         ({ url, expiresAt }) => {
           const frame = document.getElementById('cloudia-launcher-frame');
@@ -177,7 +180,10 @@ test.describe('Cloudia contact routing', () => {
             })
           );
         },
-        { url: handoffUrl, expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }
+        {
+          url: griftHandoffUrl,
+          expiresAt: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
+        }
       ),
     ]);
 
@@ -189,52 +195,87 @@ test.describe('Cloudia contact routing', () => {
   }) => {
     await page.goto('/contact/');
     const originalUrl = page.url();
-    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const future = new Date(Date.now() + 4 * 60 * 1000).toISOString();
     const cases: Array<{
       url: string;
       expiresAt: string;
       origin?: string;
       useFrameSource?: boolean;
+      extraData?: Record<string, unknown>;
     }> = [
       {
-        url: 'https://app.griftai.org/chat/portal/token',
+        url: griftHandoffUrl,
         expiresAt: future,
         origin: 'https://evil.example',
       },
       {
-        url: 'https://app.griftai.org/chat/portal/token',
+        url: griftHandoffUrl,
         expiresAt: future,
         useFrameSource: false,
       },
-      { url: 'https://user:password@app.griftai.org/chat/portal/token', expiresAt: future },
       {
-        url: 'https://app.griftai.org/chat/portal/token?next=https://evil.example',
+        url: `https://user:password@app.griftai.org${griftPortalPath}#exchange_code=${exchangeCode}`,
         expiresAt: future,
       },
-      { url: 'https://app.griftai.org/chat/portal/token#next', expiresAt: future },
-      { url: 'https://app.griftai.org/chat/portal/token%2Fadmin', expiresAt: future },
-      { url: 'https://app.griftai.org/admin/token', expiresAt: future },
-      { url: 'https://evil.example/chat/portal/token', expiresAt: future },
       {
-        url: 'https://app.griftai.org/chat/portal/token',
+        url: `https://app.griftai.org:443${griftPortalPath}#exchange_code=${exchangeCode}`,
+        expiresAt: future,
+      },
+      // Historical path-credential shape: retained only as a rejection regression.
+      { url: `${griftPortalOrigin}${griftPortalPath}/${exchangeCode}`, expiresAt: future },
+      {
+        url: `${griftPortalOrigin}${griftPortalPath}?next=1#exchange_code=${exchangeCode}`,
+        expiresAt: future,
+      },
+      { url: `${griftPortalOrigin}${griftPortalPath}`, expiresAt: future },
+      { url: `${griftPortalOrigin}${griftPortalPath}#next=${exchangeCode}`, expiresAt: future },
+      { url: `${griftHandoffUrl}&next=1`, expiresAt: future },
+      {
+        url: `${griftPortalOrigin}${griftPortalPath}#exchange_code=${exchangeCode.slice(0, 42)}`,
+        expiresAt: future,
+      },
+      {
+        url: `${griftPortalOrigin}${griftPortalPath}#exchange_code=${exchangeCode.slice(0, 42)}B`,
+        expiresAt: future,
+      },
+      {
+        url: `${griftPortalOrigin}${griftPortalPath}#exchange_code=%4D${exchangeCode.slice(1)}`,
+        expiresAt: future,
+      },
+      {
+        url: `https://evil.example${griftPortalPath}#exchange_code=${exchangeCode}`,
+        expiresAt: future,
+      },
+      {
+        url: griftHandoffUrl,
         expiresAt: new Date(Date.now() - 1000).toISOString(),
       },
       {
-        url: 'https://app.griftai.org/chat/portal/token',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60_000).toISOString(),
+        url: griftHandoffUrl,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000 + 1_000).toISOString(),
       },
-      { url: 'https://app.griftai.org/chat/portal/token', expiresAt: 'not-a-date' },
+      { url: griftHandoffUrl, expiresAt: 'not-a-date' },
+      {
+        url: griftHandoffUrl,
+        expiresAt: future,
+        extraData: { caseId: 'internal-case-id' },
+      },
+      {
+        url: griftHandoffUrl,
+        expiresAt: future,
+        extraData: { sessionCookie: '__Host-portal=secret' },
+      },
     ];
 
     for (const invalid of cases) {
-      await page.evaluate(({ url, expiresAt, origin, useFrameSource }) => {
+      await page.evaluate(({ url, expiresAt, origin, useFrameSource, extraData }) => {
         const frame = document.getElementById('cloudia-launcher-frame');
         if (!(frame instanceof HTMLIFrameElement) || !frame.contentWindow) {
           throw new Error('Cloudia iframe is unavailable');
         }
         window.dispatchEvent(
           new MessageEvent('message', {
-            data: { type: 'cloudia:grift-handoff-ready', url, expiresAt },
+            data: { type: 'cloudia:grift-handoff-ready', url, expiresAt, ...extraData },
             origin: origin || window.location.origin,
             source: useFrameSource === false ? window : frame.contentWindow,
           })

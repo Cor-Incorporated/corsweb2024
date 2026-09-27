@@ -226,14 +226,17 @@ const copy =
     };
 
     const parseHandoffUrl = (value) => {
-      if (typeof value !== 'string' || !value.trim() || value.length > 2048) return null;
+      if (typeof value !== 'string' || !value || value.length > 2048 || value !== value.trim())
+        return null;
       try {
-        const url = new URL(value.trim());
+        const url = new URL(value);
         if (!allowedHandoffOrigins.has(url.origin)) return null;
-        if (url.protocol !== 'https:' || url.username || url.password) return null;
-        if (!/^\/chat\/portal\/[A-Za-z0-9._~-]{1,512}$/.test(url.pathname)) return null;
-        if (url.search || url.hash) return null;
-        return url.toString();
+        if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
+        if (url.pathname !== '/chat/portal' || url.search) return null;
+        const fragment = /^#exchange_code=([A-Za-z0-9_-]{42}[AEIMQUYcgkosw048])$/.exec(url.hash);
+        if (!fragment) return null;
+        const canonical = `${url.origin}/chat/portal#exchange_code=${fragment[1]}`;
+        return value === canonical ? canonical : null;
       } catch {
         return null;
       }
@@ -279,6 +282,7 @@ const copy =
         !event.data ||
         typeof event.data !== 'object' ||
         event.data.type !== 'cloudia:grift-handoff-ready' ||
+        Object.keys(event.data).sort().join(',') !== 'expiresAt,type,url' ||
         !hasValidHandoffExpiry(event.data.expiresAt)
       )
         return;

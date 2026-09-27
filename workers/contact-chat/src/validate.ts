@@ -206,7 +206,7 @@ export type SummaryValidation =
 // summaryText は会話全文ではなく、Cloudiaが確定した要約だけを受け付ける。
 // 旧クライアントの文字列入力を壊さないため、明らかな role ラベル行だけを除去し、
 // 全文トランスクリプトが渡された場合は空文字へ落として決定的fallbackへ進める。
-const TRANSCRIPT_ROLE_LINE = /^(?:user|assistant|system|human|ユーザー|あなた|アシスタント|クラウディア)\s*(?:[:：]|[-—])\s*/i;
+const TRANSCRIPT_ROLE_LINE = /^(?:user|assistant|system|human|visitor|cloudia|ユーザー|あなた|訪問者|アシスタント|クラウディア)\s*(?:[:：]|[-—])\s*/i;
 const SUMMARY_PREFIX_LINE = /^(?:you|ai\s+assistant|AI\s*アシスタント)\s*(?:[:：]|[-—])\s*/i;
 
 export function canonicalizeSummaryText(raw: string): string {
@@ -287,6 +287,34 @@ export function normalizeConversationSummary(raw: unknown): SummaryValidation {
     text,
   };
   return { ok: true, text, schema };
+}
+
+/**
+ * Strict handoff contract: only body.summaryText.text from a versioned envelope
+ * can be treated as the visitor-confirmed canonical summary. Legacy strings and
+ * the nested summaryText alias remain email-compatible but cannot authorize Grift.
+ */
+export function normalizeConfirmedSummaryText(raw: unknown): SummaryValidation {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: 'Grift引継ぎにはsummaryText.textの確認済み要約が必要です', status: 400 };
+  }
+  const input = raw as Record<string, unknown>;
+  if (
+    typeof input.text !== 'string'
+    || input.text.length > MAX_SUMMARY_LEN
+    || input.summaryText !== undefined
+  ) {
+    return { ok: false, error: 'summaryText.textが不正です', status: 400 };
+  }
+  const normalized = normalizeConversationSummary(input);
+  if (!normalized.ok || !normalized.schema) return normalized;
+  // A confirmed handoff summary is copied verbatim (after canonical whitespace
+  // normalization) to D1, both email paths and Grift. Reject detected PII or
+  // credentials here instead of letting those consumers apply divergent masks.
+  if (normalized.text !== maskSensitiveContent(normalized.text)) {
+    return { ok: false, error: 'summaryText.textに連絡先または秘密情報を含めることはできません', status: 400 };
+  }
+  return normalized;
 }
 
 export type InquiryValidation =

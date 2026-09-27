@@ -23,6 +23,7 @@
 | [ADR-0013](./ADR-0013-contact-consolidation-cloudia.md) | 問い合わせ一極集中（Cloudia UI + contact-chat） | Accepted (2026-07-11) / **一部撤回 2026-09-13**（fallback フォーム恒久維持） |
 | [ADR-0014](./ADR-0014-intent-7keys-and-routing.md) | intent 正本の 7 キー化と intent ルーティング | Accepted (2026-07-11) |
 | [ADR-0015](./ADR-0015-cross-repo-adr-canon.md) | 横断 ADR の正本配置と参照方式 | Accepted (2026-07-11) |
+| [ADR-0016](./ADR-0016-cloudia-grift-customer-session-handoff.md) | CloudiaからGrift公開相談セッションへの引継ぎ | Accepted (2026-07-14) |
 
 ## フェーズ対応
 
@@ -40,6 +41,7 @@
 | `grift-team-beta` | Grift Team Beta |
 | `grift-paid-trial` | Grift Paid Trial |
 | `estimate-audit` | Estimate Audit |
+| `contract-dev` | 受託開発の相談（Grift公開相談セッションへ引継ぎ） |
 | `press-speaking-other` | 取材・登壇・その他 |
 
 ## 運用
