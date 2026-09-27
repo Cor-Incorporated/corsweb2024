@@ -67,6 +67,7 @@ describe('documented commands are accepted by the CLI', () => {
     ['README.md', read('README.md')],
     ['README-en.md', read('README-en.md')],
     ['CLAUDE.md', read('CLAUDE.md')],
+    ['AGENTS.md', read('AGENTS.md')],
   ])('%s', (_source, text) => {
     const commands = commandsIn(text);
     expect(commands.length).toBeGreaterThan(0);

@@ -251,7 +251,26 @@ git push
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
 | `--only と --since は同時に指定できません` など | 引数の誤り | `--help` を参照 |
 
-## 10. 既知の制約
+## 10. 止め方と、日々の運用で気をつけること
+
+### 止め方
+
+| 止めたいもの | コマンド | 影響 | 再開 |
+|---|---|---|---|
+| ワークフロー全体（翻訳・push・i18n-check） | `gh workflow disable translate-content.yml -R Cor-Incorporated/corsweb2024` | PR で翻訳も検査も走らなくなる | `gh workflow enable translate-content.yml -R Cor-Incorporated/corsweb2024` |
+| 翻訳（Gemini API の呼び出し）だけ | `gh secret delete GEMINI_API_KEY -R Cor-Incorporated/corsweb2024` | translate ジョブは「未設定のためスキップ」になり、i18n-check は動き続ける（翻訳の欠けは赤で見える） | 7 章の手順でキーを登録し直す |
+| bot トークンでの push だけ | `gh secret delete TRANSLATION_BOT_TOKEN -R Cor-Incorporated/corsweb2024` | GITHUB_TOKEN での push に戻る（6 章の承認操作が必要になる） | 7 章の手順で登録し直す |
+| 実行中の 1 回 | `gh run list --workflow translate-content.yml -R Cor-Incorporated/corsweb2024` で ID を確認し `gh run cancel <ID> -R Cor-Incorporated/corsweb2024` | その実行だけ止まる（push 前なら何も書かれない） | PR に push し直すと再実行される |
+
+### bot が PR にコミットしたあと
+
+translate / push ジョブは、あなたの PR ブランチに `github-actions[bot]` の翻訳コミットを追加します。手元でそのブランチの作業を続ける前に、必ず取り込んでください（取り込まずに push すると `non-fast-forward` で拒否されます）。
+
+```bash
+git pull --rebase
+```
+
+## 11. 既知の制約
 
 - コードブロック内のコメントは訳しません（保護を優先）。HTML ブロック（`<details>` 等）の中身も訳しません。
 - 参照リンクの定義行（`[ref]: https://... "title"`）は行ごと保護するため、その title は訳しません（本文中のインラインのリンク・画像の title は訳します）。
