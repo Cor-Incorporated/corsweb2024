@@ -309,13 +309,32 @@ export async function runWrite({ plan, retranslateUntracked, pruneUntracked = fa
 }
 
 /**
- * 来歴の無い旧翻訳を「今の ja の訳」として採用する。--since の差分で ja が変わった記事は拒否する
- * （旧翻訳は変更前の ja の訳なので、採用すると古い訳が最新扱いで確定してしまう。M3）。
+ * --adopt で採用しない理由（採用してよければ null）。
+ * - --since の差分で ja が追加・変更された記事（M3）
+ * - git の履歴で、ja の最後の変更が翻訳の最後の変更より後（または判定できない）記事（MEDIUM-2。history.mjs）
+ * どちらも --force-adopt でだけ上書きできる。
+ */
+function adoptRefusal(item, ctx) {
+  if (ctx.forceAdopt) return null;
+  if (sourceChangedInDiff(item)) return itemHint(item);
+  const blocker = ctx.adoptionGuard(item);
+  if (!blocker) return null;
+  return (
+    `${blocker} → 訳し直すなら ` +
+    `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only ${item.collection}/${item.slug}` +
+    '（今の ja の訳だと確かめたうえで採用するなら --force-adopt）'
+  );
+}
+
+/**
+ * 来歴の無い旧翻訳を「今の ja の訳」として採用する。ja が翻訳より後に変わった記事は拒否する
+ * （旧翻訳は変更前の ja の訳なので、採用すると古い訳が最新扱いで確定してしまう。M3 / MEDIUM-2）。
  */
 export async function runAdopt({ plan, ctx }) {
   const untracked = plan.items.filter((i) => i.status === 'untracked');
-  const targets = untracked.filter((i) => !sourceChangedInDiff(i));
-  const refused = untracked.filter(sourceChangedInDiff).map(skipOf);
+  const decisions = untracked.map((item) => ({ item, reason: adoptRefusal(item, ctx) }));
+  const targets = decisions.filter((d) => !d.reason).map((d) => d.item);
+  const refused = decisions.filter((d) => d.reason);
   const others = plan.items.filter((i) => i.status !== 'untracked' && i.status !== 'ok');
   if (ctx.dryRun) {
     targets.forEach((i) => ctx.out.info(`(dry-run) adopt ${i.collection}/${i.slug} [${i.lang}]`));
