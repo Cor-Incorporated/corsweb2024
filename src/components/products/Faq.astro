@@ -18,7 +18,7 @@ const questions: FaqQuestion[] = t.faq.questions;
 const faqJsonLd = buildFaqPageJsonLd(questions);
 ---
 
-<script type="application/ld+json" set:html={safeJsonLd(faqJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(faqJsonLd)} />
 
 <section class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">

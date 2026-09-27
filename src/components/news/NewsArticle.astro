@@ -4,6 +4,8 @@ import { getNewsCategoryLabel } from '../../config/news-categories';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import { DATE_LOCALES } from '../../utils/content-i18n';
 import { safeJsonLd } from '../../utils/json-ld';
+import { organizationRef } from '../../utils/structured-data';
+import { ORGANIZATION_LOGO } from '../../config/organization';
 
 // /news/<slug>（ja）と /[lang]/news/<slug>（非ja）で共有するニュース記事本体。
 interface Props {
@@ -40,20 +42,13 @@ const articleJsonLd = {
   inLanguage: data.lang,
   datePublished: data.publishedAt.toISOString(),
   dateModified: (data.updatedAt || data.publishedAt).toISOString(),
-  author: {
-    '@type': 'Organization',
-    '@id': 'https://cor-jp.com#organization',
-    name: 'Cor.株式会社',
-    url: 'https://cor-jp.com',
-  },
+  // 会社の @id・社名は config/organization.ts が正本（Layout が出す Organization ノードと同じ）
+  author: organizationRef(currentLocale),
   publisher: {
-    '@type': 'Organization',
-    '@id': 'https://cor-jp.com#organization',
-    name: 'Cor.株式会社',
-    url: 'https://cor-jp.com',
+    ...organizationRef(currentLocale),
     logo: {
       '@type': 'ImageObject',
-      url: 'https://cor-jp.com/logo.png',
+      url: ORGANIZATION_LOGO,
       width: 400,
       height: 400,
     },

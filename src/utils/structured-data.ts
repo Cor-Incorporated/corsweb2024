@@ -1,19 +1,21 @@
 /**
- * サイト共通の JSON-LD（Organization / WebSite / FAQPage）。M1 の是正:
- * - Organization に固定の @id を付け、ブログ記事の publisher / copyrightHolder から参照で解決できるようにする
+ * サイト共通の JSON-LD（Organization / WebSite / FAQPage）。ADR-0017（構造化データは本文に表示している
+ * 内容だけ・会社は 1 か所で定義し @id で参照）に沿って:
+ * - Organization に固定の @id を付け、記事の publisher / author / copyrightHolder から参照で解決できるようにする
  * - 社名はロケール別表記 + legalName は正式名（ADR-0007）。sameAs は会社アカウントのみ
  * - FAQPage は本文に Q&A を表示しているページ（Faq.astro）だけで、表示と同じデータから出す
  * - SearchAction（Google は 2024-11 に sitelinks search box を廃止）は出さない
  */
 import {
-  COMPANY_SOCIAL_LINKS,
   LEGAL_NAME,
   ORGANIZATION_ID,
+  ORGANIZATION_LOGO,
   ORGANIZATION_NAMES,
+  ORGANIZATION_SAME_AS,
   SITE_ORIGIN,
   WEBSITE_ID,
 } from '../config/organization';
-import { getTranslations, type Locale } from './i18n';
+import { getLocalizedUrl, getTranslations, type Locale } from './i18n';
 
 export type JsonLd = Record<string, unknown>;
 
@@ -22,6 +24,14 @@ const SITE_LOCALES: readonly Locale[] = ['ja', 'en', 'zh', 'ko', 'es'];
 /** 他ロケールの正式表記（name 以外）。同一エンティティの別名として示す。 */
 function alternateNames(locale: Locale): string[] {
   return [...new Set(Object.values(ORGANIZATION_NAMES))].filter((name) => name !== ORGANIZATION_NAMES[locale]);
+}
+
+/**
+ * 記事の author / publisher に入れる Organization の参照。正本のノード（buildOrganizationJsonLd）と
+ * 同じ @id・同じ社名を使う（社名や @id を各所に直書きしない）。
+ */
+export function organizationRef(locale: Locale): JsonLd {
+  return { '@type': 'Organization', '@id': ORGANIZATION_ID, name: ORGANIZATION_NAMES[locale], url: `${SITE_ORIGIN}/` };
 }
 
 export function buildOrganizationJsonLd(locale: Locale): JsonLd {
@@ -33,11 +43,13 @@ export function buildOrganizationJsonLd(locale: Locale): JsonLd {
     legalName: LEGAL_NAME,
     alternateName: alternateNames(locale),
     url: `${SITE_ORIGIN}/`,
-    logo: `${SITE_ORIGIN}/logo.png`,
+    logo: ORGANIZATION_LOGO,
     description: getTranslations(locale).meta.home.description,
+    // 電話・メールは公開していない（問い合わせは Cloudia に一本化）ため、ロケール別の問い合わせページを示す
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
+      url: `${SITE_ORIGIN}${getLocalizedUrl('/contact/', locale)}`,
       availableLanguage: ['Japanese', 'English'],
     },
     address: {
@@ -48,7 +60,7 @@ export function buildOrganizationJsonLd(locale: Locale): JsonLd {
       postalCode: '810-0001',
       addressCountry: 'JP',
     },
-    sameAs: COMPANY_SOCIAL_LINKS.map((link) => link.href),
+    sameAs: [...ORGANIZATION_SAME_AS],
     founder: {
       '@type': 'Person',
       name: '寺田康佑',

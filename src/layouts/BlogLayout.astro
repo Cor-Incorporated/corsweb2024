@@ -4,7 +4,7 @@ import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
 import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
-import { getCurrentLocale, type Locale } from '../utils/i18n';
+import { getCurrentLocale } from '../utils/i18n';
 import { generateKeywords } from '../utils/blog-seo';
 import { buildBlogHreflang, countContentWords } from '../utils/blog-structured-data';
 import { ORGANIZATION_NAMES } from '../config/organization';
@@ -61,7 +61,7 @@ const allBlogPosts = await getCollection('blog', ({ data }) => !data.isDraft);
 const articleLocales = ALL_LOCALES.filter((loc) =>
   allBlogPosts.some((p) => p.data.lang === loc && p.slug.replace(/^[a-z]{2}\//, '') === cleanSlug)
 );
-// hreflang も同じ articleLocales から出す（実在しない言語版を指して 404 にしない: H2）。
+// hreflang も同じ articleLocales から出す（実在しない言語版を指して 404 にしない。ADR-0017）。
 const hreflangLinks = buildBlogHreflang(cleanSlug, articleLocales);
 
 // 検索結果に出るタイトル。会社名表記をロケール別の正式表記に統一（#306）。ブログは全5言語で

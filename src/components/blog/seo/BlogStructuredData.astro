@@ -32,7 +32,7 @@ const websiteJsonLd = buildWebSiteJsonLd(currentLocale);
 const organizationJsonLd = buildOrganizationJsonLd(currentLocale);
 ---
 
-<script type="application/ld+json" set:html={safeJsonLd(articleJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(breadcrumbJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(websiteJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(organizationJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(articleJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(breadcrumbJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(websiteJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(organizationJsonLd)} />
