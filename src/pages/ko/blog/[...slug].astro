@@ -5,6 +5,7 @@ import PostCard from '../../../components/blog/PostCard.astro';
 import ShareButtons from '../../../components/blog/ShareButtons.astro';
 import TableOfContents from '../../../components/blog/TableOfContents.astro';
 import TagList from '../../../components/blog/TagList.astro';
+import AuthorBox from '../../../components/blog/AuthorBox.astro';
 import TipButton from '../../../components/blog/TipButton.astro';
 import BlogLayout from '../../../layouts/BlogLayout.astro';
 
@@ -101,6 +102,11 @@ const fullUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
     <div class="prose prose-lg prose-stone mx-auto dark:prose-invert">
       <Content />
+    </div>
+
+    <!-- 著者（写真・名前・肩書・紹介・プロフィール。JSON-LD の Person と同じ正本） -->
+    <div class="mx-auto mt-12 max-w-3xl">
+      <AuthorBox author={post.data.author} />
     </div>
 
     <div class="mx-auto mt-12 max-w-3xl"><TipButton /></div>

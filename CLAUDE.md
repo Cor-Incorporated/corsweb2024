@@ -275,6 +275,9 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ### Blog Components
 
+- **AuthorBox.astro**: Author photo, name, title, bio and profile link for every
+  locale. Author facts live in `src/config/author.ts` (also used for the Person
+  JSON-LD referenced by `Article.author`); add new authors there
 - **CategoryBadge.astro**: Color-coded category badges with responsive design
 - **PostCard.astro**: Responsive blog post preview cards for lists with hover
   effects

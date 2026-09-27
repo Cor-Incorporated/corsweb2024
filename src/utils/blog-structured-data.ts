@@ -6,6 +6,7 @@
  * - Article は publisher / copyrightHolder を Organization の @id 参照にし、articleBody（中身は
  *   description だった）を出さない。wordCount は本文から数える（日本語・中国語は文字数）
  */
+import { authorProfileUrl, findAuthor } from '../config/author';
 import { ORGANIZATION_ID, SITE_ORIGIN } from '../config/organization';
 import { blogPostPath } from './blog-paths';
 import type { Locale } from './i18n';
@@ -84,6 +85,8 @@ export type BlogArticleInput = {
 
 export function buildBlogArticleJsonLd(input: BlogArticleInput): JsonLd {
   const { title, description, keywords, author, pubDate, updatedDate, category, tags, image, locale, pageUrl } = input;
+  // 登録済みの著者は、同じページに出す Person ノード（config/author.ts）を @id で参照する（H3）
+  const profile = findAuthor(author);
   return {
     '@context': 'https://schema.org',
     '@type': category === 'ai' || category === 'engineering' ? 'TechArticle' : 'BlogPosting',
@@ -91,17 +94,14 @@ export function buildBlogArticleJsonLd(input: BlogArticleInput): JsonLd {
     description,
     keywords,
     inLanguage: locale,
-    author: {
-      '@type': 'Person',
-      '@id': 'https://cor-jp.com/about#terisuke',
-      name: author,
-      url: 'https://cor-jp.com/about',
-      sameAs: [
-        'https://twitter.com/cor_terisuke',
-        'https://github.com/Cor-Incorporated',
-        'https://www.linkedin.com/in/teradakousuke/',
-      ],
-    },
+    author: profile
+      ? {
+          '@type': 'Person',
+          '@id': profile.personId,
+          name: profile.names[locale],
+          url: authorProfileUrl(profile, locale),
+        }
+      : { '@type': 'Person', name: author },
     datePublished: pubDate.toISOString(),
     dateModified: (updatedDate ?? pubDate).toISOString(),
     publisher: { '@id': ORGANIZATION_ID },
