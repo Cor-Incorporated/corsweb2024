@@ -1,8 +1,8 @@
 name: CI
 
-# PR ごとにユニットテスト・ビルド・dist の回帰ガードを走らせる（Issue #323）。
-# 以前は vitest がどのワークフローでも実行されていなかった。develop 宛 PR の build は
-# visual-text.yml（2026-07-02〜）が表示監査の前段として走らせるだけだった。
+# PR ごとにユニットテスト・ビルド・dist の監査と回帰ガードを走らせる（Issue #323）。
+# 以前は vitest も dist の監査（security:audit:dist）もどのワークフローでも実行されていなかった。
+# develop 宛 PR の build は visual-text.yml（2026-07-02〜）が表示監査の前段として走らせるだけだった。
 # テストを足すだけでは動かないため、アサーションとこの実行経路はセットで扱う。
 #
 # ジョブ名 `verify` は main のブランチ保護で required check に指定する想定の名前。
@@ -61,6 +61,11 @@ jobs:
           # 断言する）はこの状態でしか顕在化しない。設定時の文言は src/config/__tests__/contact-guards.test.ts
           # がソースを読んで検証している。秘密情報はこのジョブに渡さない。
           PUBLIC_GCAL_ID: ''
+
+      # dist の SEO メタ・JSON-LD・秘密情報らしき文字列・非 HTTPS / 開発用オリジン・localStorage の
+      # キー・重い UI ランタイムの混入を検査する（scripts/audit-dist-security.mjs）。
+      - name: Dist security and SEO audit
+        run: npm run security:audit:dist
 
       - name: Contact regression guards on dist
         run: npm run test:dist
