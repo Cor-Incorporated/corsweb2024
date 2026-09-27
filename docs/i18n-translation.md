@@ -54,7 +54,7 @@ translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は 
 |---|---|---|---|
 | `missing` | ja はあるが翻訳ファイルが無い | 問題として列挙 | 翻訳して作成 |
 | `stale` | 翻訳の `translationSourceHash` が今の ja と一致しない | 問題 | 再翻訳して上書き |
-| `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳）。`--since` の差分で ja を変更した記事は `--adopt` を拒否し、`--write --retranslate-untracked --only <collection>/<slug>` を案内する（古い訳を最新として確定させない） |
+| `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳）。`--adopt` は、ja が翻訳より後に変わった記事を拒否し、`--write --retranslate-untracked --only <collection>/<slug>` を案内する（古い訳を最新として確定させない）。判定は `--since` の差分（あれば）と、git の履歴（ja の最後の変更が翻訳の最後の変更と同じコミットか祖先なら採用可）。履歴が無い・浅い clone・ja に未コミットの変更がある・どちらかが未コミット、のときも拒否。確かめたうえで採用するなら `--force-adopt` |
 | `meta-drift` | ハッシュは一致するが、コピー対象（`pubDate` `featured` 等）や `lang` がずれている | 問題 | API なしで ja から同期 |
 | `orphan` | ja が無い翻訳（ja を削除・改名した、または翻訳だけを追加した） | 問題 | 下の条件をすべて満たすものだけ削除。満たさないものは削除せず失敗として報告 |
 | `invalid` | 翻訳ファイルの frontmatter が壊れている、またはスキーマ違反（必須の `title` が無い・来歴の形が不正など。ハッシュが一致していても） | 問題 | 再翻訳して上書き |
@@ -73,14 +73,23 @@ frontmatter は分類の時点で `src/content/config.ts` と同じ制約（Zod 
 
 ## 4. 翻訳で守るもの（保護）と検証
 
-API に送る前に、訳してはいけない部分をプレースホルダ（`⟦B3⟧` / `⟦P12⟧`）に置き換え、翻訳後に完全に元へ戻します。
+API に送る前に、訳してはいけない部分をプレースホルダ（`⟦B3⟧` / `⟦P12⟧` / `⟦N0⟧`）に置き換え、翻訳後に元へ戻します。
 
 - ブロック: フェンスコード（```` ``` ```` / `~~~`、コメントも訳さない）、`$$` 数式、HTML ブロック・コメント、URL だけの行（リンクカード）、参照リンク定義
 - インライン: インラインコード、`$...$` 数式、`<https://...>`、インライン HTML、リンクと画像の**宛先**（リンクテキスト・alt・`"title"` は訳す。例: `![説明](/img.avif "タイトル")` はパスだけを保護）、脚注、`{#id}`、本文中の URL
+- 社名: 「Cor.株式会社」とその表記ゆれ（「Cor.inc」「Cor.Inc.」「Cor. Inc.」「株式会社Cor.」「コー株式会社」など。ja の本文と frontmatter の両方）を `⟦N0⟧` にしてモデルに渡さず、翻訳後に**翻訳先言語の正式表記**に置き換える。モデルが自分で書いた表記ゆれ（「Cor.」を「Cor. Inc.」に広げた等）も正式表記にそろえる。「Cor.」単独（ブランド名）、コード・URL の中（例: `@Cor.Incorporated`）はそのまま
+
+| 言語 | ja / zh | ko | en / es |
+|---|---|---|---|
+| 正式表記（ADR-0007） | `Cor.株式会社` | `Cor.주식회사` | `Cor.Inc.` |
+
+用語集は [`scripts/i18n/glossary.mjs`](../scripts/i18n/glossary.mjs)。正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）で、同じ値にしてあります（#335 のマージ後に両者を照合するテストを追加予定）。
+
+title と本文の見出しの一致: ja で frontmatter の `title` と本文の最初の `# ` 見出し（H1）が同じ文言なら、訳文の H1 を訳した `title` に置き換えます（モデルは両者を別々に訳すため、同じ文言でも訳が割れることがあるため。PR #344 の実 API 検証で en / zh / ko に発生）。
 
 翻訳結果は次をすべて満たしたときだけ書き込みます（1 回だけ自動で再生成し、それでも駄目なら書かずに失敗を報告）。
 
-- プレースホルダが全部・1 回ずつ・壊れずに残っている／ブロックは単独行のまま
+- プレースホルダ（社名の `⟦N…⟧` を含む。frontmatter はフィールドごと）が全部・1 回ずつ・壊れずに残っている／ブロックは単独行のまま
 - 見出し（レベル別の数）、コードブロック（数と内容が完全一致）、リンク・画像の宛先、数式、HTML、リンクカード、表の行数、空行で区切られたブロック（段落・リスト・表など）の数、リスト項目の数が ja と一致（段落 1 つ・リスト項目 1 つの欠落や、2 段落の結合も落とす）
 - 日本語が残っていない（本文は日本語文字が 10% 以下、frontmatter は 30% 以下。zh は仮名だけで判定）
 - frontmatter が `src/content/config.ts` と同じ制約（Zod ミラー `scripts/i18n/schema.mjs`）を満たし、`lang` と来歴が正しい
@@ -97,7 +106,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 ```
 
 - `npm run i18n:translate` は `.env` を自動では読みません。ローカルで翻訳するときは `node --env-file=.env ...` で起動するか、シェルで `GEMINI_API_KEY` を設定してください。
-- オプション: `--collections blog,cases,news` / `--langs en,zh,ko,es` / `--only <slug>` または `<collection>/<slug>`（カンマ区切り）/ `--since <git-ref>`（`--only` と併用不可）/ `--retranslate-untracked` / `--prune-untracked`（来歴の無い orphan も削除）/ `--dry-run` / `--root <dir>`。
+- オプション: `--collections blog,cases,news` / `--langs en,zh,ko,es` / `--only <slug>` または `<collection>/<slug>`（カンマ区切り）/ `--since <git-ref>`（`--only` と併用不可）/ `--retranslate-untracked` / `--prune-untracked`（来歴の無い orphan も削除）/ `--force-adopt`（`--adopt` で、ja が翻訳より後に変わった記事も採用）/ `--dry-run` / `--root <dir>`。
 
 | 環境変数 | 必須 | 既定値 | 意味 |
 |---|---|---|---|
@@ -131,8 +140,11 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 push ジョブがパッチを適用する条件（1 つでも外れたら何も適用・push しない）:
 
 - 変更パスがすべて `src/content/<collection>/{en,zh,ko,es}/<slug>.md`（ワークフローの `ALLOWED_CHANGE_RE`。`scripts/i18n/config.mjs` と一致することをテストで照合）
-- 通常ファイル（mode 100644）の変更・作成・削除だけ（シンボリックリンク・実行権限・改名・バイナリは拒否）
+- 通常ファイル（mode 100644）の変更・作成・削除だけ（シンボリックリンク・実行権限・改名・バイナリは拒否）。パッチは改名を検出しない形（`--no-renames`）で作るので、ja の改名に伴う「旧 slug の翻訳の削除＋新 slug の追加」はそのまま通る
+- 削除は翻訳ファイル数 × 25%（最低 4 件）まで（`MAX_DELETE_PERCENT` / `MIN_DELETE_ALLOWANCE`。翻訳スクリプトの既定値と同じことをテストで照合）
 - パッチが 5 MB 以下で、そのまま当たる（`git apply --check`）
+- 適用した後、実際に stage された内容を 1 行ずつ照合する（`git diff --cached --raw --no-renames`）: 状態は追加・変更・削除だけ、モードは 100644 だけ、パスは上と同じ。保護パスからの改名は「保護パスの削除」として拒否し、既存のシンボリックリンクの中身の差し替えも拒否する
+- 追加・変更した `.md` の 1 行目が厳密に `---`（Astro が使う gray-matter は `---js` の frontmatter を JavaScript として評価するため）
 
 残るリスク: translate ジョブは PR head のコードを `GEMINI_API_KEY` 付きで実行します（同一リポジトリの PR だけ。fork の PR には secrets が渡りません）。また、リポジトリへの書き込み権限を持つ人は、PR でワークフローを書き換えれば secrets を読み出せます（GitHub の仕様）。キーが漏れた疑いがあれば Google AI Studio でキーを削除し、再発行して secret を登録し直してください。
 
@@ -152,7 +164,7 @@ push に使うトークン（既定は GITHUB_TOKEN）:
 
 | 方式 | 条件 | 翻訳コミット後の CI | 追加操作 | リスク |
 |---|---|---|---|---|
-| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | GitHub Docs によれば、PR の各チェックは「承認待ち」になる（**本リポジトリでは未検証**）。i18n-check だけは dispatch-check が即時に再実行する | 書き込み権限者が PR の Checks で「Approve workflows to run」を押す。ボタンが出ない・押しても動かない場合は、人が空コミットを push して CI を起動する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
+| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックは「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。i18n-check だけは dispatch-check が即時に再実行する（実測: run 36329711063） | 書き込み権限者が PR の Checks で「Approve workflows to run」を押す。ボタンが出ない・押しても動かない場合は、人が空コミットを push して CI を起動する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
 | TRANSLATION_BOT_TOKEN（任意） | secret が登録されている | 通常の `synchronize` として全 CI（required check 含む）が自動で再実行 | なし | 大きい: fine-grained PAT は有効期限まで、発行者の権限で使える（漏れると他のブランチへの push にも使える）。push ジョブ以外には渡さないが、書き込み権限者は PR でワークフローを変えれば読み出せる。使う場合は対象リポジトリをこの 1 つ・権限を Contents だけ・有効期限を短くする |
 
 承認ボタンが出ない場合の手順（空コミットで CI を起動する。PR のブランチで実行）:
@@ -163,11 +175,11 @@ git commit --allow-empty -m "chore: CI を再実行"
 git push
 ```
 
-根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認。本リポジトリでの挙動は、初回の翻訳 PR で確認する）。
+根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認）。本リポジトリでも、GITHUB_TOKEN で翻訳コミットを push した後の `pull_request` の実行（run 36329708078）が `action_required` になることを 2026-09-27 に確認した。
 
 ### workflow_dispatch（Actions タブ → Translate content (i18n) → Run workflow、または `gh workflow run`）
 
-本ワークフローが既定ブランチ（main）に入ってから使えます（GitHub の仕様）。
+`gh workflow run translate-content.yml --ref <ブランチ>` は、そのブランチに本ワークフローがあれば、main に入る前でも起動できます（実測: 2026-09-27、main にも develop にも本ファイルが無い状態で、`--ref chore/i18n-live-translation-check` の dispatch から run 36329711063 が作成された）。Actions タブの Run workflow ボタンが main に入る前に表示されるかは確かめていません（未検証）。表示されないときは `gh workflow run` を使ってください。
 
 | 入力 | 必須 | 既定値 | 意味 |
 |---|---|---|---|
@@ -201,7 +213,7 @@ git push
 
 PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言語）、`untracked=68`（blog 9 本・cases 6 本・news 2 本 × 4 言語）、`ok=4`（`blog/complete-multilingual-blog-expansion` は、リンクの修正と同時に PR #339 で採用済み）。
 
-1. このブランチを develop → main までマージする（workflow_dispatch は main にワークフローが必要）
+1. このブランチを develop にマージする（手順 2・4 は `--ref develop` で dispatch するので、main に入る前でも起動できる。6 章の workflow_dispatch の実測を参照）
 2. 既存翻訳の扱いを決める
    - そのまま採用する（推奨: cases / news は人手で整えた訳、blog の既存訳も ja より新しい日付で作成済み）:
      `gh workflow run translate-content.yml -R Cor-Incorporated/corsweb2024 --ref develop -f mode=adopt`
@@ -212,7 +224,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
    → `chore/i18n-backfill-<日付>` が push されるので、PR を作成。PR 上で i18n-check が緑になることを確認してマージ
 5. 以後は ja を編集した PR ごとに自動で翻訳が積まれる
 
-手順 2 の採用（adopt）は、既存翻訳のある記事の ja を編集する PR より先に済ませてください。採用前に ja を変更した記事は、古い訳を最新として確定させないよう採用を拒否し、再翻訳を案内します。
+手順 2 の採用（adopt）は、既存翻訳のある記事の ja を編集する PR より先に済ませてください。`--adopt` は `--since` の有無にかかわらず、git の履歴で ja が翻訳より後に変わった記事の採用を拒否し、再翻訳を案内します（mode=adopt でも同じ。拒否した記事は translate-result が赤で知らせ、採用できた分だけ push される）。2026-09-28 時点の履歴では、未追跡 68 件はすべて採用できます（`node scripts/i18n/translate-content.mjs --adopt --dry-run` で「採用 68 件 / 拒否 0 件」を確認）。
 
 費用の目安（推定・未検証）: 未翻訳 40 件は ja 約 2.8 万字 × 4 言語で、`gemini-3.8-flash`（2026-12-31 まで入力 $0.75 / 出力 $3.75 per 1M tokens）なら 1〜2 ドル程度、全 112 件を訳し直しても数ドル程度。料金の根拠: <https://ai.google.dev/gemini-api/docs/pricing>（2026-09-27 確認）。
 
@@ -221,8 +233,9 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | 症状（ログの文言） | 原因 | 対処 |
 |---|---|---|
 | `GEMINI_API_KEY が未設定です` / translate ジョブが `GEMINI_API_KEY が未設定のため自動翻訳をスキップ` | secret が無い | 7 章の手順で登録 |
-| `プレースホルダ ⟦B3⟧ が欠落しています`（または `⟦P..⟧`） | モデルがコード・URL 等の保護部分を落とした | 自動で 1 回再生成済み。PR に空コミットを push して再実行、それでも駄目なら ja の該当箇所（長い表・入れ子の多いリスト等）を見直す |
+| `プレースホルダ ⟦B3⟧ が欠落しています`（または `⟦P..⟧` / 社名の `⟦N..⟧`） | モデルがコード・URL 等の保護部分を落とした | 自動で 1 回再生成済み。PR に空コミットを push して再実行、それでも駄目なら ja の該当箇所（長い表・入れ子の多いリスト等）を見直す |
 | `見出し H2 の数が一致しません` / `表の行数が一致しません` / `画像の数が一致しません` | 翻訳で Markdown の構造が変わった | 同上（再実行）。繰り返すなら記事を分割する |
+| `見出し（H1）をタイトルにそろえると構造が ja と一致しません` | ja の `title` にコードなどのマークダウン記法があり、訳した `title` でそれが変わった | ja の `title` からマークダウン記法を外す（`title` はページのタイトルとして文字のまま表示されるので、記法は不要） |
 | `段落などのブロック数が一致しません` / `リスト項目の数が一致しません` | 翻訳で段落・リスト項目が落ちた、または段落が結合・分割された | 同上（再実行）。繰り返すなら、ja 側で空行の入れ方（段落の区切り）を見直す |
 | `コードブロック #1 の内容が ja と一致しません` | 保護したはずのコードが変わった（通常起きない） | ログを添えて開発者に連絡 |
 | `日本語が残っています（割合 0.xx）` | モデルが訳さずに返した | 再実行。固有名詞が大半を占める短い記事なら開発者に相談 |
@@ -231,6 +244,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | ログに `429` / `RESOURCE_EXHAUSTED` の再試行が続く | レート上限・日次上限 | 自動で指数バックオフ。日次上限なら翌日に再実行、`I18N_RPM` を下げる、または課金ティアを上げる |
 | `404` / `models/... is not found` | `GEMINI_MODEL` の ID 誤り・提供終了 | 5 章の根拠 URL で現行 ID を確認し、variable を直す |
 | `[untracked]` が出る | 来歴の無い既存翻訳 | 今の ja の訳なら `--adopt`（採用）、ja を変更した記事なら `--retranslate-untracked`（再翻訳） |
+| `ja が翻訳より後に変更されています（ja: … 、翻訳: …）` / `…新旧を判定できません` | 旧翻訳のある記事の ja を、翻訳より後に編集した（または git の履歴で確かめられない） | 表示された `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only <collection>/<slug>` で訳し直す。今の ja の訳だと人が確かめた場合だけ `--adopt --force-adopt`（mode=adopt の CI では上書きしない） |
 | `ja がこの差分で変更されているため、旧翻訳は採用できません` | 旧翻訳のある記事の ja を PR で変更した | 表示された `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only <collection>/<slug>` を手元で実行して PR に push する（`GEMINI_API_KEY` が必要） |
 | `[meta-drift]` | ja の `featured` 等を変えた | PR なら translate ジョブが自動同期。ローカルは `npm run i18n:translate` |
 | `[orphan]` | ja を削除・改名した | PR なら translate ジョブが翻訳を削除する（来歴つきの翻訳のみ） |
@@ -242,11 +256,13 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | `ja ディレクトリが空のため削除を中止しました（安全装置）` | ja が 1 本も無いのに翻訳だけある | 意図した削除なら翻訳ファイルを手で削除する |
 | `許可されていない変更のため適用しません` / `許可されていない種類の変更のため適用しません` | 翻訳が翻訳ディレクトリ以外・ja を変えた、またはシンボリックリンク・実行権限を作った | バグか改ざんの疑い。ログを添えて開発者に連絡（何も push されていない） |
 | `パッチが大きすぎるため適用しません` | 1 回の変更が 5 MB を超えた | 記事を分けて処理する |
+| `削除が多すぎるため適用しません（N 件 / 翻訳 M 件、上限 K 件）`（push ジョブ） | 1 回で削除する翻訳ファイルが多すぎる | 意図した削除なら、翻訳ファイルを人が PR で `git rm` する |
+| `許可されていない変更が stage されました` / `許可されていない種類の変更が stage されました` / `許可されていないパスが stage されました` / `frontmatter の 1 行目が --- ではありません` | 適用後の照合に落ちた（改名・シンボリックリンク・翻訳ディレクトリ以外・frontmatter の形式） | バグか改ざんの疑い。ログを添えて開発者に連絡（何も push されていない） |
 | `push できませんでした` | 翻訳中に PR へ新しいコミットが積まれた | 新しいコミットの実行で処理し直されるので待つ |
 | translate-result が赤（`一部の翻訳・同期・削除が失敗または検証に通らず`） | 一部の記事が失敗した（成功分は push 済み） | translate ジョブの Translate ステップのログで記事と理由を確認し、上の各行に従う |
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
 | 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式 | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順。毎回の操作を無くしたい場合だけ、リスクを理解したうえで `TRANSLATION_BOT_TOKEN` を登録 |
-| `i18n-check の再実行を起動できませんでした` | ワークフローがまだ main に無い（workflow_dispatch 不可） | main 反映後は自動で解消。それまでは承認で代替 |
+| `i18n-check の再実行（workflow_dispatch）を起動できませんでした` | dispatch-check の `gh workflow run` が失敗した（原因は同じステップのログに出る gh のエラー） | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順 |
 | `翻訳が必要な件数 N 件が上限 20 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる | 記事を分けて PR を出す。意図した一括翻訳なら workflow_dispatch の mode=translate（バックフィル）を使うか、手元で `I18N_MAX_ITEMS=100` のように上限を上げて実行 |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
 | `--only と --since は同時に指定できません` など | 引数の誤り | `--help` を参照 |
@@ -275,5 +291,6 @@ git pull --rebase
 - コードブロック内のコメントは訳しません（保護を優先）。HTML ブロック（`<details>` 等）の中身も訳しません。
 - 参照リンクの定義行（`[ref]: https://... "title"`）は行ごと保護するため、その title は訳しません（本文中のインラインのリンク・画像の title は訳します）。
 - 機械翻訳の品質は人のレビューで担保します（PR の差分で確認）。対外表現ガードレール（ADR-0007）の機械検査は日本語向けのため、訳文での「主張の強まり」はプロンプトで禁止したうえで、人が確認してください。
+- この仕組みより前の翻訳（`untracked`、`--adopt` で採用したもの）は、社名が「Cor. Inc.」などの旧表記のまま残っています（2026-09-28 時点で en 7 件・es 4 件など）。再翻訳（`--retranslate-untracked`）するか手で直すまで変わりません。
 - hreflang（翻訳の有無に応じた代替ページ指定）は別レーンで対応します。
 - Sveltia CMS を導入する際は、コレクションのフォルダを `src/content/<collection>/ja` に限定してください（他言語は CI 専有）。

@@ -5,9 +5,12 @@ name: Translate content (i18n)
 #
 # ■ 信頼境界（書き込みトークンと、信頼しないコードを同じジョブに置かない）
 #   translate        contents: read だけ。PR head のコード（scripts/i18n と npm 依存）を GEMINI_API_KEY 付きで動かし、
-#                    結果を `git diff --binary` のパッチとして artifact に渡す。`npm ci --ignore-scripts`、npm キャッシュなし。
-#   push             contents: write。npm もリポジトリのコードも実行しない。パッチ（信頼しないデータ）の変更パスと
-#                    ファイル種別を検査してから適用し、hooks を無効にして commit / push する。
+#                    結果を `git diff --binary --no-renames` のパッチとして artifact に渡す（ja の改名は、旧 slug の
+#                    翻訳の削除と新 slug の翻訳の追加になる）。`npm ci --ignore-scripts`、npm キャッシュなし。
+#   push             contents: write。npm もリポジトリのコードも実行しない。パッチ（信頼しないデータ）の変更パス・
+#                    ファイル種別・大きさ・削除件数を検査してから適用し、stage された内容を行ごとに照合して
+#                    （追加・変更・削除だけ、mode 100644 だけ、許可パスだけ、.md の 1 行目が ---）から、
+#                    hooks を無効にして commit / push する。
 #   dispatch-check   actions: write だけ。GITHUB_TOKEN で push したとき i18n-check を workflow_dispatch で再実行する。
 #   i18n-check       contents: read。単体テストと --check（キー不要）。
 #   translate-result 権限なし。翻訳の一部が失敗・検証落ちしたとき、成功分を push したうえで赤にする。
@@ -17,8 +20,9 @@ name: Translate content (i18n)
 #   PR で変更された記事を `--write --since <base>` で処理する（1 回あたり I18N_MAX_ITEMS=20 件まで）。
 #   i18n-check は translate / push の後に走る。push した場合は新しい HEAD 側の実行に検査を委ねて成功で終える。
 #   push に使うトークン:
-#     - 既定: GITHUB_TOKEN。GitHub Docs によれば、GITHUB_TOKEN による PR 更新で作られる pull_request の実行は
-#       「承認待ち」になる（本リポジトリでは未検証）。i18n-check だけは dispatch-check が即時に再実行する。
+#     - 既定: GITHUB_TOKEN。GITHUB_TOKEN による PR 更新で作られる pull_request の実行は「承認待ち」になる
+#       （GitHub Docs。本リポジトリでも実測: run 36329708078 が action_required）。i18n-check だけは
+#       dispatch-check が即時に再実行する。
 #     - 任意: secrets.TRANSLATION_BOT_TOKEN（fine-grained PAT / GitHub App）。push が通常の synchronize を起こし
 #       全 CI が再実行されるが、GITHUB_TOKEN より権限・有効期間が広い。リスクは docs/i18n-translation.md 6 章。
 #
@@ -65,8 +69,10 @@ on:
 # 既定は権限なし。各ジョブが必要な最小限だけを宣言する。
 permissions: {}
 
+# PR は PR ごとに 1 本（新しい push で古い実行を取り消す）。workflow_dispatch は実行ごとに別グループにして、
+# 同じ ref に続けて起動した dispatch が待機中に置き換えられて消えないようにする。
 concurrency:
-  group: translate-content-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: translate-content-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -77,6 +83,10 @@ env:
   ALLOWED_CHANGE_RE: '^src/content/(blog|cases|news)/(en|zh|ko|es)/[A-Za-z0-9][A-Za-z0-9._-]*\.md$'
   PATCH_ARTIFACT: i18n-translation-patch
   MAX_PATCH_BYTES: '5000000'
+  # push ジョブで 1 回に削除してよい翻訳ファイルの上限: 翻訳ファイル数 × 25%（最低 4 件 = 記事 1 本分）。
+  # scripts/i18n の I18N_MAX_PRUNE_RATIO の既定値と対象言語数と同じ値（workflow-link.test.mjs が照合する）。
+  MAX_DELETE_PERCENT: '25'
+  MIN_DELETE_ALLOWANCE: '4'
 
 jobs:
   translate:
@@ -118,7 +128,7 @@ jobs:
 
       - name: Checkout
         if: steps.plan.outputs.run == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # PR は head（翻訳を積む先）、workflow_dispatch は起動した ref のコミット
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -139,7 +149,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.scope.outputs.changed == 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           # 秘密情報（GEMINI_API_KEY）を扱うジョブなので npm キャッシュは使わない（cache poisoning 対策）
@@ -180,7 +190,9 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/i18n-patch"
           git add -- src/content
-          git diff --cached --binary -- src/content > "$RUNNER_TEMP/i18n-patch/translation.patch"
+          # --no-renames: ja の改名（slug 変更）では旧 slug の翻訳を削除し新 slug を作る。内容が似ていると git は
+          # 既定で「改名」として出力し、push ジョブの検査（通常ファイルの作成・削除だけを許可）が拒否してしまう。
+          git diff --cached --binary --no-renames -- src/content > "$RUNNER_TEMP/i18n-patch/translation.patch"
           if [ -s "$RUNNER_TEMP/i18n-patch/translation.patch" ]; then
             git diff --cached --stat -- src/content
             echo "patch=true" >> "$GITHUB_OUTPUT"
@@ -191,7 +203,7 @@ jobs:
 
       - name: Upload the translation patch
         if: steps.patch.outputs.patch == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.PATCH_ARTIFACT }}
           path: ${{ runner.temp }}/i18n-patch/translation.patch
@@ -216,18 +228,19 @@ jobs:
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
       - name: Checkout (the commit the patch was made from)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Download the translation patch
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.PATCH_ARTIFACT }}
           path: ${{ runner.temp }}/i18n-patch
 
-      # パッチは信頼しないジョブの出力なので、中身ではなく「どこを・どういう種類で変えるか」だけを検査して適用する。
+      # パッチは信頼しないジョブの出力なので、「どこを・どういう種類で・何件変えるか」と、適用後の frontmatter の
+      # 1 行目（(5)）を検査して適用する。本文の妥当性はここでは見ない（i18n-check と PR のレビューで見る）。
       - name: Verify and apply the patch
         run: |
           set -euo pipefail
@@ -264,15 +277,46 @@ jobs:
             fail=1
           done <<< "$(git apply --summary "$patch")"
           if [ "$fail" -ne 0 ]; then exit 1; fi
+          # (3) 削除件数: 翻訳ファイル数 × MAX_DELETE_PERCENT%（最低 MIN_DELETE_ALLOWANCE 件）まで
+          total="$(git ls-tree -r --name-only HEAD -- src/content | grep -cE "$ALLOWED_CHANGE_RE" || true)"
+          deletions="$(git apply --summary "$patch" | grep -c '^ delete mode ' || true)"
+          allowance=$(( total * MAX_DELETE_PERCENT / 100 ))
+          if [ "$allowance" -lt "$MIN_DELETE_ALLOWANCE" ]; then allowance="$MIN_DELETE_ALLOWANCE"; fi
+          if [ "$deletions" -gt "$allowance" ]; then
+            echo "::error title=i18n::削除が多すぎるため適用しません（${deletions} 件 / 翻訳 ${total} 件、上限 ${allowance} 件）"
+            exit 1
+          fi
           git apply --check "$patch"
           git apply --index "$patch"
-          # (3) 念のため、実際に stage された内容も同じ条件で照合する
-          while IFS= read -r file; do
-            if ! [[ "$file" =~ $ALLOWED_CHANGE_RE ]]; then
-              echo "::error title=i18n::許可されていないパスが stage されました: ${file}"
-              exit 1
+          # 適用した後の検査に落ちたら、stage も作業ツリーも元に戻してから失敗させる
+          reject() {
+            echo "::error title=i18n::$1"
+            git reset -q --hard HEAD
+            exit 1
+          }
+          # (4) stage された内容を 1 行ずつ照合する（パッチの見た目ではなく、実際に index に入ったもの）。
+          #     改名は検出しない（--no-renames）ので、保護パスからの改名は「保護パスの削除」として拒否される。
+          #     状態は A/M/D、モードは通常ファイル 100644（無しは 000000）、パスは翻訳ディレクトリの .md だけ。
+          tab=$'\t'
+          raw_re="^:([0-7]{6}) ([0-7]{6}) [0-9a-f]+ [0-9a-f]+ ([A-Z])[0-9]*${tab}(.+)\$"
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            [[ "$line" =~ $raw_re ]] || reject "許可されていない変更が stage されました: ${line}"
+            status="${BASH_REMATCH[3]}:${BASH_REMATCH[1]}:${BASH_REMATCH[2]}"
+            file="${BASH_REMATCH[4]}"
+            case "$status" in
+              A:000000:100644 | D:100644:000000 | M:100644:100644) ;;
+              *) reject "許可されていない種類の変更が stage されました: ${line}" ;;
+            esac
+            [[ "$file" =~ $ALLOWED_CHANGE_RE ]] || reject "許可されていないパスが stage されました: ${file}"
+            # (5) 追加・変更した .md の 1 行目は厳密に "---"（Astro が使う gray-matter は "---js" の frontmatter を
+            #     JavaScript として評価するため。翻訳パイプラインの書き出しは常に "---" で始まる）
+            if [ "${status%%:*}" != "D" ]; then
+              first=""
+              IFS= read -r first < <(git cat-file -p ":$file") || true
+              [ "$first" = "---" ] || reject "frontmatter の 1 行目が --- ではありません: ${file}（${first:0:40}）"
             fi
-          done < <(git diff --cached --name-only)
+          done < <(git diff --cached --raw --no-renames --no-abbrev)
           git diff --cached --stat
 
       - name: Commit and push
@@ -341,7 +385,7 @@ jobs:
           set -euo pipefail
           if ! gh workflow run translate-content.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
                -f mode=check -f since="$BASE_SHA"; then
-            echo "::warning title=i18n::i18n-check の再実行を起動できませんでした（本ファイルが main に入る前は workflow_dispatch を使えません）"
+            echo "::warning title=i18n::i18n-check の再実行（workflow_dispatch）を起動できませんでした（原因は直前の gh のエラー）。新しいコミットの PR チェックを承認するか、空コミットを push して i18n-check を動かしてください（docs/i18n-translation.md 9 章）"
           fi
           echo "::notice title=i18n::GITHUB_TOKEN で push しました。新しいコミットの PR チェックが「承認待ち」なら PR の Checks で承認し、表示されない・動かない場合は空コミットを push して再実行してください（docs/i18n-translation.md 6 章）"
 
@@ -381,14 +425,14 @@ jobs:
 
       - name: Checkout
         if: steps.delegate.outputs.delegated != 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js
         if: steps.delegate.outputs.delegated != 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm

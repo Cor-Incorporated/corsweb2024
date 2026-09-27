@@ -64,16 +64,7 @@ export const HASH_VERSION = 1;
  */
 export const DEFAULT_MODEL = 'gemini-3.8-flash';
 
-/** 用語集（既存の翻訳ファイルで使われている訳に揃える）。 */
-export const GLOSSARY = Object.freeze([
-  Object.freeze({
-    ja: 'Cor.株式会社',
-    en: 'Cor. Inc.',
-    zh: 'Cor.株式会社',
-    ko: 'Cor.주식회사',
-    es: 'Cor. Inc.',
-  }),
-]);
+/** 社名の表記は glossary.mjs（正本は src/config/organization.ts の ORGANIZATION_NAMES）。 */
 
 /** 固有名詞として訳さない語。 */
 export const KEEP_AS_IS = Object.freeze(['Cor.', 'Grift', 'Cloudia', 'Terisuke']);

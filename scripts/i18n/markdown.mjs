@@ -1,19 +1,21 @@
 /**
  * Markdown の「訳してはいけない部分」をプレースホルダで保護し、翻訳後に完全復元する。
  *
- * 保護するもの（ブロック = 1 行の ⟦Bn⟧、インライン = ⟦Pn⟧）:
- *   ブロック: フェンスコード（``` / ~~~）、$$ 数式、HTML ブロック・コメント、
+ * 保護するもの（ブロック = 1 行の ⟦Bn⟧、インライン = ⟦Pn⟧、社名 = ⟦Nn⟧）:
+ *   ブロック: フェンスコード（``` / ~~~）、$ 数式、HTML ブロック・コメント、
  *             URL だけの行（remark-link-card-plus のリンクカード）、参照リンク定義
  *   インライン: インラインコード、$ 数式、<autolink>、インライン HTML、
  *             リンク・画像の宛先（テキスト / alt / "title" は訳す）、参照ラベル、脚注、{#id}、裸 URL
+ *   社名: 「Cor.株式会社」とその表記ゆれ（glossary.mjs）。復元時に翻訳先言語の正式表記へ置き換える
  *
  * analyze() は同じ走査で構造メトリクス（見出し数・コードブロック・リンク・画像…）を数える。
  * 翻訳の前後を同じ関数で数えるので、保護と検証の判定がずれない。
  */
+import { organizationName, SOURCE_NAME_PATTERN } from './glossary.mjs';
 import { normalizeNewlines } from './util.mjs';
 
-export const TOKEN_RE = /⟦([PB])(\d+)⟧/g;
-const TOKEN_ANY_RE = /⟦[PB]\d+⟧/g;
+export const TOKEN_RE = /⟦([PBN])(\d+)⟧/g;
+export const TOKEN_ANY_RE = /⟦[PBN]\d+⟧/g;
 const BLOCK_LINE_RE = /^((?:[ \t]*>)*[ \t]*)⟦B(\d+)⟧[ \t]*$/;
 const QUOTE_PREFIX_RE = /^((?:[ \t]*>)*[ \t]*)/;
 
@@ -202,10 +204,12 @@ function protectInline(line, put) {
   s = s.replace(REF_LINK_RE, (_m, label) => `]${put('ref-label')(label)}`);
   s = s.replace(FOOTNOTE_RE, put('footnote'));
   s = s.replace(HEADING_ID_RE, put('heading-id'));
-  return s.replace(BARE_URL_RE, (url) => {
+  s = s.replace(BARE_URL_RE, (url) => {
     const { core, tail } = splitUrlTail(url);
     return /^https?:\/\/[A-Za-z0-9]/.test(core) ? put('bare-url')(core) + tail : url;
   });
+  // 社名は最後に置き換える（コード・URL などの中にあるものは先にトークン化されているので触らない）
+  return s.replace(SOURCE_NAME_PATTERN, put('org-name', 'N'));
 }
 
 // ---- 保護と復元 ---------------------------------------------------------------
@@ -213,7 +217,7 @@ export class ProtectionError extends Error {}
 
 /**
  * @returns {{ text: string, store: Map<string, { kind: string, original: string }> }}
- *   text は API に送る文字列。store は id（"P3" / "B0"）→ 元の文字列。
+ *   text は API に送る文字列。store は id（"P3" / "B0" / "N1"）→ 元の文字列。
  */
 export function protect(markdown) {
   const source = normalizeNewlines(markdown);
@@ -229,7 +233,9 @@ export function protect(markdown) {
   };
   const text = segment(source)
     .map((seg) => {
-      if (seg.kind === 'text') return protectInline(seg.text, (kind) => register(kind, 'P'));
+      if (seg.kind === 'text') {
+        return protectInline(seg.text, (kind, prefix = 'P') => register(kind, prefix));
+      }
       const prefix = seg.text.match(QUOTE_PREFIX_RE)[1];
       return `${prefix}${register(seg.kind, 'B')(seg.text)}`;
     })
@@ -237,27 +243,32 @@ export function protect(markdown) {
   return { text, store };
 }
 
-/** トークン（入れ子を含む）を元の文字列に戻す。 */
-export function expandTokens(text, store) {
+/**
+ * トークン（入れ子を含む）を元の文字列に戻す。lang を渡すと、社名（org-name）は元の表記ではなく
+ * その言語の正式表記にする（翻訳結果の復元）。lang なしは完全な往復（構造の比較・テスト用）。
+ */
+export function expandTokens(text, store, lang) {
+  const valueOf = (token, kind, n) => {
+    const entry = store.get(`${kind}${n}`);
+    if (!entry) return token;
+    return entry.kind === 'org-name' && lang ? organizationName(lang) : entry.original;
+  };
   let current = text;
-  for (let depth = 0; depth < 32 && /⟦[PB]\d+⟧/.test(current); depth += 1) {
-    current = current.replace(
-      TOKEN_RE,
-      (token, kind, n) => store.get(`${kind}${n}`)?.original ?? token
-    );
+  for (let depth = 0; depth < 32 && /⟦[PBN]\d+⟧/.test(current); depth += 1) {
+    current = current.replace(TOKEN_RE, valueOf);
   }
   return current;
 }
 
-/** 翻訳結果を復元する。ブロックトークンの行は行ごと元のブロックに置き換える。 */
-export function restore(translated, store) {
+/** 翻訳結果を復元する。ブロックトークンの行は行ごと元のブロックに置き換える（lang は expandTokens と同じ）。 */
+export function restore(translated, store, lang) {
   const lines = normalizeNewlines(translated)
     .split('\n')
     .map((line) => {
       const m = line.match(BLOCK_LINE_RE);
       return m && store.has(`B${m[2]}`) ? store.get(`B${m[2]}`).original : line;
     });
-  return expandTokens(lines.join('\n'), store);
+  return expandTokens(lines.join('\n'), store, lang);
 }
 
 /** 文字列中のトークン id を出現順に返す。 */

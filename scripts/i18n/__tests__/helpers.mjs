@@ -122,15 +122,36 @@ export async function createTempRepo(files) {
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, text, 'utf8');
   }
-  return { root, cleanup: () => rm(root, { recursive: true, force: true }) };
+  return { root, cleanup: () => removeTempDir(root) };
 }
 
-// 一時リポジトリ用の git。利用者のグローバル設定（hooksPath・署名）に左右されないよう上書きする。
-const GIT_ISOLATION = [
+/**
+ * 一時ディレクトリの削除。git の後処理などで削除中にファイルが増えても（ENOTEMPTY / EBUSY）、
+ * 少し待って再試行する。
+ */
+export function removeTempDir(dir) {
+  return rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+}
+
+/**
+ * 一時リポジトリ用の git 設定。利用者のグローバル設定（hooksPath・署名）に左右されないよう上書きし、
+ * commit 後に git が起動する自動メンテナンス（既定で切り離されたバックグラウンド処理になり、
+ * .git/objects/pack などへ書き込む）を止める。止めないと、テスト後の削除と競合して
+ * `ENOTEMPTY: rmdir .git/objects/pack` で落ちる（CI の run 36329711063 で発生）。
+ */
+export const GIT_TEST_CONFIG = Object.freeze([
   '-c',
   'core.hooksPath=/dev/null',
   '-c',
   'commit.gpgsign=false',
+  '-c',
+  'gc.auto=0',
+  '-c',
+  'maintenance.auto=false',
+]);
+
+const GIT_ISOLATION = [
+  ...GIT_TEST_CONFIG,
   '-c',
   'user.name=i18n-test',
   '-c',

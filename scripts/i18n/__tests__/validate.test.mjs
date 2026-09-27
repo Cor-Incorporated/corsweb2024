@@ -174,6 +174,46 @@ describe('checkBodyOutput (tokens → restore → parity)', () => {
   });
 });
 
+describe('リンク・画像の title の引用符が曲がった訳（“…”）は書き込まない（LOW-5）', () => {
+  // title を “…” にすると、宛先に空白が入った扱いになり、リンク・画像として解釈されなくなる
+  const source = '画像 ![図](/images/a.avif "図の説明") と [公式](https://cor-jp.com "会社の説明")';
+  const { text, store } = protect(source);
+  const curly = fakeTranslate(text).replaceAll('"lorem"', '“lorem”');
+
+  it('画像・リンクの数が ja と一致しないとして落とす', () => {
+    const result = checkBodyOutput({
+      output: curly,
+      finishReason: 'STOP',
+      protectedText: text,
+      store,
+      sourceCore: source,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        '画像の数が一致しません（ja 1 / 翻訳 0）',
+        'リンクの数が一致しません（ja 1 / 翻訳 0）',
+      ])
+    );
+  });
+
+  it('直線の引用符のままなら通る', () => {
+    const result = checkBodyOutput({
+      output: fakeTranslate(text),
+      finishReason: 'STOP',
+      protectedText: text,
+      store,
+      sourceCore: source,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.text).toBe(
+      'lorem ![lorem](/images/a.avif "lorem") lorem [lorem](https://cor-jp.com "lorem")'
+    );
+  });
+});
+
 describe('japaneseRatio', () => {
   it('counts kana + kanji for en/ko/es but only kana for zh', () => {
     expect(japaneseRatio('これは日本語です', 'en')).toBe(1);
@@ -248,6 +288,42 @@ describe('checkFieldsOutput', () => {
       { title: 'タイトル', description: '説明 https://example.com/a', tags: ['お知らせ', 'AI'] },
       /日本語が残っています/,
     ],
+  ])('rejects: %s', (_name, value, pattern) => {
+    const result = run(value);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toMatch(pattern);
+  });
+});
+
+describe('checkFieldsOutput — 社名トークン ⟦N…⟧', () => {
+  const input = { title: '導入は⟦N0⟧へ', source: '⟦N1⟧' };
+  const run = (value, lang = 'en') =>
+    checkFieldsOutput({ output: JSON.stringify(value), finishReason: 'STOP', input, lang });
+
+  it('トークンがそのまま残れば通り、モデルが書いた表記ゆれは正式表記にそろえる', () => {
+    expect(run({ title: 'Turn to ⟦N0⟧ (Cor. Inc.)', source: '⟦N1⟧' })).toEqual({
+      ok: true,
+      value: { title: 'Turn to ⟦N0⟧ (Cor.Inc.)', source: '⟦N1⟧' },
+    });
+  });
+
+  it.each([
+    [
+      'token dropped',
+      { title: 'Turn to Cor. Inc.', source: '⟦N1⟧' },
+      /title: プレースホルダ（社名）が一致しません/,
+    ],
+    [
+      'token duplicated',
+      { title: '⟦N0⟧ ⟦N0⟧', source: '⟦N1⟧' },
+      /title: プレースホルダ（社名）が一致しません/,
+    ],
+    [
+      'token moved to another field',
+      { title: 'Turn to ⟦N1⟧', source: '⟦N0⟧' },
+      /プレースホルダ（社名）が一致しません/,
+    ],
+    ['broken token', { title: 'Turn to ⟦N0', source: '⟦N1⟧' }, /予約文字 ⟦ ⟧ が混入/],
   ])('rejects: %s', (_name, value, pattern) => {
     const result = run(value);
     expect(result.ok).toBe(false);

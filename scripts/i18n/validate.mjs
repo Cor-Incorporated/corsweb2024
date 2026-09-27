@@ -5,8 +5,17 @@
  * - 構造パリティ: 見出し（レベル別）・コードブロック（内容一致）・リンク/画像の宛先・数式・HTML・
  *   リンクカード・表の行数・空行区切りのブロック（段落等）の数・リスト項目の数が ja と一致するか
  * - 未翻訳検出: 日本語（かな・漢字）が残りすぎていないか
+ * - 社名: モデルが書いた表記ゆれを翻訳先言語の正式表記にそろえ、社名トークンを正式表記で戻す（glossary.mjs）
  */
-import { analyze, isBlockTokenLine, restore, stripTokens, tokenIds } from './markdown.mjs';
+import { normalizeOrganizationNames } from './glossary.mjs';
+import {
+  analyze,
+  isBlockTokenLine,
+  restore,
+  stripTokens,
+  TOKEN_ANY_RE,
+  tokenIds,
+} from './markdown.mjs';
 import { countBy, multisetDiff, normalizeNewlines } from './util.mjs';
 
 const SEQUENCE_KINDS = ['code-block'];
@@ -117,7 +126,7 @@ export function checkTokens(output, protectedText) {
   }
   for (const id of found.keys())
     if (!expected.has(id)) errors.push(`未知のプレースホルダ ⟦${id}⟧ があります`);
-  if (/[⟦⟧]/.test(output.replace(/⟦[PB]\d+⟧/g, '')))
+  if (/[⟦⟧]/.test(output.replace(TOKEN_ANY_RE, '')))
     errors.push('壊れたプレースホルダ（⟦ ⟧ の断片）があります');
   const misplaced = output
     .split('\n')
@@ -163,7 +172,7 @@ export function checkBodyOutput({ output, finishReason, protectedText, store, so
   if (ratio > MAX_JAPANESE_RATIO.body)
     errors.push(`日本語が残っています（割合 ${ratio.toFixed(2)}）`);
   if (errors.length > 0) return { ok: false, errors };
-  const restored = restore(text, store);
+  const restored = restore(normalizeOrganizationNames(text, lang), store, lang);
   const structural = compareStructure(sourceCore, restored);
   return structural.length > 0 ? { ok: false, errors: structural } : { ok: true, text: restored };
 }
@@ -176,7 +185,11 @@ function fieldValueErrors(key, source, translated) {
   const errors = [];
   if (!source.includes('\n') && translated.trim().includes('\n'))
     errors.push(`${key}: 改行が混入しています`);
-  if (/[⟦⟧]/.test(translated)) errors.push(`${key}: 予約文字 ⟦ ⟧ が混入しています`);
+  // 社名トークン（⟦N…⟧）は入力と同じものが同じ回数だけ残っていること。それ以外の ⟦ ⟧ は混入扱い。
+  if (multisetDiff(tokenIds(source), tokenIds(translated)).length > 0)
+    errors.push(`${key}: プレースホルダ（社名）が一致しません`);
+  if (/[⟦⟧]/.test(translated.replace(TOKEN_ANY_RE, '')))
+    errors.push(`${key}: 予約文字 ⟦ ⟧ が混入しています`);
   const diff = multisetDiff(
     source.match(URL_IN_TEXT_RE) ?? [],
     translated.match(URL_IN_TEXT_RE) ?? []
@@ -235,10 +248,11 @@ export function checkFieldsOutput({ output, finishReason, input, lang }) {
   const ratio = japaneseRatio(joined, lang);
   if (ratio > MAX_JAPANESE_RATIO.fields)
     return { ok: false, errors: [`日本語が残っています（割合 ${ratio.toFixed(2)}）`] };
+  const finish = (text) => normalizeOrganizationNames(text.trim(), lang);
   const value = Object.fromEntries(
     expectedKeys.map((k) => [
       k,
-      Array.isArray(parsed[k]) ? parsed[k].map((t) => t.trim()) : parsed[k].trim(),
+      Array.isArray(parsed[k]) ? parsed[k].map(finish) : finish(parsed[k]),
     ])
   );
   return { ok: true, value };

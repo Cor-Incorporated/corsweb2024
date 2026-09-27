@@ -13,6 +13,7 @@ import {
   FIXED_NOW,
   JA_BLOG,
   JA_NEWS,
+  initGitRepo,
 } from './helpers.mjs';
 
 let repo;
@@ -118,6 +119,7 @@ describe('i18n CLI', () => {
       'Legacy title'
     );
     repo = await createTempRepo({ 'blog/ja/alpha.md': JA_BLOG, 'blog/en/alpha.md': legacy });
+    initGitRepo(repo.root); // --adopt は git の履歴で ja と翻訳の新旧を確かめる（同じコミットなので採用できる）
     const skipped = await cli(['--write', '--langs', 'en']);
     expect(skipped.code).toBe(1);
     expect(readFileSync(file('blog/en/alpha.md'), 'utf8')).toBe(legacy);
@@ -199,6 +201,8 @@ describe('argument validation', () => {
     [['--retranslate-untracked'], /--write/],
     [['--prune-untracked'], /--write/],
     [['--adopt', '--prune-untracked'], /--write/],
+    [['--force-adopt'], /--adopt/],
+    [['--write', '--force-adopt'], /--adopt/],
     [['--unknown'], /Unknown option/],
   ])('rejects %j', (argv, pattern) => {
     expect(() => parseCliArgs(argv)).toThrow(pattern);

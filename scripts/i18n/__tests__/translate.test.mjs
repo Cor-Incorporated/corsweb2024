@@ -97,7 +97,7 @@ describe('translateDocument with a mocked Gemini client', () => {
     const { data } = await run(client, { source: news, collection: 'news', lang: 'ko' });
     expect(data).toMatchObject({
       tags: ['lorem', 'lorem'],
-      source: 'Cor.lorem',
+      source: 'Cor.주식회사', // 社名はモデルに渡さず、各言語の正式表記で戻す（glossary.mjs）
       lang: 'ko',
       category: 'info',
     });

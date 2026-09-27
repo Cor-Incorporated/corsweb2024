@@ -7,6 +7,7 @@ import { parseArgs } from 'node:util';
 import { z } from 'astro/zod';
 import { COLLECTION_NAMES, readRuntimeConfig, TARGET_LANGS } from './config.mjs';
 import { createGeminiClient } from './gemini.mjs';
+import { createAdoptionGuard } from './history.mjs';
 import { buildPlan, changedContent, SLUG_RE } from './plan.mjs';
 import { createRateLimiter, withResilience } from './retry.mjs';
 import { removeFile, runAdopt, runCheck, runWrite, writeFileAtomic } from './run.mjs';
@@ -19,6 +20,7 @@ export const USAGE = `使い方: node scripts/i18n/translate-content.mjs [モー
                           コピー対象のずれは API なしで同期し、ja が無い翻訳は条件つきで削除する
                           （--since では差分で ja の削除を確認できたものだけ・来歴なしは --prune-untracked）
   --adopt                 来歴の無い既存翻訳（untracked）を「現在の ja に対応済み」として採用（API 不要）
+                          git の履歴で ja が翻訳より後に変わった記事は拒否する（--force-adopt で上書き）
 
 オプション
   --collections blog,cases,news   対象コレクション（既定: 全部）
@@ -27,6 +29,7 @@ export const USAGE = `使い方: node scripts/i18n/translate-content.mjs [モー
   --since <git-ref>               <git-ref>...HEAD で変更された記事だけに絞る（PR 用。--only と併用不可）
   --retranslate-untracked         --write で untracked も再翻訳する（既定は触らない）
   --prune-untracked               --write で来歴の無い orphan も削除する（既定は触らない）
+  --force-adopt                   --adopt で、ja が翻訳より後に変わった記事も採用する（確かめたうえで）
   --dry-run                       --write / --adopt の計画だけ表示（API も書き込みもしない）
   --root <dir>                    リポジトリのルート（既定: カレントディレクトリ）
 
@@ -67,6 +70,7 @@ const ArgsSchema = z
     'dry-run': z.boolean().default(false),
     'retranslate-untracked': z.boolean().default(false),
     'prune-untracked': z.boolean().default(false),
+    'force-adopt': z.boolean().default(false),
     help: z.boolean().default(false),
     collections: listArg(COLLECTION_NAMES, '--collections'),
     langs: listArg(TARGET_LANGS, '--langs'),
@@ -95,6 +99,7 @@ const ArgsSchema = z
       issue('--retranslate-untracked は --write と一緒に指定してください');
     if (v['prune-untracked'] && !v.write)
       issue('--prune-untracked は --write と一緒に指定してください');
+    if (v['force-adopt'] && !v.adopt) issue('--force-adopt は --adopt と一緒に指定してください');
     if (v['dry-run'] && !v.write && !v.adopt)
       issue('--dry-run は --write か --adopt と一緒に指定してください');
   });
@@ -112,6 +117,7 @@ export function parseCliArgs(argv) {
       'dry-run': { type: 'boolean' },
       'retranslate-untracked': { type: 'boolean' },
       'prune-untracked': { type: 'boolean' },
+      'force-adopt': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
       collections: { type: 'string' },
       langs: { type: 'string' },
@@ -223,6 +229,10 @@ export async function main(argv, deps = {}) {
       createClient: deps.createClient ?? defaultClientFactory(config, env, out),
       writeFile: deps.writeFile ?? writeFileAtomic,
       removeFile: deps.removeFile ?? removeFile,
+      forceAdopt: args['force-adopt'],
+      adoptionGuard:
+        deps.adoptionGuard ??
+        createAdoptionGuard({ root, ...(deps.runGit ? { runGit: deps.runGit } : {}) }),
     };
     if (args.write) {
       return await runWrite({
