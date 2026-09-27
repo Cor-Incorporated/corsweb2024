@@ -18,13 +18,23 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
   - サイトは Astro の静的出力で、Firebase Hosting の静的配信（ADR-0017）。
   - 本文は `src/content/<collection>/<lang>/<slug>.md`（blog / news / cases × ja / en / zh / ko / es）。スキーマは `src/content/config.ts`。ja が原文。
   - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019、別 PR で作成予定）。
-  - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop には現時点で GitHub 上の保護が無い（PoC で設定する）。
+  - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop も 2026-09-27 に保護を設定した（PR 必須・承認 0 件・必須チェック 2 本・管理者にも適用）。
+  - Sveltia CMS は、ログインした GitHub のトークン（refresh token を含む）をブラウザの localStorage に保存する。localStorage はオリジン単位なので、同じオリジンで動くスクリプトはすべてトークンを読める。要求するスコープは `public_repo,user` で、そのユーザーが書き込める全ての公開リポジトリに及ぶ（2026-09-28 時点で、書き込み権限者 4 名は全員がリポジトリの管理者）。
+  - 公開サイト（cor-jp.com）には CSP が無く、計測や reCAPTCHA などの第三者スクリプトを読み込んでいる（2026-09-28 のレビューで確認）。
 
 ## 決定
 
-1. CMS に Sveltia CMS（MIT）を採用する。管理画面は `src/pages/admin/index.astro`（noindex の最小 HTML）で npm 版の Sveltia CMS を Vite で同梱し、設定は `public/admin/config.yml` に置いて、`https://cor-jp.com/admin/` で静的に配信する。フォント・翻訳などの付随ファイルも自サイトから配信し、外部 CDN を読まない。SSR・adapter・DB は導入しない。
+1. CMS に Sveltia CMS（MIT）を採用する。管理画面は公開サイトとは別のオリジンに置く。専用の Firebase Hosting サイト `cor-jp-cms`（`https://cor-jp-cms.web.app/`、プロジェクト cor-jp-web）で配信し、cor-jp.com・develop チャネル・プレビューチャネルには置かない。
+   - 公開サイトと同じオリジンに置くと、公開サイトの第三者スクリプトの侵害や、どこか 1 ページの XSS で、編集者のトークンを読まれるため。
+   - 管理画面は Astro から独立した Vite のビルド（`cms/`）で、npm 版の Sveltia CMS を同梱する。noindex の最小 HTML と `config.yml` だけを置き、フォント・翻訳などの付随ファイルも同じサイトから配信して、外部 CDN を読まない。
+   - 厳しい CSP（許可リスト方式、`frame-ancestors 'none'`）を付ける。OAuth のポップアップと通信するため、Cross-Origin-Opener-Policy は `same-origin-allow-popups` にする。
+   - 配信は main へのマージ後だけ（`.github/workflows/deploy-cms.yml`）。管理画面のコードの変更は、main の承認 1 件を経る。
+   - SSR・adapter・DB は導入しない。
 2. GitHub バックエンドを使う（対象ブランチは develop）。`publish_mode: editorial_workflow` とし、下書きは PR、レビューは PR のラベル、公開は merge commit で行う。
-3. 認証は GitHub OAuth App と Sveltia CMS Authenticator（Cloudflare Workers）で行う。呼び出し元のドメインを限定する。編集者は各自の GitHub アカウント（リポジトリの Write 権限）でログインする。
+3. 認証は GitHub OAuth App と Sveltia CMS Authenticator（Cloudflare Workers）で行う。編集者は各自の GitHub アカウント（リポジトリの Write 権限）でログインする。
+   - トークンを渡してよいオリジン（`ALLOWED_DOMAINS`）は、`workers/sveltia-cms-auth/wrangler.toml` の `[vars]` に完全一致で宣言する（`cor-jp-cms.web.app`。ワイルドカード・develop・プレビューは入れない）。
+   - secret にはしない。secret だと値を後から確認できず、未設定や空のとき Authenticator はどのオリジンにもトークンを渡すため。
+   - wrangler.toml の値と管理画面のサイト名が一致すること、空・`*`・プレビューを含まないことを、テストで強制する。
 4. CMS が編集するのは ja のフォルダだけとする（`src/content/{blog,news,cases}/ja`）。en / zh / ko / es は翻訳 CI の専有とする。この範囲と、カテゴリの定義・スキーマの必須項目が一致していることを、`config.yml` を読むテストで強制する。
 5. プレビューは Firebase Hosting のプレビューチャネルを使う。develop 宛の PR にもプレビューを作り、CMS の「プレビューを表示」から開けるようにする。
 6. Sveltia CMS の版は devDependency として固定し（package-lock の integrity で改ざんを検知）、更新は依存更新の PR で行う。
@@ -34,7 +44,9 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 ## PoC の受入基準
 
 - 最初に、Sveltia CMS の editorial workflow（下書き・レビューを PR とラベルで管理する機能）が本構成で動作することを確認する。動作しない場合は Decap CMS に切り替える。
-- develop にブランチ保護（PR 必須・必須チェック）を設定し、CMS から develop へ直接 push できないことを確認する。
+- develop のブランチ保護（設定済み）により、CMS から develop へ直接 push できないことを確認する。
+- `https://cor-jp-cms.web.app/` でだけログインでき、他のオリジン（`cor-jp-cms.firebaseapp.com`・プレビュー）からはトークンが渡されないことを確認する。
+- 初回のログインとひととおりの操作で、ブラウザのコンソールに CSP 違反が出ないことを確認する（ログイン後の通信は自動テストで観測できないため）。
 - ブラウザの言語が日本語のとき、管理画面が日本語で表示される。一覧の件数が `src/content/blog/ja` の記事数と一致する。
 - 記事を作成して「レビューに送る」と、base が develop の PR ができ、差分が ja の Markdown と画像だけになる。
 - その PR でビルドとプレビューが成功し、CMS の「プレビューを表示」から該当記事を開ける。
@@ -56,6 +68,9 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 ## 影響
 
 - 編集者全員に GitHub アカウントと Write 権限が必要になる。
+- トークンのスコープ（`public_repo,user`）は、編集者が書き込める全ての公開リポジトリに及ぶ。OAuth App ではリポジトリ単位に絞れないので、編集者にはリポジトリの管理者でないアカウントを使うことを推奨する。
+- develop は承認 0 件で merge できるため、「公開はレビューした人が行う」は GitHub 上では強制されない慣行である。強制が必要になったら、CODEOWNERS とコードオーナーのレビューを develop に設定する。
+- 管理画面の URL は `https://cor-jp-cms.web.app/`（cor-jp.com/admin/ ではない）。初回の配信の前に、Firebase サイトの作成と、配信を有効にするリポジトリ変数の設定が 1 回だけ必要になる（手順は `docs/cms-sveltia.md`）。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
 - 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019、別 PR で作成予定）。
