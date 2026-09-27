@@ -1,6 +1,6 @@
 // /contact の回帰ガードの判定基準（Issue #323 B-1〜B-3・C）。
 //
-// ここが唯一の定義。ビルド済み dist の検査（tests/dist/contact-regression.test.ts）と
+// ここが唯一の定義。ビルド済み dist の検査（tests/build-output/contact-regression.test.ts）と
 // Cloudia 可用性の合成監視（Issue #322）は、この値と関数を import して同じ基準で判定する。
 // 文言や判定を別の場所へ書き写さないこと（片方だけ直して食い違うのを防ぐ）。
 //
