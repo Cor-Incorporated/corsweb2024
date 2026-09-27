@@ -10,6 +10,7 @@ import { getCurrentLocale, type Locale } from '../utils/i18n';
 import { getRobotsContent } from '../config/site';
 import { safeJsonLd } from '../utils/json-ld';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
+import { ORGANIZATION_NAMES } from '../config/organization';
 
 interface Props {
   description: string;
@@ -120,7 +121,8 @@ const robotsContent = getRobotsContent();
     {usesGeneratedOgImage && <meta property="og:image:height" content="630" />}
     <meta property="og:image:alt" content={socialTitle} />
     <meta property="og:locale" content={OG_LOCALES[currentLocale]} />
-    <meta property="og:site_name" content="Cor.Inc." />
+    {/* サイト名は WebSite.name と同じ正本（config/organization.ts のロケール別社名） */}
+    <meta property="og:site_name" content={ORGANIZATION_NAMES[currentLocale]} />
     <meta property="article:author" content="寺田康佑" />
     
     <!-- Twitter -->
