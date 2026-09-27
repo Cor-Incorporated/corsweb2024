@@ -174,6 +174,46 @@ describe('checkBodyOutput (tokens → restore → parity)', () => {
   });
 });
 
+describe('リンク・画像の title の引用符が曲がった訳（“…”）は書き込まない（LOW-5）', () => {
+  // title を “…” にすると、宛先に空白が入った扱いになり、リンク・画像として解釈されなくなる
+  const source = '画像 ![図](/images/a.avif "図の説明") と [公式](https://cor-jp.com "会社の説明")';
+  const { text, store } = protect(source);
+  const curly = fakeTranslate(text).replaceAll('"lorem"', '“lorem”');
+
+  it('画像・リンクの数が ja と一致しないとして落とす', () => {
+    const result = checkBodyOutput({
+      output: curly,
+      finishReason: 'STOP',
+      protectedText: text,
+      store,
+      sourceCore: source,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        '画像の数が一致しません（ja 1 / 翻訳 0）',
+        'リンクの数が一致しません（ja 1 / 翻訳 0）',
+      ])
+    );
+  });
+
+  it('直線の引用符のままなら通る', () => {
+    const result = checkBodyOutput({
+      output: fakeTranslate(text),
+      finishReason: 'STOP',
+      protectedText: text,
+      store,
+      sourceCore: source,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.text).toBe(
+      'lorem ![lorem](/images/a.avif "lorem") lorem [lorem](https://cor-jp.com "lorem")'
+    );
+  });
+});
+
 describe('japaneseRatio', () => {
   it('counts kana + kanji for en/ko/es but only kana for zh', () => {
     expect(japaneseRatio('これは日本語です', 'en')).toBe(1);

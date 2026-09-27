@@ -2,8 +2,9 @@
 /**
  * レビュー指摘 H1 の恒久ゲート: .github/workflows/translate-content.yml の信頼境界を機械照合する。
  *
- * 1. 構造: 書き込みトークン（contents: write / actions: write / TRANSLATION_BOT_TOKEN）を持つジョブで、
- *    npm・node・リポジトリのスクリプト・setup-node を実行しない。npm/node を実行するジョブは読み取り権限だけ。
+ * 1. 構造: 書き込みトークン（contents: write / actions: write / TRANSLATION_BOT_TOKEN）を持つジョブは、
+ *    run で実行するコマンドを許可リスト（ジョブごと）に限り、uses も決まった action だけにする（禁止リストでは
+ *    `./x.sh` や `uses: ./…` を見逃すため）。node / npm / npx を実行するジョブは読み取り権限だけ。
  *    npm ci は --ignore-scripts、checkout は persist-credentials: false、commit / push は hooks 無効。
  * 2. 振る舞い: translate ジョブの「Build the translation patch」と push ジョブの「Verify and apply the patch」の
  *    run スクリプトを YAML から取り出して実際に bash で実行する。正しいパッチ（ja の改名に伴う削除＋追加を含む）は
@@ -17,6 +18,7 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GIT_TEST_CONFIG, removeTempDir } from './helpers.mjs';
+import { shellCommands } from './shell-commands.mjs';
 
 const root = path.resolve(import.meta.dirname, '../../..');
 const workflow = yaml.load(
@@ -24,11 +26,37 @@ const workflow = yaml.load(
 );
 const jobs = Object.entries(workflow.jobs);
 
-const CODE_RE = /\b(npm|npx|node|pnpm|yarn)\b|scripts\//;
-const runsRepoCode = (job) =>
-  job.steps.some(
-    (s) => (s.uses ?? '').startsWith('actions/setup-node') || CODE_RE.test(s.run ?? '')
-  );
+/** ジョブの run で実行されるコマンドと、run の中で定義された関数。 */
+function jobCommands(job) {
+  const parsed = job.steps.filter((s) => s.run).map((s) => shellCommands(s.run));
+  return {
+    commands: [...new Set(parsed.flatMap((p) => p.commands))].sort(),
+    functions: [...new Set(parsed.flatMap((p) => p.functions))].sort(),
+  };
+}
+
+// 書き込みトークンを持つジョブで許すもの（足すときは、そのコマンド・action が信頼しないコードを実行しないことを確かめる）
+const WRITE_JOB_ALLOWLIST = {
+  push: {
+    commands: [
+      '[',
+      '[[',
+      'continue',
+      'date',
+      'echo',
+      'exit',
+      'git',
+      'grep',
+      'read',
+      'set',
+      'tr',
+      'true',
+      'wc',
+    ],
+    uses: ['actions/checkout', 'actions/download-artifact'],
+  },
+  'dispatch-check': { commands: ['echo', 'gh', 'set'], uses: [] },
+};
 const hasWriteToken = (job) =>
   Object.values(job.permissions ?? {}).includes('write') ||
   JSON.stringify(job).includes('TRANSLATION_BOT_TOKEN');
@@ -42,12 +70,43 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
     expect(job.permissions).toBeDefined();
   });
 
-  it.each(jobs)('%s: 書き込みトークンとコード実行を同時に持たない', (name, job) => {
-    expect({ job: name, writeToken: hasWriteToken(job), runsCode: runsRepoCode(job) }).not.toEqual({
+  it.each(jobs.filter(([, job]) => hasWriteToken(job)))(
+    '%s: 書き込みトークンを持つジョブは、許可リストのコマンドと action だけを使う（LOW-5）',
+    (name, job) => {
+      const allow = WRITE_JOB_ALLOWLIST[name];
+      expect(
+        allow,
+        `${name} の許可リストがありません（書き込みトークンを持つジョブを足したら決めること）`
+      ).toBeDefined();
+      const { commands, functions } = jobCommands(job);
+      expect({
+        job: name,
+        notAllowed: commands.filter((c) => !allow.commands.includes(c) && !functions.includes(c)),
+      }).toEqual({
+        job: name,
+        notAllowed: [],
+      });
+      const uses = job.steps
+        .map((s) => s.uses)
+        .filter(Boolean)
+        .map((u) => u.split('@')[0]);
+      expect({ job: name, notAllowed: uses.filter((u) => !allow.uses.includes(u)) }).toEqual({
+        job: name,
+        notAllowed: [],
+      });
+    }
+  );
+
+  it.each(jobs)('%s: node / npm / npx を実行するジョブは読み取り権限だけ', (name, job) => {
+    const runsNode =
+      jobCommands(job).commands.some((c) => ['node', 'npm', 'npx'].includes(c)) ||
+      job.steps.some((s) => (s.uses ?? '').startsWith('actions/setup-node'));
+    if (!runsNode) return;
+    expect({ job: name, permissions: Object.values(job.permissions ?? {}) }).toEqual({
       job: name,
-      writeToken: true,
-      runsCode: true,
+      permissions: Object.values(job.permissions ?? {}).map(() => 'read'),
     });
+    expect(hasWriteToken(job)).toBe(false);
   });
 
   it('GEMINI_API_KEY を使うのは translate ジョブだけで、その権限は contents: read だけ', () => {
