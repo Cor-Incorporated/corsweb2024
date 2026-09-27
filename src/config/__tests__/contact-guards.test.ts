@@ -110,9 +110,28 @@ describe('B-1 findPhoneLeads', () => {
     ]);
   });
 
-  it('文言が無くても tel: リンクを構造で検出する', () => {
-    const findings = findPhoneLeads(parsePage('<main><a href=" TEL:+810000000000 ">0000</a></main>'));
-    expect(findings).toEqual([{ kind: 'tel-link', match: 'TEL:+810000000000', context: 'TEL:+810000000000' }]);
+  it('文言も番号の形も無くても tel: リンクを構造で検出する', () => {
+    const findings = findPhoneLeads(parsePage('<main><a href=" TEL:0000 ">連絡先</a></main>'));
+    expect(findings).toEqual([{ kind: 'tel-link', match: 'TEL:0000', context: 'TEL:0000' }]);
+  });
+
+  // 語を伴わず番号だけが出る回帰（PR #331 レビュー L6）。番号はすべて架空。
+  it.each(['070-0000-0000', '092-000-0000', '0120-000-000', '+81-70-0000-0000', '+81 70 0000 0000', '+81(0)70-0000-0000'])(
+    '番号だけの「%s」を検出する',
+    (number) => {
+      const findings = findPhoneLeads(parsePage(`<main><p>${number}</p></main>`));
+      expect(findings.map((finding) => finding.kind)).toEqual(['number']);
+    }
+  );
+
+  it.each([
+    ['日付', '2026-09-27'],
+    ['時刻付き日付', '2026-09-27T12:00:00+09:00'],
+    ['郵便番号と番地', '810-0001 福岡県 福岡市 中央区天神2丁目3-10'],
+    ['SVG のパスデータ', '<svg><path d="M1.05-12-345 0-1.5-2L10.0-120-3456"></path></svg>'],
+    ['base64', '<img alt="" src="data:image/png;base64,AB+81Cd9+8100a/+81234==">'],
+  ])('番号に似た%sは誤検知しない', (_label, html) => {
+    expect(findPhoneLeads(parsePage(`<main><p>${html}</p></main>`))).toEqual([]);
   });
 
   it('渡した Document を変更しない', () => {

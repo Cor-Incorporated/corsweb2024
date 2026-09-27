@@ -151,6 +151,8 @@ describe('B-3 /contact 上のランチャーのフォールバックが自分自
 
 // F2: dist の実物に既知の事故入力を注入し、判定が赤になることを毎回確かめる。
 // ページ構造が変わって判定が空振りし始めたら（素通り）、ここが先に落ちる。
+// 件数を数える注入テストは「注入前との差分」で判定する。dist がすでに壊れているときは本体の
+// B-1〜B-3 だけが落ち、ここは巻き添えで落ちない（失敗の報告先を 1 か所に保つ）。
 describe('反証: dist の実物へ事故を注入すると検出する', () => {
   it('zh の /contact に「电话」が出る', () => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS.zh);
@@ -171,8 +173,23 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     expect(findPhoneLeads(document).map((finding) => finding.kind)).toContain('tel-link');
   });
 
-  // 注入テストは「注入前との差分」で判定する。dist がすでに壊れているときは本体の
-  // B-1〜B-3 だけが落ち、ここは巻き添えで落ちない（失敗の報告先を 1 か所に保つ）。
+  // 語を伴わず番号だけが出る回帰（番号は架空）。
+  it.each([
+    ['ja', '092-000-0000'],
+    ['es', '+81 92-000-0000'],
+  ] as const)('%s の /contact に電話番号だけ（%s）が出る', (locale, number) => {
+    const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
+    lastMain(document).insertAdjacentHTML('beforeend', `<p>${number}</p>`);
+    expect(findPhoneLeads(document).map((finding) => finding.kind)).toContain('number');
+  });
+
+  // 陽性対照: 法令で番号を表示する特商法ページ（B-1 の対象外）では、サイト自身が出している
+  // 表記（国内表記・+81 表記）を番号として検出できる。表記が変わって空振りし始めたらここが落ちる。
+  it.each(['/legal/tokushoho/', '/en/legal/tokushoho/'])('特商法ページ %s の番号を検出できる', (legalPath) => {
+    const { document } = loadDistPage(legalPath);
+    expect(findPhoneLeads(document).map((finding) => finding.kind)).toContain('number');
+  });
+
   it('format-detection の meta を足しても誤検出しない', () => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS.ja);
     const before = findPhoneLeads(document);

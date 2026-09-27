@@ -42,7 +42,7 @@ export const CLOUDIA_CHAT_PATH = '/contact/chat/';
 
 // ---------------------------------------------------------------------------
 // B-1: 電話導線の不在（2 段構え）
-// - /contact（問い合わせの入口）: 電話を指す語・tel: リンクが一切出ないこと（語レベル）。
+// - /contact（問い合わせの入口）: 電話を指す語・電話番号・tel: リンクが一切出ないこと（語レベル）。
 // - /privacy: 収集項目として「電話番号」が正当に載る（zh「电话号码」・ko「전화번호」など）ため、
 //   語レベルでは誤検知する。「電話で受け付ける／電話してほしい」を述べる句で判定する（句レベル）。
 //   #323 背景 1（zh/ko/es のプライバシーポリシーに「電話でも受け付ける」が残存）はこちらの事故。
@@ -71,6 +71,15 @@ export const PHONE_LEAD_PATTERNS = {
 export const PHONE_LEAD_EXCLUDED_META_NAMES = ['format-detection'] as const;
 
 /**
+ * 電話番号そのもの（/contact 用）。語を伴わず番号だけが出る回帰を捕まえる。
+ * 国際表記（+81 …）と国内表記（0 始まりのハイフン区切り: 070-1234-5678 / 0120-123-456）。
+ * base64・SVG のパスデータ・日付や郵便番号・長い数字列の一部に一致しないよう前後を制限している。
+ * 実測（2026-09-27・dist 全 481 ページ）で一致したのは、法令で番号を表示する特商法ページ 5 言語だけ。
+ */
+export const PHONE_NUMBER_PATTERN =
+  /(?<![A-Za-z0-9+/])\+81[\s\-.()]*\d|(?<![\d.\-])0\d{1,4}-\d{1,4}-\d{3,4}(?!\d)/u;
+
+/**
  * 「電話で問い合わせ・相談を受け付ける／電話で連絡してほしい」を述べる句（/privacy 用の句レベル）。
  * 「電話番号」のような収集項目には一致しない。PR #324（ad40cd6）が削除した実際の文言
  * （tests/fixtures/phone-inquiry-accidents.ts）にすべて一致することをユニットテストで固定している。
@@ -85,23 +94,24 @@ export const PHONE_INQUIRY_PHRASE_PATTERNS = {
 } as const satisfies Record<Locale, RegExp>;
 
 export type PhoneLeadFinding = {
-  readonly kind: 'text' | 'tel-link' | 'phrase';
+  readonly kind: 'text' | 'number' | 'tel-link' | 'phrase';
   readonly match: string;
   readonly context: string;
 };
 
 /**
  * /contact 用（語レベル）。本文・属性値・インラインスクリプトを含む HTML 全体に
- * PHONE_LEAD_PATTERNS を当て（除外 meta を除く）、加えて tel: リンクを構造で拾う。
+ * PHONE_LEAD_PATTERNS と PHONE_NUMBER_PATTERN を当て（除外 meta を除く）、加えて tel: リンクを構造で拾う。
  */
 export function findPhoneLeads(document: Document): PhoneLeadFinding[] {
   const html = serializeWithoutExcludedMeta(document);
   const textFindings = findingsIn(html, combineGlobal(PHONE_LEAD_PATTERNS), 'text');
+  const numberFindings = findingsIn(html, new RegExp(PHONE_NUMBER_PATTERN.source, 'gu'), 'number');
   const telLinkFindings = Array.from(document.querySelectorAll('a[href], area[href]'))
     .map((element) => (element.getAttribute('href') ?? '').trim())
     .filter((href) => /^tel:/iu.test(href))
     .map((href) => ({ kind: 'tel-link' as const, match: href, context: href }));
-  return [...textFindings, ...telLinkFindings];
+  return [...textFindings, ...numberFindings, ...telLinkFindings];
 }
 
 /** /privacy 用（句レベル）。「電話番号」のような収集項目の記載は拾わない。 */
