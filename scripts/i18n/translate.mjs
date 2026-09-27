@@ -4,11 +4,13 @@
  * 流れ: ja frontmatter の翻訳対象フィールドを JSON で翻訳 → 本文を保護して翻訳 → 検証 →
  * frontmatter を組み立て（翻訳対象以外は ja からコピー、lang と来歴を設定）→ Zod ミラーで検証。
  * どこかで検証に落ちたら例外（呼び出し側はファイルを書かない）。
+ * 社名は本文・frontmatter とも保護トークン ⟦N…⟧ で送り、翻訳先言語の正式表記で戻す（glossary.mjs）。
  */
 import { COLLECTIONS, META_KEYS } from './config.mjs';
 import { bodyCore, composeDocument } from './frontmatter.mjs';
+import { SOURCE_NAME_PATTERN } from './glossary.mjs';
 import { computeSourceHash } from './hash.mjs';
-import { protect } from './markdown.mjs';
+import { expandTokens, protect, ProtectionError } from './markdown.mjs';
 import { bodySystemInstruction, fieldsResponseSchema, fieldsSystemInstruction } from './prompt.mjs';
 import { validateTranslatedFrontmatter } from './schema.mjs';
 import { getPath, setPath } from './util.mjs';
@@ -36,6 +38,44 @@ export function fieldsPayload(collection, data) {
       ? [['tags', data.tags.map(String)]]
       : [];
   return Object.fromEntries([...entries, ...tags]);
+}
+
+/**
+ * frontmatter の翻訳ペイロードの社名を保護トークン ⟦N…⟧ に置き換える（本文の protect() と同じ扱い）。
+ * @returns {{ payload: Record<string, string | string[]>, store: Map<string, { kind: string, original: string }> }}
+ */
+export function protectPayloadNames(payload) {
+  const store = new Map();
+  const protectText = (text) => {
+    if (/[⟦⟧]/.test(text)) {
+      throw new ProtectionError(
+        'frontmatter に予約文字 ⟦ ⟧ が含まれているため安全に保護できません'
+      );
+    }
+    return text.replace(SOURCE_NAME_PATTERN, (original) => {
+      const id = `N${store.size}`;
+      store.set(id, { kind: 'org-name', original });
+      return `⟦${id}⟧`;
+    });
+  };
+  const protectedPayload = Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.map(protectText) : protectText(value),
+    ])
+  );
+  return { payload: protectedPayload, store };
+}
+
+/** 翻訳済みペイロードの社名トークンを、翻訳先言語の正式表記に戻す。 */
+export function restorePayloadNames(value, store, lang) {
+  const restoreText = (text) => expandTokens(text, store, lang);
+  return Object.fromEntries(
+    Object.entries(value).map(([key, v]) => [
+      key,
+      Array.isArray(v) ? v.map(restoreText) : restoreText(v),
+    ])
+  );
 }
 
 /** 翻訳済みの値を { fields: { 'image.alt': ... }, tags? } に戻す。 */
@@ -84,7 +124,7 @@ export function buildTranslatedData(collection, sourceData, translated, lang, me
 }
 
 async function translateFields({ collection, lang, data, client, attempts }) {
-  const payload = fieldsPayload(collection, data);
+  const { payload, store } = protectPayloadNames(fieldsPayload(collection, data));
   if (Object.keys(payload).length === 0) return { fields: {} };
   const errors = [];
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -99,7 +139,7 @@ async function translateFields({ collection, lang, data, client, attempts }) {
       input: payload,
       lang,
     });
-    if (result.ok) return fromPayload(collection, result.value);
+    if (result.ok) return fromPayload(collection, restorePayloadNames(result.value, store, lang));
     errors.push(...result.errors.map((e) => `#${attempt} ${e}`));
   }
   throw new TranslationError('frontmatter', errors);

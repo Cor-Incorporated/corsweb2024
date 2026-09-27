@@ -25,7 +25,8 @@
    - push トークンは既定で `GITHUB_TOKEN`。`TRANSLATION_BOT_TOKEN`（fine-grained PAT / GitHub App）は任意とし、登録すると push 後の CI が承認なしで再実行されるが、有効期間と権限が GITHUB_TOKEN より広い（漏えい時の影響が大きい）ことを運用文書に明記する。
    - `workflow_dispatch`: 既存記事のバックフィル（`chore/i18n-backfill-<日付>`）と既存翻訳の採用（`chore/i18n-adopt-<日付>`）も同じ 2 段で、ブランチの push まで。PR は人が作る。
    - 1 回の翻訳件数は `I18N_MAX_ITEMS`（PR は 20、バックフィルは 500）まで。
-7. **frontmatter の慣習は既存翻訳に合わせる**: blog の tags は訳さない（タグページの言語切替が同一文字列前提）、cases / news の tags と news の `source` は訳す。
+7. **社名は決定的に扱う**（ADR-0007）: 「Cor.株式会社」とその表記ゆれは翻訳前に保護トークンにしてモデルに渡さず、翻訳後に翻訳先言語の正式表記（ja / zh `Cor.株式会社`、ko `Cor.주식회사`、en / es `Cor.Inc.`）へ置き換える。モデルが書いた表記ゆれも正式表記にそろえる。用語集 `scripts/i18n/glossary.mjs` の正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）。
+8. **frontmatter の慣習は既存翻訳に合わせる**: blog の tags は訳さない（タグページの言語切替が同一文字列前提）、cases / news の tags と news の `source` は訳す。
 
 ## 理由
 - 「ja を 1 本マージすれば 5 言語が揃う」には、翻訳の要否を機械的に決める鮮度判定と、人の介在なく走るトリガー（PR 上の CI）が必要。ハッシュを翻訳ファイル自身に持たせれば、別の状態ファイルや DB が要らない（ADR-0008 / 0009 の「静的・DB なし」方針と整合）。
