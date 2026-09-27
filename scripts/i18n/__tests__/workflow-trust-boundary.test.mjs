@@ -84,6 +84,15 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
     gitWrites.forEach((l) => expect(l).toContain('core.hooksPath=/dev/null'));
   });
 
+  it('concurrency: PR は PR ごと、workflow_dispatch は実行ごと（待機中の dispatch を置き換えで消さない。LOW-4）', () => {
+    expect(workflow.concurrency.group).toContain(
+      'github.event.pull_request.number || github.run_id'
+    );
+    expect(workflow.concurrency['cancel-in-progress']).toBe(
+      "${{ github.event_name == 'pull_request' }}"
+    );
+  });
+
   it('外部の action はすべてコミット SHA に固定し、版をコメントで残す（MEDIUM-4）', () => {
     const uses = jobs.flatMap(([, job]) => job.steps.map((s) => s.uses).filter(Boolean));
     expect(uses.length).toBeGreaterThan(0);

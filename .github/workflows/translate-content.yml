@@ -69,8 +69,10 @@ on:
 # 既定は権限なし。各ジョブが必要な最小限だけを宣言する。
 permissions: {}
 
+# PR は PR ごとに 1 本（新しい push で古い実行を取り消す）。workflow_dispatch は実行ごとに別グループにして、
+# 同じ ref に続けて起動した dispatch が待機中に置き換えられて消えないようにする。
 concurrency:
-  group: translate-content-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: translate-content-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
