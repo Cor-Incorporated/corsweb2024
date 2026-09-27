@@ -189,6 +189,11 @@ describe('argument validation', () => {
     [['--only', 'a b'], /--only/],
     [['--only', 'x', '--since', 'HEAD~1'], /同時に指定できません|git の ref/],
     [['--since', '--foo'], /./],
+    // `--since=<値>` 形式では "-" 始まりの値も parseArgs を素通りする。git diff へのオプション注入
+    // （例: --output=<file> で任意のファイルに書き込む）を Zod の ref 検証で止める。
+    [['--check', '--since=--output=x'], /git の ref/],
+    // 許可文字だけで組めるオプション風の値は「"-" 始まり禁止」だけが止める（文字種の検査では通る）
+    [['--check', '--since=--no-index'], /git の ref/],
     [['--since', 'a..b'], /git の ref/],
     [['--dry-run'], /--dry-run/],
     [['--retranslate-untracked'], /--write/],
