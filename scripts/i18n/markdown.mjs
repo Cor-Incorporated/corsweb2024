@@ -275,10 +275,16 @@ export function isBlockTokenLine(line) {
 // ---- 構造メトリクス -----------------------------------------------------------
 const HEADING_RE = /^ {0,3}(#{1,6})(?:[ \t]|$)/;
 const TABLE_ROW_RE = /^[ \t]*\|/;
+// 空行（引用記号 > だけの行も含む）。これで区切られた連続行を 1 ブロック（段落・リスト・表・見出し…）と数える。
+const SEPARATOR_RE = /^(?:[ \t]*>)*[ \t]*$/;
+// 箇条書き・番号付きリストの項目（引用内・入れ子を含む）。`*強調*` や `---` は項目ではない。
+const LIST_ITEM_RE = /^(?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]+|$)/;
 
 /**
- * 構造メトリクス。kinds は保護対象の種類ごとの元文字列（入れ子展開済み）。
- * @returns {{ headings: number[], tableRows: number, kinds: Record<string, string[]> }}
+ * 構造メトリクス。保護後のテキスト（コード等は 1 行のトークン）で数えるので、コードブロック内の
+ * 空行や "- " は数に入らない。kinds は保護対象の種類ごとの元文字列（入れ子展開済み）。
+ * @returns {{ headings: number[], tableRows: number, textBlocks: number, listItems: number,
+ *            kinds: Record<string, string[]> }}
  */
 export function analyze(markdown) {
   const { text, store } = protect(markdown);
@@ -288,10 +294,20 @@ export function analyze(markdown) {
   }
   const headings = [0, 0, 0, 0, 0, 0];
   let tableRows = 0;
+  let textBlocks = 0;
+  let listItems = 0;
+  let inBlock = false;
   for (const line of text.split('\n')) {
+    if (SEPARATOR_RE.test(line)) {
+      inBlock = false;
+      continue;
+    }
+    if (!inBlock) textBlocks += 1;
+    inBlock = true;
     const h = line.match(HEADING_RE);
     if (h) headings[h[1].length - 1] += 1;
     if (TABLE_ROW_RE.test(line)) tableRows += 1;
+    if (LIST_ITEM_RE.test(line)) listItems += 1;
   }
-  return { headings, tableRows, kinds };
+  return { headings, tableRows, textBlocks, listItems, kinds };
 }

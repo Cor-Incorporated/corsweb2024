@@ -25,6 +25,12 @@ featured: true
 
 これは \`npm run build\` の説明です。詳細は [公式サイト](https://cor-jp.com) を参照。
 
+Second paragraph stays in English.
+
+- 項目その1
+- 項目その2
+- Third item
+
 \`\`\`js
 // コメントは訳さない
 console.log("こんにちは");

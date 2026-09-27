@@ -3,7 +3,7 @@
  *
  * - トークン検証: プレースホルダが全部・1 回ずつ・壊れず残っているか、ブロックは単独行か
  * - 構造パリティ: 見出し（レベル別）・コードブロック（内容一致）・リンク/画像の宛先・数式・HTML・
- *   リンクカード・表の行数が ja と一致するか
+ *   リンクカード・表の行数・空行区切りのブロック（段落等）の数・リスト項目の数が ja と一致するか
  * - 未翻訳検出: 日本語（かな・漢字）が残りすぎていないか
  */
 import { analyze, isBlockTokenLine, restore, stripTokens, tokenIds } from './markdown.mjs';
@@ -91,6 +91,13 @@ export function compareStructure(sourceMarkdown, translatedMarkdown) {
   }
   if (src.tableRows !== out.tableRows)
     errors.push(`表の行数が一致しません（ja ${src.tableRows} / 翻訳 ${out.tableRows}）`);
+  // 見出し・コード・リンクの数が変わらない「段落 1 つ」「リスト項目 1 つ」の欠落・結合も落とす。
+  if (src.textBlocks !== out.textBlocks)
+    errors.push(
+      `段落などのブロック数が一致しません（ja ${src.textBlocks} / 翻訳 ${out.textBlocks}）`
+    );
+  if (src.listItems !== out.listItems)
+    errors.push(`リスト項目の数が一致しません（ja ${src.listItems} / 翻訳 ${out.listItems}）`);
   return errors;
 }
 

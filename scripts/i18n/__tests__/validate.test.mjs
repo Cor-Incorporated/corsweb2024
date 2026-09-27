@@ -84,6 +84,36 @@ describe('compareStructure (parity)', () => {
     expect(broken).not.toBe(translated);
     expect(compareStructure(sourceCore, broken).join('\n')).toContain(message);
   });
+
+  // P7b: 見出し・コード・リンクの数が変わらない「段落 1 つ」「リスト項目 1 つ」の欠落も落とす。
+  it.each([
+    [
+      'P7b: paragraph dropped',
+      (t) => t.replace('Second paragraph stays in English.\n\n', ''),
+      '段落などのブロック数が一致しません（ja 13 / 翻訳 12）',
+    ],
+    [
+      'P7b: two paragraphs merged',
+      (t) =>
+        t.replace('\n\nSecond paragraph stays in English.', ' Second paragraph stays in English.'),
+      '段落などのブロック数が一致しません（ja 13 / 翻訳 12）',
+    ],
+    [
+      'P7b: list item dropped',
+      (t) => t.replace('- Third item\n', ''),
+      'リスト項目の数が一致しません（ja 3 / 翻訳 2）',
+    ],
+  ])('rejects: %s', (_name, mutate, message) => {
+    const broken = mutate(translated);
+    expect(broken).not.toBe(translated);
+    expect(compareStructure(sourceCore, broken)).toContain(message);
+  });
+
+  it('P7b: the model dropping a paragraph is rejected end-to-end (nothing to write)', () => {
+    const result = check(goodOutput.replace('Second paragraph stays in English.\n\n', ''));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('段落などのブロック数が一致しません（ja 13 / 翻訳 12）');
+  });
 });
 
 describe('checkBodyOutput (tokens → restore → parity)', () => {
