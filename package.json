@@ -11,7 +11,6 @@
     "astro": "./node_modules/.bin/astro",
     "translate": "node scripts/translate-blog.js",
     "translate:all": "node scripts/translate-all-blog.js",
-    "blog:draft": "node scripts/generate-blog-draft.mjs",
     "blog:check": "node scripts/blog-guardrails.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -29,7 +28,6 @@
   },
   "dependencies": {
     "@alpinejs/collapse": "3.12.3",
-    "@anthropic-ai/sdk": "^0.105.0",
     "@astrojs/check": "^0.3.3",
     "@astrojs/rss": "^4.0.12",
     "@astrojs/sitemap": "^3.4.1",
