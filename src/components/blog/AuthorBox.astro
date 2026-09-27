@@ -1,5 +1,5 @@
 ---
-// 記事の著者ボックス（H3）。frontmatter の author（例: "Terisuke"）を config/author.ts の
+// 記事の著者ボックス（ADR-0017 / Epic #330）。frontmatter の author（例: "Terisuke"）を config/author.ts の
 // 著者プロフィールに引き当て、写真・名前・肩書・紹介・プロフィールへのリンクを表示する。
 // JSON-LD の Person（BlogStructuredData）と同じ正本を読むので、表示と構造化データがずれない。
 // 未登録の著者なら何も出さない。
@@ -30,14 +30,15 @@ const bio = profile ? authorBio(profile, locale) : undefined;
   profile && (
     <aside
       class="rounded-lg border border-stone-200 bg-stone-50 p-5 dark:border-stone-700 dark:bg-stone-900 sm:p-6"
-      aria-label={labels.heading}
+      aria-labelledby="author-box-heading"
       data-testid="author-box"
     >
-      <p class="mb-4 text-sm font-medium text-stone-500 dark:text-stone-400">{labels.heading}</p>
+      <h2 id="author-box-heading" class="mb-4 text-sm font-medium text-stone-500 dark:text-stone-400">{labels.heading}</h2>
       <div class="flex items-start gap-4">
+        {/* 隣に氏名を表示しているので代替テキストは空（読み上げの重複を避ける）。64px 表示に 128px の縮小版 */}
         <img
-          src={profile.image}
-          alt={name}
+          src={profile.avatar}
+          alt=""
           width="64"
           height="64"
           loading="lazy"
@@ -54,7 +55,8 @@ const bio = profile ? authorBio(profile, locale) : undefined;
             href={getLocalizedUrl(profile.profilePath, locale)}
             class="mt-3 inline-flex text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
           >
-            {labels.link} →
+            {/* 矢印は装飾なので読み上げない。inline-flex では先頭の空白が詰まるため余白は ml-1 で付ける */}
+            {labels.link}<span aria-hidden="true" class="ml-1">→</span>
           </a>
         </div>
       </div>

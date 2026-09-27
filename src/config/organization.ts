@@ -47,3 +47,8 @@ export const SOCIAL_LINKS: readonly SocialLink[] = [
 export const ORGANIZATION_SAME_AS: readonly string[] = SOCIAL_LINKS.filter((link) => link.owner === 'company').map(
   (link) => link.href,
 );
+
+/** 代表個人のアカウントのうちフッターにも載せているもの（Person.sameAs に入れる。config/author.ts が読む）。 */
+export const FOUNDER_SOCIAL_URLS: readonly string[] = SOCIAL_LINKS.filter((link) => link.owner === 'founder').map(
+  (link) => link.href,
+);

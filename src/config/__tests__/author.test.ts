@@ -1,8 +1,9 @@
 // @vitest-environment node
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import { describe, expect, it } from 'vitest';
+import sharp from 'sharp';
 import { buildBlogArticleJsonLd } from '../../utils/blog-structured-data';
 import type { Locale } from '../../utils/i18n';
 import { buildOrganizationJsonLd } from '../../utils/structured-data';
@@ -51,6 +52,50 @@ describe('buildPersonJsonLd', () => {
     expect(existsSync(path.resolve('public', `.${KOUSUKE_TERADA.image}`))).toBe(true);
     const linkedIn = KOUSUKE_TERADA.sameAs.filter((url) => url.includes('linkedin.com'));
     expect(linkedIn).toEqual(['https://www.linkedin.com/in/kousuketerada/']);
+  });
+
+  it('uses a small avatar for the 64px author box and the full photo for Person.image', async () => {
+    const avatar = path.resolve('public', `.${KOUSUKE_TERADA.avatar}`);
+    const meta = await sharp(avatar).metadata();
+    expect([meta.width, meta.height]).toEqual([128, 128]);
+    expect(readFileSync(avatar).length).toBeLessThan(10_000);
+    expect(buildPersonJsonLd(KOUSUKE_TERADA, 'ja').image).toBe(`https://cor-jp.com${KOUSUKE_TERADA.image}`);
+  });
+
+  it('keeps the pre-unification romanization as an alternate name', () => {
+    expect(buildPersonJsonLd(KOUSUKE_TERADA, 'en').alternateName).toContain('Kosuke Terada');
+  });
+
+  it('reads the bio from the teamData entry with the same id in every locale', () => {
+    for (const locale of LOCALES) {
+      const members = JSON.parse(readFileSync(path.resolve('src/i18n/locales', `${locale}.json`), 'utf8')).teamData;
+      const entries = members.filter((member: { id?: string }) => member.id === KOUSUKE_TERADA.id);
+      expect(entries, locale).toHaveLength(1);
+      expect(authorBio(KOUSUKE_TERADA, locale)).toBe(entries[0].description);
+    }
+  });
+});
+
+// CEO 判断（2026-09-27）: x.com/cor_terisuke は代表個人のアカウント。会社と個人で同じ URL を sameAs に
+// 載せると、検索エンジンが会社と個人を同一視しうる。どちらかに足すと両側の値を出して落ちる。
+describe('sameAs separation between Person and Organization', () => {
+  it('Person.sameAs and Organization.sameAs share no URL', () => {
+    const person = buildPersonJsonLd(KOUSUKE_TERADA, 'ja').sameAs as string[];
+    const organization = buildOrganizationJsonLd('ja').sameAs as string[];
+    const shared = person.filter((url) => organization.includes(url));
+    expect(shared, `Person.sameAs=${JSON.stringify(person)} Organization.sameAs=${JSON.stringify(organization)}`).toEqual([]);
+    expect(person).toContain('https://x.com/cor_terisuke');
+  });
+
+  it('no source file keeps the wrong LinkedIn handle', () => {
+    const wrongHandle = ['terada', 'kousuke'].join('');
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const full = path.join(dir, name);
+        return statSync(full).isDirectory() ? walk(full) : [full];
+      });
+    const offenders = walk(path.resolve('src')).filter((file) => readFileSync(file, 'utf8').includes(`linkedin.com/in/${wrongHandle}`));
+    expect(offenders).toEqual([]);
   });
 });
 

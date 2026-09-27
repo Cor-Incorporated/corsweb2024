@@ -86,7 +86,7 @@ export type BlogArticleInput = {
 
 export function buildBlogArticleJsonLd(input: BlogArticleInput): JsonLd {
   const { title, description, keywords, author, pubDate, updatedDate, category, tags, image, locale, pageUrl } = input;
-  // 登録済みの著者は、同じページに出す Person ノード（config/author.ts）を @id で参照する（H3）
+  // 登録済みの著者は、同じページに出す Person ノード（config/author.ts）を @id で参照する（ADR-0017）
   const profile = findAuthor(author);
   return {
     '@context': 'https://schema.org',

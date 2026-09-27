@@ -1,18 +1,22 @@
 /**
- * ブログ著者（Person）の正本（H3）。著者ボックス・Article.author・Organization.founder がここを読む。
+ * ブログ著者（Person）の正本（ADR-0017: 著者は 1 か所で定義し @id で参照する / Epic #330）。
+ * 著者ボックス・About の #founder-story・Article.author・Organization.founder がここを読む。
+ * 写真と経歴の再掲載は CEO 承認済み（2026-09-27）。
  *
  * 事実の出典（推測で足さない。変えるときは出典側も確認する）:
  * - 日本語名「寺田 康佑」/ 役職: privacy.businessTable・security.basicPolicy.signatureName（5 言語）
  * - 英字名「Kousuke Terada」: i18n teamData.name（5 言語）。Git の作者名 "Terada Kousuke"、LinkedIn / Facebook の
  *   URL（kousuketerada / kousuke.terada）とも一致するため、en/es の "Kosuke" 表記はこちらに統一した
  * - 韓国語表記「데라다 코스케」: ko の privacy / security / aboutPage.founderLead
- * - 写真 /assets/k-terada.avif と紹介文: i18n teamData（紹介文は teamData から読む）
+ * - 写真 /assets/k-terada.avif（Person.image）と紹介文: i18n teamData（紹介文は teamData の id で引く）。
+ *   著者ボックスは 64px 表示のため、同じ写真を 128×128 に縮小した avatar（/assets/k-terada-128.avif）を使う
  * - ハンドル「Terisuke」: 全記事の frontmatter author。X アカウント cor_terisuke
- * - sameAs: 以前 Organization.sameAs に載っていた代表個人のアカウント（LinkedIn は kousuketerada を採用。
- *   2025-09-23 に sameAs を見直した際も残った側。記事側の teradakousuke は 2025-06-22 以降の機械的な複写）
+ * - sameAs: 代表個人のアカウント。x.com/cor_terisuke は個人アカウント（CEO 判断 2026-09-27）のため
+ *   Organization.sameAs には入れず、ここにだけ置く（フッター表示用の定義 FOUNDER_SOCIAL_URLS から読む）。
+ *   LinkedIn は kousuketerada（CEO 確認済み。旧記事側の teradakousuke は誤り）
  */
 import { getLocalizedUrl, getTranslations, type Locale } from '../utils/i18n';
-import { ORGANIZATION_ID, SITE_ORIGIN } from './organization';
+import { FOUNDER_SOCIAL_URLS, ORGANIZATION_ID, SITE_ORIGIN } from './organization';
 
 export type AuthorProfile = {
   /** URL / @id 用の識別子 */
@@ -26,7 +30,10 @@ export type AuthorProfile = {
   jobTitles: Record<Locale, string>;
   /** 同一人物の別表記（JSON-LD の alternateName） */
   alternateNames: readonly string[];
+  /** 構造化データ用の写真（原寸） */
   image: string;
+  /** 著者ボックス用の縮小写真（128×128。64px 表示の 2x） */
+  avatar: string;
   /** プロフィールのあるページ（ロケールで接頭辞を付ける） */
   profilePath: string;
   sameAs: readonly string[];
@@ -50,11 +57,13 @@ export const KOUSUKE_TERADA: AuthorProfile = {
     en: 'Representative Director',
     es: 'Director Representante',
   },
-  alternateNames: ['寺田康佑', '寺田 康佑', 'テラダコウスケ', 'Kousuke Terada', '데라다 코스케', 'terisuke'],
+  // 'Kosuke Terada' は統一前の旧表記。過去の言及と同一人物であることを示すため別名として残す
+  alternateNames: ['寺田康佑', '寺田 康佑', 'テラダコウスケ', 'Kousuke Terada', 'Kosuke Terada', '데라다 코스케', 'terisuke'],
   image: '/assets/k-terada.avif',
+  avatar: '/assets/k-terada-128.avif',
   profilePath: '/about/#founder-story',
   sameAs: [
-    'https://x.com/cor_terisuke',
+    ...FOUNDER_SOCIAL_URLS,
     'https://www.linkedin.com/in/kousuketerada/',
     'https://www.facebook.com/kousuke.terada.35',
     'https://qiita.com/terisuke',
@@ -69,10 +78,10 @@ export function findAuthor(handle: string | undefined): AuthorProfile | undefine
   return AUTHORS.find((author) => author.handles.includes(key));
 }
 
-/** 紹介文は i18n の teamData（写真で同一人物を特定）から読む。二重管理しない。 */
+/** 紹介文は i18n の teamData から、著者と同じ id のエントリーを読む（翻訳の正本は i18n。二重管理しない）。 */
 export function authorBio(author: AuthorProfile, locale: Locale): string | undefined {
-  const members = getTranslations(locale).teamData as readonly { image?: string; description?: string }[];
-  return members.find((member) => member.image === author.image)?.description;
+  const members = getTranslations(locale).teamData as readonly { id?: string; description?: string }[];
+  return members.find((member) => member.id === author.id)?.description;
 }
 
 export function authorProfileUrl(author: AuthorProfile, locale: Locale): string {
