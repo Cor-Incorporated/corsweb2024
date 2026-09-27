@@ -1,6 +1,6 @@
 # ADR-0006 i18n source of truth を `src/utils/i18n.ts` に一本化（`*.json` 廃止）
 
-## ステータス: Superseded (2026-09-27)
+## ステータス: Superseded by 実装 #209（9d96cbc）(2026-09-27)
 
 旧ステータス: Accepted (2026-06-13)。実装は逆方向に進んだ: 2026-07-06 のリファクタ（#209, 9d96cbc）で翻訳データは言語別 JSON `src/i18n/locales/{ja,en,zh,ko,es}.json` に外部化され、`src/utils/i18n.ts`（60 行）は型付きローダーになった。現在の正本は locales の JSON で、「単一の正本を持つ」という本 ADR の意図はこの形で満たされている。以下は当時の記録。
 

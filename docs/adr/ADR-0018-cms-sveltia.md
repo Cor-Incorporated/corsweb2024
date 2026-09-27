@@ -6,6 +6,10 @@
 
 PoC の受入基準をすべて満たした時点で Accepted に改める。
 
+## 暫定運用（PoC 完了まで）
+
+記事の追加・更新は、Markdown を develop 宛の PR で追加して行う（Claude Code での執筆を含む）。yomimono（`cor-jp.com/blog-admin`）は使わない。
+
 ## 背景
 
 - 自作 CMS「読みもの（yomimono）」（Cloudflare Worker、合言葉ログイン、bot によるコミット、入口 `cor-jp.com/blog-admin`）は、2026-06-25 の公開以降、CMS 経由の投稿が 0 本だった。入口 URL がサイト上のどこにも無く、「公開」も develop のプレビューにしか届かなかった。
@@ -13,8 +17,8 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 - 制約:
   - サイトは Astro の静的出力で、Firebase Hosting の静的配信（ADR-0017）。
   - 本文は `src/content/<collection>/<lang>/<slug>.md`（blog / news / cases × ja / en / zh / ko / es）。スキーマは `src/content/config.ts`。ja が原文。
-  - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019）。
-  - main と develop は PR 経由でのみ更新する。main への PR は develop からのみ。
+  - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019、別 PR で作成予定）。
+  - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop には現時点で GitHub 上の保護が無い（PoC で設定する）。
 
 ## 決定
 
@@ -29,6 +33,8 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 ## PoC の受入基準
 
+- 最初に、Sveltia CMS の editorial workflow（下書き・レビューを PR とラベルで管理する機能）が本構成で動作することを確認する。動作しない場合は Decap CMS に切り替える。
+- develop にブランチ保護（PR 必須・必須チェック）を設定し、CMS から develop へ直接 push できないことを確認する。
 - ブラウザの言語が日本語のとき、管理画面が日本語で表示される。一覧の件数が `src/content/blog/ja` の記事数と一致する。
 - 記事を作成して「レビューに送る」と、base が develop の PR ができ、差分が ja の Markdown と画像だけになる。
 - その PR でビルドとプレビューが成功し、CMS の「プレビューを表示」から該当記事を開ける。
@@ -52,7 +58,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 - 編集者全員に GitHub アカウントと Write 権限が必要になる。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
-- 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019）。
+- 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019、別 PR で作成予定）。
 - ja 記事の削除や slug の変更で翻訳ファイルが孤立しないよう、翻訳 CI 側で追随する。
 - スキーマが `config.yml` と `src/content/config.ts` の二重管理になるため、照合テストで結ぶ。
 - Sveltia は 1.0 未満で、主な保守者が 1 人。版の固定と Decap への退避手順を維持する。
@@ -69,4 +75,4 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 ## 関連
 
-ADR-0007（対外表現ガードレール）、ADR-0017（静的 Astro の継続）、ADR-0019（翻訳パイプライン）
+ADR-0007（対外表現ガードレール）、ADR-0017（静的 Astro の継続）、ADR-0019（翻訳パイプライン、別 PR で作成予定）

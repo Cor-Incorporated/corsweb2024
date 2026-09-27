@@ -1,8 +1,8 @@
 # ADR-0009 yomimono CMS の news/cases 拡張 + 非エンジニア向けUI改善 + OGP PNG化
 
-## ステータス: 一部 Superseded by ADR-0018 (2026-09-27)
+## ステータス: 一部 Deprecated (2026-09-27)
 
-yomimono の Worker・UI に関する部分は ADR-0018 で置き換えた（yomimono は #328 で退役）。news / cases のコレクション定義、プレスリリース運用、OGP の PNG 化は存続する。以下は当時の記録（Accepted 2026-07-14）。
+yomimono の Worker・UI に関する部分は廃止した（コードは #328 でリポジトリから削除。後継候補は ADR-0018、Proposed）。news / cases のコレクション定義、プレスリリース運用、OGP の PNG 化は存続する。以下は当時の記録（Accepted 2026-07-14）。
 
 ## 背景
 ADR-0008 で確立した「静的＋記事bot（DBなし）」の読みものCMS基盤（yomimono Worker / `cor-yomimono-bot`）は**ブログ単機能で稼働中**。これを取り巻く4つの課題がある:

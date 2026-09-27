@@ -1,8 +1,8 @@
 # ADR-0001 CMS に StudioCMS（Astroネイティブ・SSR・libSQL）を採用
 
-## ステータス: Superseded by ADR-0018 (2026-09-27)
+## ステータス: Superseded by ADR-0017 (2026-09-27)
 
-旧ステータス: Accepted (2026-06-13)。StudioCMS は導入されなかった（依存もコードも無い）。CMS は Git ベースの Sveltia CMS を採用予定（ADR-0018）。以下は当時の記録。
+旧ステータス: Accepted (2026-06-13)。StudioCMS は導入されなかった（依存もコードも無い）。SSR と DB を前提とする本 ADR は、静的 Astro の継続（ADR-0017）により不採用とした。後継の CMS は ADR-0018（Proposed、Sveltia CMS）で選定中。以下は当時の記録。
 
 ## 背景
 - 現行サイトはブログ記事を `src/content/blog`（Content Collections・各言語10記事）で管理しており、記事更新にはエンジニアの介在とビルド・デプロイが必須。社長（寺田）・Nagi など非エンジニアが「お知らせ」「プレスリリース」「登壇・受賞」を投稿できる運用基盤が存在しない。
