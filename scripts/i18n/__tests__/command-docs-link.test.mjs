@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseCliArgs } from '../cli.mjs';
+import { PRUNE_REASONS } from '../prune.mjs';
 import { HINTS } from '../run.mjs';
 
 const root = path.resolve(import.meta.dirname, '../../..');
@@ -51,6 +52,7 @@ describe('documented commands are accepted by the CLI', () => {
 
   it.each([
     ['--check hints (scripts/i18n/run.mjs)', Object.values(HINTS).join('\n')],
+    ['orphan reasons (scripts/i18n/prune.mjs)', Object.values(PRUNE_REASONS).join('\n')],
     ['docs/i18n-translation.md', read('docs/i18n-translation.md')],
     ['README.md', read('README.md')],
     ['README-en.md', read('README-en.md')],

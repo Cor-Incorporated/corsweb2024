@@ -53,12 +53,18 @@ translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は 
 | `stale` | 翻訳の `translationSourceHash` が今の ja と一致しない | 問題 | 再翻訳して上書き |
 | `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳） |
 | `meta-drift` | ハッシュは一致するが、コピー対象（`pubDate` `featured` 等）や `lang` がずれている | 問題 | API なしで ja から同期 |
-| `orphan` | ja が無い翻訳（ja を削除・改名した） | 問題 | 翻訳ファイルを削除（ja ディレクトリが空のときは安全装置で中止） |
+| `orphan` | ja が無い翻訳（ja を削除・改名した、または翻訳だけを追加した） | 問題 | 下の条件をすべて満たすものだけ削除。満たさないものは削除せず失敗として報告 |
 | `invalid` | 翻訳ファイルの frontmatter が壊れている | 問題 | 再翻訳して上書き |
 | `source-error` | ja の frontmatter が壊れている | 問題 | 何もしない（ja を直す） |
 | `ok` | 同期済み | — | 何もしない |
 
 `--check` は 1 件でも問題があれば終了コード 1、`--write` は失敗・未処理が 1 件でもあれば終了コード 1、引数や設定の誤りは終了コード 2 です。
+
+`orphan` を削除する条件（人が書いた翻訳や、ja の改名だけで消える事故を防ぐため）:
+
+1. `--since`（PR の差分）で実行したときは、その差分で **ja の削除が確認できた**記事だけ。PR で en などの翻訳だけを追加した記事は消さない
+2. 来歴（`translationSourceHash`）の無い翻訳は、`--prune-untracked` を明示したときだけ
+3. 1 回に消す件数がコレクションの翻訳ファイル数 × `I18N_MAX_PRUNE_RATIO`（既定 0.25。最低でも記事 1 本分）以下で、ja ディレクトリが空でないこと。超えたらそのコレクションでは 1 件も消さない
 
 ## 4. 翻訳で守るもの（保護）と検証
 
@@ -86,7 +92,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 ```
 
 - `npm run i18n:translate` は `.env` を自動では読みません。ローカルで翻訳するときは `node --env-file=.env ...` で起動するか、シェルで `GEMINI_API_KEY` を設定してください。
-- オプション: `--collections blog,cases,news` / `--langs en,zh,ko,es` / `--only <slug>` または `<collection>/<slug>`（カンマ区切り）/ `--since <git-ref>`（`--only` と併用不可）/ `--retranslate-untracked` / `--dry-run` / `--root <dir>`。
+- オプション: `--collections blog,cases,news` / `--langs en,zh,ko,es` / `--only <slug>` または `<collection>/<slug>`（カンマ区切り）/ `--since <git-ref>`（`--only` と併用不可）/ `--retranslate-untracked` / `--prune-untracked`（来歴の無い orphan も削除）/ `--dry-run` / `--root <dir>`。
 
 | 環境変数 | 必須 | 既定値 | 意味 |
 |---|---|---|---|
@@ -98,6 +104,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 | `I18N_MAX_API_ATTEMPTS` | いいえ | `5` | 429 / 5xx / ネットワーク失敗時の試行回数（指数バックオフ、`retryDelay` も尊重） |
 | `I18N_MAX_VALIDATION_ATTEMPTS` | いいえ | `2` | 検証に落ちたときの再生成を含む試行回数 |
 | `I18N_REQUEST_TIMEOUT_MS` | いいえ | `180000` | 1 リクエストのタイムアウト |
+| `I18N_MAX_PRUNE_RATIO` | いいえ | `0.25` | orphan を 1 回で削除してよい割合（コレクションの翻訳ファイル数に対して。0 より大きく 1 以下。最低でも記事 1 本分は許可） |
 
 モデル ID の根拠: <https://ai.google.dev/gemini-api/docs/models>（2026-09-27 確認）。`gemini-3.8-flash` は Stable の最新 Flash で、新規プロジェクトには「3.5 Flash-Lite or 3.8 Flash」が推奨されています（2.5 系は既存ユーザー限定）。公開記事なので品質優先で 3.8 Flash を既定にしています。
 
@@ -106,7 +113,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 ### pull_request（`src/content/**`・`scripts/i18n/**`・このワークフローを変更した PR）
 
 1. **translate**（GEMINI_API_KEY があり、同一リポジトリの PR で、head が develop / main / master でないとき）
-   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除
+   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ）
    - 変更が `src/content/<collection>/{en,zh,ko,es}/*.md` だけであることを確かめてから、`github-actions[bot]` 名義でコミットし PR の head ブランチへ push
    - 一部の記事が失敗しても成功分は push し、最後にジョブを失敗させる
 2. **i18n-check**（translate の後）
@@ -186,7 +193,10 @@ push に使うトークン:
 | `404` / `models/... is not found` | `GEMINI_MODEL` の ID 誤り・提供終了 | 5 章の根拠 URL で現行 ID を確認し、variable を直す |
 | `[untracked]` が出る | 来歴の無い既存翻訳 | `--adopt`（採用）か `--retranslate-untracked`（再翻訳） |
 | `[meta-drift]` | ja の `featured` 等を変えた | PR なら translate ジョブが自動同期。ローカルは `npm run i18n:translate` |
-| `[orphan]` | ja を削除・改名した | PR なら translate ジョブが翻訳を削除する |
+| `[orphan]` | ja を削除・改名した | PR なら translate ジョブが翻訳を削除する（来歴つきの翻訳のみ） |
+| `ja が無いのに翻訳があり、ja の削除が差分にありません` | PR で翻訳（en 等）だけを追加した | ja を追加するか、その翻訳ファイルを PR から削除する |
+| `来歴のない翻訳は自動では削除しません` | ja を削除・改名したが、翻訳は旧来のもの | 削除してよければ手元で `npm run i18n:translate -- --prune-untracked`、または翻訳ファイルを PR で `git rm` する |
+| `削除が多すぎるため中止しました（blog: N 件 / 翻訳 M 件、上限 K 件）` | 1 回の削除が上限を超えた | 意図した削除なら `I18N_MAX_PRUNE_RATIO=1 npm run i18n:translate` のように上限を上げて手元で実行する |
 | `[source-error]` | ja の frontmatter が壊れている | ja を直す（`npm run build` でも同じ箇所が落ちる） |
 | `ja ディレクトリが空のため削除を中止しました（安全装置）` | ja が 1 本も無いのに翻訳だけある | 意図した削除なら翻訳ファイルを手で削除する |
 | `翻訳ディレクトリ以外が変更されたため push しません` | スクリプトが想定外のファイルを変更した | バグ。ログを添えて開発者に連絡（何も push されていない） |

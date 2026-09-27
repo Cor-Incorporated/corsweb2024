@@ -7,9 +7,13 @@
  *   stale       ja あり / 翻訳あり / ハッシュ不一致           → 再翻訳する
  *   meta-drift  ハッシュ一致だがコピー対象（pubDate 等）や lang がずれている → API なしで同期
  *   ok          ハッシュ一致・コピー対象も一致
- *   orphan      ja なし / 翻訳あり（ja を削除・改名した）      → 翻訳を削除する
+ *   orphan      ja なし / 翻訳あり（ja を削除・改名した）      → 条件つきで翻訳を削除する（run.mjs）
  *   invalid     翻訳ファイルの frontmatter が壊れている        → 再翻訳する
  *   source-error ja の frontmatter が壊れている               → 何もしない（人が直す）
+ *
+ * --since で差分を与えたときは、各項目に sourceDiff（ja ファイルがその差分で
+ * 'added' / 'modified' / 'deleted' / 'unchanged' のどれか）を付ける。差分なしの実行では null。
+ * orphan の削除可否（M1）と、旧翻訳の採用可否（M3）はこれを根拠に決める。
  */
 import { execFileSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
@@ -94,13 +98,21 @@ function inScope(only, collection, slug) {
   return !only || only.has(`${collection}/${slug}`) || only.has(slug);
 }
 
-async function planCollection({ root, collection, langs, only }) {
+/** 翻訳ファイルに来歴（translationSourceHash）があるか。壊れたファイル・旧翻訳は false。 */
+export function hasProvenance(target) {
+  const hash = target?.data?.translationSourceHash;
+  return !target?.error && hash !== undefined && hash !== null;
+}
+
+async function planCollection({ root, collection, langs, only, sourceChanges }) {
   const base = path.join(root, CONTENT_ROOT, collection);
   const sourceSlugs = await listSlugs(path.join(base, SOURCE_LANG));
   const sources = new Map();
   const items = [];
+  let targetCount = 0;
   for (const lang of langs) {
     const targetSlugs = await listSlugs(path.join(base, lang));
+    targetCount += targetSlugs.length;
     const slugs = [...new Set([...sourceSlugs, ...targetSlugs])]
       .filter((s) => inScope(only, collection, s))
       .sort();
@@ -111,55 +123,123 @@ async function planCollection({ root, collection, langs, only }) {
       const source = sources.get(slug);
       const target = await readDocument(targetPath);
       const verdict = classify({ collection, lang, source, target });
-      if (verdict)
-        items.push({ collection, slug, lang, ...verdict, sourcePath, targetPath, source, target });
+      const sourceDiff = sourceChanges
+        ? sourceChanges.get(`${collection}/${slug}`) ?? 'unchanged'
+        : null;
+      if (verdict) {
+        items.push({
+          collection,
+          slug,
+          lang,
+          ...verdict,
+          sourceDiff,
+          sourcePath,
+          targetPath,
+          source,
+          target,
+        });
+      }
     }
   }
-  return { items, sourceCount: sourceSlugs.length };
+  return { items, sourceCount: sourceSlugs.length, targetCount };
 }
 
 /**
- * @param {{ root: string, collections: string[], langs: string[], only: Set<string> | null }} scope
- * @returns {Promise<{ items: object[], sourceCounts: Record<string, number> }>}
+ * @param {{ root: string, collections: string[], langs: string[], only: Set<string> | null,
+ *           sourceChanges?: Map<string, 'added' | 'modified' | 'deleted'> | null }} scope
+ *   sourceChanges は --since の差分での ja ファイルの変化（collection/slug → 種類）。
+ * @returns {Promise<{ items: object[], langs: string[], sourceCounts: Record<string, number>,
+ *           targetCounts: Record<string, number> }>}
+ *   targetCounts は対象言語の翻訳ファイル総数（--only / --since で絞る前）。削除比率の分母に使う。
  */
-export async function buildPlan({ root, collections, langs = TARGET_LANGS, only = null }) {
+export async function buildPlan({
+  root,
+  collections,
+  langs = TARGET_LANGS,
+  only = null,
+  sourceChanges = null,
+}) {
   const items = [];
   const sourceCounts = {};
+  const targetCounts = {};
   for (const collection of collections) {
-    const result = await planCollection({ root, collection, langs, only });
+    const result = await planCollection({ root, collection, langs, only, sourceChanges });
     items.push(...result.items);
     sourceCounts[collection] = result.sourceCount;
+    targetCounts[collection] = result.targetCount;
   }
-  return { items, sourceCounts };
+  return { items, langs: [...langs], sourceCounts, targetCounts };
 }
 
 const CONTENT_PATH_RE = new RegExp(`^${CONTENT_ROOT}/([^/]+)/([^/]+)/([^/]+)\\.md$`);
 
-/** git diff のパス一覧から「collection/slug」の集合を作る（コンテンツ以外は無視）。 */
-export function targetsFromPaths(paths) {
+/** コンテンツのパスなら { collection, lang, slug }。それ以外は null。 */
+function parseContentPath(file) {
   const known = new Set([SOURCE_LANG, ...TARGET_LANGS]);
-  const targets = new Set();
-  for (const file of paths) {
-    const m = file.match(CONTENT_PATH_RE);
-    if (!m || !(m[1] in COLLECTIONS) || !known.has(m[2])) continue;
-    if (!SLUG_RE.test(m[3])) throw new Error(`扱えないファイル名です: ${file}`);
-    targets.add(`${m[1]}/${m[3]}`);
-  }
-  return targets;
+  const m = file.match(CONTENT_PATH_RE);
+  if (!m || !(m[1] in COLLECTIONS) || !known.has(m[2])) return null;
+  if (!SLUG_RE.test(m[3])) throw new Error(`扱えないファイル名です: ${file}`);
+  return { collection: m[1], lang: m[2], slug: m[3] };
 }
 
-/** `<ref>...HEAD` で変更されたコンテンツの「collection/slug」集合（PR の差分に絞る用）。 */
-export function changedTargets({ root, since, runGit = defaultRunGit }) {
+/** git diff のパス一覧から「collection/slug」の集合を作る（コンテンツ以外は無視）。 */
+export function targetsFromPaths(paths) {
+  return new Set(
+    paths
+      .map(parseContentPath)
+      .filter(Boolean)
+      .map((p) => `${p.collection}/${p.slug}`)
+  );
+}
+
+/** `git diff --name-status -z` の出力を [{ status, path }] にする（R/C は新しい側のパス）。 */
+export function parseNameStatus(output) {
+  const fields = output.split('\0');
+  const entries = [];
+  let i = 0;
+  while (i < fields.length && fields[i] !== '') {
+    const status = fields[i];
+    const twoPaths = /^[RC]/.test(status);
+    entries.push({ status: status[0], path: fields[i + (twoPaths ? 2 : 1)] });
+    i += twoPaths ? 3 : 2;
+  }
+  return entries;
+}
+
+const SOURCE_CHANGE_KIND = Object.freeze({ A: 'added', D: 'deleted' });
+
+/**
+ * 差分から「対象にする記事」と「ja ファイルの変化」を作る。
+ * @returns {{ targets: Set<string>, sourceChanges: Map<string, 'added' | 'modified' | 'deleted'> }}
+ */
+export function contentChangesFromNameStatus(output) {
+  const entries = parseNameStatus(output);
+  const targets = targetsFromPaths(entries.map((e) => e.path));
+  const sourceChanges = new Map();
+  for (const { status, path: file } of entries) {
+    const p = parseContentPath(file);
+    if (p?.lang === SOURCE_LANG) {
+      sourceChanges.set(`${p.collection}/${p.slug}`, SOURCE_CHANGE_KIND[status] ?? 'modified');
+    }
+  }
+  return { targets, sourceChanges };
+}
+
+/**
+ * `<ref>...HEAD`（merge-base からの差分）で変更されたコンテンツ。
+ * --no-renames なので ja の改名は「旧 slug の削除 + 新 slug の追加」として現れる。
+ */
+export function changedContent({ root, since, runGit = defaultRunGit }) {
   const out = runGit(root, [
     'diff',
-    '--name-only',
+    '--name-status',
     '--no-renames',
     '-z',
     `${since}...HEAD`,
     '--',
     CONTENT_ROOT,
   ]);
-  return targetsFromPaths(out.split('\0').filter(Boolean));
+  return contentChangesFromNameStatus(out);
 }
 
 function defaultRunGit(cwd, args) {

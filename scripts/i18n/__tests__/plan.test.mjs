@@ -2,7 +2,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseDocument } from '../frontmatter.mjs';
 import { computeSourceHash } from '../hash.mjs';
-import { buildPlan, changedTargets, classify, targetsFromPaths } from '../plan.mjs';
+import {
+  buildPlan,
+  changedContent,
+  classify,
+  parseNameStatus,
+  targetsFromPaths,
+} from '../plan.mjs';
 import { createTempRepo, JA_BLOG } from './helpers.mjs';
 
 const source = parseDocument(JA_BLOG);
@@ -115,6 +121,9 @@ describe('buildPlan (filesystem)', () => {
 });
 
 describe('--since targets', () => {
+  let repo;
+  afterEach(async () => repo?.cleanup());
+
   it('maps changed content paths (any language) to collection/slug and ignores other files', () => {
     const targets = targetsFromPaths([
       'src/content/blog/ja/alpha.md',
@@ -133,22 +142,67 @@ describe('--since targets', () => {
     );
   });
 
-  it('asks git for a merge-base diff without renames (deleted ja files stay visible)', () => {
+  it('asks git for a merge-base name-status diff without renames (deleted ja files stay visible)', () => {
     const seen = [];
     const runGit = (_cwd, args) => {
       seen.push(args);
-      return 'src/content/blog/ja/alpha.md\0src/content/news/ja/old.md\0';
+      return [
+        'M',
+        'src/content/blog/ja/alpha.md',
+        'D',
+        'src/content/news/ja/old.md',
+        'A',
+        'src/content/news/ja/new.md',
+        'A',
+        'src/content/blog/en/en-only.md',
+        '',
+      ].join('\0');
     };
-    const targets = changedTargets({ root: '/repo', since: 'abc123', runGit });
+    const { targets, sourceChanges } = changedContent({ root: '/repo', since: 'abc123', runGit });
     expect(seen[0]).toEqual([
       'diff',
-      '--name-only',
+      '--name-status',
       '--no-renames',
       '-z',
       'abc123...HEAD',
       '--',
       'src/content',
     ]);
-    expect([...targets]).toEqual(['blog/alpha', 'news/old']);
+    expect([...targets]).toEqual(['blog/alpha', 'news/old', 'news/new', 'blog/en-only']);
+    // ja ファイルの変化だけを記録する（en だけの追加は ja の変化ではない）
+    expect(Object.fromEntries(sourceChanges)).toEqual({
+      'blog/alpha': 'modified',
+      'news/old': 'deleted',
+      'news/new': 'added',
+    });
+  });
+
+  it('parses rename / copy records (two paths) even though --no-renames normally avoids them', () => {
+    expect(parseNameStatus('R100\0src/a.md\0src/b.md\0M\0src/c.md\0')).toEqual([
+      { status: 'R', path: 'src/b.md' },
+      { status: 'M', path: 'src/c.md' },
+    ]);
+    expect(parseNameStatus('')).toEqual([]);
+  });
+
+  it('annotates plan items with how the ja file changed in the diff (null without --since)', async () => {
+    repo = await createTempRepo({ 'blog/ja/alpha.md': JA_BLOG, 'blog/en/gone.md': JA_BLOG });
+    const withDiff = await buildPlan({
+      root: repo.root,
+      collections: ['blog'],
+      langs: ['en'],
+      only: null,
+      sourceChanges: new Map([
+        ['blog/alpha', 'modified'],
+        ['blog/gone', 'deleted'],
+      ]),
+    });
+    expect(withDiff.items.map((i) => `${i.slug}:${i.status}:${i.sourceDiff}`)).toEqual([
+      'alpha:missing:modified',
+      'gone:orphan:deleted',
+    ]);
+    expect(withDiff.targetCounts).toEqual({ blog: 1 });
+    const withoutDiff = await buildPlan({ root: repo.root, collections: ['blog'], langs: ['en'] });
+    expect(withoutDiff.items.every((i) => i.sourceDiff === null)).toBe(true);
   });
 });

@@ -85,6 +85,13 @@ const intFromEnv = (min, max, fallback) =>
     .transform((v) => (v === undefined || v.trim() === '' ? String(fallback) : v.trim()))
     .pipe(z.coerce.number().int().min(min).max(max));
 
+const ratioFromEnv = (fallback) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined || v.trim() === '' ? String(fallback) : v.trim()))
+    .pipe(z.coerce.number().gt(0).max(1));
+
 const RuntimeEnvSchema = z.object({
   GEMINI_MODEL: z
     .string()
@@ -107,6 +114,9 @@ const RuntimeEnvSchema = z.object({
   I18N_MAX_API_ATTEMPTS: intFromEnv(1, 10, 5),
   I18N_MAX_VALIDATION_ATTEMPTS: intFromEnv(1, 5, 2),
   I18N_REQUEST_TIMEOUT_MS: intFromEnv(10_000, 600_000, 180_000),
+  // ja の無い翻訳（orphan）を 1 回で消してよい量: コレクションの翻訳ファイル数に対する割合
+  // （ただし最低でも記事 1 本分 = 対象言語数）。超えたらそのコレクションでは 1 件も消さない。
+  I18N_MAX_PRUNE_RATIO: ratioFromEnv(0.25),
 });
 
 /**
@@ -128,6 +138,7 @@ export function readRuntimeConfig(env) {
     maxApiAttempts: e.I18N_MAX_API_ATTEMPTS,
     maxValidationAttempts: e.I18N_MAX_VALIDATION_ATTEMPTS,
     requestTimeoutMs: e.I18N_REQUEST_TIMEOUT_MS,
+    maxPruneRatio: e.I18N_MAX_PRUNE_RATIO,
     baseDelayMs: 2_000,
     maxDelayMs: 60_000,
   });

@@ -2,6 +2,7 @@
  * テスト共通: フィクスチャ文書・モック LLM クライアント・一時リポジトリ。
  * 実 API は呼ばない（Gemini クライアントは依存注入でこのモックに差し替える）。
  */
+import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -118,6 +119,35 @@ export async function createTempRepo(files) {
   return { root, cleanup: () => rm(root, { recursive: true, force: true }) };
 }
 
+// 一時リポジトリ用の git。利用者のグローバル設定（hooksPath・署名）に左右されないよう上書きする。
+const GIT_ISOLATION = [
+  '-c',
+  'core.hooksPath=/dev/null',
+  '-c',
+  'commit.gpgsign=false',
+  '-c',
+  'user.name=i18n-test',
+  '-c',
+  'user.email=i18n-test@example.invalid',
+];
+
+export function git(root, ...args) {
+  return execFileSync('git', [...GIT_ISOLATION, ...args], { cwd: root, encoding: 'utf8' });
+}
+
+/** 一時リポジトリの現状をすべてコミットし、その SHA を返す。 */
+export function commitAll(root, message) {
+  git(root, 'add', '--', 'src'); // Git 2.x の pathspec 指定は削除も含めて stage する
+  git(root, 'commit', '-q', '--allow-empty', '-m', message);
+  return git(root, 'rev-parse', 'HEAD').trim();
+}
+
+/** createTempRepo の中身で git リポジトリを作り、最初のコミット（差分の基準）の SHA を返す。 */
+export function initGitRepo(root) {
+  git(root, 'init', '-q', '-b', 'i18n-test');
+  return commitAll(root, 'base');
+}
+
 /** 出力を配列に溜める out。 */
 export function createOut() {
   const lines = [];
@@ -130,3 +160,21 @@ export function createOut() {
 }
 
 export const FIXED_NOW = () => new Date('2026-09-27T00:00:00.000Z');
+
+/** CLI を一時リポジトリに対して実行する（API はモック。createClient の呼び出し回数も返す）。 */
+export async function runCli(root, args, { client = createMockClient(), env = {}, runGit } = {}) {
+  const { main } = await import('../cli.mjs');
+  const out = createOut();
+  let created = 0;
+  const code = await main([...args, '--root', root], {
+    out,
+    env,
+    now: FIXED_NOW,
+    runGit,
+    createClient: async () => {
+      created += 1;
+      return client;
+    },
+  });
+  return { code, out, created, client };
+}

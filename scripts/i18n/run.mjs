@@ -7,6 +7,7 @@ import { ADOPTED_MODEL_LABEL, COLLECTIONS } from './config.mjs';
 import { composeDocument, parseDocument } from './frontmatter.mjs';
 import { computeSourceHash } from './hash.mjs';
 import { classify, STATUSES } from './plan.mjs';
+import { capPrunes, orphanDecision } from './prune.mjs';
 import { mapWithConcurrency } from './retry.mjs';
 import { validateTranslatedFrontmatter } from './schema.mjs';
 import { buildTranslatedData, extractTranslatedValues, translateDocument } from './translate.mjs';
@@ -21,11 +22,21 @@ export const HINTS = Object.freeze({
     '訳し直すなら `npm run i18n:translate -- --retranslate-untracked`',
   'meta-drift':
     'pubDate / category / featured 等が ja とずれています → npm run i18n:translate で同期（API 不要）',
-  orphan: 'ja が無い翻訳です（ja を削除・改名した）→ npm run i18n:translate で削除',
+  orphan:
+    'ja が無い翻訳です（ja を削除・改名した）→ npm run i18n:translate で削除（条件は docs/i18n-translation.md）',
   'source-error': 'ja の frontmatter を解釈できません → ja を修正してください',
 });
 
-/** 状態ごと → collection/slug ごとに言語をまとめた報告行。 */
+/** 項目ごとの具体的な案内（状態ごとの HINTS より優先）。無ければ undefined。 */
+export function itemHint(item) {
+  if (item.status === 'orphan') {
+    const decision = orphanDecision(item, { pruneUntracked: false });
+    return decision.prune ? undefined : decision.reason;
+  }
+  return undefined;
+}
+
+/** 状態ごと → collection/slug ごとに言語をまとめた報告行（項目ごとの案内は ↳ で添える）。 */
 export function formatReport(items) {
   const lines = [];
   for (const status of STATUSES.filter((s) => s !== 'ok')) {
@@ -35,12 +46,14 @@ export function formatReport(items) {
     const bySlug = new Map();
     for (const item of group) {
       const key = `${item.collection}/${item.slug}`;
-      bySlug.set(key, [
-        ...(bySlug.get(key) ?? []),
-        item.lang + (item.reason ? `（${item.reason}）` : ''),
-      ]);
+      bySlug.set(key, [...(bySlug.get(key) ?? []), item]);
     }
-    for (const [key, langs] of bySlug) lines.push(`  ${key} → ${langs.join(', ')}`);
+    for (const [key, slugItems] of bySlug) {
+      const langs = slugItems.map((i) => i.lang + (i.reason ? `（${i.reason}）` : ''));
+      lines.push(`  ${key} → ${langs.join(', ')}`);
+      const hints = [...new Set(slugItems.map(itemHint).filter(Boolean))];
+      hints.forEach((hint) => lines.push(`    ↳ ${hint}`));
+    }
   }
   return lines;
 }
@@ -133,17 +146,14 @@ async function applySync(item, action, ctx) {
   }
 }
 
-async function applyPrune(item, ctx, sourceCounts) {
-  if (!sourceCounts[item.collection]) {
-    return {
-      item,
-      action: 'prune',
-      ok: false,
-      error: 'ja ディレクトリが空のため削除を中止しました（安全装置）',
-    };
+/** 削除してよいかは planWrite（prune.mjs）で判定済み。ここでは消すだけ。 */
+async function applyPrune(item, ctx) {
+  try {
+    if (!ctx.dryRun) await ctx.removeFile(item.targetPath);
+    return { item, action: 'prune', ok: true };
+  } catch (err) {
+    return { item, action: 'prune', ok: false, error: err.message };
   }
-  if (!ctx.dryRun) await ctx.removeFile(item.targetPath);
-  return { item, action: 'prune', ok: true };
 }
 
 async function applyTranslate(item, ctx) {
@@ -170,32 +180,45 @@ function reportResults(results, skipped, out) {
     if (r.ok) out.info(`✓ ${r.action} ${where}`);
     else out.error(`✗ ${r.action} ${where}: ${r.error}`);
   }
-  for (const item of skipped)
-    out.error(
-      `- skip ${item.collection}/${item.slug} [${item.lang}]（${item.status}）: ${
-        HINTS[item.status]
-      }`
-    );
+  for (const { item, reason } of skipped)
+    out.error(`- skip ${item.collection}/${item.slug} [${item.lang}]（${item.status}）: ${reason}`);
   const failed = results.filter((r) => !r.ok).length;
   out.info(`結果: 成功 ${results.length - failed} / 失敗 ${failed} / 未処理 ${skipped.length}`);
   return failed === 0 && skipped.length === 0 ? 0 : 1;
 }
 
-/** --write の作業計画。 */
-export function planWrite(items, { retranslateUntracked }) {
+const skipOf = (item) => ({ item, reason: itemHint(item) ?? HINTS[item.status] });
+
+/**
+ * --write の作業計画。skipped は { item, reason }（処理しなかった理由つき。終了コード 1 になる）。
+ * @param {{ items: object[], langs: string[], sourceCounts: object, targetCounts: object }} plan
+ */
+export function planWrite(plan, { retranslateUntracked, pruneUntracked, maxPruneRatio }) {
+  const { items } = plan;
   const translateStatuses = new Set([
     'missing',
     'stale',
     'invalid',
     ...(retranslateUntracked ? ['untracked'] : []),
   ]);
+  const orphans = items
+    .filter((i) => i.status === 'orphan')
+    .map((item) => ({ item, ...orphanDecision(item, { pruneUntracked }) }));
+  const { prune, blocked } = capPrunes(
+    orphans.filter((o) => o.prune).map((o) => o.item),
+    plan,
+    maxPruneRatio
+  );
   return {
     translate: items.filter((i) => translateStatuses.has(i.status)),
     resync: items.filter((i) => i.status === 'meta-drift'),
-    prune: items.filter((i) => i.status === 'orphan'),
-    skipped: items
-      .filter((i) => i.status === 'untracked' && !retranslateUntracked)
-      .concat(items.filter((i) => i.status === 'source-error')),
+    prune,
+    skipped: [
+      ...items.filter((i) => i.status === 'untracked' && !retranslateUntracked).map(skipOf),
+      ...items.filter((i) => i.status === 'source-error').map(skipOf),
+      ...orphans.filter((o) => !o.prune).map(({ item, reason }) => ({ item, reason })),
+      ...blocked,
+    ],
   };
 }
 
@@ -208,8 +231,8 @@ function printPlan(work, out) {
   rows.forEach(([action, i]) =>
     out.info(`(dry-run) ${action} ${i.collection}/${i.slug} [${i.lang}]（${i.status}）`)
   );
-  work.skipped.forEach((i) =>
-    out.info(`(dry-run) skip ${i.collection}/${i.slug} [${i.lang}]（${i.status}）`)
+  work.skipped.forEach(({ item: i, reason }) =>
+    out.info(`(dry-run) skip ${i.collection}/${i.slug} [${i.lang}]（${i.status}）: ${reason}`)
   );
   out.info(
     `(dry-run) 翻訳 ${work.translate.length} / 同期 ${work.resync.length} / 削除 ${work.prune.length} / 未処理 ${work.skipped.length}`
@@ -217,12 +240,17 @@ function printPlan(work, out) {
 }
 
 /**
- * @param {{ plan: { items: object[], sourceCounts: Record<string, number> }, retranslateUntracked: boolean,
+ * @param {{ plan: { items: object[], langs: string[], sourceCounts: object, targetCounts: object },
+ *           retranslateUntracked: boolean, pruneUntracked: boolean,
  *           ctx: { dryRun: boolean, out: object, now: () => Date, config: object, redact: (s: string) => string,
  *                  createClient: () => Promise<object>, writeFile: Function, removeFile: Function } }} args
  */
-export async function runWrite({ plan, retranslateUntracked, ctx }) {
-  const work = planWrite(plan.items, { retranslateUntracked });
+export async function runWrite({ plan, retranslateUntracked, pruneUntracked = false, ctx }) {
+  const work = planWrite(plan, {
+    retranslateUntracked,
+    pruneUntracked,
+    maxPruneRatio: ctx.config.maxPruneRatio,
+  });
   if (ctx.dryRun) {
     printPlan(work, ctx.out);
     return 0;
@@ -231,7 +259,7 @@ export async function runWrite({ plan, retranslateUntracked, ctx }) {
   const client = work.translate.length > 0 ? await ctx.createClient() : null;
   const synced = [];
   for (const item of work.resync) synced.push(await applySync(item, 'resync', ctx));
-  for (const item of work.prune) synced.push(await applyPrune(item, ctx, plan.sourceCounts));
+  for (const item of work.prune) synced.push(await applyPrune(item, ctx));
   const translated = await mapWithConcurrency(work.translate, ctx.config.concurrency, (item) =>
     applyTranslate(item, { ...ctx, client })
   );

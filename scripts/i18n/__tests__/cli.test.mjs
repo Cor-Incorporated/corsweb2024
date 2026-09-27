@@ -163,7 +163,7 @@ describe('i18n CLI', () => {
 
   it('--since limits the run to articles changed in the diff', async () => {
     repo = await createTempRepo({ 'blog/ja/alpha.md': JA_BLOG, 'blog/ja/other.md': JA_BLOG });
-    const runGit = () => 'src/content/blog/ja/alpha.md\0';
+    const runGit = () => 'M\0src/content/blog/ja/alpha.md\0';
     const result = await cli(['--check', '--since', 'origin/develop'], { runGit });
     expect(result.code).toBe(1);
     expect(result.out.text()).toContain('blog/alpha → en, zh, ko, es');
@@ -192,6 +192,8 @@ describe('argument validation', () => {
     [['--since', 'a..b'], /git の ref/],
     [['--dry-run'], /--dry-run/],
     [['--retranslate-untracked'], /--write/],
+    [['--prune-untracked'], /--write/],
+    [['--adopt', '--prune-untracked'], /--write/],
     [['--unknown'], /Unknown option/],
   ])('rejects %j', (argv, pattern) => {
     expect(() => parseCliArgs(argv)).toThrow(pattern);

@@ -7,7 +7,7 @@ import { parseArgs } from 'node:util';
 import { z } from 'astro/zod';
 import { COLLECTION_NAMES, readRuntimeConfig, TARGET_LANGS } from './config.mjs';
 import { createGeminiClient } from './gemini.mjs';
-import { buildPlan, changedTargets, SLUG_RE } from './plan.mjs';
+import { buildPlan, changedContent, SLUG_RE } from './plan.mjs';
 import { createRateLimiter, withResilience } from './retry.mjs';
 import { removeFile, runAdopt, runCheck, runWrite, writeFileAtomic } from './run.mjs';
 
@@ -16,7 +16,8 @@ export const USAGE = `使い方: node scripts/i18n/translate-content.mjs [モー
 モード（どれか 1 つ。省略時は --check）
   --check                 未翻訳・古い翻訳を列挙し、1 件でもあれば exit 1（API キー不要）
   --write                 不足・古い翻訳だけを Gemini で翻訳して書き込む（GEMINI_API_KEY が必要）
-                          ja が無い翻訳は削除、コピー対象のずれは API なしで同期する
+                          コピー対象のずれは API なしで同期し、ja が無い翻訳は条件つきで削除する
+                          （--since では差分で ja の削除を確認できたものだけ・来歴なしは --prune-untracked）
   --adopt                 来歴の無い既存翻訳（untracked）を「現在の ja に対応済み」として採用（API 不要）
 
 オプション
@@ -25,12 +26,14 @@ export const USAGE = `使い方: node scripts/i18n/translate-content.mjs [モー
   --only <slug>[,<collection>/<slug>...]  対象記事を絞る
   --since <git-ref>               <git-ref>...HEAD で変更された記事だけに絞る（PR 用。--only と併用不可）
   --retranslate-untracked         --write で untracked も再翻訳する（既定は触らない）
+  --prune-untracked               --write で来歴の無い orphan も削除する（既定は触らない）
   --dry-run                       --write / --adopt の計画だけ表示（API も書き込みもしない）
   --root <dir>                    リポジトリのルート（既定: カレントディレクトリ）
 
 環境変数
   GEMINI_API_KEY（--write で翻訳するときのみ必須）, GEMINI_MODEL, GEMINI_THINKING_LEVEL,
-  I18N_RPM, I18N_CONCURRENCY(1-2), I18N_MAX_API_ATTEMPTS, I18N_MAX_VALIDATION_ATTEMPTS, I18N_REQUEST_TIMEOUT_MS`;
+  I18N_RPM, I18N_CONCURRENCY(1-2), I18N_MAX_API_ATTEMPTS, I18N_MAX_VALIDATION_ATTEMPTS, I18N_REQUEST_TIMEOUT_MS,
+  I18N_MAX_PRUNE_RATIO`;
 
 /** "a, b" → ['a', 'b']。未指定・空文字（CI の空入力）は null = 全部。 */
 const splitList = (v) =>
@@ -63,6 +66,7 @@ const ArgsSchema = z
     adopt: z.boolean().default(false),
     'dry-run': z.boolean().default(false),
     'retranslate-untracked': z.boolean().default(false),
+    'prune-untracked': z.boolean().default(false),
     help: z.boolean().default(false),
     collections: listArg(COLLECTION_NAMES, '--collections'),
     langs: listArg(TARGET_LANGS, '--langs'),
@@ -89,6 +93,8 @@ const ArgsSchema = z
     if (v.only && v.since) issue('--only と --since は同時に指定できません');
     if (v['retranslate-untracked'] && !v.write)
       issue('--retranslate-untracked は --write と一緒に指定してください');
+    if (v['prune-untracked'] && !v.write)
+      issue('--prune-untracked は --write と一緒に指定してください');
     if (v['dry-run'] && !v.write && !v.adopt)
       issue('--dry-run は --write か --adopt と一緒に指定してください');
   });
@@ -105,6 +111,7 @@ export function parseCliArgs(argv) {
       adopt: { type: 'boolean' },
       'dry-run': { type: 'boolean' },
       'retranslate-untracked': { type: 'boolean' },
+      'prune-untracked': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
       collections: { type: 'string' },
       langs: { type: 'string' },
@@ -152,15 +159,23 @@ function defaultClientFactory(config, env, out) {
 const redactWith = (env) => (text) =>
   env.GEMINI_API_KEY ? String(text).split(env.GEMINI_API_KEY).join('***') : String(text);
 
-async function resolveScope(args, root, deps, out) {
-  if (!args.since) return args.only ? new Set(args.only) : null;
-  const targets = changedTargets({ root, since: args.since, runGit: deps.runGit });
+/**
+ * 対象記事の絞り込み。--since のときは差分での ja の変化（sourceChanges）も返す。
+ * @returns {{ only: Set<string> | null, sourceChanges: Map<string, string> | null }}
+ */
+function resolveScope(args, root, deps, out) {
+  if (!args.since) return { only: args.only ? new Set(args.only) : null, sourceChanges: null };
+  const { targets, sourceChanges } = changedContent({
+    root,
+    since: args.since,
+    runGit: deps.runGit,
+  });
   out.info(
     `--since ${args.since}: 変更のあった記事 ${targets.size} 件に限定（${
       [...targets].join(', ') || 'なし'
     }）`
   );
-  return targets;
+  return { only: targets, sourceChanges };
 }
 
 /** --only の打ち間違い（どの記事にも当たらない）を「対象なし＝成功」にしない。 */
@@ -190,12 +205,13 @@ export async function main(argv, deps = {}) {
     }
     const config = readRuntimeConfig(env);
     const root = path.resolve(args.root ?? deps.root ?? process.cwd());
-    const only = await resolveScope(args, root, deps, out);
+    const { only, sourceChanges } = resolveScope(args, root, deps, out);
     const plan = await buildPlan({
       root,
       collections: args.collections ?? [...COLLECTION_NAMES],
       langs: args.langs ?? [...TARGET_LANGS],
       only,
+      sourceChanges,
     });
     assertOnlyMatched(args.only, plan.items);
     const ctx = {
@@ -208,8 +224,14 @@ export async function main(argv, deps = {}) {
       writeFile: deps.writeFile ?? writeFileAtomic,
       removeFile: deps.removeFile ?? removeFile,
     };
-    if (args.write)
-      return await runWrite({ plan, retranslateUntracked: args['retranslate-untracked'], ctx });
+    if (args.write) {
+      return await runWrite({
+        plan,
+        retranslateUntracked: args['retranslate-untracked'],
+        pruneUntracked: args['prune-untracked'],
+        ctx,
+      });
+    }
     if (args.adopt) return await runAdopt({ plan, ctx });
     return runCheck({ plan, out });
   } catch (err) {
