@@ -17,6 +17,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:dist": "vitest run --config vitest.dist.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:visual-text": "playwright test --config=playwright.visual.config.ts",
