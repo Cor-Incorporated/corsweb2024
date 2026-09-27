@@ -8,6 +8,7 @@ import Analytics from '../components/analytics/Analytics.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
 import { getRobotsContent } from '../config/site';
+import { isNoindexPath } from '../config/indexing';
 
 interface Props {
   description: string;
@@ -71,7 +72,8 @@ const ogImage = ogImageProp
     : new URL('/logo.png', Astro.site);
 const usesGeneratedOgImage = !ogImageProp && Boolean(ogPageSlug);
 // Preview / develop は noindex（ADR-0010）。canonical は本番向きのままでよい。
-const robotsContent = getRobotsContent();
+// タグ一覧・検証用・404 等は production でも noindex（判定の正本は config/indexing.ts。sitemap と共有）。
+const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathname) });
 ---
 
 <!doctype html>
