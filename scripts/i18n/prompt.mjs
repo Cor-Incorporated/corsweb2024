@@ -13,22 +13,24 @@ function glossaryLines(lang) {
   ].join('\n');
 }
 
-const COMMON_RULES = (
-  lang
-) => `You are a professional localizer for the corporate website of Cor. Inc. (Cor.株式会社),
-a Japanese company that helps businesses adopt AI and builds software. Translate from Japanese into ${
-  LANGUAGE_NAMES[lang]
-}.
-Write natural, accurate ${
-  LANGUAGE_NAMES[lang]
-} for business readers. Keep the author's voice and level of formality.
-Do not add, remove, summarize or explain content. Translate every piece of Japanese text.
-Glossary:
-${glossaryLines(lang)}`;
+function commonRules(lang) {
+  const language = LANGUAGE_NAMES[lang];
+  return [
+    'You are a professional localizer for the corporate website of Cor. Inc. (Cor.株式会社),',
+    `a Japanese company that helps businesses adopt AI and builds software. Translate from Japanese into ${language}.`,
+    `Write natural, accurate ${language} for business readers. Keep the author's voice and level of formality.`,
+    'Do not add, remove, summarize or explain content. Translate every piece of Japanese text.',
+    // ADR-0007（対外表現ガードレール）: 訳で主張を強めない（例: 「ISMS 取得に向け整備中」→ "ISMS certified" は禁止）。
+    'Never strengthen or weaken claims: certifications, guarantees, results, numbers and dates must keep exactly',
+    'the same degree of certainty as the Japanese (e.g. "preparing for ISMS certification" must not become "ISMS certified").',
+    'Glossary:',
+    glossaryLines(lang),
+  ].join('\n');
+}
 
 /** 本文（保護済み Markdown）用のシステム指示。 */
 export function bodySystemInstruction(lang) {
-  return `${COMMON_RULES(lang)}
+  return `${commonRules(lang)}
 
 The user message is a Markdown document. Return ONLY the translated Markdown document:
 no preface, no notes, and do not wrap the output in a code fence.
@@ -48,7 +50,7 @@ Markdown structure must stay identical:
 
 /** frontmatter フィールド（JSON）用のシステム指示。 */
 export function fieldsSystemInstruction(lang) {
-  return `${COMMON_RULES(lang)}
+  return `${commonRules(lang)}
 
 The user message is a JSON object whose values are page metadata (title, description, tags, ...).
 Return a JSON object with exactly the same keys. Translate every value; never translate or rename keys.
