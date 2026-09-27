@@ -5,8 +5,9 @@
  * 1. 構造: 書き込みトークン（contents: write / actions: write / TRANSLATION_BOT_TOKEN）を持つジョブで、
  *    npm・node・リポジトリのスクリプト・setup-node を実行しない。npm/node を実行するジョブは読み取り権限だけ。
  *    npm ci は --ignore-scripts、checkout は persist-credentials: false、commit / push は hooks 無効。
- * 2. 振る舞い: push ジョブの「Verify and apply the patch」の run スクリプトを実際に bash で実行し、
- *    翻訳ディレクトリ以外・ja・シンボリックリンク・実行権限・巨大パッチを拒否し、正しいパッチだけを適用する。
+ * 2. 振る舞い: translate ジョブの「Build the translation patch」と push ジョブの「Verify and apply the patch」の
+ *    run スクリプトを YAML から取り出して実際に bash で実行する。正しいパッチ（ja の改名に伴う削除＋追加を含む）は
+ *    適用し、翻訳ディレクトリ以外・ja・シンボリックリンク・実行権限・巨大パッチは拒否する。
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, symlink, writeFile, chmod, unlink } from 'node:fs/promises';
@@ -89,12 +90,17 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
   });
 });
 
-// ---- push ジョブのパッチ検査を実際に動かす -------------------------------------------
-const verifyScript = workflow.jobs.push?.steps.find(
-  (s) => s.name === 'Verify and apply the patch'
-)?.run;
+// ---- パッチの生成（translate ジョブ）と検査・適用（push ジョブ）を実際に動かす ----------------
+const stepScript = (job, name) => workflow.jobs[job]?.steps.find((s) => s.name === name)?.run;
+const buildScript = stepScript('translate', 'Build the translation patch');
+const verifyScript = stepScript('push', 'Verify and apply the patch');
 const GIT = GIT_TEST_CONFIG;
 const IDENTITY = ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid'];
+const STEP_ENV = {
+  ALLOWED_CHANGE_RE: workflow.env.ALLOWED_CHANGE_RE,
+  MAX_PATCH_BYTES: workflow.env.MAX_PATCH_BYTES,
+  GIT_CONFIG_PARAMETERS: "'core.hooksPath=/dev/null' 'gc.auto=0' 'maintenance.auto=false'",
+};
 
 let tmp;
 afterEach(async () => tmp && removeTempDir(tmp));
@@ -103,28 +109,73 @@ function git(cwd, ...args) {
   return execFileSync('git', [...GIT, ...IDENTITY, ...args], { cwd, encoding: 'utf8' });
 }
 
-/** base の状態の一時リポジトリを作り、change() を加えた差分をパッチにして、作業ツリーは base に戻す。 */
-async function makePatch(change) {
+/** 翻訳記事らしい .md（scripts/i18n の書き出しと同じく 1 行目は `---`）。 */
+const article = (title, body = 'Body.') =>
+  `---\ntitle: "${title}"\nlang: "en"\ntranslationSourceHash: "${'0'.repeat(
+    64
+  )}"\n---\n\n${body}\n`;
+
+/** files（パス → 内容。{ symlink: 先 } ならシンボリックリンク）を 1 コミット目にした一時リポジトリ。 */
+async function baseRepo(files) {
   tmp = await mkdtemp(path.join(os.tmpdir(), 'i18n-patch-'));
   const repo = path.join(tmp, 'repo');
-  const en = path.join(repo, 'src/content/blog/en');
-  await mkdir(en, { recursive: true });
-  await mkdir(path.join(repo, 'src/content/blog/ja'), { recursive: true });
-  await writeFile(path.join(en, 'keep.md'), 'a\n');
-  await writeFile(path.join(en, 'gone.md'), 'old\n');
-  await writeFile(path.join(repo, 'src/content/blog/ja/keep.md'), 'ja\n');
+  for (const [rel, content] of Object.entries(files)) {
+    const file = path.join(repo, rel);
+    await mkdir(path.dirname(file), { recursive: true });
+    if (typeof content === 'string') await writeFile(file, content);
+    else await symlink(content.symlink, file);
+  }
   git(repo, 'init', '-q', '-b', 'patch-test');
-  git(repo, 'add', '--', 'src');
-  git(repo, 'commit', '-q', '-m', 'base');
-  await change(repo);
   git(repo, 'add', '--', '.');
-  const patch = git(repo, 'diff', '--cached', '--binary');
-  git(repo, 'reset', '-q', '--hard');
-  git(repo, 'clean', '-q', '-fd');
+  git(repo, 'commit', '-q', '-m', 'base');
   const runnerTemp = path.join(tmp, 'runner');
   await mkdir(path.join(runnerTemp, 'i18n-patch'), { recursive: true });
-  await writeFile(path.join(runnerTemp, 'i18n-patch/translation.patch'), patch);
   return { repo, runnerTemp };
+}
+
+const DEFAULT_FILES = {
+  'src/content/blog/en/keep.md': article('Keep'),
+  'src/content/blog/en/gone.md': article('Gone'),
+  'src/content/blog/ja/keep.md': '---\ntitle: "ja"\n---\n',
+};
+
+/** 作業ツリーを base に戻す（translate ジョブと push ジョブは別々のチェックアウトなので、同じ状態から始める）。 */
+function resetToBase(repo) {
+  git(repo, 'reset', '-q', '--hard');
+  git(repo, 'clean', '-q', '-fd');
+}
+
+/** 正規の経路: change() のあと translate ジョブの「Build the translation patch」をそのまま実行してパッチを作る。 */
+async function buildPatch(change, files = DEFAULT_FILES) {
+  const ctx = await baseRepo(files);
+  await change(ctx.repo);
+  expect(buildScript, 'translate ジョブに「Build the translation patch」がありません').toBeTypeOf(
+    'string'
+  );
+  const result = spawnSync('bash', ['-c', buildScript], {
+    cwd: ctx.repo,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      ...STEP_ENV,
+      RUNNER_TEMP: ctx.runnerTemp,
+      GITHUB_OUTPUT: path.join(tmp, 'out'),
+    },
+  });
+  expect(result.status, result.stdout + result.stderr).toBe(0);
+  resetToBase(ctx.repo);
+  return ctx;
+}
+
+/** 攻撃者の経路: 信頼しない translate ジョブが任意のパッチを作った想定（git の既定どおり改名も検出する）。 */
+async function craftPatch(change, files = DEFAULT_FILES) {
+  const ctx = await baseRepo(files);
+  await change(ctx.repo);
+  git(ctx.repo, 'add', '--', '.');
+  const patch = git(ctx.repo, 'diff', '--cached', '--binary');
+  resetToBase(ctx.repo);
+  await writeFile(path.join(ctx.runnerTemp, 'i18n-patch/translation.patch'), patch);
+  return ctx;
 }
 
 function runVerify({ repo, runnerTemp }, env = {}) {
@@ -135,33 +186,54 @@ function runVerify({ repo, runnerTemp }, env = {}) {
   const result = spawnSync('bash', ['-c', verifyScript], {
     cwd: repo,
     encoding: 'utf8',
-    env: {
-      ...process.env,
-      RUNNER_TEMP: runnerTemp,
-      ALLOWED_CHANGE_RE: workflow.env.ALLOWED_CHANGE_RE,
-      MAX_PATCH_BYTES: workflow.env.MAX_PATCH_BYTES,
-      GIT_CONFIG_PARAMETERS: "'core.hooksPath=/dev/null' 'gc.auto=0' 'maintenance.auto=false'",
-      ...env,
-    },
+    env: { ...process.env, ...STEP_ENV, RUNNER_TEMP: runnerTemp, ...env },
   });
-  const staged = git(repo, 'diff', '--cached', '--name-only').trim().split('\n').filter(Boolean);
+  const staged = git(repo, 'diff', '--cached', '--no-renames', '--name-status')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => line.replace('\t', ' '));
   return { code: result.status, output: result.stdout + result.stderr, staged };
 }
 
 describe('H1: push ジョブはパッチの変更パスと種別を検査してから適用する', () => {
   it('翻訳ディレクトリの .md の変更・追加・削除は適用して stage する', async () => {
-    const ctx = await makePatch(async (repo) => {
+    const ctx = await buildPatch(async (repo) => {
       const en = path.join(repo, 'src/content/blog/en');
-      await writeFile(path.join(en, 'keep.md'), 'a\nb\n');
-      await writeFile(path.join(en, 'new.md'), 'new\n');
+      await writeFile(path.join(en, 'keep.md'), article('Keep', 'Changed.'));
+      await writeFile(path.join(en, 'new.md'), article('New'));
       await unlink(path.join(en, 'gone.md'));
     });
     const result = runVerify(ctx);
     expect(result.code, result.output).toBe(0);
     expect(result.staged.sort()).toEqual([
-      'src/content/blog/en/gone.md',
-      'src/content/blog/en/keep.md',
-      'src/content/blog/en/new.md',
+      'A src/content/blog/en/new.md',
+      'D src/content/blog/en/gone.md',
+      'M src/content/blog/en/keep.md',
+    ]);
+  });
+
+  it('ja の改名（slug 変更）: 旧 slug の翻訳の削除と、ほぼ同じ内容の新 slug の追加を適用する（HIGH-1）', async () => {
+    const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i} of the article.`).join(
+      '\n\n'
+    );
+    const files = { ...DEFAULT_FILES, 'src/content/blog/en/old-slug.md': article('Same', long) };
+    const ctx = await buildPatch(async (repo) => {
+      const en = path.join(repo, 'src/content/blog/en');
+      await unlink(path.join(en, 'old-slug.md'));
+      // 新しい翻訳は来歴行（ハッシュ）だけが違う
+      await writeFile(
+        path.join(en, 'new-slug.md'),
+        article('Same', long).replace('0'.repeat(64), 'f'.repeat(64))
+      );
+    }, files);
+    const patch = readFileSync(path.join(ctx.runnerTemp, 'i18n-patch/translation.patch'), 'utf8');
+    expect(patch).not.toMatch(/^rename (from|to) /m);
+    const result = runVerify(ctx);
+    expect(result.code, result.output).toBe(0);
+    expect(result.staged.sort()).toEqual([
+      'A src/content/blog/en/new-slug.md',
+      'D src/content/blog/en/old-slug.md',
     ]);
   });
 
@@ -187,7 +259,7 @@ describe('H1: push ジョブはパッチの変更パスと種別を検査して�
       (repo) => writeFile(path.join(repo, 'src/content/blog/en/keep.mjs'), 'x\n'),
     ],
   ])('拒否して何も stage しない: %s', async (_name, change) => {
-    const ctx = await makePatch(change);
+    const ctx = await craftPatch(change);
     const result = runVerify(ctx);
     expect(result.code, result.output).toBe(1);
     expect(result.output).toContain('::error title=i18n::');
@@ -195,8 +267,8 @@ describe('H1: push ジョブはパッチの変更パスと種別を検査して�
   });
 
   it('上限を超える大きさのパッチは適用しない', async () => {
-    const ctx = await makePatch((repo) =>
-      writeFile(path.join(repo, 'src/content/blog/en/keep.md'), 'x'.repeat(2000))
+    const ctx = await craftPatch((repo) =>
+      writeFile(path.join(repo, 'src/content/blog/en/keep.md'), article('Keep', 'x'.repeat(2000)))
     );
     const result = runVerify(ctx, { MAX_PATCH_BYTES: '100' });
     expect(result.code).toBe(1);

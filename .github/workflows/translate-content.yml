@@ -5,7 +5,8 @@ name: Translate content (i18n)
 #
 # ■ 信頼境界（書き込みトークンと、信頼しないコードを同じジョブに置かない）
 #   translate        contents: read だけ。PR head のコード（scripts/i18n と npm 依存）を GEMINI_API_KEY 付きで動かし、
-#                    結果を `git diff --binary` のパッチとして artifact に渡す。`npm ci --ignore-scripts`、npm キャッシュなし。
+#                    結果を `git diff --binary --no-renames` のパッチとして artifact に渡す（ja の改名は、旧 slug の
+#                    翻訳の削除と新 slug の翻訳の追加になる）。`npm ci --ignore-scripts`、npm キャッシュなし。
 #   push             contents: write。npm もリポジトリのコードも実行しない。パッチ（信頼しないデータ）の変更パスと
 #                    ファイル種別を検査してから適用し、hooks を無効にして commit / push する。
 #   dispatch-check   actions: write だけ。GITHUB_TOKEN で push したとき i18n-check を workflow_dispatch で再実行する。
@@ -181,7 +182,9 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/i18n-patch"
           git add -- src/content
-          git diff --cached --binary -- src/content > "$RUNNER_TEMP/i18n-patch/translation.patch"
+          # --no-renames: ja の改名（slug 変更）では旧 slug の翻訳を削除し新 slug を作る。内容が似ていると git は
+          # 既定で「改名」として出力し、push ジョブの検査（通常ファイルの作成・削除だけを許可）が拒否してしまう。
+          git diff --cached --binary --no-renames -- src/content > "$RUNNER_TEMP/i18n-patch/translation.patch"
           if [ -s "$RUNNER_TEMP/i18n-patch/translation.patch" ]; then
             git diff --cached --stat -- src/content
             echo "patch=true" >> "$GITHUB_OUTPUT"
