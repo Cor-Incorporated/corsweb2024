@@ -19,6 +19,7 @@ import {
   findCalendarCopyMismatches,
   findContactSelfLoops,
   findLauncherFallbackSelfLinks,
+  findPhoneInquiryLeads,
   findPhoneInquiryPhrases,
   findPhoneLeads,
   hasCalendarEmbed,
@@ -102,11 +103,11 @@ describe('B-1 5 言語の /contact に電話導線が無い（語レベル）', 
   });
 });
 
-// /privacy は収集項目として「電話番号」が正当に載るため、句レベルで判定する（#323 背景 1 の事故現場）。
-describe('B-1 5 言語の /privacy に「電話で受け付ける」旨が無い（句レベル・#323 背景 1）', () => {
+// /privacy は収集項目として「電話番号」が正当に載るため、語ではなく句・番号・tel: で判定する（#323 背景 1 の事故現場）。
+describe('B-1 5 言語の /privacy に「電話で受け付ける」旨・電話番号・tel: が無い（#323 背景 1）', () => {
   it.each(LOCALES)('%s', (locale) => {
     const { document } = loadDistPage(PRIVACY_PAGE_PATHS[locale]);
-    expect(findPhoneInquiryPhrases(document)).toEqual([]);
+    expect(findPhoneInquiryLeads(document)).toEqual([]);
   });
 });
 
@@ -187,6 +188,15 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     const before = findPhoneInquiryPhrases(document).length;
     lastMain(document).insertAdjacentHTML('beforeend', `<p>${PHONE_INQUIRY_ACCIDENTS[locale].privacy}</p>`);
     expect(findPhoneInquiryPhrases(document).length).toBeGreaterThan(before);
+  });
+
+  it('ja の /privacy に語を伴わない番号（TEL 092-000-0000）が出る', () => {
+    const { document } = loadDistPage(PRIVACY_PAGE_PATHS.ja);
+    const before = findPhoneInquiryLeads(document).length;
+    lastMain(document).insertAdjacentHTML('beforeend', '<p>お問合せ窓口 TEL 092-000-0000</p>');
+    const after = findPhoneInquiryLeads(document);
+    expect(after).toHaveLength(before + 1);
+    expect(after.map((finding) => finding.kind)).toContain('number');
   });
 
   it('en の /contact に tel: リンクが戻る', () => {

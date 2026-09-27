@@ -103,15 +103,17 @@ export function isPlausiblePhoneNumber(candidate: string): boolean {
 /**
  * 「電話で問い合わせ・相談を受け付ける／電話で連絡してほしい」を述べる句（/privacy 用の句レベル）。
  * 「電話番号」のような収集項目には一致しない。PR #324（ad40cd6）が削除した実際の文言
- * （tests/fixtures/phone-inquiry-accidents.ts）にすべて一致することをユニットテストで固定している。
- * zh の実例は「或电话受理」で、「通过电话」「电话咨询」だけでは拾えない点に注意。
+ * （tests/fixtures/phone-inquiry-accidents.ts）と、#331 再レビューで挙がった見逃し・誤検知の実例を
+ * ユニットテストで固定している。zh の実例は「或电话受理」で、「通过电话」「电话咨询」だけでは拾えない。
+ * ja は「電話でのお問い合わせは受け付けておりません」のような否定文を除く（同じ文の 40 字以内）。
+ * 他言語の否定文は除いていない（該当する文言が出たら誤検知として判定を見直す）。
  */
 export const PHONE_INQUIRY_PHRASE_PATTERNS = {
-  ja: /お電話(?!番号)|電話(?:でも|にて|で(?:の)?(?:ご?連絡|お?問い?合わせ|ご?相談|受け?付|承))/u,
-  en: /by (?:tele)?phone|over the (?:tele)?phone|via (?:tele)?phone|(?:call|phone|ring) us\b|telephone us/iu,
-  zh: /或电话|电话(?:受理|联系|咨询|预约)|通过电话|致电|拨打|或電話|電話(?:受理|聯繫|諮詢)|透過電話/u,
-  ko: /전화로|전화\s?(?:문의|상담|접수|연락)/u,
-  es: /por tel[eé]fono|v[ií]a telef[oó]nica|telef[oó]nicamente|ll[aá]m(?:enos|anos|arnos)/iu,
+  ja: /(?:お電話(?!番号)|電話(?:でも|にて|受付|窓口|相談|連絡|による|で(?:の)?(?:ご?連絡|お?問い?合わ?せ|ご?相談|受け?付|承))|[（(]\s*電話\s*[)）])(?![^。<]{0,40}?(?:受け付けて(?:おりません|いません)|承って(?:おりません|いません)|お受けして(?:おりません|いません)|できません|ご遠慮))/u,
+  en: /by (?:tele)?phone|over the (?:tele)?phone|via (?:tele)?phone|(?:call|phone|ring) us\b|telephone us|(?:tele)?phone (?:inquir\w*|consultations?|support)\b/iu,
+  zh: /或电话(?!号码)|电话(?:受理|联系|咨询|预约)|通过电话|致电|拨打|来电|或電話(?!號碼)|電話(?:受理|聯繫|諮詢)|透過電話|來電/u,
+  ko: /전화나|전화로|전화\s?(?:문의|상담|접수|연락)/u,
+  es: /por tel[eé]fono|v[ií]a telef[oó]nica|telef[oó]nicamente|ll[aá]m(?:enos|anos|arnos)|atenci[oó]n telef[oó]nica|consultas? telef[oó]nicas?|l[ií]nea telef[oó]nica/iu,
 } as const satisfies Record<Locale, RegExp>;
 
 export type PhoneLeadFinding = {
@@ -134,9 +136,22 @@ export function findPhoneLeads(document: Document): PhoneLeadFinding[] {
   ];
 }
 
-/** /privacy 用（句レベル）。「電話番号」のような収集項目の記載は拾わない。 */
+/** 句レベルだけの判定（/privacy の判定の一部。ユニットテストで句パターン単体を検証するのに使う）。 */
 export function findPhoneInquiryPhrases(document: Document): PhoneLeadFinding[] {
   return findingsIn(scanTextOf(document), combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase');
+}
+
+/**
+ * /privacy 用。句レベル（「電話で受け付ける」旨）に加え、電話番号と tel: リンクも拾う。
+ * 語レベル（「電話番号」という語）は収集項目として正当に載るので当てない。
+ */
+export function findPhoneInquiryLeads(document: Document): PhoneLeadFinding[] {
+  const text = scanTextOf(document);
+  return [
+    ...findingsIn(text, combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase'),
+    ...phoneNumberFindingsIn(text),
+    ...telLinkFindingsIn(document),
+  ];
 }
 
 // ---------------------------------------------------------------------------

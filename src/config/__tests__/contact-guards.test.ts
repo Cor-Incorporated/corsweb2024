@@ -22,6 +22,7 @@ import {
   findCalendarCopyMismatches,
   findContactSelfLoops,
   findLauncherFallbackSelfLinks,
+  findPhoneInquiryLeads,
   findPhoneInquiryPhrases,
   findPhoneLeads,
   hasCalendarEmbed,
@@ -191,6 +192,56 @@ describe('B-1 findPhoneInquiryPhrases（/privacy 用の句レベル）', () => {
   it('format-detection の meta は句レベルでも誤検出しない', () => {
     const head = '<meta name="format-detection" content="telephone=no">';
     expect(findPhoneInquiryPhrases(parsePage('<main><p>所在地</p></main>', head))).toEqual([]);
+  });
+
+  // 再レビュー LOW-2 で挙がった見逃しの実例。「或电话」「或電話」は他のどの句でも拾えない文（邮件或电话）で固定する。
+  it.each([
+    ['ja', '電話受付：平日10時〜17時'],
+    ['ja', '電話によるお問い合わせも可能です'],
+    ['ja', '電話で問合せいただけます'],
+    ['ja', '苦情窓口（電話）'],
+    ['en', 'telephone inquiries are accepted'],
+    ['es', 'atención telefónica'],
+    ['ko', '전화나 이메일로 문의'],
+    ['zh', '也可来电咨询'],
+    ['zh', '也可以通过邮件或电话与我们联系'],
+    ['zh', '也可透過郵件或電話與我們聯繫'],
+  ])('%s: 「%s」を句として検出する', (_locale, text) => {
+    expect(findPhoneInquiryPhrases(parsePage(`<main><p>${text}</p></main>`)).length).toBeGreaterThan(0);
+  });
+
+  // 再レビュー LOW-2 で挙がった誤検知の実例（収集項目の列挙と、ja の否定文）。
+  it.each([
+    ['zh', '电子邮箱或电话号码'],
+    ['zh', '電子郵件或電話號碼'],
+    ['en', 'email or phone number'],
+    ['es', 'correo o número de teléfono'],
+    ['ko', '이메일 또는 전화번호'],
+    ['ja', '電話でのお問い合わせは受け付けておりません'],
+  ])('%s: 「%s」は句として誤検知しない', (_locale, text) => {
+    expect(findPhoneInquiryLeads(parsePage(`<main><p>${text}</p></main>`))).toEqual([]);
+  });
+});
+
+describe('B-1 findPhoneInquiryLeads（/privacy 用: 句 + 番号 + tel:）', () => {
+  // 語を伴わない番号・tel: リンクは句レベルだけでは拾えない（再レビュー LOW-2 の実例）。
+  it.each([
+    ['お問合せ窓口 TEL 092-000-0000', 'number'],
+    ['Phone: +81 92 000 0000', 'number'],
+  ])('「%s」を %s として検出する', (text, kind) => {
+    const findings = findPhoneInquiryLeads(parsePage(`<main><p>${text}</p></main>`));
+    expect(findings.map((finding) => finding.kind)).toEqual([kind]);
+  });
+
+  it('tel: リンクを検出する', () => {
+    const findings = findPhoneInquiryLeads(parsePage('<main><a href="tel:0000">連絡</a></main>'));
+    expect(findings.map((finding) => finding.kind)).toEqual(['tel-link']);
+  });
+
+  it('収集項目としての「電話番号」は語レベルなら拾うが、/privacy の判定では拾わない', () => {
+    const document = parsePage('<main><dd>氏名・メールアドレス・電話番号</dd></main>');
+    expect(findPhoneLeads(document).length).toBeGreaterThan(0);
+    expect(findPhoneInquiryLeads(document)).toEqual([]);
   });
 });
 
