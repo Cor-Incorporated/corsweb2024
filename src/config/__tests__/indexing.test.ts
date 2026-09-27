@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { includeInSitemap, isNoindexPath } from '../indexing';
+import { DISALLOWED_PATHS } from '../robots';
 
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
@@ -56,6 +57,12 @@ describe('includeInSitemap', () => {
     expect(includeInSitemap(url)).toBe(expected);
   });
 
+  // 宣言（robots.txt の Disallow）と実体（sitemap の filter）を結ぶ: 拒否しているパスを sitemap に載せない
+  it.each(DISALLOWED_PATHS.map((disallowed) => [disallowed]))('never lists %s (disallowed in robots.txt)', (disallowed) => {
+    expect(includeInSitemap(`https://cor-jp.com${disallowed}`)).toBe(false);
+    expect(includeInSitemap(`https://cor-jp.com${disallowed}page/`)).toBe(false);
+  });
+
   it('never keeps a URL whose page is noindex', () => {
     for (const path of ['/blog/tags/x/', '/en/404/', '/tip-success/', '/contact/chat/']) {
       expect(isNoindexPath(path)).toBe(true);
@@ -77,9 +84,17 @@ describe('meta robots call sites', () => {
     }
   });
 
-  it('no page passes slot="head" unless a layout defines that named slot (it would be silently dropped)', () => {
-    const layoutsWithHeadSlot = SOURCES.filter(({ text }) => /<slot\s+name=["']head["']/.test(text));
-    const pagesUsingHeadSlot = SOURCES.filter(({ text }) => /slot=["']head["']/.test(text)).map(({ file }) => file);
-    if (layoutsWithHeadSlot.length === 0) expect(pagesUsingHeadSlot).toEqual([]);
+  it('every page that passes slot="head" uses a layout that defines <slot name="head"> (otherwise it is dropped)', () => {
+    const layouts = SOURCES.filter(({ file }) => file.includes(`${path.sep}layouts${path.sep}`));
+    // 走査対象が空で素通りしないこと
+    expect(layouts.map(({ file }) => path.basename(file)).sort()).toEqual(['BlogLayout.astro', 'Layout.astro']);
+    const offenders = SOURCES.filter(({ text }) => /slot=["']head["']/.test(text)).flatMap(({ file, text }) => {
+      const usedLayouts = [...text.matchAll(/from\s+['"][^'"]*layouts\/(\w+\.astro)['"]/g)].map((match) => match[1]);
+      const hasHeadSlot = layouts.some(
+        ({ file: layout, text: layoutText }) => usedLayouts.includes(path.basename(layout)) && /<slot\s+name=["']head["']/.test(layoutText),
+      );
+      return hasHeadSlot ? [] : [path.relative(path.resolve('src'), file)];
+    });
+    expect(offenders).toEqual([]);
   });
 });

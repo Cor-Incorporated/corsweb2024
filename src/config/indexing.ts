@@ -6,6 +6,8 @@
  * 判定を 1 か所に置くことで構造的に防ぐ。
  */
 
+import { DISALLOWED_PATHS } from './robots';
+
 const LOCALE_PREFIX = '(?:/(?:en|zh|ko|es))?';
 
 /** 検索結果に出す価値が無い（薄い・重複・利用者向けでない）ページ。noindex, follow にする。 */
@@ -35,8 +37,13 @@ export function isNoindexPath(pathname: string): boolean {
   return NOINDEX_PATTERNS.some((pattern) => pattern.test(path));
 }
 
-/** sitemap に載せるか（@astrojs/sitemap の filter に渡す。引数は絶対 URL）。 */
+/**
+ * sitemap に載せるか（@astrojs/sitemap の filter に渡す。引数は絶対 URL）。
+ * robots.txt でクロールを拒否しているパス（config/robots.ts の DISALLOWED_PATHS）は、sitemap にも載せない
+ * （「載せたのに取得を拒否する」矛盾を Search Console が警告するため。宣言を 1 つの配列で共有する）。
+ */
 export function includeInSitemap(pageUrl: string): boolean {
   const { pathname } = new URL(pageUrl);
+  if (DISALLOWED_PATHS.some((disallowed) => pathname.startsWith(disallowed))) return false;
   return !NON_PAGE_PATTERNS.some((pattern) => pattern.test(pathname)) && !isNoindexPath(pathname);
 }
