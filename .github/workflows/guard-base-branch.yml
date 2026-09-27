@@ -1,0 +1,48 @@
+name: Guard base branch
+
+# main へのマージは develop からのみ許可する。
+# それ以外のブランチから main 宛に PR が開かれたら、自動で fail させ、
+# develop 経由にするよう PR にコメントで誘導する（誤 base=main の再発防止）。
+#
+# 注1: pull_request ワークフローは base ブランチ側のファイルで実行されるため、
+#      このガードを効かせるには main にこのファイルが存在している必要がある。
+# 注2: ワークフロー単体ではマージを物理的にブロックできない（チェックが赤くなるだけ）。
+#      確実に止めるには main のブランチ保護で status check "guard" を
+#      required に設定すること（develop からの PR のみが緑になる）。
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: main へは develop からのみ許可
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD: ${{ github.head_ref }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -eo pipefail
+          echo "main 宛 PR #${PR}  head=${HEAD}"
+          if [ "$HEAD" = "develop" ]; then
+            echo "✅ develop → main は許可された唯一の経路です"
+            exit 0
+          fi
+          # 誘導コメントは初回のみ。隠しマーカーで既出を判定し、edited 連発でも重複させない。
+          MARKER="<!-- guard-base-branch -->"
+          EXISTING=$(gh pr view "$PR" --repo "$REPO" --json comments \
+            --jq "[.comments[] | select(.body | contains(\"$MARKER\"))] | length" 2>/dev/null || echo 0)
+          if [ "${EXISTING:-0}" -eq 0 ]; then
+            # 単一引用符の format 文字列なのでバッククォートはリテラル。動的値は %s で渡す。
+            BODY=$(printf '%s\n🚫 **`main` へのマージは `develop` からのみ許可しています。**\n\nこのPRは head=`%s` → base=`main` ですが、変更は **`develop` を経由** してください:\n\n1. base を `develop` に変更（このPR画面の base 切替、または `gh pr edit %s --base develop`）\n2. develop に取り込まれた後、リリース時に develop → main をまとめて PR します。' "$MARKER" "$HEAD" "$PR")
+            gh pr comment "$PR" --repo "$REPO" --body "$BODY" || true
+          fi
+          echo "::error title=base が main です::main へは develop からの PR のみ許可されています。base を develop に変更してください。"
+          exit 1
