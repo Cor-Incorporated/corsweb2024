@@ -70,14 +70,35 @@ export const PHONE_LEAD_PATTERNS = {
  */
 export const PHONE_LEAD_EXCLUDED_META_NAMES = ['format-detection'] as const;
 
+// 番号の区切りとして認める文字（1 か所に 1 文字まで）: 空白・ハイフン類（- ‐ ‑ – —）・ドット。
+// 全角の数字・記号（０９２－… / ＋81）は照合前に NFKC で半角へ寄せる（findPhoneLeads など）。
+const NUMBER_SEPARATOR = String.raw`[\s\-‐‑–—.]`;
+
 /**
- * 電話番号そのもの（/contact 用）。語を伴わず番号だけが出る回帰を捕まえる。
- * 国際表記（+81 …）と国内表記（0 始まりのハイフン区切り: 070-1234-5678 / 0120-123-456）。
- * base64・SVG のパスデータ・日付や郵便番号・長い数字列の一部に一致しないよう前後を制限している。
- * 実測（2026-09-27・dist 全 481 ページ）で一致したのは、法令で番号を表示する特商法ページ 5 言語だけ。
+ * 電話番号の候補（/contact・/privacy 用）。語を伴わず番号だけが出る回帰を捕まえる。
+ * 国際表記（+81 …、+81 (0)…）と国内表記（0 始まり。括弧・区切りなしも可: (092) 000-0000 /
+ * 0920000000）。base64・SVG のパスデータ・長い数字列の一部に一致しないよう前を制限している。
+ * これは候補であり、isPlausiblePhoneNumber の桁数判定（国内 10〜11 桁、+81 は国番号を除き 9〜10 桁）
+ * を通ったものだけを番号とみなす（09-27-2026 のような日付は 8 桁なので落ちる）。
+ * 実測（2026-09-28・dist 全 481 ページ）で番号と判定されたのは、法令で番号を表示する特商法ページ
+ * 5 言語だけ。
  */
-export const PHONE_NUMBER_PATTERN =
-  /(?<![A-Za-z0-9+/])\+81[\s\-.()]*\d|(?<![\d.\-])0\d{1,4}-\d{1,4}-\d{3,4}(?!\d)/u;
+export const PHONE_NUMBER_PATTERN = new RegExp(
+  String.raw`(?<![\w+/])\+81${NUMBER_SEPARATOR}?(?:\(0\)${NUMBER_SEPARATOR}?)?\(?\d{1,4}\)?` +
+    String.raw`${NUMBER_SEPARATOR}?\d{1,4}${NUMBER_SEPARATOR}?\d{3,4}(?!\d)` +
+    String.raw`|(?<![\w+/.\-‐‑–—])\(?0\d{1,4}\)?${NUMBER_SEPARATOR}?\d{1,4}${NUMBER_SEPARATOR}?\d{3,4}(?!\d)`,
+  'u'
+);
+
+/** PHONE_NUMBER_PATTERN の候補が、区切りを除いた桁数として日本の電話番号に当たるか。 */
+export function isPlausiblePhoneNumber(candidate: string): boolean {
+  if (candidate.startsWith('+81')) {
+    const national = candidate.slice(3).replace(/\(0\)/u, '').replace(/\D/gu, '');
+    return national.length >= 9 && national.length <= 10;
+  }
+  const digits = candidate.replace(/\D/gu, '');
+  return digits.startsWith('0') && digits.length >= 10 && digits.length <= 11;
+}
 
 /**
  * 「電話で問い合わせ・相談を受け付ける／電話で連絡してほしい」を述べる句（/privacy 用の句レベル）。
@@ -100,24 +121,22 @@ export type PhoneLeadFinding = {
 };
 
 /**
- * /contact 用（語レベル）。本文・属性値・インラインスクリプトを含む HTML 全体に
- * PHONE_LEAD_PATTERNS と PHONE_NUMBER_PATTERN を当て（除外 meta を除く）、加えて tel: リンクを構造で拾う。
+ * /contact 用（語レベル）。本文・属性値・インラインスクリプトを含む HTML 全体（除外 meta を除き、
+ * NFKC で正規化したもの）に PHONE_LEAD_PATTERNS と電話番号の判定を当て、加えて tel: リンクを構造で拾う。
+ * match / context は正規化後の文字列（全角は半角になっている）。
  */
 export function findPhoneLeads(document: Document): PhoneLeadFinding[] {
-  const html = serializeWithoutExcludedMeta(document);
-  const textFindings = findingsIn(html, combineGlobal(PHONE_LEAD_PATTERNS), 'text');
-  const numberFindings = findingsIn(html, new RegExp(PHONE_NUMBER_PATTERN.source, 'gu'), 'number');
-  const telLinkFindings = Array.from(document.querySelectorAll('a[href], area[href]'))
-    .map((element) => (element.getAttribute('href') ?? '').trim())
-    .filter((href) => /^tel:/iu.test(href))
-    .map((href) => ({ kind: 'tel-link' as const, match: href, context: href }));
-  return [...textFindings, ...numberFindings, ...telLinkFindings];
+  const text = scanTextOf(document);
+  return [
+    ...findingsIn(text, combineGlobal(PHONE_LEAD_PATTERNS), 'text'),
+    ...phoneNumberFindingsIn(text),
+    ...telLinkFindingsIn(document),
+  ];
 }
 
 /** /privacy 用（句レベル）。「電話番号」のような収集項目の記載は拾わない。 */
 export function findPhoneInquiryPhrases(document: Document): PhoneLeadFinding[] {
-  const html = serializeWithoutExcludedMeta(document);
-  return findingsIn(html, combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase');
+  return findingsIn(scanTextOf(document), combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase');
 }
 
 // ---------------------------------------------------------------------------
@@ -318,6 +337,24 @@ export function isCloudiaChatHtmlServed(inspection: CloudiaChatInspection): bool
 // ---------------------------------------------------------------------------
 // 内部ヘルパ
 // ---------------------------------------------------------------------------
+
+// 電話誘導の検査対象の文字列: 除外 meta を落とした HTML を NFKC で正規化したもの（全角→半角）。
+function scanTextOf(document: Document): string {
+  return serializeWithoutExcludedMeta(document).normalize('NFKC');
+}
+
+function phoneNumberFindingsIn(text: string): PhoneLeadFinding[] {
+  return findingsIn(text, new RegExp(PHONE_NUMBER_PATTERN.source, 'gu'), 'number').filter((finding) =>
+    isPlausiblePhoneNumber(finding.match)
+  );
+}
+
+function telLinkFindingsIn(document: Document): PhoneLeadFinding[] {
+  return Array.from(document.querySelectorAll('a[href], area[href]'))
+    .map((element) => (element.getAttribute('href') ?? '').trim())
+    .filter((href) => /^tel:/iu.test(href))
+    .map((href) => ({ kind: 'tel-link' as const, match: href, context: href }));
+}
 
 function serializeWithoutExcludedMeta(document: Document): string {
   const excluded: ReadonlySet<string> = new Set(PHONE_LEAD_EXCLUDED_META_NAMES);

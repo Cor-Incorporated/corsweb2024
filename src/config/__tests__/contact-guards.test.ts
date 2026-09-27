@@ -17,6 +17,7 @@ import {
   LAUNCHER_FALLBACK_LINK_SELECTOR,
   PHONE_INQUIRY_PHRASE_PATTERNS,
   PHONE_LEAD_PATTERNS,
+  PHONE_NUMBER_PATTERN,
   PRIVACY_PAGE_PATHS,
   findCalendarCopyMismatches,
   findContactSelfLoops,
@@ -63,6 +64,7 @@ describe('判定パターンの網羅性', () => {
       ...Object.values(PHONE_LEAD_PATTERNS),
       ...Object.values(PHONE_INQUIRY_PHRASE_PATTERNS),
       ...Object.values(AVAILABILITY_CLAIM_PATTERNS),
+      PHONE_NUMBER_PATTERN,
     ].filter((pattern) => pattern.global || pattern.sticky);
     expect(stateful).toEqual([]);
   });
@@ -116,18 +118,35 @@ describe('B-1 findPhoneLeads', () => {
     expect(findings).toEqual([{ kind: 'tel-link', match: 'TEL:0000', context: 'TEL:0000' }]);
   });
 
-  // 語を伴わず番号だけが出る回帰（PR #331 レビュー L6）。番号はすべて架空。
-  it.each(['070-0000-0000', '092-000-0000', '0120-000-000', '+81-70-0000-0000', '+81 70 0000 0000', '+81(0)70-0000-0000'])(
-    '番号だけの「%s」を検出する',
-    (number) => {
-      const findings = findPhoneLeads(parsePage(`<main><p>${number}</p></main>`));
-      expect(findings.map((finding) => finding.kind)).toEqual(['number']);
-    }
-  );
+  // 語を伴わず番号だけが出る回帰（PR #331 レビュー L6）と、再レビュー LOW-1 で挙がった見逃しの実例
+  // （全角・空白区切り・括弧・区切りなし・en dash・U+2010・全角＋・ドット区切り）。番号はすべて架空。
+  it.each([
+    '070-0000-0000',
+    '092-000-0000',
+    '0120-000-000',
+    '+81-70-0000-0000',
+    '+81 70 0000 0000',
+    '+81(0)70-0000-0000',
+    '０９２－０００－００００',
+    '092 000 0000',
+    '(092) 000-0000',
+    '0920000000',
+    '092–000–0000',
+    '092‐000‐0000',
+    '＋81-92-000-0000',
+    '092.000.0000',
+  ])('番号だけの「%s」を検出する', (number) => {
+    const findings = findPhoneLeads(parsePage(`<main><p>${number}</p></main>`));
+    expect(findings.map((finding) => finding.kind)).toEqual(['number']);
+  });
 
   it.each([
     ['日付', '2026-09-27'],
     ['時刻付き日付', '2026-09-27T12:00:00+09:00'],
+    ['月-日-年の日付', '更新日 09-27-2026'],
+    ['es の日付', 'Fecha: 05-12-2025'],
+    ['英数字の ID', 'id=A012-34-5678'],
+    ['版番号', 'ver 0.12-3-456'],
     ['郵便番号と番地', '810-0001 福岡県 福岡市 中央区天神2丁目3-10'],
     ['SVG のパスデータ', '<svg><path d="M1.05-12-345 0-1.5-2L10.0-120-3456"></path></svg>'],
     ['base64', '<img alt="" src="data:image/png;base64,AB+81Cd9+8100a/+81234==">'],
