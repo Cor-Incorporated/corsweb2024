@@ -1,0 +1,64 @@
+name: CI
+
+# PR ごとにユニットテスト・ビルド・dist の回帰ガードを走らせる（Issue #323）。
+# 以前は vitest がどのワークフローでも実行されず、develop 宛 PR では build すら走らなかった。
+# テストを足すだけでは動かないため、アサーションとこの実行経路はセットで扱う。
+#
+# ジョブ名 `verify` は main のブランチ保護で required check に指定する想定の名前。
+# 変えると必須チェックが「待機中」のまま止まるので、変える場合は保護設定と同時に行うこと。
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # 取り消すのは同じ PR の古い実行だけ。develop への push は各マージ結果を残すため取り消さない。
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test:run
+
+      - name: Type check and build
+        run: npm run build
+        env:
+          # カレンダー未設定の状態でビルドする。#323 背景 4（説明文だけが「打ち合わせ可能な時間」を
+          # 断言する）はこの状態でしか顕在化しない。設定時の文言は src/config/__tests__/contact-guards.test.ts
+          # がソースを読んで検証している。秘密情報はこのジョブに渡さない。
+          PUBLIC_GCAL_ID: ''
+
+      - name: Contact regression guards on dist
+        run: npm run test:dist
+
+      - name: Worker security header audit
+        run: npm run security:audit:workers
