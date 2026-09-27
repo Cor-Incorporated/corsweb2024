@@ -102,7 +102,7 @@ export default defineConfig({
       exclude: []
     },
     // rollupOptions.output の出力名を上書きしない。上書きは Astro のサーバー描画（SSR）ビルドにも効き、
-    // 記事本文を含む SSR チャンクが公開ディレクトリ dist/_astro/*.js に残っていた（S1）。
+    // 記事本文を含む SSR チャンクが公開ディレクトリ dist/_astro/*.js に残っていた（Epic #330 / #337）。
     // クライアント用の名前は Astro 既定でも _astro/[name].[hash].js になる。
     build: {
       minify: 'terser',
