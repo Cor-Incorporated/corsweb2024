@@ -18,16 +18,23 @@ permissions:
   checks: write
   pull-requests: write
 
+# 同じ PR の実行は 1 本ずつにし、古い run は取り消す。CMS（ADR-0018）から続けて保存したとき、
+# 古い run が後から終わってプレビューチャネルを古い内容で上書きしないようにするため。
+# push（本番・develop チャネル）と手動実行は取り消さず順に実行する（待機中の run は新しい run に置き換わる）。
+concurrency:
+  group: deploy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -54,8 +61,11 @@ jobs:
           PUBLIC_CF_BEACON_TOKEN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CF_BEACON_TOKEN || '' }}
 
       - name: Debug Firebase service account secret
+        # secret はシェルのスクリプトに直接展開せず、環境変数で渡す。
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
         run: |
-          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}" ]; then
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "❌ Missing FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB secret"
             exit 1
           fi
@@ -63,7 +73,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting (Preview)
         if: github.event_name == 'pull_request'
-        uses: FirebaseExtended/action-hosting-deploy@v0.7.1
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
@@ -72,7 +82,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting (Develop preview)
         if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0.7.1
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
@@ -82,7 +92,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting (Production)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0.7.1
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
