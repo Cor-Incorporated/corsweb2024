@@ -22,6 +22,7 @@
     "test:visual-text": "playwright test --config=playwright.visual.config.ts",
     "verify:visual-text": "npm run build && npm run test:visual-text",
     "check:links": "node scripts/check-external-links.mjs",
+    "seo:snapshot": "node scripts/seo-snapshot.mjs",
     "security:audit:firebase": "node scripts/audit-firebase-headers.mjs",
     "security:audit:workers": "node scripts/audit-worker-headers.mjs",
     "security:audit:dist": "node scripts/audit-dist-security.mjs",
