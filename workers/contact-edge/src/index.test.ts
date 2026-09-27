@@ -144,21 +144,21 @@ describe('cor-contact-edge', () => {
   });
 
   it('keeps noindex on the Firebase fallback HTML when Pages is unavailable', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(new Response('pages down', { status: 503 }))
-        .mockResolvedValueOnce(new Response('<!doctype html><title>Cloudia</title>', {
-          status: 200,
-          headers: { 'content-type': 'text/html; charset=utf-8' },
-        })),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('pages down', { status: 503 }))
+      .mockResolvedValueOnce(new Response('<!doctype html><title>Cloudia</title>', {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      }));
+    vi.stubGlobal('fetch', fetchMock);
 
     const response = await fetchContactEdge(request('/contact/chat/'), { CONTACT_ORIGIN: 'pages' });
 
     expect(response.status).toBe(200);
     expect(response.headers.get('x-robots-tag')).toBe('noindex');
+    // 応答したのが Firebase であることも確かめる（Pages を再試行する実装に変わっても、この経路を固定する）。
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.objectContaining({ url: 'https://cor-jp-main.web.app/contact/chat/' }));
   });
 
   it('marks HEAD responses for the chat document as noindex too', async () => {
