@@ -51,7 +51,7 @@ translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は 
 |---|---|---|---|
 | `missing` | ja はあるが翻訳ファイルが無い | 問題として列挙 | 翻訳して作成 |
 | `stale` | 翻訳の `translationSourceHash` が今の ja と一致しない | 問題 | 再翻訳して上書き |
-| `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳） |
+| `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳）。`--since` の差分で ja を変更した記事は `--adopt` を拒否し、`--write --retranslate-untracked --only <collection>/<slug>` を案内する（古い訳を最新として確定させない） |
 | `meta-drift` | ハッシュは一致するが、コピー対象（`pubDate` `featured` 等）や `lang` がずれている | 問題 | API なしで ja から同期 |
 | `orphan` | ja が無い翻訳（ja を削除・改名した、または翻訳だけを追加した） | 問題 | 下の条件をすべて満たすものだけ削除。満たさないものは削除せず失敗として報告 |
 | `invalid` | 翻訳ファイルの frontmatter が壊れている | 問題 | 再翻訳して上書き |
@@ -176,6 +176,8 @@ push に使うトークン:
    → `chore/i18n-backfill-<日付>` が push されるので、PR を作成。PR 上で i18n-check が緑になることを確認してマージ
 5. 以後は ja を編集した PR ごとに自動で翻訳が積まれる
 
+手順 2 の採用（adopt）は、既存翻訳のある記事の ja を編集する PR より先に済ませてください。採用前に ja を変更した記事は、古い訳を最新として確定させないよう採用を拒否し、再翻訳を案内します。
+
 費用の目安（推定・未検証）: 未翻訳 40 件は ja 約 2.8 万字 × 4 言語で、`gemini-3.8-flash`（2026-12-31 まで入力 $0.75 / 出力 $3.75 per 1M tokens）なら 1〜2 ドル程度、全 112 件を訳し直しても数ドル程度。料金の根拠: <https://ai.google.dev/gemini-api/docs/pricing>（2026-09-27 確認）。
 
 ## 9. 失敗時の対処
@@ -192,7 +194,8 @@ push に使うトークン:
 | `finishReason=SAFETY` など | 安全フィルタで止まった | 表現を見直すか、その言語だけ手で翻訳して `--adopt` で採用 |
 | ログに `429` / `RESOURCE_EXHAUSTED` の再試行が続く | レート上限・日次上限 | 自動で指数バックオフ。日次上限なら翌日に再実行、`I18N_RPM` を下げる、または課金ティアを上げる |
 | `404` / `models/... is not found` | `GEMINI_MODEL` の ID 誤り・提供終了 | 5 章の根拠 URL で現行 ID を確認し、variable を直す |
-| `[untracked]` が出る | 来歴の無い既存翻訳 | `--adopt`（採用）か `--retranslate-untracked`（再翻訳） |
+| `[untracked]` が出る | 来歴の無い既存翻訳 | 今の ja の訳なら `--adopt`（採用）、ja を変更した記事なら `--retranslate-untracked`（再翻訳） |
+| `ja がこの差分で変更されているため、旧翻訳は採用できません` | 旧翻訳のある記事の ja を PR で変更した | 表示された `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only <collection>/<slug>` を手元で実行して PR に push する（`GEMINI_API_KEY` が必要） |
 | `[meta-drift]` | ja の `featured` 等を変えた | PR なら translate ジョブが自動同期。ローカルは `npm run i18n:translate` |
 | `[orphan]` | ja を削除・改名した | PR なら translate ジョブが翻訳を削除する（来歴つきの翻訳のみ） |
 | `ja が無いのに翻訳があり、ja の削除が差分にありません` | PR で翻訳（en 等）だけを追加した | ja を追加するか、その翻訳ファイルを PR から削除する |

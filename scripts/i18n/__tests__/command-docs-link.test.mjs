@@ -9,7 +9,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseCliArgs } from '../cli.mjs';
 import { PRUNE_REASONS } from '../prune.mjs';
-import { HINTS } from '../run.mjs';
+import { HINTS, itemHint } from '../run.mjs';
 
 const root = path.resolve(import.meta.dirname, '../../..');
 const read = (rel) => readFileSync(path.join(root, rel), 'utf8');
@@ -36,6 +36,7 @@ function commandsIn(text) {
 function split(raw = '') {
   return raw
     .replace(/<slug>|your-post/g, 'sample-post')
+    .replace(/<collection>/g, 'blog')
     .replace(/<git-ref>/g, 'origin/develop')
     .replace(/<dir>/g, '.')
     .trim()
@@ -53,6 +54,15 @@ describe('documented commands are accepted by the CLI', () => {
   it.each([
     ['--check hints (scripts/i18n/run.mjs)', Object.values(HINTS).join('\n')],
     ['orphan reasons (scripts/i18n/prune.mjs)', Object.values(PRUNE_REASONS).join('\n')],
+    [
+      'per-item hint for an edited legacy translation (run.mjs itemHint)',
+      itemHint({
+        status: 'untracked',
+        sourceDiff: 'modified',
+        collection: 'blog',
+        slug: 'sample-post',
+      }),
+    ],
     ['docs/i18n-translation.md', read('docs/i18n-translation.md')],
     ['README.md', read('README.md')],
     ['README-en.md', read('README-en.md')],

@@ -18,8 +18,8 @@ export const HINTS = Object.freeze({
   stale: 'ja が更新されています → npm run i18n:translate で再翻訳',
   invalid: '翻訳ファイルの frontmatter が壊れています → npm run i18n:translate で再生成',
   untracked:
-    '来歴（translationSourceHash）の無い既存翻訳 → そのまま使うなら `node scripts/i18n/translate-content.mjs --adopt`、' +
-    '訳し直すなら `npm run i18n:translate -- --retranslate-untracked`',
+    '来歴（translationSourceHash）の無い既存翻訳 → 今の ja に対応した訳なら `node scripts/i18n/translate-content.mjs --adopt` で採用、' +
+    'ja を変更した記事なら `npm run i18n:translate -- --retranslate-untracked` で訳し直す',
   'meta-drift':
     'pubDate / category / featured 等が ja とずれています → npm run i18n:translate で同期（API 不要）',
   orphan:
@@ -27,8 +27,19 @@ export const HINTS = Object.freeze({
   'source-error': 'ja の frontmatter を解釈できません → ja を修正してください',
 });
 
+/** --since の差分で ja が追加・変更された項目か（旧翻訳はその変更を反映していない）。 */
+export const sourceChangedInDiff = (item) =>
+  item.sourceDiff === 'added' || item.sourceDiff === 'modified';
+
 /** 項目ごとの具体的な案内（状態ごとの HINTS より優先）。無ければ undefined。 */
 export function itemHint(item) {
+  if (item.status === 'untracked' && sourceChangedInDiff(item)) {
+    // M3: 古い訳を「今の ja の訳」として確定させない。adopt ではなく再翻訳を案内する。
+    return (
+      'ja がこの差分で変更されているため、旧翻訳は採用できません → ' +
+      `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only ${item.collection}/${item.slug}`
+    );
+  }
   if (item.status === 'orphan') {
     const decision = orphanDecision(item, { pruneUntracked: false });
     return decision.prune ? undefined : decision.reason;
@@ -266,18 +277,27 @@ export async function runWrite({ plan, retranslateUntracked, pruneUntracked = fa
   return reportResults([...synced, ...translated], work.skipped, ctx.out);
 }
 
+/**
+ * 来歴の無い旧翻訳を「今の ja の訳」として採用する。--since の差分で ja が変わった記事は拒否する
+ * （旧翻訳は変更前の ja の訳なので、採用すると古い訳が最新扱いで確定してしまう。M3）。
+ */
 export async function runAdopt({ plan, ctx }) {
-  const targets = plan.items.filter((i) => i.status === 'untracked');
+  const untracked = plan.items.filter((i) => i.status === 'untracked');
+  const targets = untracked.filter((i) => !sourceChangedInDiff(i));
+  const refused = untracked.filter(sourceChangedInDiff).map(skipOf);
   const others = plan.items.filter((i) => i.status !== 'untracked' && i.status !== 'ok');
   if (ctx.dryRun) {
     targets.forEach((i) => ctx.out.info(`(dry-run) adopt ${i.collection}/${i.slug} [${i.lang}]`));
-    ctx.out.info(`(dry-run) 採用 ${targets.length} 件`);
+    refused.forEach(({ item: i, reason }) =>
+      ctx.out.info(`(dry-run) refuse ${i.collection}/${i.slug} [${i.lang}]: ${reason}`)
+    );
+    ctx.out.info(`(dry-run) 採用 ${targets.length} 件 / 拒否 ${refused.length} 件`);
     return 0;
   }
   const results = [];
   for (const item of targets) results.push(await applySync(item, 'adopt', ctx));
   if (others.length > 0) ctx.out.info(`（--adopt の対象外で未解決: ${summaryLine(others)}）`);
-  return reportResults(results, [], ctx.out);
+  return reportResults(results, refused, ctx.out);
 }
 
 export const removeFile = (file) => rm(file);
