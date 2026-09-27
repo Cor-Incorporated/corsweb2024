@@ -9,6 +9,7 @@ import { generateKeywords, estimateReadingTime } from '../utils/blog-seo';
 import BlogSeoMeta from '../components/blog/seo/BlogSeoMeta.astro';
 import BlogOgp from '../components/blog/seo/BlogOgp.astro';
 import BlogStructuredData from '../components/blog/seo/BlogStructuredData.astro';
+import KatexStyles from '../components/blog/KatexStyles.astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 type BlogPostData = {
@@ -35,9 +36,11 @@ interface Props {
   relatedPosts?: BlogPost[];
   nextPost?: BlogPost;
   prevPost?: BlogPost;
+  // 本文に数式がある記事だけ KaTeX の CSS を読む（remarkPluginFrontmatter.hasMath）
+  hasMath?: boolean;
 }
 
-const { post } = Astro.props;
+const { post, hasMath = false } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
 const { title, description, pubDate, updatedDate, author, category, tags, image, ogImage } = post.data;
 
@@ -127,8 +130,8 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       currentLocale={currentLocale}
     />
     
-    <!-- KaTeX CSS for math rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <!-- KaTeX CSS: 数式を含む記事だけ。自前ホスト（CDN・SRI・preload 不一致 #293 を解消） -->
+    {hasMath && <KatexStyles />}
     
     {/* pageTitle は frontmatter で組み立て済み（全角｜直書きは圧縮ツールで壊れるため）。 */}
     <title>{pageTitle}</title>
