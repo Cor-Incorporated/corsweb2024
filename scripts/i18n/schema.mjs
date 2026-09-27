@@ -89,8 +89,7 @@ export const CONTENT_SCHEMAS = Object.freeze({
 });
 
 /** 翻訳先だけに付く来歴フィールド（config.ts の z.object は未知キーを捨てるのでビルドには影響しない）。 */
-export const TranslationMetaSchema = z.object({
-  lang: z.enum([...TARGET_LANGS]),
+export const ProvenanceSchema = z.object({
   translationSourceHash: z
     .string()
     .regex(SOURCE_HASH_RE, '64 桁の小文字 16 進 SHA-256 ではありません'),
@@ -100,6 +99,11 @@ export const TranslationMetaSchema = z.object({
   translationModel: z.string().min(1),
 });
 
+/** 来歴 + 翻訳先の lang。書き込む直前の検証に使う。 */
+export const TranslationMetaSchema = ProvenanceSchema.extend({
+  lang: z.enum([...TARGET_LANGS]),
+});
+
 function issues(result, prefix) {
   return result.success
     ? []
@@ -107,7 +111,32 @@ function issues(result, prefix) {
 }
 
 /**
- * 翻訳先 frontmatter の検証。違反メッセージの配列（問題なければ空）。
+ * ja（正本）の frontmatter の検証（src/content/config.ts と同じ制約）。違反メッセージの配列。
+ * 分類の時点で使い、違反があれば source-error として API を呼ばない。
+ */
+export function validateSourceFrontmatter(collection, data) {
+  const schema = CONTENT_SCHEMAS[collection];
+  if (!schema) return [`未知のコレクションです: ${collection}`];
+  return issues(schema.safeParse(data), 'schema ');
+}
+
+/**
+ * 既存の翻訳ファイルの frontmatter の検証（分類用）。本文スキーマと、来歴がある場合はその形を見る。
+ * lang の食い違いは meta-drift（API なしで同期）として扱うため、ここでは見ない。
+ */
+export function validateExistingTranslation(collection, data) {
+  const schema = CONTENT_SCHEMAS[collection];
+  if (!schema) return [`未知のコレクションです: ${collection}`];
+  const hash = data.translationSourceHash;
+  const tracked = hash !== undefined && hash !== null;
+  return [
+    ...issues(schema.safeParse(data), 'schema '),
+    ...(tracked ? issues(ProvenanceSchema.safeParse(data), 'meta ') : []),
+  ];
+}
+
+/**
+ * 書き込む翻訳の frontmatter の検証（本文スキーマ + 来歴 + lang）。違反メッセージの配列（問題なければ空）。
  */
 export function validateTranslatedFrontmatter(collection, data, lang) {
   const schema = CONTENT_SCHEMAS[collection];

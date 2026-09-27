@@ -8,8 +8,12 @@
  *   meta-drift  ハッシュ一致だがコピー対象（pubDate 等）や lang がずれている → API なしで同期
  *   ok          ハッシュ一致・コピー対象も一致
  *   orphan      ja なし / 翻訳あり（ja を削除・改名した）      → 条件つきで翻訳を削除する（run.mjs）
- *   invalid     翻訳ファイルの frontmatter が壊れている        → 再翻訳する
- *   source-error ja の frontmatter が壊れている               → 何もしない（人が直す）
+ *   invalid     翻訳ファイルの frontmatter が壊れている・スキーマ違反 → 再翻訳する
+ *   source-error ja の frontmatter が壊れている・スキーマ違反   → 何もしない（人が直す。API も呼ばない）
+ *
+ * frontmatter は分類の時点で src/content/config.ts の Zod ミラー（schema.mjs）で検証する。
+ * ja が不正なまま翻訳して API を使ったあとで失敗したり、必須フィールドの消えた翻訳を ok と
+ * 判定したりしないため。
  *
  * --since で差分を与えたときは、各項目に sourceDiff（ja ファイルがその差分で
  * 'added' / 'modified' / 'deleted' / 'unchanged' のどれか）を付ける。差分なしの実行では null。
@@ -21,6 +25,7 @@ import path from 'node:path';
 import { COLLECTIONS, CONTENT_ROOT, META_KEYS, SOURCE_LANG, TARGET_LANGS } from './config.mjs';
 import { parseDocument } from './frontmatter.mjs';
 import { computeSourceHash } from './hash.mjs';
+import { validateExistingTranslation, validateSourceFrontmatter } from './schema.mjs';
 import { deepEqual, omitPath } from './util.mjs';
 
 export const SLUG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -52,8 +57,12 @@ export function copiedPart(collection, data) {
 export function classify({ collection, lang, source, target }) {
   if (!source) return target ? { status: 'orphan' } : null;
   if (source.error) return { status: 'source-error', reason: source.error };
+  const sourceIssues = validateSourceFrontmatter(collection, source.data);
+  if (sourceIssues.length > 0) return { status: 'source-error', reason: sourceIssues.join(' / ') };
   if (!target) return { status: 'missing' };
   if (target.error) return { status: 'invalid', reason: target.error };
+  const targetIssues = validateExistingTranslation(collection, target.data);
+  if (targetIssues.length > 0) return { status: 'invalid', reason: targetIssues.join(' / ') };
   const recorded = target.data.translationSourceHash;
   if (recorded === undefined || recorded === null) return { status: 'untracked' };
   if (recorded !== computeSourceHash(collection, source.data, source.body))

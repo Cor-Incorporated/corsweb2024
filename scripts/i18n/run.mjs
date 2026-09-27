@@ -16,7 +16,8 @@ import { getPath } from './util.mjs';
 export const HINTS = Object.freeze({
   missing: '翻訳ファイルがありません → npm run i18n:translate（GEMINI_API_KEY が必要）',
   stale: 'ja が更新されています → npm run i18n:translate で再翻訳',
-  invalid: '翻訳ファイルの frontmatter が壊れています → npm run i18n:translate で再生成',
+  invalid:
+    '翻訳ファイルの frontmatter が壊れている・スキーマに違反しています → npm run i18n:translate で再生成',
   untracked:
     '来歴（translationSourceHash）の無い既存翻訳 → 今の ja に対応した訳なら `node scripts/i18n/translate-content.mjs --adopt` で採用、' +
     'ja を変更した記事なら `npm run i18n:translate -- --retranslate-untracked` で訳し直す',
@@ -24,7 +25,8 @@ export const HINTS = Object.freeze({
     'pubDate / category / featured 等が ja とずれています → npm run i18n:translate で同期（API 不要）',
   orphan:
     'ja が無い翻訳です（ja を削除・改名した）→ npm run i18n:translate で削除（条件は docs/i18n-translation.md）',
-  'source-error': 'ja の frontmatter を解釈できません → ja を修正してください',
+  'source-error':
+    'ja の frontmatter を解釈できない・スキーマ（src/content/config.ts）に違反しています → ja を修正してください（翻訳は行いません）',
 });
 
 /** --since の差分で ja が追加・変更された項目か（旧翻訳はその変更を反映していない）。 */
@@ -60,8 +62,13 @@ export function formatReport(items) {
       bySlug.set(key, [...(bySlug.get(key) ?? []), item]);
     }
     for (const [key, slugItems] of bySlug) {
-      const langs = slugItems.map((i) => i.lang + (i.reason ? `（${i.reason}）` : ''));
-      lines.push(`  ${key} → ${langs.join(', ')}`);
+      // 同じ理由（ja の不正など）は言語ごとに繰り返さず 1 回だけ出す
+      const reasons = [...new Set(slugItems.map((i) => i.reason ?? ''))];
+      const langs =
+        reasons.length === 1
+          ? slugItems.map((i) => i.lang).join(', ') + (reasons[0] ? `（${reasons[0]}）` : '')
+          : slugItems.map((i) => i.lang + (i.reason ? `（${i.reason}）` : '')).join(', ');
+      lines.push(`  ${key} → ${langs}`);
       const hints = [...new Set(slugItems.map(itemHint).filter(Boolean))];
       hints.forEach((hint) => lines.push(`    ↳ ${hint}`));
     }
@@ -198,7 +205,10 @@ function reportResults(results, skipped, out) {
   return failed === 0 && skipped.length === 0 ? 0 : 1;
 }
 
-const skipOf = (item) => ({ item, reason: itemHint(item) ?? HINTS[item.status] });
+const skipOf = (item) => ({
+  item,
+  reason: itemHint(item) ?? HINTS[item.status] + (item.reason ? `（${item.reason}）` : ''),
+});
 
 /**
  * --write の作業計画。skipped は { item, reason }（処理しなかった理由つき。終了コード 1 になる）。

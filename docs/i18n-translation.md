@@ -57,9 +57,11 @@ translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は 
 | `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳）。`--since` の差分で ja を変更した記事は `--adopt` を拒否し、`--write --retranslate-untracked --only <collection>/<slug>` を案内する（古い訳を最新として確定させない） |
 | `meta-drift` | ハッシュは一致するが、コピー対象（`pubDate` `featured` 等）や `lang` がずれている | 問題 | API なしで ja から同期 |
 | `orphan` | ja が無い翻訳（ja を削除・改名した、または翻訳だけを追加した） | 問題 | 下の条件をすべて満たすものだけ削除。満たさないものは削除せず失敗として報告 |
-| `invalid` | 翻訳ファイルの frontmatter が壊れている | 問題 | 再翻訳して上書き |
-| `source-error` | ja の frontmatter が壊れている | 問題 | 何もしない（ja を直す） |
+| `invalid` | 翻訳ファイルの frontmatter が壊れている、またはスキーマ違反（必須の `title` が無い・来歴の形が不正など。ハッシュが一致していても） | 問題 | 再翻訳して上書き |
+| `source-error` | ja の frontmatter が壊れている、またはスキーマ違反（未知の `category`・必須フィールドの欠落など） | 問題 | 何もしない（ja を直す。API も呼ばない） |
 | `ok` | 同期済み | — | 何もしない |
+
+frontmatter は分類の時点で `src/content/config.ts` と同じ制約（Zod ミラー `scripts/i18n/schema.mjs`）で検証します（ja が不正なまま翻訳して API を使ったり、壊れた翻訳を `ok` と判定したりしないため）。
 
 `--check` は 1 件でも問題があれば終了コード 1、`--write` は失敗・未処理が 1 件でもあれば終了コード 1、引数や設定の誤りは終了コード 2 です。
 
@@ -235,7 +237,8 @@ git push
 | `ja が無いのに翻訳があり、ja の削除が差分にありません` | PR で翻訳（en 等）だけを追加した | ja を追加するか、その翻訳ファイルを PR から削除する |
 | `来歴のない翻訳は自動では削除しません` | ja を削除・改名したが、翻訳は旧来のもの | 削除してよければ手元で `npm run i18n:translate -- --prune-untracked`、または翻訳ファイルを PR で `git rm` する |
 | `削除が多すぎるため中止しました（blog: N 件 / 翻訳 M 件、上限 K 件）` | 1 回の削除が上限を超えた | 意図した削除なら `I18N_MAX_PRUNE_RATIO=1 npm run i18n:translate` のように上限を上げて手元で実行する |
-| `[source-error]` | ja の frontmatter が壊れている | ja を直す（`npm run build` でも同じ箇所が落ちる） |
+| `[source-error]` | ja の frontmatter が壊れている・スキーマ違反（行末の括弧内に違反箇所。例: `schema category: Invalid enum value`） | ja を直す（`npm run build` でも同じ箇所が落ちる）。直すまでその記事は翻訳しない |
+| `[invalid]` | 翻訳の frontmatter が壊れている・スキーマ違反（手で編集して `title` を消した等） | `npm run i18n:translate` で再生成（PR なら translate ジョブが再生成） |
 | `ja ディレクトリが空のため削除を中止しました（安全装置）` | ja が 1 本も無いのに翻訳だけある | 意図した削除なら翻訳ファイルを手で削除する |
 | `許可されていない変更のため適用しません` / `許可されていない種類の変更のため適用しません` | 翻訳が翻訳ディレクトリ以外・ja を変えた、またはシンボリックリンク・実行権限を作った | バグか改ざんの疑い。ログを添えて開発者に連絡（何も push されていない） |
 | `パッチが大きすぎるため適用しません` | 1 回の変更が 5 MB を超えた | 記事を分けて処理する |
