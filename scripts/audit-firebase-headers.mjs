@@ -132,7 +132,8 @@ const main = async () => {
   requireEffectiveHeader(violations, headers, '/blog/', 'Cache-Control', /no-cache/);
   requireEffectiveHeader(violations, headers, '/blog/index.html', 'Cache-Control', /no-cache/);
   requireEffectiveHeader(violations, headers, '/assets/app.js', 'Cache-Control', /immutable/);
-  for (const font of ['/_astro/KaTeX_Main-Regular.B22Nviop.woff2', '/_astro/KaTeX_Main-Regular.Dr94JaBh.woff', '/_astro/KaTeX_Main-Regular.ypZvNtVU.ttf']) {
+  // 自前ホストのフォント（/_astro/ にハッシュ付きで出力される）の代表パス
+  for (const font of ['/_astro/example-font.woff2', '/_astro/example-font.woff', '/_astro/example-font.ttf']) {
     requireEffectiveHeader(violations, headers, font, 'Cache-Control', /immutable/);
   }
   requireEffectiveHeader(violations, headers, '/og/page/home.png', 'Cache-Control', /immutable/);
