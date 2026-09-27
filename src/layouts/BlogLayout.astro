@@ -2,7 +2,6 @@
 import { ViewTransitions } from 'astro:transitions';
 import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
-import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
 import { generateKeywords, estimateReadingTime } from '../utils/blog-seo';
@@ -465,7 +464,6 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       <slot />
     </main>
     <Footer />
-    <WebVitals />
     
     <!-- Alpine.js Stores Plugin -->
     <script data-cfasync="false">

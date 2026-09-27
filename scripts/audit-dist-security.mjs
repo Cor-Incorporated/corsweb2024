@@ -36,6 +36,14 @@ const BLOCKED_HOST_PATTERNS = [
   /^cor-jp-main(?:--[a-z0-9-]+)?\.firebaseapp\.com$/i,
 ];
 
+// 実行時に第三者の CDN からコードを読み込まない。完全性を検証できず、版を範囲で指定すると中身も固定されない
+// （2026-09-28 まで全ページが unpkg の web-vitals@3 を動的 import していた。計測値の送り先も無かった）。
+// 必要なライブラリは npm から同梱する。jsDelivr の Alpine.js は同梱への切り替え（#333）が済むまで対象外。
+const REMOTE_CODE_PATTERNS = [
+  { name: 'dynamic import of a remote module', pattern: /\bimport\(\s*["'`]https?:\/\//i },
+  { name: 'script loaded from unpkg', pattern: /<script\b[^>]*\bsrc=["']?https?:\/\/unpkg\.com\//i },
+];
+const REMOTE_CODE_EXTENSIONS = new Set(['.html', '.js', '.mjs']);
 const SECRET_PATTERNS = [
   { name: 'private key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'github token', pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/ },
@@ -161,6 +169,15 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
+const auditRemoteCode = (violations, file) => {
+  if (!REMOTE_CODE_EXTENSIONS.has(path.extname(file.file))) return;
+  for (const { name, pattern } of REMOTE_CODE_PATTERNS) {
+    if (pattern.test(file.text)) {
+      violations.push(`[dist-security] ${file.relative} contains ${name}.`);
+    }
+  }
+};
+
 const auditHeavyRuntime = (violations, file) => {
   if (!file.relative.startsWith('_astro/') || !file.relative.endsWith('.js')) return;
   const heavyRuntimePatterns = [
@@ -194,6 +211,7 @@ const main = async () => {
     auditSecrets(violations, file);
     auditOrigins(violations, file);
     auditLocalStorage(violations, file);
+    auditRemoteCode(violations, file);
     auditHeavyRuntime(violations, file);
   }
 

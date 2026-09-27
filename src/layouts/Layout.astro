@@ -3,7 +3,6 @@ import { ViewTransitions } from 'astro:transitions';
 import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
 import CloudiaLauncher from '../components/contact/CloudiaLauncher.astro';
-import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
@@ -397,7 +396,6 @@ const robotsContent = getRobotsContent();
     </main>
     <Footer />
     {CLOUDIA_LAUNCHER_ENABLED && cloudiaLauncher && <CloudiaLauncher />}
-    <WebVitals />
     <script data-cfasync="false">
       // Global store fallback - ストアが未定義の場合のデフォルト値
       // @ts-ignore
