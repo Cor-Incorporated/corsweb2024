@@ -7,6 +7,7 @@
 // スクリプトなどのサブリソースを読み込まないため、テスト中にネットワークへは出ない。
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { z } from 'astro/zod';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import {
@@ -20,6 +21,7 @@ import {
   findLauncherFallbackSelfLinks,
   findPhoneInquiryPhrases,
   findPhoneLeads,
+  hasCalendarEmbed,
   inspectCloudiaChatDocument,
   isCloudiaChatHtmlServed,
   isContactPagePath,
@@ -28,7 +30,16 @@ import { PHONE_INQUIRY_ACCIDENTS } from '../fixtures/phone-inquiry-accidents';
 
 // 反証の実測では、壊した dist の複製を CONTACT_GUARD_DIST_DIR で渡す（既定は ./dist）。
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
+// その dist を作ったビルドの条件（ci.yml が渡す）。'0' = カレンダーなし、'1' = カレンダーあり（ダミー ID）。
+// 未設定（ローカル実行）なら状態は検査しない。'0' / '1' 以外はここで落とす。
+const EXPECT_CALENDAR = z
+  .enum(['0', '1'])
+  .optional()
+  .parse(process.env.CONTACT_GUARD_EXPECT_CALENDAR || undefined);
 const LOCALES = Object.keys(CONTACT_PAGE_PATHS) as ReadonlyArray<keyof typeof CONTACT_PAGE_PATHS>;
+// 注入テストで使う架空のカレンダー埋め込み（カレンダーなしの dist で「ある状態」を作るとき用）。
+const CALENDAR_IFRAME_FIXTURE =
+  '<iframe src="https://calendar.google.com/calendar/embed?src=fixture%40example.invalid"></iframe>';
 
 type DistPage = { readonly document: Document; readonly pageUrl: URL };
 type LauncherRun = { readonly document: Document; readonly errors: readonly string[] };
@@ -105,6 +116,17 @@ describe('B-2 <details> の文言とカレンダーが整合している', () =>
     // 検査対象が消えて素通りになっていないこと（details が無ければ判定は常に空になる）。
     expect(document.querySelectorAll('details').length).toBeGreaterThan(0);
     expect(findCalendarCopyMismatches(document)).toEqual([]);
+  });
+});
+
+// ビルド条件どおりにカレンダーが描画されたか（#331 再レビュー MEDIUM-1）。これが無いと、
+// カレンダーありのビルドが何かの理由でカレンダーなしの HTML になっても B-2 の逆向き
+// （calendar-without-claim）は評価されず、2 回目の test:dist が気づかれずに空振りする。
+describe.runIf(EXPECT_CALENDAR !== undefined)('ビルド条件どおりのカレンダー状態（CONTACT_GUARD_EXPECT_CALENDAR）', () => {
+  it.each(LOCALES)('%s', (locale) => {
+    const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
+    const rendered = Array.from(document.querySelectorAll('details')).some(hasCalendarEmbed);
+    expect({ locale, rendered }).toEqual({ locale, rendered: EXPECT_CALENDAR === '1' });
   });
 });
 
@@ -206,6 +228,20 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     summary.textContent = '所在地・打ち合わせ可能な時間を見る';
     expect(findCalendarCopyMismatches(document).map((finding) => finding.kind)).toEqual([
       'claim-without-calendar',
+    ]);
+  });
+
+  // 逆向き（#331 再レビュー MEDIUM-1）: カレンダーがあるのに見出しが案内しない。カレンダーありの dist では
+  // 実物のカレンダーをそのまま使い、カレンダーなしの dist では架空の埋め込みを足して同じ状態を作る。
+  it.each(LOCALES)('%s: カレンダーがあるのに見出しが時間帯を案内しない（calendar-without-claim）', (locale) => {
+    const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
+    const details = document.querySelector('details');
+    const summary = details?.querySelector('summary');
+    if (!details || !summary) throw new Error(`${locale}: details / summary が無い`);
+    if (!hasCalendarEmbed(details)) details.insertAdjacentHTML('beforeend', CALENDAR_IFRAME_FIXTURE);
+    summary.textContent = '所在地を見る';
+    expect(findCalendarCopyMismatches(document).map((finding) => finding.kind)).toEqual([
+      'calendar-without-claim',
     ]);
   });
 

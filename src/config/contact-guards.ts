@@ -148,6 +148,16 @@ export type CalendarCopyFinding = {
 };
 
 /**
+ * root の中に Google カレンダーの埋め込み（https の calendar.google.com を src に持つ iframe）があるか。
+ * B-2 の判定と、「そのビルドで実際にカレンダーが描画されたか」の確認（dist 検査）が同じ定義を使う。
+ */
+export function hasCalendarEmbed(root: ParentNode): boolean {
+  return Array.from(root.querySelectorAll('iframe[src]')).some((iframe) =>
+    isCalendarEmbedSrc(iframe.getAttribute('src'))
+  );
+}
+
+/**
  * `<details>` ごとに文言とカレンダーの有無を突き合わせる。
  * - claim-without-calendar: 中身が時間帯に言及しているのに、同じ details 内にカレンダーが無い
  *   （PUBLIC_GCAL_ID 未設定ビルドで説明文だけが断言していた事故 = #323 背景 4）。
@@ -159,9 +169,7 @@ export function findCalendarCopyMismatches(root: ParentNode): CalendarCopyFindin
   return Array.from(root.querySelectorAll('details')).flatMap((details) => {
     const text = normalizeWhitespace(details.textContent);
     const summaryText = normalizeWhitespace(summaryOf(details)?.textContent);
-    const hasCalendar = Array.from(details.querySelectorAll('iframe[src]')).some((iframe) =>
-      isCalendarEmbedSrc(iframe.getAttribute('src'))
-    );
+    const hasCalendar = hasCalendarEmbed(details);
     const claimsAvailability = matchesAny(AVAILABILITY_CLAIM_PATTERNS, text);
     const summaryClaimsAvailability = matchesAny(AVAILABILITY_CLAIM_PATTERNS, summaryText);
     const detailsId = details.getAttribute('id');

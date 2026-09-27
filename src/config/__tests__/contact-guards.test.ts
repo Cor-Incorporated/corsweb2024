@@ -23,6 +23,7 @@ import {
   findLauncherFallbackSelfLinks,
   findPhoneInquiryPhrases,
   findPhoneLeads,
+  hasCalendarEmbed,
   inspectCloudiaChatDocument,
   isCloudiaChatHtmlServed,
   isContactPagePath,
@@ -171,6 +172,20 @@ describe('B-1 findPhoneInquiryPhrases（/privacy 用の句レベル）', () => {
   it('format-detection の meta は句レベルでも誤検出しない', () => {
     const head = '<meta name="format-detection" content="telephone=no">';
     expect(findPhoneInquiryPhrases(parsePage('<main><p>所在地</p></main>', head))).toEqual([]);
+  });
+});
+
+describe('B-2 hasCalendarEmbed（カレンダーが描画されているかの定義）', () => {
+  it('https の calendar.google.com を src に持つ iframe だけをカレンダーとみなす', () => {
+    expect(hasCalendarEmbed(parsePage(CALENDAR_IFRAME))).toBe(true);
+    expect(
+      [
+        '<iframe src="https://calendar.google.com.evil.example/calendar/embed"></iframe>',
+        '<iframe src="http://calendar.google.com/calendar/embed"></iframe>',
+        '<iframe src="/contact/chat/?embed=1"></iframe>',
+        '<p>カレンダーなし</p>',
+      ].filter((html) => hasCalendarEmbed(parsePage(html)))
+    ).toEqual([]);
   });
 });
 
