@@ -13,7 +13,6 @@ function analyzeBundles() {
     console.log('Bundle analysis complete. Key findings:');
     console.log('- Alpine.js is now bundled locally (reduced external dependencies)');
     console.log('- reCAPTCHA only loads on contact page (conditional loading implemented)');
-    console.log('- Web Vitals monitoring added for performance tracking');
     console.log('- Critical CSS inlined for faster initial render');
     
     results.recommendations = [

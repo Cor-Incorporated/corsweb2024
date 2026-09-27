@@ -74,7 +74,6 @@ node scripts/translate-all-blog.js
 - **CDN Delivery**: Alpine.js delivered from CDN (utilizing browser cache)
 - **DNS Prefetch**: Pre-resolve DNS for external resources
   ```html
-  <link rel="preconnect" href="https://esm.sh" crossorigin>
   <link rel="dns-prefetch" href="https://ssgform.com">
   ```
 - **Long-term Cache**: Static assets cached for 1 year in Firebase configuration
@@ -146,7 +145,6 @@ src/
 │   ├── blog/        # Blog-specific components
 │   ├── home/        # Homepage components
 │   ├── layout/      # Shared layouts
-│   ├── performance/ # Performance monitoring
 │   ├── products/    # Product showcase components
 │   └── youtube/     # YouTube API integration components
 ├── content/         # Content collections
@@ -210,7 +208,7 @@ https://github.com
 - Service Worker for offline support
 - Additional optimization of Resource Hints
 - Improved image Lazy Loading strategy
-- Enhanced Web Vitals monitoring
+- Using Core Web Vitals field data (Cloudflare Web Analytics) to drive improvements
 - Further improvement of translation accuracy
 - Blog management UI/CMS implementation
 - Tip history management feature

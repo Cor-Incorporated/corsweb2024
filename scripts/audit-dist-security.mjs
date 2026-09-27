@@ -38,12 +38,19 @@ const BLOCKED_HOST_PATTERNS = [
 
 // 実行時に第三者の CDN からコードを読み込まない。完全性を検証できず、版を範囲で指定すると中身も固定されない
 // （2026-09-28 まで全ページが unpkg の web-vitals@3 を動的 import していた。計測値の送り先も無かった）。
-// 必要なライブラリは npm から同梱する。jsDelivr の Alpine.js は同梱への切り替え（#333）が済むまで対象外。
-const REMOTE_CODE_PATTERNS = [
-  { name: 'dynamic import of a remote module', pattern: /\bimport\(\s*["'`]https?:\/\//i },
-  { name: 'script loaded from unpkg', pattern: /<script\b[^>]*\bsrc=["']?https?:\/\/unpkg\.com\//i },
+// 必要なライブラリは npm から同梱する。
+// - HTML は、実行されるインラインの <script>（JSON-LD 以外）の本文だけを見る。記事のコード例
+//   （<code> の中の import("https://…") など）は実行されないので対象にしない。
+// - 例外: jsDelivr の Alpine.js は同梱への切り替え（#333）が済むまで対象外。計測のベンダータグ
+//   （Cloudflare Web Analytics の beacon、Clarity の loader）は Analytics.astro が本番だけで出力するもので、
+//   URL の import ではないので当たらない。
+const REMOTE_MODULE_PATTERNS = [
+  { name: 'dynamic import of a remote module', pattern: /\bimport\s*\(\s*["'`](?:https?:)?\/\//i },
+  { name: 'static import of a remote module', pattern: /\b(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?["'`](?:https?:)?\/\//i },
 ];
-const REMOTE_CODE_EXTENSIONS = new Set(['.html', '.js', '.mjs']);
+const PUBLIC_CDN_SCRIPT_PATTERN =
+  /<script\b[^>]*\bsrc=["']?(?:https?:)?\/\/(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com)\//i;
+const INLINE_SCRIPT_PATTERN = /<script\b(?![^>]*\bsrc=)(?![^>]*application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/gi;
 const SECRET_PATTERNS = [
   { name: 'private key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'github token', pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/ },
@@ -169,11 +176,22 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
+const executableCode = file => {
+  const extension = path.extname(file.file);
+  if (extension === '.js' || extension === '.mjs') return [file.text];
+  if (extension === '.html') return [...file.text.matchAll(INLINE_SCRIPT_PATTERN)].map(match => match[1]);
+  return [];
+};
+
 const auditRemoteCode = (violations, file) => {
-  if (!REMOTE_CODE_EXTENSIONS.has(path.extname(file.file))) return;
-  for (const { name, pattern } of REMOTE_CODE_PATTERNS) {
-    if (pattern.test(file.text)) {
-      violations.push(`[dist-security] ${file.relative} contains ${name}.`);
+  if (path.extname(file.file) === '.html' && PUBLIC_CDN_SCRIPT_PATTERN.test(file.text)) {
+    violations.push(`[dist-security] ${file.relative} loads a script from a public JS CDN.`);
+  }
+  for (const code of executableCode(file)) {
+    for (const { name, pattern } of REMOTE_MODULE_PATTERNS) {
+      if (pattern.test(code)) {
+        violations.push(`[dist-security] ${file.relative} contains ${name}.`);
+      }
     }
   }
 };
