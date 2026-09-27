@@ -22,12 +22,12 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 ## 決定
 
-1. CMS に Sveltia CMS（MIT）を採用する。管理画面は `public/admin/index.html` と `public/admin/config.yml` を静的に置き、`https://cor-jp.com/admin/` で配信する。SSR・adapter・DB は導入しない。
+1. CMS に Sveltia CMS（MIT）を採用する。管理画面は `src/pages/admin/index.astro`（noindex の最小 HTML）で npm 版の Sveltia CMS を Vite で同梱し、設定は `public/admin/config.yml` に置いて、`https://cor-jp.com/admin/` で静的に配信する。フォント・翻訳などの付随ファイルも自サイトから配信し、外部 CDN を読まない。SSR・adapter・DB は導入しない。
 2. GitHub バックエンドを使う（対象ブランチは develop）。`publish_mode: editorial_workflow` とし、下書きは PR、レビューは PR のラベル、公開は merge commit で行う。
 3. 認証は GitHub OAuth App と Sveltia CMS Authenticator（Cloudflare Workers）で行う。呼び出し元のドメインを限定する。編集者は各自の GitHub アカウント（リポジトリの Write 権限）でログインする。
 4. CMS が編集するのは ja のフォルダだけとする（`src/content/{blog,news,cases}/ja`）。en / zh / ko / es は翻訳 CI の専有とする。この範囲と、カテゴリの定義・スキーマの必須項目が一致していることを、`config.yml` を読むテストで強制する。
 5. プレビューは Firebase Hosting のプレビューチャネルを使う。develop 宛の PR にもプレビューを作り、CMS の「プレビューを表示」から開けるようにする。
-6. Sveltia CMS の版は固定し、更新は依存更新の PR で行う。
+6. Sveltia CMS の版は devDependency として固定し（package-lock の integrity で改ざんを検知）、更新は依存更新の PR で行う。
 7. AI は 2 段階で導入する。第 1 段階（本 ADR）では導入しない。第 2 段階で、Sveltia のカスタムフィールド API を使い、サーバー側（Worker）を呼ぶ「AI 下書き・推敲」ウィジェットを別の ADR で追加する。文体ガイド `docs/blog-style-guide.md` とガードレール `scripts/blog-guardrails.mjs` を再利用する。Sveltia 内蔵の AI 翻訳は翻訳 CI と責務が重なるので使わない。
 8. 次点は Decap CMS とする。設定形式が互換で、Sveltia に問題が出た場合の退避先にする。
 
