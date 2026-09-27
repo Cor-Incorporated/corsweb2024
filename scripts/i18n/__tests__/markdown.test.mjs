@@ -56,7 +56,10 @@ describe('protect / restore', () => {
   it.each([
     ['\\`コードではない\\` と `本物`', '\\`コードではない\\` と ⟦P0⟧'],
     ['式 $a^2 + b^2$。価格は $20 と $30。', '式 ⟦P0⟧。価格は $20 と $30。'],
-    ['[リンク](https://a.example/x_(y)) ![代替](/図.avif "題")', '[リンク]⟦P0⟧ ![代替]⟦P1⟧'],
+    [
+      '[リンク](https://a.example/x_(y)) ![代替](/図.avif "題")',
+      '[リンク](⟦P0⟧) ![代替](⟦P1⟧ "題")',
+    ],
     ['https://d.example/path?q=1。 (https://e.example/)', '⟦P0⟧。 (⟦P1⟧)'],
     ['文<br>と<span>強調</span>', '文⟦P0⟧と⟦P1⟧強調⟦P2⟧'],
     ['<AIエージェント> と a < b > c', '<AIエージェント> と a < b > c'],
@@ -94,6 +97,36 @@ describe('protect / restore', () => {
   });
 });
 
+describe('リンク・画像の title は訳す（宛先だけを保護する）', () => {
+  it.each([
+    ['![説明](/img.avif "タイトル")', '![説明](⟦P0⟧ "タイトル")'],
+    ['[文言](https://example.com/a "リンクの説明")', '[文言](⟦P0⟧ "リンクの説明")'],
+    ["[文言](/b 'シングル')", "[文言](⟦P0⟧ 'シングル')"],
+    ['[文言](/c (かっこ))', '[文言](⟦P0⟧ (かっこ))'],
+    ['[文言](<https://example.com/a b> "空白入り")', '[文言](⟦P0⟧ "空白入り")'],
+    ['[文言]( /d  "余白" )', '[文言]( ⟦P0⟧  "余白" )'],
+  ])('%s', (markdown, expected) => {
+    const { text, store } = protect(markdown);
+    expect(text).toBe(expected);
+    expect(restore(text, store)).toBe(markdown);
+  });
+
+  it('title だけを訳しても宛先は 1 文字も変わらない（往復）', () => {
+    const markdown =
+      '見出し ![図の説明](/images/blog/図1.avif "タイトル") と [公式](https://cor-jp.com "会社の説明")';
+    const { text, store } = protect(markdown);
+    const translated = text
+      .replace('見出し', 'Heading')
+      .replace('図の説明', 'Figure')
+      .replace('"タイトル"', '"Title"')
+      .replace('公式', 'Official')
+      .replace('"会社の説明"', '"About us"');
+    expect(restore(translated, store)).toBe(
+      'Heading ![Figure](/images/blog/図1.avif "Title") と [Official](https://cor-jp.com "About us")'
+    );
+  });
+});
+
 describe('analyze', () => {
   it('counts structure outside code blocks only', () => {
     const metrics = analyze(
@@ -102,8 +135,8 @@ describe('analyze', () => {
     expect(metrics.headings).toEqual([1, 1, 0, 0, 0, 0]);
     expect(metrics.tableRows).toBe(2);
     expect(metrics.kinds['code-block']).toHaveLength(1);
-    expect(metrics.kinds['image-dest']).toEqual(['(/a.png)']);
-    expect(metrics.kinds['link-dest']).toEqual(['(/b)']);
+    expect(metrics.kinds['image-dest']).toEqual(['/a.png']);
+    expect(metrics.kinds['link-dest']).toEqual(['/b']);
     expect(metrics.kinds['bare-url']).toEqual(['https://c.example']);
   });
 });

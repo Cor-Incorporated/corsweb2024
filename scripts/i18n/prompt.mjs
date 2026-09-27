@@ -44,7 +44,8 @@ Placeholders:
 Markdown structure must stay identical:
 - the same headings with the same number of "#", the same list markers and numbering, the same table rows
   and columns, the same blockquote markers (">"), emphasis markers and blank lines between blocks;
-- translate headings, list items, table cells, link texts ([text]) and image alt texts (![alt]);
+- translate headings, list items, table cells, link texts ([text]), image alt texts (![alt]) and link / image
+  titles (the quoted text after a placeholder, e.g. (⟦P3⟧ "title")), keeping the same straight quote characters;
 - do not create new headings, code fences, links, images or tables.`;
 }
 

@@ -52,6 +52,15 @@ describe('translateDocument with a mocked Gemini client', () => {
     expect(bodyRequest.system).toMatch(/English/);
   });
 
+  it('sends image / link titles to the model but not their paths (Codex: titles are translated)', async () => {
+    const client = createMockClient();
+    const { text } = await run(client);
+    const bodyRequest = client.calls.find((c) => !c.jsonSchema);
+    expect(bodyRequest.prompt).toMatch(/!\[図の説明\]\(⟦P\d+⟧ "タイトル"\)/);
+    expect(bodyRequest.prompt).not.toContain('図1.avif');
+    expect(text).toContain('![lorem](/images/blog/図1.avif "lorem")');
+  });
+
   it('F2: a translation that drops one code fence is rejected after the retry and nothing is returned', async () => {
     const client = createMockClient({ mutateBody: dropFirstBlockToken });
     const error = await run(client).catch((e) => e);

@@ -5,7 +5,7 @@
  *   ブロック: フェンスコード（``` / ~~~）、$$ 数式、HTML ブロック・コメント、
  *             URL だけの行（remark-link-card-plus のリンクカード）、参照リンク定義
  *   インライン: インラインコード、$ 数式、<autolink>、インライン HTML、
- *             リンク・画像の宛先（テキスト / alt は訳す）、参照ラベル、脚注、{#id}、裸 URL
+ *             リンク・画像の宛先（テキスト / alt / "title" は訳す）、参照ラベル、脚注、{#id}、裸 URL
  *
  * analyze() は同じ走査で構造メトリクス（見出し数・コードブロック・リンク・画像…）を数える。
  * 翻訳の前後を同じ関数で数えるので、保護と検証の判定がずれない。
@@ -110,8 +110,9 @@ export function segment(markdown) {
 const LINK_TEXT = String.raw`(?:[^\[\]\\\n]|\\.|\[(?:[^\[\]\\\n]|\\.)*\])*`;
 const LINK_DEST = String.raw`(?:<[^<>\n]*>|(?:[^()\s\\]|\\.|\((?:[^()\s\\]|\\.)*\))*)`;
 const LINK_TITLE = String.raw`(?:\s+(?:"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|\((?:[^()\\\n]|\\.)*\)))?`;
+// 宛先（URL・パス）だけを保護し、title（"..." / '...' / (...)）は訳す対象に残す。
 const INLINE_LINK_RE = new RegExp(
-  String.raw`(!?\[${LINK_TEXT}\])(\([ \t]*${LINK_DEST}${LINK_TITLE}[ \t]*\))`,
+  String.raw`(!?\[${LINK_TEXT}\])\(([ \t]*)(${LINK_DEST})(${LINK_TITLE})([ \t]*)\)`,
   'g'
 );
 const DISPLAY_MATH_INLINE_RE = /\$\$[^$\n]+?\$\$/g;
@@ -194,10 +195,10 @@ function protectInline(line, put) {
   s = s.replace(AUTOLINK_RE, put('autolink'));
   s = s.replace(HTML_INLINE_COMMENT_RE, put('html-inline'));
   s = s.replace(HTML_INLINE_TAG_RE, put('html-inline'));
-  s = s.replace(
-    INLINE_LINK_RE,
-    (_m, head, dest) => head + put(head.startsWith('!') ? 'image-dest' : 'link-dest')(dest)
-  );
+  s = s.replace(INLINE_LINK_RE, (_m, head, lead, dest, title, trail) => {
+    const token = dest ? put(head.startsWith('!') ? 'image-dest' : 'link-dest')(dest) : '';
+    return `${head}(${lead}${token}${title}${trail})`;
+  });
   s = s.replace(REF_LINK_RE, (_m, label) => `]${put('ref-label')(label)}`);
   s = s.replace(FOOTNOTE_RE, put('footnote'));
   s = s.replace(HEADING_ID_RE, put('heading-id'));

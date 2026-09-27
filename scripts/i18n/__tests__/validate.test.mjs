@@ -122,7 +122,8 @@ describe('checkBodyOutput (tokens → restore → parity)', () => {
     expect(result.ok).toBe(true);
     expect(result.text).toContain('```js\n// コメントは訳さない\nconsole.log("こんにちは");\n```');
     expect(result.text).toContain('[lorem](https://cor-jp.com)');
-    expect(result.text).toContain('![lorem](/images/blog/図1.avif "タイトル")');
+    // 画像の宛先はそのまま、title（"タイトル"）は訳される（Codex 指摘）
+    expect(result.text).toContain('![lorem](/images/blog/図1.avif "lorem")');
   });
 
   it('F2: the model dropping one code-fence placeholder is rejected (nothing to write)', () => {
