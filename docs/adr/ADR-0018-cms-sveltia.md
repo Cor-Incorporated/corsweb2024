@@ -19,7 +19,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
   - 本文は `src/content/<collection>/<lang>/<slug>.md`（blog / news / cases × ja / en / zh / ko / es）。スキーマは `src/content/config.ts`。ja が原文。
   - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019、別 PR で作成予定）。
   - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop も 2026-09-27 に保護を設定した（PR 必須・承認 0 件・必須チェック 2 本・管理者にも適用）。2026-09-28 には push 制限を加え、develop に merge できるのは terisuke と cloudia-Cor だけにした。
-  - Sveltia CMS は、ログインした GitHub のトークン（refresh token を含む）をブラウザの localStorage に保存する。localStorage はオリジン単位なので、同じオリジンで動くスクリプトはすべてトークンを読める。要求するスコープは `public_repo,user` で、そのユーザーが書き込める全ての公開リポジトリに及ぶ（2026-09-28 時点で、書き込み権限者 4 名は全員がリポジトリの管理者）。
+  - Sveltia CMS は、ログインした GitHub のトークンをブラウザの localStorage に保存する。GitHub の OAuth App のトークンには有効期限がなく、取り消すまで有効である。localStorage はオリジン単位なので、同じオリジンで動くスクリプトはすべてトークンを読める。要求するスコープは `public_repo,user` で、そのユーザーが書き込める全ての公開リポジトリに及ぶ。
   - 公開サイト（cor-jp.com）には CSP が無く、計測や reCAPTCHA などの第三者スクリプトを読み込んでいる（2026-09-28 のレビューで確認）。
 
 ## 決定
@@ -70,8 +70,8 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 - 編集者全員に GitHub アカウントと Write 権限が必要になる。
 - トークンのスコープ（`public_repo,user`）は、編集者が書き込める全ての公開リポジトリに及ぶ。OAuth App ではリポジトリ単位に絞れないので、編集者にはリポジトリの管理者でないアカウントを使うことを推奨する。
-- CMS の「公開」（PR の merge）ができるのは、develop の push 制限で許可された terisuke と cloudia-Cor だけである（2026-09-28 設定）。それ以外の編集者は「レビューに送る」までを行い、公開は CEO が行う。
-- 管理画面の URL は `https://cor-jp-cms.web.app/`（cor-jp.com/admin/ ではない）。Firebase サイト `cor-jp-cms` の作成と、配信を有効にするリポジトリ変数 `CMS_DEPLOY_ENABLED=true` の設定は、2026-09-28 に済ませた（手順と確認方法は `docs/cms-sveltia.md`）。
+- CMS の「公開」（PR の merge）ができるのは、develop の push 制限で許可された terisuke と cloudia-Cor だけである（2026-09-28 設定）。それ以外の編集者は「レビューに送る」までを行う。ただし cloudia-Cor も merge できるため、「公開は CEO が行う」は運用上の約束である。develop は承認 0 件なので、公開前のレビューも GitHub 上では強制されない（必要になったら CODEOWNERS とコードオーナーのレビューを設定する）。
+- 管理画面の URL は `https://cor-jp-cms.web.app/`（cor-jp.com/admin/ ではない）。Firebase サイト `cor-jp-cms` の作成と、配信を有効にするリポジトリ変数 `CMS_DEPLOY_ENABLED=true` の設定は、2026-09-28 に済ませた（手順と確認方法は、#342 で追加する `docs/cms-sveltia.md` に書く）。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
 - 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019、別 PR で作成予定）。
