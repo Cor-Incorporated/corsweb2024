@@ -1,7 +1,8 @@
 name: CI
 
 # PR ごとにユニットテスト・ビルド・dist の回帰ガードを走らせる（Issue #323）。
-# 以前は vitest がどのワークフローでも実行されず、develop 宛 PR では build すら走らなかった。
+# 以前は vitest がどのワークフローでも実行されていなかった。develop 宛 PR の build は
+# visual-text.yml（2026-07-02〜）が表示監査の前段として走らせるだけだった。
 # テストを足すだけでは動かないため、アサーションとこの実行経路はセットで扱う。
 #
 # ジョブ名 `verify` は main のブランチ保護で required check に指定する想定の名前。
@@ -21,8 +22,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  # 取り消すのは同じ PR の古い実行だけ。develop への push は各マージ結果を残すため取り消さない。
+  # PR は番号単位にし、同じ PR の古い実行を取り消す。
+  # push / 手動実行は SHA 単位にする。cancel-in-progress: false でも、同じ group で待機中の実行は
+  # 後から来た実行に置き換えられて取り消されるため、ref 単位だと develop への連続マージで検証が抜ける。
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('sha-{0}', github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -32,13 +35,15 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # actions はタグではなくコミット SHA で固定する（タグの付け替えで中身が変わるのを防ぐ）。
+      # 上げるときは `gh api repos/actions/<name>/git/ref/tags/<tag>` で SHA を確かめてから書き換える。
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'npm'
