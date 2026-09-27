@@ -159,7 +159,7 @@ const langOptions = localeOrder.map((loc) => ({
         class="rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-950 dark:group-focus-visible:outline-primary-200"
       >
         <span class="sr-only">Cor.株式会社</span>
-        <img class="h-20 w-auto" width="65" height="40" src="/assets/logo.avif" alt="Cor.株式会社" loading="lazy" />
+        <img class="h-20 w-auto" width="65" height="40" src="/assets/logo.avif" alt="Cor.株式会社" />
       </a>
     </div>
 
@@ -173,6 +173,7 @@ const langOptions = localeOrder.map((loc) => ({
         <button
           type="button"
           @click="servicesOpen = !servicesOpen"
+          aria-expanded="false"
           :aria-expanded="servicesOpen.toString()"
           aria-haspopup="true"
           class="inline-flex items-center gap-1 rounded-full px-2.5 py-2 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-950 dark:text-primary-200 dark:hover:bg-primary-400/10 dark:focus-visible:ring-primary-200 xl:px-4"
@@ -241,6 +242,7 @@ const langOptions = localeOrder.map((loc) => ({
         type="button"
         x-data
         role="switch"
+        aria-checked="false"
         :aria-checked="($store.theme?.isDark || false).toString()"
         @click="$store.theme?.toggle()"
         class="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border border-primary-900/10 bg-primary-500/10 transition focus:outline-none focus-visible:ring-2 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10"
@@ -288,6 +290,7 @@ const langOptions = localeOrder.map((loc) => ({
         <button
           type="button"
           @click="langOpen = !langOpen"
+          aria-expanded="false"
           :aria-expanded="langOpen.toString()"
           aria-haspopup="true"
           class="inline-flex h-14 items-center justify-center gap-1.5 rounded-full px-4 text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:text-primary-200 dark:hover:bg-primary-400/10"

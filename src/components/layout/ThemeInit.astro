@@ -2,13 +2,16 @@
 // 初回描画前にテーマ（<html> の dark クラス）を当てる。<head> 内で同期実行するため、
 // <html x-cloak> を外しても配色のちらつき（FOUC）が出ない。Alpine には依存しない。
 // View Transitions は遷移のたびに <html> の属性を新しいページのもので置き換える（class も消える）
-// ため、astro:after-swap でも同じ判定を当て直す。
+// ため、astro:after-swap でテーマを当て直し、JS 実行中の印（js: [data-reveal] の演出）と
+// フォント読込済みの印（font-loaded: Inter の適用）も戻す。
 // Layout / BlogLayout の両方がこのコンポーネントを使うこと: 同一テキストの inline script は
 // 遷移時に再実行されないので、リスナーが二重登録されない。
+// data-cfasync="false": Cloudflare Rocket Loader に遅延させない（既存の重要スクリプトと同じ扱い）。
 ---
 
-<script is:inline>
+<script is:inline data-cfasync="false">
   (() => {
+    const root = document.documentElement;
     const applyTheme = () => {
       let stored = null;
       try {
@@ -17,9 +20,13 @@
         stored = null;
       }
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.classList.toggle('dark', stored === 'dark' || (!stored && prefersDark));
+      root.classList.toggle('dark', stored === 'dark' || (!stored && prefersDark));
     };
     applyTheme();
-    document.addEventListener('astro:after-swap', applyTheme);
+    document.addEventListener('astro:after-swap', () => {
+      applyTheme();
+      root.classList.add('js');
+      if ('fonts' in document) document.fonts.ready.then(() => root.classList.add('font-loaded'));
+    });
   })();
 </script>

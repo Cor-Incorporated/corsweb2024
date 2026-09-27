@@ -78,6 +78,8 @@ const SPEAKER = Math.floor((COUNT - 1) / 2);
 
 <style>
   .pw-layer { position: absolute; inset: 0; z-index: 14; overflow: hidden; pointer-events: none; }
+  /* 初期化（data-pw-ready）前は .pw が left:0; top:0 のまま左上に見えるため隠す */
+  .pw-layer:not([data-pw-ready]) { visibility: hidden; }
 
   .pw {
     position: absolute; left: 0; top: 0;

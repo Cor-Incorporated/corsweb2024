@@ -70,7 +70,7 @@ applied before first paint by `src/components/layout/ThemeInit.astro` (no `x-clo
 ```typescript
 // Global stores accessible via Alpine.store()
 Alpine.store('theme', { isDark: boolean, toggle: function })
-Alpine.store('lang', { current: string, toggle: function })
+// (language switching uses plain links in the Header dropdown; there is no lang store)
 // Components use x-data for local state
 // Dark mode and language toggle integrated in Header component
 ```

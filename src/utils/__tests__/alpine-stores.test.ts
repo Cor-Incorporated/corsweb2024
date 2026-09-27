@@ -1,28 +1,7 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createLangStore,
-  createThemeStore,
-  nextLocalePath,
-  registerAlpineStores,
-  THEME_STORAGE_KEY,
-} from '../alpine-stores';
-
-describe('nextLocalePath', () => {
-  it.each([
-    ['ja', '/', '/en'],
-    ['ja', '/about/', '/en/about/'],
-    ['en', '/en/about/', '/zh/about/'],
-    ['ko', '/ko', '/es'],
-    ['es', '/es/blog/post/', '/blog/post/'],
-    ['es', '/es', '/'],
-    // ロケール接頭辞は語境界でだけ外す（/escape を /cape にしない）
-    ['ja', '/escape/', '/en/escape/'],
-    // 未知の lang は ja 扱いの次（= 先頭 ja）へ
-    ['xx', '/en/about/', '/about/'],
-  ])('%s %s → %s', (lang, path, expected) => {
-    expect(nextLocalePath(lang, path)).toBe(expected);
-  });
-});
+import { createThemeStore, registerAlpineStores, THEME_STORAGE_KEY } from '../alpine-stores';
 
 describe('createThemeStore', () => {
   afterEach(() => {
@@ -58,22 +37,27 @@ describe('createThemeStore', () => {
   });
 });
 
-describe('createLangStore / registerAlpineStores', () => {
-  it('navigates to the next locale path from the current <html lang>', () => {
-    const root = document.createElement('html');
-    root.lang = 'zh';
-    const navigate = vi.fn();
-    window.history.replaceState(null, '', '/zh/about/');
-    createLangStore(root, navigate).toggle();
-    expect(navigate).toHaveBeenCalledWith('/ko/about/');
-  });
-
-  it('registers theme and lang stores on the given Alpine host', () => {
+describe('registerAlpineStores', () => {
+  it('registers only the theme store', () => {
     const stores = new Map<string, unknown>();
     const host = { store: vi.fn((name: string, value?: unknown) => stores.set(name, value)) };
     registerAlpineStores(host as never);
-    expect([...stores.keys()]).toEqual(['theme', 'lang']);
+    expect([...stores.keys()]).toEqual(['theme']);
     expect(stores.get('theme')).toMatchObject({ isDark: false });
-    expect(stores.get('lang')).toMatchObject({ current: document.documentElement.lang });
+  });
+
+  // 宣言（登録するストア）と実体（テンプレートの $store 参照）を結ぶ: 参照されないストアを残さず、
+  // 登録していないストアを参照しない。
+  it('matches the $store references used in src templates', () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const full = path.join(dir, name);
+        return statSync(full).isDirectory() ? walk(full) : full.endsWith('.astro') ? [full] : [];
+      });
+    const referenced = new Set<string>();
+    for (const file of walk(path.resolve('src'))) {
+      for (const match of readFileSync(file, 'utf8').matchAll(/\$store\.(\w+)/g)) referenced.add(match[1]);
+    }
+    expect([...referenced].sort()).toEqual(['theme']);
   });
 });

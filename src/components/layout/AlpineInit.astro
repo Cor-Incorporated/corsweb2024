@@ -1,5 +1,5 @@
 ---
-// Alpine.js を npm からビルドに同梱して起動する（C1）。
+// Alpine.js を npm からビルドに同梱して起動する（Epic #330 / ADR-0017: 初期表示を外部 CDN の JS に依存させない）。
 // 以前は jsDelivr の CDN から読み込み、<html x-cloak> でページ全体を Alpine 起動まで非表示に
 // していたため、CDN が遮断されると白紙、CDN が遅いとそのまま初回表示（FCP）が遅れていた。
 // 処理対象の <script>（属性なし）は Astro がモジュールとしてバンドルし、同一 URL のため

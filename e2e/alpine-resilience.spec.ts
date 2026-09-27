@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// C1: 以前は <html x-cloak> でページ全体を隠し、jsDelivr の CDN から読んだ Alpine が起動して
+// Epic #330 / ADR-0017（初期表示を外部 CDN の JS に依存させない）: 以前は <html x-cloak> でページ全体を隠し、jsDelivr の CDN から読んだ Alpine が起動して
 // 初めて表示していた。CDN が遮断・遅延すると白紙（または FCP 遅延）になる。
 // Alpine を npm からバンドルし、<html> の x-cloak を外したことを実ブラウザで確かめる。
 
@@ -28,7 +28,7 @@ function collectAlpineErrors(page: Page): string[] {
 const themeSwitch = (page: Page) => page.locator('header button[role="switch"]');
 const html = (page: Page) => page.locator('html');
 
-test.describe('Alpine without CDN (C1)', () => {
+test.describe('Alpine without CDN (ADR-0017)', () => {
   for (const path of ['/', '/blog/complete-markdown-guide/']) {
     test(`shows the page body with jsDelivr blocked: ${path}`, async ({ page }) => {
       await blockJsdelivr(page);
@@ -49,6 +49,27 @@ test.describe('Alpine without CDN (C1)', () => {
     await page.goto('/');
     await expect(html(page)).toHaveClass(/(^|\s)dark(\s|$)/);
     await expect(page.locator('main h1').first()).toBeVisible();
+  });
+
+  // Alpine / モジュールが動く前（= スクリプトをすべて止めた状態）の初期表示
+  test('renders sensible defaults before any script runs', async ({ page }) => {
+    await page.route('**/*', (route) =>
+      route.request().resourceType() === 'script' ? route.abort() : route.continue(),
+    );
+    await page.goto('/');
+    // FAQ の質問行は Alpine を待たずに見える（回答は閉じたまま）
+    const faqQuestion = page.locator('button[aria-controls^="faq-question-"]').first();
+    await faqQuestion.scrollIntoViewIfNeeded();
+    await expect(faqQuestion).toBeVisible();
+    await expect(page.locator('dd[id^="faq-question-"]').first()).toBeHidden();
+    // ペンギンは位置が決まるまで左上に出さない
+    const layer = page.locator('[data-pw-layer]');
+    await expect(layer).toHaveCount(1);
+    expect(await layer.evaluate((el) => getComputedStyle(el).visibility)).toBe('hidden');
+    // スイッチとドロップダウンは ARIA の既定値を静的に持つ。ファーストビューのロゴは遅延読込しない
+    await expect(themeSwitch(page)).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByRole('button', { name: /Language/ })).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('header a img').first()).not.toHaveAttribute('loading', 'lazy');
   });
 });
 
@@ -110,8 +131,10 @@ test.describe('Alpine interactions', () => {
       await expect(page).toHaveURL(to);
       expect(await page.evaluate(() => (window as unknown as { __vtMarker?: boolean }).__vtMarker)).toBe(true);
 
-      // 遷移で <html> の属性が差し替わっても配色が保たれ、新しい body の Alpine ディレクティブが動く
+      // 遷移で <html> の属性が差し替わっても配色・js・font-loaded が保たれ、新しい body の Alpine ディレクティブが動く
       await expect(html(page)).toHaveClass(/(^|\s)dark(\s|$)/);
+      await expect(html(page)).toHaveClass(/(^|\s)js(\s|$)/);
+      await expect(html(page)).toHaveClass(/(^|\s)font-loaded(\s|$)/);
       await expect(html(page)).not.toHaveAttribute('x-cloak');
       const list = page.locator('ul[aria-label="Language"]');
       const langButton = page.getByRole('button', { name: /Language/ });
