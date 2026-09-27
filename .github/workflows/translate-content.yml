@@ -1,0 +1,358 @@
+name: Translate content (i18n)
+
+# ja（src/content/<collection>/ja/*.md）を正本に、en/zh/ko/es を Gemini で差分翻訳する。
+# 設計: docs/adr/ADR-0019-i18n-auto-translation.md / 運用: docs/i18n-translation.md
+#
+# ■ pull_request（ja を編集した PR）
+#   1. translate  … GEMINI_API_KEY があり、かつ同一リポジトリの PR のときだけ、PR で変更された記事を
+#                   `--write --since <base>` で翻訳し、bot 名義でコミットして PR の head ブランチへ push する。
+#                   contents: write を持つのはこのジョブ（と下の backfill）だけ。
+#   2. i18n-check … translate の後に走る。
+#                   - translate が翻訳コミットを push した → この実行の SHA はもう PR の HEAD ではないので、
+#                     検査は新しい HEAD 側の実行に委ねて成功で終える（赤→緑のちらつき・矛盾を避ける）。
+#                   - push しなかった（キー未設定・fork・翻訳不要・失敗）→ `--check --since <base>` で検査。
+#   push に使うトークン（推奨は 1）:
+#     1. secrets.TRANSLATION_BOT_TOKEN（GitHub App のインストールトークン / fine-grained PAT）
+#        → push が通常の pull_request: synchronize を起こし、required check を含む全 CI が新 HEAD で自動再実行。
+#     2. 無ければ GITHUB_TOKEN。GITHUB_TOKEN による PR 更新で作られる pull_request の実行は
+#        「承認待ち（approval-required）」になるため、書き込み権限者が 1 クリック承認する。
+#        加えて i18n-check だけは workflow_dispatch（mode=check）で新 HEAD に対して即時再実行する。
+#        （workflow_dispatch は本ファイルが既定ブランチ main に入ってから有効）
+#
+# ■ workflow_dispatch
+#   mode=translate … 既存記事のバックフィル。chore/i18n-backfill-<YYYYMMDD> ブランチを作って push するまで。
+#                    PR は人が作る（リポジトリ設定で Actions による PR 作成は無効）。
+#   mode=adopt     … 来歴の無い既存翻訳を「現在の ja に対応済み」として採用（API 不要）。chore/i18n-adopt-<日付>
+#   mode=check     … 検査だけ（GITHUB_TOKEN 方式の自動再実行にも使う）
+
+on:
+  pull_request:
+    paths:
+      - 'src/content/**'
+      - 'scripts/i18n/**'
+      - '.github/workflows/translate-content.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'translate = 翻訳してブランチを push / adopt = 既存翻訳を採用 / check = 検査のみ'
+        type: choice
+        options: [translate, adopt, check]
+        default: translate
+      collections:
+        description: '対象コレクション（blog,cases,news をカンマ区切り。空 = 全部）'
+        type: string
+        default: ''
+      langs:
+        description: '対象言語（en,zh,ko,es をカンマ区切り。空 = 全部）'
+        type: string
+        default: ''
+      only:
+        description: '対象記事（slug または collection/slug をカンマ区切り。空 = 全記事）'
+        type: string
+        default: ''
+      retranslate_untracked:
+        description: '来歴の無い既存翻訳も訳し直す（mode=translate のときだけ有効）'
+        type: boolean
+        default: false
+      since:
+        description: '（自動再実行用）この SHA からの差分に含まれる記事だけを検査する。通常は空'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: translate-content-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: '22'
+  # 翻訳が書き込んでよいパス（ja や他のファイルを CI が変更したら push せずに失敗させる）
+  ALLOWED_CHANGE_RE: '^src/content/(blog|cases|news)/(en|zh|ko|es)/[A-Za-z0-9][A-Za-z0-9._-]*\.md$'
+
+jobs:
+  translate:
+    name: translate
+    # 統合ブランチ（develop→main のリリース PR 等）には CI から直接 push しない（PR 経由の原則）。
+    # そこで翻訳の欠けが見つかった場合は i18n-check が赤になり、workflow_dispatch のバックフィルで直す。
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(fromJSON('["develop","main","master"]'), github.event.pull_request.head.ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # 翻訳コミットを PR の head ブランチへ push する
+      actions: write # GITHUB_TOKEN 方式のとき i18n-check を workflow_dispatch で再実行する
+    outputs:
+      pushed: ${{ steps.push.outputs.pushed }}
+      commit: ${{ steps.push.outputs.commit }}
+    env:
+      HAS_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY != '' }}
+      HAS_BOT_TOKEN: ${{ secrets.TRANSLATION_BOT_TOKEN != '' }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - name: Skip when GEMINI_API_KEY is not configured
+        if: env.HAS_GEMINI_KEY != 'true'
+        run: echo "::notice title=i18n::GEMINI_API_KEY が未設定のため自動翻訳をスキップしました（docs/i18n-translation.md）"
+
+      - name: Checkout PR head
+        if: env.HAS_GEMINI_KEY == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect content changes
+        id: scope
+        if: env.HAS_GEMINI_KEY == 'true'
+        run: |
+          set -euo pipefail
+          if git diff --quiet "${BASE_SHA}...HEAD" -- src/content; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "src/content に変更が無いため翻訳は不要です"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.scope.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.scope.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Translate changed articles
+        id: translate
+        if: steps.scope.outputs.changed == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        # 一部の記事が検証に落ちても成功した分はコミットしたいので、終了コードを記録して
+        # 最後の「Fail when some translations were rejected」でジョブを失敗させる。
+        run: |
+          set +e
+          node scripts/i18n/translate-content.mjs --write --since "$BASE_SHA"
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push translations
+        id: push
+        if: steps.scope.outputs.changed == 'true'
+        env:
+          BOT_TOKEN: ${{ secrets.TRANSLATION_BOT_TOKEN }}
+          FALLBACK_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git check-ref-format --branch "$HEAD_REF" > /dev/null
+          if [ -z "$(git status --porcelain --untracked-files=all)" ]; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            echo "翻訳の変更はありません"
+            exit 0
+          fi
+          unexpected="$(git status --porcelain --untracked-files=all | cut -c4- | grep -Ev "$ALLOWED_CHANGE_RE" || true)"
+          if [ -n "$unexpected" ]; then
+            echo "::error title=i18n::翻訳ディレクトリ以外が変更されたため push しません: ${unexpected}"
+            exit 1
+          fi
+          git add --all -- src/content
+          count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q -m "chore(i18n): ja の変更に合わせて翻訳を同期（${count} ファイル）" \
+              -m "scripts/i18n/translate-content.mjs --write による自動翻訳（ADR-0019）。"
+          token="${BOT_TOKEN:-$FALLBACK_TOKEN}"
+          git push "https://x-access-token:${token}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${HEAD_REF}"
+          {
+            echo "pushed=true"
+            echo "commit=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Re-run i18n-check on the new commit (GITHUB_TOKEN fallback)
+        if: steps.push.outputs.pushed == 'true' && env.HAS_BOT_TOKEN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh workflow run translate-content.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
+               -f mode=check -f since="$BASE_SHA"; then
+            echo "::warning title=i18n::i18n-check の再実行を起動できませんでした（本ファイルが main に入る前は workflow_dispatch を使えません）"
+          fi
+          echo "::notice title=i18n::GITHUB_TOKEN で push したため、新しいコミットの PR チェックは承認待ちになります。PR の Checks で「Approve workflows to run」を押してください（TRANSLATION_BOT_TOKEN を設定すると不要）"
+
+      - name: Fail when some translations were rejected
+        if: steps.translate.outputs.exit_code != '' && steps.translate.outputs.exit_code != '0'
+        run: |
+          echo "::error title=i18n::一部の翻訳が失敗または検証に通らず、書き込まれませんでした。上の Translate changed articles のログを確認してください"
+          exit 1
+
+  i18n-check:
+    name: i18n-check
+    needs: translate
+    if: >-
+      !cancelled() &&
+      (github.event_name == 'pull_request' || inputs.mode == 'check')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Delegate to the translation commit
+        id: delegate
+        if: needs.translate.outputs.pushed == 'true'
+        env:
+          COMMIT: ${{ needs.translate.outputs.commit }}
+        run: |
+          echo "delegated=true" >> "$GITHUB_OUTPUT"
+          echo "::notice title=i18n::翻訳コミット ${COMMIT} を push しました。i18n-check はそのコミットに対して実行されます"
+
+      - name: Checkout
+        if: steps.delegate.outputs.delegated != 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        if: steps.delegate.outputs.delegated != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.delegate.outputs.delegated != 'true'
+        run: npm ci
+
+      - name: Unit tests (scripts/i18n)
+        if: steps.delegate.outputs.delegated != 'true'
+        run: npx vitest run scripts/i18n
+
+      - name: Check translations
+        if: steps.delegate.outputs.delegated != 'true'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SINCE: ${{ inputs.since }}
+          COLLECTIONS: ${{ inputs.collections }}
+          LANGS: ${{ inputs.langs }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          set -uo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            args=(--check --since "$BASE_SHA")
+          elif [ -n "${SINCE:-}" ]; then
+            args=(--check --since "$SINCE")
+          else
+            args=(--check --collections "${COLLECTIONS:-}" --langs "${LANGS:-}" --only "${ONLY:-}")
+          fi
+          node scripts/i18n/translate-content.mjs "${args[@]}" > i18n-report.txt 2>&1
+          code=$?
+          cat i18n-report.txt
+          {
+            echo "### i18n-check"
+            echo '```'
+            cat i18n-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+
+  backfill:
+    name: backfill
+    if: github.event_name == 'workflow_dispatch' && inputs.mode != 'check'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write # chore/i18n-* ブランチを作って push する（PR は人が作る）
+    env:
+      MODE: ${{ inputs.mode }}
+      HAS_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY != '' }}
+    steps:
+      - name: Require GEMINI_API_KEY for translate mode
+        if: env.MODE == 'translate' && env.HAS_GEMINI_KEY != 'true'
+        run: |
+          echo "::error title=i18n::GEMINI_API_KEY が未設定です（docs/i18n-translation.md の「CEO が行う設定」）"
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Translate or adopt
+        id: run
+        env:
+          GEMINI_API_KEY: ${{ inputs.mode == 'translate' && secrets.GEMINI_API_KEY || '' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          COLLECTIONS: ${{ inputs.collections }}
+          LANGS: ${{ inputs.langs }}
+          ONLY: ${{ inputs.only }}
+          RETRANSLATE_UNTRACKED: ${{ inputs.retranslate_untracked }}
+        # 成功分は下のステップで push したいので、終了コードを記録して最後に判定する。
+        run: |
+          set -uo pipefail
+          if [ "$MODE" = "adopt" ]; then
+            args=(--adopt)
+          else
+            args=(--write)
+            if [ "$RETRANSLATE_UNTRACKED" = "true" ]; then args+=(--retranslate-untracked); fi
+          fi
+          node scripts/i18n/translate-content.mjs "${args[@]}" \
+            --collections "${COLLECTIONS:-}" --langs "${LANGS:-}" --only "${ONLY:-}"
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Push a chore/i18n-* branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain --untracked-files=all)" ]; then
+            echo "変更はありません（ブランチは作りません）" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          unexpected="$(git status --porcelain --untracked-files=all | cut -c4- | grep -Ev "$ALLOWED_CHANGE_RE" || true)"
+          if [ -n "$unexpected" ]; then
+            echo "::error title=i18n::翻訳ディレクトリ以外が変更されたため push しません: ${unexpected}"
+            exit 1
+          fi
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          kind="backfill"
+          if [ "$MODE" = "adopt" ]; then kind="adopt"; fi
+          branch="chore/i18n-${kind}-$(date -u +%Y%m%d)"
+          if git ls-remote --exit-code --heads "$remote" "$branch" > /dev/null; then
+            branch="${branch}-${GITHUB_RUN_ID}"
+          fi
+          git switch -c "$branch"
+          git add --all -- src/content
+          count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q -m "chore(i18n): 既存記事の翻訳を${kind}（${count} ファイル）" \
+              -m "workflow_dispatch（mode=${MODE}）による一括処理（ADR-0019）。"
+          git push "$remote" "HEAD:refs/heads/${branch}"
+          {
+            echo "### i18n ${kind}"
+            echo "ブランチ \`${branch}\` を push しました（${count} ファイル）。PR を作成してください:"
+            echo "https://github.com/${GITHUB_REPOSITORY}/compare/${GITHUB_REF_NAME}...${branch}?expand=1"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when some items failed
+        if: steps.run.outputs.exit_code != '0'
+        run: |
+          echo "::error title=i18n::一部の記事が失敗または検証に通りませんでした（成功分は push 済み）。Translate or adopt のログを確認してください"
+          exit 1
