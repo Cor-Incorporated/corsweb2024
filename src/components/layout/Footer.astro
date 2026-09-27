@@ -1,6 +1,7 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+import { COMPANY_SOCIAL_LINKS } from '../../config/organization';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -8,23 +9,8 @@ const t = getTranslations(currentLocale);
 const bottomLinks = [
   {
     header: t.footer.social,
-    links: [
-      {
-        name: 'Github',
-        href: 'https://github.com/Cor-Incorporated',
-        isExternal: true,
-      },
-      {
-        name: 'X(Twitter)',
-        href: 'https://x.com/cor_terisuke',
-        isExternal: true,
-      },
-      {
-        name: 'YouTube',
-        href: 'https://www.youtube.com/@Cor.Incorporated',
-        isExternal: true,
-      },
-    ],
+    // 会社の公式アカウント。正本は config/organization.ts（Organization JSON-LD の sameAs と共有）。
+    links: COMPANY_SOCIAL_LINKS.map((link) => ({ ...link, isExternal: true })),
   },
   {
     header: t.footer.company,

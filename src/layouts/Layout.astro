@@ -8,6 +8,8 @@ import Analytics from '../components/analytics/Analytics.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
 import { getRobotsContent } from '../config/site';
+import { safeJsonLd } from '../utils/json-ld';
+import { buildOrganizationJsonLd } from '../utils/structured-data';
 
 interface Props {
   description: string;
@@ -130,84 +132,8 @@ const robotsContent = getRobotsContent();
     <meta name="twitter:image" content={ogImage} />
     <meta name="twitter:image:alt" content={socialTitle} />
     
-    <!-- Structured Data - Organization -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Cor.株式会社",
-        "legalName": "Cor.株式会社",
-        "alternateName": ["Cor.株式会社", "Cor.Inc."],
-        "url": "https://cor-jp.com",
-        "logo": "https://cor-jp.com/logo.png",
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer service",
-          "availableLanguage": ["Japanese", "English"]
-        },
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "福岡県福岡市中央区天神",
-          "addressLocality": "福岡市",
-          "addressRegion": "福岡県",
-          "postalCode": "810-0001",
-          "addressCountry": "JP"
-        },
-        "sameAs": [
-          "https://github.com/Cor-Incorporated",
-          "https://x.com/cor_terisuke",
-          "https://www.linkedin.com/in/kousuketerada/",
-          "https://www.facebook.com/kousuke.terada.35",
-          "https://note.com/cor_instrument",
-          "https://qiita.com/terisuke",
-          "https://zenn.dev/cloudia"
-        ],
-        "founder": {
-          "@type": "Person",
-          "name": "寺田康佑",
-          "alternateName": ["寺田 康佑", "Kosuke Terada", "Terada Kosuke", "寺田 康佑 CEO", "寺田康佑 代表取締役", "テラダコウスケ", "terisuke", "テリスケ"],
-          "jobTitle": "代表取締役",
-          "worksFor": {
-            "@type": "Organization",
-            "name": "Cor.株式会社"
-          }
-        }
-      }
-    </script>
-    
-    <!-- FAQ Schema for better search visibility -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "どのようなサービスを提供していますか？",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "AI受託開発、AI顧問・AI研修、ローカルLLM・セキュアAI、自社AIツールGriftなど、現場の課題をAIで解決するサービスを提供しています。"
-            }
-          },
-          {
-            "@type": "Question", 
-            "name": "対応可能な地域はどこですか？",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "福岡を拠点としていますが、オンラインでの対応により全国のお客様にサービスを提供しています。"
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "代表取締役の寺田康佑について教えてください",
-            "acceptedAnswer": {
-              "@type": "Answer", 
-              "text": "寺田康佑（terisuke）は、AI・DX分野の専門家として、Python開発、機械学習、アプリ開発において豊富な経験を持ち、企業のデジタル変革を支援しています。"
-            }
-          }
-        ]
-      }
-    </script>
+    <!-- Structured Data - Organization（@id 固定・ロケール別表記・会社アカウントのみ。FAQPage は Q&A を表示するページだけ） -->
+    <script type="application/ld+json" set:html={safeJsonLd(buildOrganizationJsonLd(currentLocale))} />
     <!-- Performance optimizations -->
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
