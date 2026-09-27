@@ -242,6 +242,7 @@ const langOptions = localeOrder.map((loc) => ({
         type="button"
         x-data
         role="switch"
+        data-theme-switch
         aria-checked="false"
         :aria-checked="($store.theme?.isDark || false).toString()"
         @click="$store.theme?.toggle()"

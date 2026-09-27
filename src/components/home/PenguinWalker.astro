@@ -78,8 +78,9 @@ const SPEAKER = Math.floor((COUNT - 1) / 2);
 
 <style>
   .pw-layer { position: absolute; inset: 0; z-index: 14; overflow: hidden; pointer-events: none; }
-  /* 初期化（data-pw-ready）前は .pw が left:0; top:0 のまま左上に見えるため隠す */
-  .pw-layer:not([data-pw-ready]) { visibility: hidden; }
+  /* 位置を最初に反映する（data-pw-placed）までは .pw が left:0; top:0 のまま左上に見えるため隠す。
+     data-pw-ready は初期化の冒頭で付き、位置の反映は次の rAF になるので、ready では 1 フレーム見えてしまう */
+  .pw-layer:not([data-pw-placed]) { visibility: hidden; }
 
   .pw {
     position: absolute; left: 0; top: 0;
@@ -244,6 +245,8 @@ const SPEAKER = Math.floor((COUNT - 1) / 2);
         }
         apply(p);
       }
+      // 位置を反映し終えたので表示してよい（毎フレーム属性を書き換えないよう 1 回だけ）
+      if (!layer.dataset.pwPlaced) layer.dataset.pwPlaced = '1';
 
       // 吹き出し（中央ペンギンが歩行中のみ表示、端では隠す）
       const sp = peng[speaker];
@@ -300,6 +303,7 @@ const SPEAKER = Math.floor((COUNT - 1) / 2);
       const sp = peng[speaker], cx = sp.x + PW / 2;
       bubbleEl.style.left = cx + 'px'; bubbleEl.style.top = (sp.y - 4) + 'px';
       bubbleEl.style.opacity = layer.classList.contains('pw-tight') ? '0' : '1';
+      layer.dataset.pwPlaced = '1';
     }
 
     // リサイズは軽くデバウンス（歩行値は phase 基準なので位置は自動追従）

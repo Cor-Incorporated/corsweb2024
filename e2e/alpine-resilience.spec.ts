@@ -49,10 +49,25 @@ test.describe('Alpine without CDN (ADR-0017)', () => {
     await page.goto('/');
     await expect(html(page)).toHaveClass(/(^|\s)dark(\s|$)/);
     await expect(page.locator('main h1').first()).toBeVisible();
+    // Alpine が無くても、スイッチの読み上げ状態は描画前に当てた配色（dark）と一致する
+    await expect(themeSwitch(page)).toHaveAttribute('aria-checked', 'true');
   });
 
-  // Alpine / モジュールが動く前（= スクリプトをすべて止めた状態）の初期表示
-  test('renders sensible defaults before any script runs', async ({ page }) => {
+  test('shows the penguins only after their first placement', async ({ page }) => {
+    await page.goto('/');
+    const layer = page.locator('[data-pw-layer]');
+    await expect(layer).toHaveAttribute('data-pw-placed', '1');
+    expect(await layer.evaluate((el) => getComputedStyle(el).visibility)).toBe('visible');
+    const first = await layer.locator('.pw').first().boundingBox();
+    const box = await layer.boundingBox();
+    // 置かれた後は左上（レイヤーの原点）に張り付いていない
+    expect(first && box && (first.x - box.x > 1 || first.y - box.y > 1)).toBe(true);
+  });
+
+  // ネットワーク経由のスクリプト（Alpine を含むモジュール）を止め、インラインのスクリプトだけが動く状態の初期表示。
+  // TODO（フォローアップ）: この状態ではファーストビューの [data-reveal] が opacity 0 のまま残る（html.js は
+  // インラインで付くが、表示を戻す IntersectionObserver はモジュール側にある）。以前からの設計のため別途扱う。
+  test('renders sensible defaults while network scripts are blocked (inline scripts only)', async ({ page }) => {
     await page.route('**/*', (route) =>
       route.request().resourceType() === 'script' ? route.abort() : route.continue(),
     );

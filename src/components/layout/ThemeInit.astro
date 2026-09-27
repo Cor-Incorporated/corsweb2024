@@ -22,9 +22,18 @@
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       root.classList.toggle('dark', stored === 'dark' || (!stored && prefersDark));
     };
+    // ヘッダーのテーマ切替スイッチ（[data-theme-switch]）の aria-checked も同じ判定で合わせる。
+    // Alpine が遅れる・読み込めない場合でも、描画前に当てた配色と読み上げの状態が食い違わないようにする
+    // （Alpine が動けば :aria-checked が同じ値で上書きする）。
+    const syncSwitch = () => {
+      const checked = String(root.classList.contains('dark'));
+      document.querySelectorAll('[data-theme-switch]').forEach((el) => el.setAttribute('aria-checked', checked));
+    };
     applyTheme();
+    document.addEventListener('DOMContentLoaded', syncSwitch);
     document.addEventListener('astro:after-swap', () => {
       applyTheme();
+      syncSwitch();
       root.classList.add('js');
       if ('fonts' in document) document.fonts.ready.then(() => root.classList.add('font-loaded'));
     });
