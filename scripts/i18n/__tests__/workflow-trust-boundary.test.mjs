@@ -84,6 +84,15 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
     gitWrites.forEach((l) => expect(l).toContain('core.hooksPath=/dev/null'));
   });
 
+  it('外部の action はすべてコミット SHA に固定し、版をコメントで残す（MEDIUM-4）', () => {
+    const uses = jobs.flatMap(([, job]) => job.steps.map((s) => s.uses).filter(Boolean));
+    expect(uses.length).toBeGreaterThan(0);
+    uses.forEach((u) => expect(u).toMatch(/^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/));
+    const raw = readFileSync(path.join(root, '.github/workflows/translate-content.yml'), 'utf8');
+    const lines = raw.split('\n').filter((l) => /^\s*uses: /.test(l));
+    lines.forEach((l) => expect(l).toMatch(/@[0-9a-f]{40} # v\d+\.\d+\.\d+$/));
+  });
+
   it('dispatch-check は actions: write だけ、translate-result は権限なし', () => {
     expect(workflow.jobs['dispatch-check']?.permissions).toEqual({ actions: 'write' });
     expect(workflow.jobs['translate-result']?.permissions).toEqual({});

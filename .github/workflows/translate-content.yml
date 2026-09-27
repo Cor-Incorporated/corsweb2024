@@ -126,7 +126,7 @@ jobs:
 
       - name: Checkout
         if: steps.plan.outputs.run == 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # PR は head（翻訳を積む先）、workflow_dispatch は起動した ref のコミット
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -147,7 +147,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.scope.outputs.changed == 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           # 秘密情報（GEMINI_API_KEY）を扱うジョブなので npm キャッシュは使わない（cache poisoning 対策）
@@ -201,7 +201,7 @@ jobs:
 
       - name: Upload the translation patch
         if: steps.patch.outputs.patch == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.PATCH_ARTIFACT }}
           path: ${{ runner.temp }}/i18n-patch/translation.patch
@@ -226,13 +226,13 @@ jobs:
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
       - name: Checkout (the commit the patch was made from)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Download the translation patch
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ env.PATCH_ARTIFACT }}
           path: ${{ runner.temp }}/i18n-patch
@@ -423,14 +423,14 @@ jobs:
 
       - name: Checkout
         if: steps.delegate.outputs.delegated != 'true'
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Node.js
         if: steps.delegate.outputs.delegated != 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
