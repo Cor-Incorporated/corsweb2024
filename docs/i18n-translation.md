@@ -179,7 +179,7 @@ git push
 
 ### workflow_dispatch（Actions タブ → Translate content (i18n) → Run workflow、または `gh workflow run`）
 
-本ワークフローが既定ブランチ（main）に入ってから使えます（GitHub の仕様）。
+`gh workflow run translate-content.yml --ref <ブランチ>` は、そのブランチに本ワークフローがあれば、main に入る前でも起動できます（実測: 2026-09-27、main にも develop にも本ファイルが無い状態で、`--ref chore/i18n-live-translation-check` の dispatch から run 36329711063 が作成された）。Actions タブの Run workflow ボタンが main に入る前に表示されるかは確かめていません（未検証）。表示されないときは `gh workflow run` を使ってください。
 
 | 入力 | 必須 | 既定値 | 意味 |
 |---|---|---|---|
@@ -213,7 +213,7 @@ git push
 
 PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言語）、`untracked=68`（blog 9 本・cases 6 本・news 2 本 × 4 言語）、`ok=4`（`blog/complete-multilingual-blog-expansion` は、リンクの修正と同時に PR #339 で採用済み）。
 
-1. このブランチを develop → main までマージする（workflow_dispatch は main にワークフローが必要）
+1. このブランチを develop にマージする（手順 2・4 は `--ref develop` で dispatch するので、main に入る前でも起動できる。6 章の workflow_dispatch の実測を参照）
 2. 既存翻訳の扱いを決める
    - そのまま採用する（推奨: cases / news は人手で整えた訳、blog の既存訳も ja より新しい日付で作成済み）:
      `gh workflow run translate-content.yml -R Cor-Incorporated/corsweb2024 --ref develop -f mode=adopt`
@@ -262,7 +262,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | translate-result が赤（`一部の翻訳・同期・削除が失敗または検証に通らず`） | 一部の記事が失敗した（成功分は push 済み） | translate ジョブの Translate ステップのログで記事と理由を確認し、上の各行に従う |
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
 | 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式 | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順。毎回の操作を無くしたい場合だけ、リスクを理解したうえで `TRANSLATION_BOT_TOKEN` を登録 |
-| `i18n-check の再実行を起動できませんでした` | ワークフローがまだ main に無い（workflow_dispatch 不可） | main 反映後は自動で解消。それまでは承認で代替 |
+| `i18n-check の再実行（workflow_dispatch）を起動できませんでした` | dispatch-check の `gh workflow run` が失敗した（原因は同じステップのログに出る gh のエラー） | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順 |
 | `翻訳が必要な件数 N 件が上限 20 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる | 記事を分けて PR を出す。意図した一括翻訳なら workflow_dispatch の mode=translate（バックフィル）を使うか、手元で `I18N_MAX_ITEMS=100` のように上限を上げて実行 |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
 | `--only と --since は同時に指定できません` など | 引数の誤り | `--help` を参照 |

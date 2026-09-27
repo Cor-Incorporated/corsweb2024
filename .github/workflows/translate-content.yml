@@ -385,7 +385,7 @@ jobs:
           set -euo pipefail
           if ! gh workflow run translate-content.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
                -f mode=check -f since="$BASE_SHA"; then
-            echo "::warning title=i18n::i18n-check の再実行を起動できませんでした（本ファイルが main に入る前は workflow_dispatch を使えません）"
+            echo "::warning title=i18n::i18n-check の再実行（workflow_dispatch）を起動できませんでした（原因は直前の gh のエラー）。新しいコミットの PR チェックを承認するか、空コミットを push して i18n-check を動かしてください（docs/i18n-translation.md 9 章）"
           fi
           echo "::notice title=i18n::GITHUB_TOKEN で push しました。新しいコミットの PR チェックが「承認待ち」なら PR の Checks で承認し、表示されない・動かない場合は空コミットを push して再実行してください（docs/i18n-translation.md 6 章）"
 
