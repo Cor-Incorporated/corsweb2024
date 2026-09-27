@@ -48,12 +48,24 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          # workers/contact-edge は独自の package-lock.json を持つので、キャッシュの鍵に含める。
+          cache-dependency-path: |
+            package-lock.json
+            workers/contact-edge/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Unit tests
         run: npm run test:run
+
+      # workers/contact-edge（/contact/chat/ を配信する Worker）は独自の package.json を持ち、ルートの
+      # vitest には含まれない。テストの実行に依存パッケージのインストールスクリプトは不要なので
+      # --ignore-scripts で入れる（wrangler / workerd の postinstall を走らせない）。
+      - name: contact-edge worker tests
+        run: |
+          npm ci --prefix workers/contact-edge --ignore-scripts --no-audit --no-fund
+          npm test --prefix workers/contact-edge
 
       - name: Type check and build
         run: npm run build
