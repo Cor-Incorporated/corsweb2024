@@ -20,6 +20,9 @@ describe('remarkHasMath: 真理値表（数式の書き方 × 有無）', () => 
     ['インライン数式 $E = mc^2$ を含む', true],
     ['$$\nx^2 + y^2 = z^2\n$$', true],
     ['- リスト内の $a_i$', true],
+    // rehype-katex 7 は ```math のコードフェンスも数式として描画する（Astro の Shiki は math を着色しない）
+    ['```math\nE = mc^2\n```', true],
+    ['```latex\nE = mc^2\n```', false],
     ['数式なしの本文', false],
     ['```js\nconst price = "$5 and $10";\n```', false],
     ['インラインコード `$x$` は数式ではない', false],
@@ -50,6 +53,9 @@ describe('the KaTeX CSS we ship', () => {
     const rehypeKatex = JSON.parse(readFileSync(path.resolve('node_modules/rehype-katex/package.json'), 'utf8'));
     expect(rehypeKatex.dependencies.katex).toMatch(/^\^0\.16\./);
     expect(katex.version).toMatch(/^0\.16\./);
+    // KatexStyles.astro が直接 import するので、推移依存に頼らず dependencies に明示しておく
+    const pkg = JSON.parse(readFileSync(path.resolve('package.json'), 'utf8'));
+    expect(pkg.dependencies.katex).toBe('^0.16.22');
   });
 
   it('is imported by KatexStyles.astro and BlogLayout no longer loads it from a CDN', () => {

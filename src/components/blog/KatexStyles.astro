@@ -1,5 +1,5 @@
 ---
-// KaTeX の CSS（M6 / #293）。jsDelivr の CDN から全記事で描画ブロック読込していたのをやめ、
+// KaTeX の CSS（Epic #330 / #293）。jsDelivr の CDN から全記事で描画ブロック読込していたのをやめ、
 // 数式を含む記事（remarkPluginFrontmatter.hasMath）だけでインライン出力する。
 // ?inline で Vite が CSS を処理し、url() のフォントは自前ホスト（/_astro/）に出力される。
 // CSS は rehype-katex が描画に使う katex と同じパッケージから読む（CDN 版 0.16.9 と描画側 0.16.22 の

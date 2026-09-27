@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// M6 / #293: KaTeX の CSS を jsDelivr から全記事で描画ブロック読込していた（数式を使う ja 記事は 20 本中 2 本）。
+// Epic #330 / #293: KaTeX の CSS を jsDelivr から全 60 記事で描画ブロック読込していた（数式を描画する記事は
+// ja 20 本中 1 本 = complete-markdown-guide。5 言語版を合わせて 5 本）。
 // 数式記事だけで自前ホストの CSS を読み、数式の表示が崩れないこと・CDN / preload 警告が出ないことを確かめる。
 
 function watch(page: Page) {
