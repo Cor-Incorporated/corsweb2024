@@ -40,7 +40,9 @@ const SECRET_PATTERNS = [
   { name: 'private key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'github token', pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/ },
   { name: 'github fine-grained token', pattern: /\bgithub_pat_[A-Za-z0-9_]{40,}\b/ },
-  { name: 'openai-style secret', pattern: /\bsk-[A-Za-z0-9_-]{20,}\b/ },
+  // OpenAI の鍵は sk- の後が 48 文字以上。20 文字だと CMS 同梱の構文定義（emacs-lisp の
+  // `sk-prompt-state-selector` など）に誤検知するため 32 文字以上にしている。
+  { name: 'openai-style secret', pattern: /\bsk-[A-Za-z0-9_-]{32,}\b/ },
   { name: 'anthropic secret', pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/ },
   { name: 'slack token', pattern: /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/ },
   { name: 'resend token', pattern: /\bre_[A-Za-z0-9]{20,}\b/ },
@@ -175,6 +177,35 @@ const auditHeavyRuntime = (violations, file) => {
   }
 };
 
+// _astro/*.js のうち、指定した HTML から import / 動的 import / preload の参照を辿って届くもの。
+// ビルド後のチャンクは "./x.js" か "_astro/x.js" の形で互いを参照する。取りこぼしより拾いすぎを選ぶ正規表現。
+const reachableScripts = (textFiles, isEntryHtml) => {
+  const byRelative = new Map(textFiles.map(file => [file.relative, file]));
+  const reachable = new Set();
+  const queue = [];
+  const visit = text => {
+    for (const ref of text.match(/(?:\.\/|_astro\/)[\w.-]+\.js/g) ?? []) {
+      const relative = `_astro/${ref.replace(/^(?:\.\/|_astro\/)/, '')}`;
+      if (byRelative.has(relative) && !reachable.has(relative)) {
+        reachable.add(relative);
+        queue.push(relative);
+      }
+    }
+  };
+  textFiles.filter(file => file.relative.endsWith('.html') && isEntryHtml(file.relative)).forEach(file => visit(file.text));
+  while (queue.length > 0) visit(byRelative.get(queue.shift()).text);
+  return reachable;
+};
+
+// CMS の管理画面（admin/、ADR-0018）からだけ読まれるスクリプト = 同梱した Sveltia CMS（第三者コード）。
+// 公開ページの訪問者は読み込まないので、サイト自身のコード向けの検査（http origin・localhost・
+// localStorage・重い UI ランタイム）からは外す。秘密情報と JSON-LD の検査は全ファイルに行う。
+const cmsOnlyScripts = textFiles => {
+  const isAdmin = relative => relative.startsWith('admin/');
+  const fromPublic = reachableScripts(textFiles, relative => !isAdmin(relative));
+  return new Set([...reachableScripts(textFiles, isAdmin)].filter(relative => !fromPublic.has(relative)));
+};
+
 const main = async () => {
   const distStat = await stat(DIST_DIR).catch(() => null);
   if (!distStat?.isDirectory()) {
@@ -183,6 +214,7 @@ const main = async () => {
 
   const files = await walk(DIST_DIR);
   const textFiles = await readTextFiles(files);
+  const cmsOnly = cmsOnlyScripts(textFiles);
   const violations = [];
 
   for (const page of REQUIRED_SEO_PAGES) {
@@ -192,6 +224,7 @@ const main = async () => {
   for (const file of textFiles) {
     auditJsonLd(violations, file);
     auditSecrets(violations, file);
+    if (cmsOnly.has(file.relative)) continue;
     auditOrigins(violations, file);
     auditLocalStorage(violations, file);
     auditHeavyRuntime(violations, file);
@@ -202,7 +235,7 @@ const main = async () => {
   }
 
   console.log(
-    `[dist-security] dist baseline passed (${files.length} files, ${textFiles.length} text assets, ${REQUIRED_SEO_PAGES.length} SEO pages).`
+    `[dist-security] dist baseline passed (${files.length} files, ${textFiles.length} text assets, ${REQUIRED_SEO_PAGES.length} SEO pages, ${cmsOnly.size} CMS-only scripts: secrets checked, site-code checks skipped).`
   );
 };
 

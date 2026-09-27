@@ -1,0 +1,21 @@
+# Sveltia CMS Authenticator — CMS（https://cor-jp.com/admin/）の「GitHub にログイン」を仲介する Worker。
+# ADR-0018。src/index.js は上流 sveltia/sveltia-cms-auth のコードをそのまま置いている（README.md 参照）。
+# 上流の wrangler.toml から変えたのは name・account_id・workers_dev とコメントだけ。
+name = "cor-sveltia-cms-auth"
+main = "src/index.js"
+compatibility_date = "2023-03-24"
+# cor-jp.com ゾーンを持つアカウント（Company@cor-jp.com）。workers/contact-chat と同じ。
+account_id = "9973f2d2304b58a1f90d4d9409e9f8cc"
+
+# route は置かない。https://cor-sveltia-cms-auth.<アカウントの workers.dev サブドメイン>.workers.dev で動かし、
+# その URL を public/admin/config.yml の backend.base_url に書く。
+workers_dev = true
+
+# 設定値。ここには値を書かない。3 つとも `wrangler secret put <NAME>` で登録する
+# （secret はデプロイし直しても消えない。[vars] はデプロイのたびに wrangler.toml の内容で上書きされる）。
+#   GITHUB_CLIENT_ID      ... GitHub OAuth App の Client ID
+#   GITHUB_CLIENT_SECRET  ... GitHub OAuth App の Client secret（秘密）
+#   ALLOWED_DOMAINS       ... トークンを渡してよい CMS のホスト名。カンマ区切り、* は任意の文字列に一致。
+#                             例: cor-jp.com, cor-jp-main--develop-*.web.app
+#                             未設定だとどのサイトにもトークンを渡すため、必ず設定する。
+# 使わない設定: GITHUB_HOSTNAME（GitHub Enterprise 用）、GITLAB_CLIENT_ID / GITLAB_CLIENT_SECRET / GITLAB_HOSTNAME

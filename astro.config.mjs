@@ -3,6 +3,24 @@ import tailwind from '@astrojs/tailwind';
 import compress from 'astro-compress';
 import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
+import { readFile, writeFile } from 'node:fs/promises';
+
+// CMS の管理画面（dist/admin/index.html、ADR-0018）からサイトの CSS を外す。
+// @astrojs/tailwind は全ページに Tailwind の base CSS を注入するが、Sveltia CMS は自前のスタイルで描画し、
+// 追加の CSS を想定していない（読み込むと入力欄などのフォントが変わる）。compress より前に実行する。
+// dev サーバーでは外れない（build:done はビルド時のみ）。e2e/admin-cms.spec.ts が stylesheet 0 本を確認する。
+const stripSiteCssFromCmsAdmin = () => ({
+  name: 'strip-site-css-from-cms-admin',
+  hooks: {
+    'astro:build:done': async ({ dir }) => {
+      const file = new URL('admin/index.html', dir);
+      const html = await readFile(file, 'utf8').catch((error) => {
+        throw new Error(`[strip-site-css-from-cms-admin] ${file.pathname} を読めない。src/pages/admin/index.astro を消したなら、この integration も消す。(${error.message})`);
+      });
+      await writeFile(file, html.replace(/<link\b[^>]*\brel=["']?stylesheet["']?[^>]*>/gi, ''));
+    },
+  },
+});
 
 export default defineConfig({
   site: 'https://cor-jp.com',
@@ -41,6 +59,7 @@ export default defineConfig({
   },
   integrations: [
     tailwind(), 
+    stripSiteCssFromCmsAdmin(),
     compress({
       CSS: true,
       HTML: {
@@ -87,6 +106,10 @@ export default defineConfig({
         // (slug must be the final path segment, optionally locale-prefixed, so
         //  real blog posts like /blog/test-blog-foo are NOT excluded).
         if (/\/(styleguide|test-blog|tip-success|tip-cancelled)\/?$/.test(page)) {
+          return false;
+        }
+        // Exclude the CMS admin (ADR-0018). robots.txt disallows /admin/ as well.
+        if (new URL(page).pathname.startsWith('/admin/')) {
           return false;
         }
         return true;

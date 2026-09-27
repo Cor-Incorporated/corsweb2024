@@ -18,6 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:admin": "playwright test --config=playwright.admin.config.ts",
     "test:visual-text": "playwright test --config=playwright.visual.config.ts",
     "verify:visual-text": "npm run build && npm run test:visual-text",
     "check:links": "node scripts/check-external-links.mjs",
@@ -62,6 +63,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.53.1",
+    "@sveltia/cms": "0.221.7",
     "@testing-library/dom": "^10.4.0",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
