@@ -20,15 +20,33 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
-import { JSDOM } from 'jsdom';
+import {
+  collectSiteFiles,
+  compareSite,
+  formatSite,
+  listWithMore,
+  logicalAssetName,
+  multisetDiff,
+  siteHasDifferences,
+  walkFiles,
+} from './seo-snapshot-site.mjs';
+
+export { logicalAssetName, multisetDiff, parseFeed, parseSitemapIndex, parseSitemapUrls } from './seo-snapshot-site.mjs';
+
+// jsdom は HTML を読むときだけ読み込む（2 つの JSON を比べるだけの実行では不要で、起動が重いため）
+const require = createRequire(import.meta.url);
+let jsdomClass = null;
+const loadJsdom = () => (jsdomClass ??= require('jsdom').JSDOM);
 
 // 形式を変えたら上げる。比較時に一致しなければエラーにする（形式違いの比較は偽の差分を出すため）。
 // 2: sitemap-index / sitemap の hreflang / og・twitter / preload / インライン CSS・JS の中身 / ビルド条件
-export const SNAPSHOT_VERSION = 2;
+// 3: description / canonical / robots を配列で保持、preload の type・crossorigin、sitemap の rel、RSS フィード
+export const SNAPSHOT_VERSION = 3;
 const SITE_ORIGIN = 'https://cor-jp.com';
 
 /** dist 相対の HTML パス → サイトの URL パス（dist/about/index.html → /about/）。 */
@@ -68,12 +86,6 @@ export function jsonLdTypes(data) {
   return types;
 }
 
-/** ハッシュ付きアセット名から論理名を得る（/_astro/hoisted.Dgzzfq7E.js → /_astro/hoisted.js）。 */
-export function logicalAssetName(assetPath) {
-  const clean = assetPath.split('#')[0].split('?')[0];
-  return clean.replace(/\.[A-Za-z0-9_-]{8}(?=\.(?:js|mjs|css|woff2?|ttf|otf)$)/, '');
-}
-
 /** インライン <script> / <style> の中身の短いハッシュ（件数が同じでも中身の変化を検出するため）。 */
 export function contentHash(text) {
   return createHash('sha256')
@@ -82,27 +94,9 @@ export function contentHash(text) {
     .slice(0, 12);
 }
 
-/** 重複を数えた差集合（removed: before にだけある要素、added: after にだけある要素）。 */
-export function multisetDiff(before, after) {
-  const counts = new Map();
-  for (const item of before) counts.set(item, (counts.get(item) ?? 0) + 1);
-  const added = [];
-  for (const item of after) {
-    const count = counts.get(item) ?? 0;
-    if (count > 0) counts.set(item, count - 1);
-    else added.push(item);
-  }
-  const removed = [...counts].flatMap(([item, count]) => Array(count).fill(item));
-  return { removed, added };
-}
-
 const collapse = (value) => (value ?? '').replace(/\s+/g, ' ').trim();
 
 const isLocalAsset = (href) => typeof href === 'string' && href.startsWith('/') && !href.startsWith('//');
-
-// 同じ要素が複数あると検索エンジンの扱いが変わる（robots は最も厳しい指定、canonical は無視され得る）。
-// 重複自体を差分に出すため、全件を ` | ` で連結して残す。
-const joinAll = (values) => (values.length > 0 ? values.join(' | ') : null);
 
 /** og:* / twitter:* の meta を { key: [content...] } にまとめる（キー順は正規化）。 */
 function extractSocialMeta(all) {
@@ -145,6 +139,7 @@ function extractInline(all) {
  * アセットのサイズ解決は collectSnapshot が行う。
  */
 export function extractPageSeo(html) {
+  const JSDOM = loadJsdom();
   const { document } = new JSDOM(html).window;
   const all = (selector) => [...document.querySelectorAll(selector)];
   const hreflang = all('link[rel~="alternate"][hreflang]')
@@ -153,9 +148,11 @@ export function extractPageSeo(html) {
   return {
     lang: document.documentElement.getAttribute('lang'),
     title: collapse(document.querySelector('title')?.textContent),
-    description: joinAll(all('meta[name="description" i]').map((m) => m.getAttribute('content') ?? '')),
-    canonical: joinAll(all('link[rel~="canonical"]').map((l) => l.getAttribute('href') ?? '')),
-    robots: joinAll(all('meta[name="robots" i]').map((m) => m.getAttribute('content') ?? '')),
+    // 同じ要素が複数あると検索エンジンの扱いが変わる（robots は最も厳しい指定、canonical は無視され得る）。
+    // 重複自体を差分に出すため、区切り文字で連結せず全件を配列で残す（値に区切りが含まれても曖昧にならない）
+    description: all('meta[name="description" i]').map((m) => m.getAttribute('content') ?? ''),
+    canonical: all('link[rel~="canonical"]').map((l) => l.getAttribute('href') ?? ''),
+    robots: all('meta[name="robots" i]').map((m) => m.getAttribute('content') ?? ''),
     hreflang,
     h1: all('h1').map((h) => collapse(h.textContent)),
     social: extractSocialMeta(all),
@@ -165,6 +162,9 @@ export function extractPageSeo(html) {
     preloads: all('link[rel~="preload"][href], link[rel~="modulepreload"][href]').map((link) => ({
       rel: link.getAttribute('rel') ?? '',
       as: link.getAttribute('as') ?? null,
+      type: link.getAttribute('type') ?? null,
+      // フォントの preload は crossorigin の有無で使われ方が変わる（無いと二重取得になる）。値なし = anonymous
+      crossorigin: link.hasAttribute('crossorigin') ? link.getAttribute('crossorigin') || 'anonymous' : null,
       href: link.getAttribute('href') ?? '',
     })),
     inline: extractInline(all),
@@ -186,40 +186,7 @@ export function staticImports(code) {
   return [...found];
 }
 
-const byLangThenHref = (a, b) => a.hreflang.localeCompare(b.hreflang) || a.href.localeCompare(b.href);
-
-/** sitemap XML から <url> の loc / lastmod / xhtml:link（言語版の代替 URL）を取り出す。 */
-export function parseSitemapUrls(xml) {
-  return [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(([, body]) => ({
-    loc: body.match(/<loc>([^<]*)<\/loc>/)?.[1] ?? '',
-    lastmod: body.match(/<lastmod>([^<]*)<\/lastmod>/)?.[1] ?? null,
-    alternates: [...body.matchAll(/<xhtml:link\b([^>]*)>/g)]
-      .map(([, attrs]) => ({
-        hreflang: attrs.match(/\bhreflang="([^"]*)"/)?.[1] ?? '',
-        href: attrs.match(/\bhref="([^"]*)"/)?.[1] ?? '',
-      }))
-      .sort(byLangThenHref),
-  }));
-}
-
-/** sitemap-index.xml から <sitemap> の loc / lastmod を取り出す。 */
-export function parseSitemapIndex(xml) {
-  return [...xml.matchAll(/<sitemap>([\s\S]*?)<\/sitemap>/g)].map(([, body]) => ({
-    loc: body.match(/<loc>([^<]*)<\/loc>/)?.[1] ?? '',
-    lastmod: body.match(/<lastmod>([^<]*)<\/lastmod>/)?.[1] ?? null,
-  }));
-}
-
-async function walkFiles(dir) {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) files.push(...(await walkFiles(full)));
-    else if (entry.isFile()) files.push(full);
-  }
-  return files;
-}
+const sumOf = (items, key) => items.reduce((total, item) => total + (item[key] ?? 0), 0);
 
 function createAssetLoader(distDir) {
   const cache = new Map();
@@ -277,48 +244,6 @@ function createAssetResolver(distDir) {
   return { resolveJs, resolveCss };
 }
 
-const sumOf = (items, key) => items.reduce((total, item) => total + (item[key] ?? 0), 0);
-
-// 公開ディレクトリ _astro の JS 棚卸し（HTML から参照されないサーバー描画チャンクの検出用）
-async function inventoryAstroDir(distDir) {
-  const astroDir = path.join(distDir, '_astro');
-  const astroJs = existsSync(astroDir) ? (await walkFiles(astroDir)).filter((file) => file.endsWith('.js')).sort() : [];
-  const serverChunks = [];
-  let jsBytes = 0;
-  for (const file of astroJs) {
-    const code = await readFile(file, 'utf8');
-    jsBytes += Buffer.byteLength(code);
-    if (/\bcreateComponent\b|\brenderTemplate\b/.test(code)) {
-      serverChunks.push(logicalAssetName(`/${path.relative(distDir, file).split(path.sep).join('/')}`));
-    }
-  }
-  return {
-    jsFiles: astroJs.length,
-    jsBytes,
-    serverChunkFiles: serverChunks.length,
-    serverChunks: [...new Set(serverChunks)].sort(),
-  };
-}
-
-async function collectSiteFiles(distDir) {
-  const readIfExists = async (name) => {
-    const file = path.join(distDir, name);
-    return existsSync(file) ? readFile(file, 'utf8') : null;
-  };
-  const robotsTxt = await readIfExists('robots.txt');
-  const indexXml = await readIfExists('sitemap-index.xml');
-  const sitemapFiles = (await readdir(distDir)).filter((name) => /^sitemap-\d+\.xml$/.test(name)).sort();
-  const sitemap = [];
-  for (const name of sitemapFiles) sitemap.push(...parseSitemapUrls(await readIfExists(name)));
-  sitemap.sort((a, b) => a.loc.localeCompare(b.loc));
-  return {
-    robotsTxt,
-    sitemapIndex: indexXml === null ? null : parseSitemapIndex(indexXml),
-    sitemap,
-    astroDir: await inventoryAstroDir(distDir),
-  };
-}
-
 /**
  * ビルド条件のメモ（比較の表示にだけ使い、差分判定には使わない）。dist をビルドしたのと同じ作業ツリー・
  * 同じシェルで実行した場合にだけ意味がある（preview 用ビルドとの取り違えを見つけるため）。
@@ -343,7 +268,8 @@ function collectBuildMeta(distDir) {
 /** dist ディレクトリ全体のスナップショットを作る。 */
 export async function collectSnapshot(distDir) {
   const absoluteDist = path.resolve(distDir);
-  const htmlFiles = (await walkFiles(absoluteDist)).filter((file) => file.endsWith('.html')).sort();
+  const allFiles = await walkFiles(absoluteDist);
+  const htmlFiles = allFiles.filter((file) => file.endsWith('.html')).sort();
   const resolver = createAssetResolver(absoluteDist);
   const pages = {};
   for (const file of htmlFiles) {
@@ -366,7 +292,7 @@ export async function collectSnapshot(distDir) {
     version: SNAPSHOT_VERSION,
     meta: collectBuildMeta(absoluteDist),
     pageCount: htmlFiles.length,
-    site: await collectSiteFiles(absoluteDist),
+    site: await collectSiteFiles(absoluteDist, allFiles),
     pages,
   };
 }
@@ -443,7 +369,12 @@ const assetNames = (list) =>
   list.map((asset) => `${logicalAssetName(asset.file)}${asset.external ? ' (external)' : ''}`).sort();
 
 const preloadNames = (list = []) =>
-  list.map((preload) => `${preload.rel} ${preload.as ?? '-'} ${logicalAssetName(preload.href)}`).sort();
+  list
+    .map(
+      (preload) =>
+        `${preload.rel} as=${preload.as ?? '-'} type=${preload.type ?? '-'} crossorigin=${preload.crossorigin ?? '-'} ${logicalAssetName(preload.href)}`,
+    )
+    .sort();
 
 const hreflangByLang = (links = []) => {
   const map = {};
@@ -543,48 +474,6 @@ function compareInline(url, before, after, grouper) {
   }
 }
 
-function compareSitemap(baseSitemap = [], curSitemap = []) {
-  const base = new Map(baseSitemap.map((entry) => [entry.loc, entry]));
-  const cur = new Map(curSitemap.map((entry) => [entry.loc, entry]));
-  const common = [...cur.keys()].filter((loc) => base.has(loc));
-  const alternates = (entry) => (entry.alternates ?? []).map((link) => `${link.hreflang} ${link.href}`);
-  return {
-    before: base.size,
-    after: cur.size,
-    added: [...cur.keys()].filter((loc) => !base.has(loc)).sort(),
-    removed: [...base.keys()].filter((loc) => !cur.has(loc)).sort(),
-    lastmodChanged: common.filter((loc) => base.get(loc).lastmod !== cur.get(loc).lastmod).length,
-    distinctLastmodBefore: new Set(baseSitemap.map((entry) => entry.lastmod)).size,
-    distinctLastmodAfter: new Set(curSitemap.map((entry) => entry.lastmod)).size,
-    alternatesChanged: common.flatMap((loc) => {
-      const { removed, added } = multisetDiff(alternates(base.get(loc)), alternates(cur.get(loc)));
-      return removed.length + added.length > 0 ? [{ loc, removed, added }] : [];
-    }),
-  };
-}
-
-function compareSitemapIndex(before, after) {
-  const base = new Map((before ?? []).map((entry) => [entry.loc, entry.lastmod]));
-  const cur = new Map((after ?? []).map((entry) => [entry.loc, entry.lastmod]));
-  return {
-    before: base.size,
-    after: cur.size,
-    added: [...cur.keys()].filter((loc) => !base.has(loc)).sort(),
-    removed: [...base.keys()].filter((loc) => !cur.has(loc)).sort(),
-    lastmodChanged: [...cur.keys()].filter((loc) => base.has(loc) && base.get(loc) !== cur.get(loc)).sort(),
-  };
-}
-
-function compareSite(baseSite = {}, curSite = {}) {
-  return {
-    robotsTxt:
-      baseSite.robotsTxt === curSite.robotsTxt ? null : { before: baseSite.robotsTxt, after: curSite.robotsTxt },
-    sitemapIndex: compareSitemapIndex(baseSite.sitemapIndex, curSite.sitemapIndex),
-    sitemap: compareSitemap(baseSite.sitemap, curSite.sitemap),
-    astroDir: { before: baseSite.astroDir ?? null, after: curSite.astroDir ?? null },
-  };
-}
-
 /** 2 つのスナップショットの差分。フィールドごとに「同じ変化」をまとめ、ページ数の多い順に並べる。 */
 export function diffSnapshots(baseline, current) {
   if (baseline.version !== current.version) {
@@ -620,20 +509,8 @@ export function diffSnapshots(baseline, current) {
 /** 差分が 1 つでもあるか（--fail-on-diff の判定）。 */
 export function hasDifferences(diff) {
   const { pages, fields, site } = diff;
-  const index = site.sitemapIndex;
-  const sitemap = site.sitemap;
-  return (
-    pages.added.length + pages.removed.length > 0 ||
-    Object.keys(fields).length > 0 ||
-    site.robotsTxt !== null ||
-    index.added.length + index.removed.length + index.lastmodChanged.length > 0 ||
-    sitemap.added.length + sitemap.removed.length + sitemap.lastmodChanged + sitemap.alternatesChanged.length > 0 ||
-    stableString(site.astroDir.before) !== stableString(site.astroDir.after)
-  );
+  return pages.added.length + pages.removed.length > 0 || Object.keys(fields).length > 0 || siteHasDifferences(site);
 }
-
-const listWithMore = (list, limit) =>
-  `${list.slice(0, limit).join(', ')}${list.length > limit ? ` …(+${list.length - limit})` : ''}`;
 
 const formatMeta = (meta) =>
   meta
@@ -650,40 +527,6 @@ function formatFields(fields, out, { maxGroups, maxUrls }) {
       for (const line of group.detail.split('\n')) out.push(`      ${line}`);
     }
     if (fieldGroups.length > maxGroups) out.push(`  … (+${fieldGroups.length - maxGroups} more distinct changes)`);
-  }
-}
-
-function formatSite(site, out) {
-  out.push('\n[site]');
-  if (site.robotsTxt) {
-    out.push('  robots.txt changed:', '  --- before');
-    for (const line of (site.robotsTxt.before ?? '(none)').split('\n')) out.push(`  | ${line}`);
-    out.push('  --- after');
-    for (const line of (site.robotsTxt.after ?? '(none)').split('\n')) out.push(`  | ${line}`);
-  } else {
-    out.push('  robots.txt: unchanged');
-  }
-  const index = site.sitemapIndex;
-  out.push(
-    `  sitemap-index: ${index.before} → ${index.after} sitemaps (added ${index.added.length}, removed ${index.removed.length}, lastmod changed ${index.lastmodChanged.length})`,
-  );
-  for (const [label, list] of [['added', index.added], ['removed', index.removed]]) {
-    if (list.length > 0) out.push(`    ${label}: ${listWithMore(list, 5)}`);
-  }
-  const sm = site.sitemap;
-  out.push(
-    `  sitemap: ${sm.before} → ${sm.after} URLs (added ${sm.added.length}, removed ${sm.removed.length}, lastmod changed ${sm.lastmodChanged}; distinct lastmod values ${sm.distinctLastmodBefore} → ${sm.distinctLastmodAfter}; hreflang alternates changed ${sm.alternatesChanged.length})`,
-  );
-  if (sm.added.length > 0) out.push(`    added: ${listWithMore(sm.added, 15)}`);
-  if (sm.removed.length > 0) out.push(`    removed: ${listWithMore(sm.removed, 15)}`);
-  for (const change of sm.alternatesChanged.slice(0, 5)) {
-    out.push(`    alternates ${change.loc}: ${[...change.removed.map((x) => `- ${x}`), ...change.added.map((x) => `+ ${x}`)].join(' / ')}`);
-  }
-  const { before, after } = site.astroDir;
-  if (before && after) {
-    out.push(
-      `  _astro JS: ${before.jsFiles} → ${after.jsFiles} files, ${before.jsBytes} → ${after.jsBytes} bytes; server-render chunk files ${before.serverChunkFiles} → ${after.serverChunkFiles}`,
-    );
   }
 }
 
@@ -722,19 +565,19 @@ export function parseArgs(argv) {
   return args;
 }
 
-/** 戻り値は終了コード（0: 差分なし・比較なし、1: --fail-on-diff で差分あり）。 */
-export async function runCli(argv) {
+/** 戻り値は終了コード（0: 差分なし・比較なし、1: --fail-on-diff で差分あり）。出力先は差し替えられる。 */
+export async function runCli(argv, { write = (text) => process.stdout.write(text) } = {}) {
   const args = parseArgs(argv);
   const current = args.current
     ? JSON.parse(await readFile(args.current, 'utf8'))
     : await collectSnapshot(args.dist);
   if (args.out) await writeFile(args.out, `${JSON.stringify(current, null, 2)}\n`);
   if (!args.compare) {
-    if (!args.out) process.stdout.write(`${JSON.stringify(current, null, 2)}\n`);
+    if (!args.out) write(`${JSON.stringify(current, null, 2)}\n`);
     return 0;
   }
   const diff = diffSnapshots(JSON.parse(await readFile(args.compare, 'utf8')), current);
-  process.stdout.write(`${formatDiff(diff)}\n`);
+  write(`${formatDiff(diff)}\n`);
   return args.failOnDiff && hasDifferences(diff) ? 1 : 0;
 }
 
