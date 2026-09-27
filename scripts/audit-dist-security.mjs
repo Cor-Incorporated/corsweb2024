@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { ACTIVE_SVG_CONTENT, signatureMismatch } from './lib/file-signatures.mjs';
+import { ACTIVE_SVG_CONTENT, hasKnownSignature, signatureMismatch } from './lib/file-signatures.mjs';
 
 const DIST_DIR = path.resolve('dist');
 const TEXT_EXTENSIONS = new Set([
@@ -162,19 +162,28 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
-// remark-link-card-plus の画像（追跡しているものと、ビルド時に取得したもの）の拡張子と中身の形式が
-// 一致するかを確かめる（#340。理由は scripts/lib/file-signatures.mjs）。圧縮版（.gz / .br）は対象外。
+// remark-link-card-plus の画像（追跡しているものと、ビルド時に取得したもの）の拡張子と中身の形式を照合する
+// （#340。理由は scripts/lib/file-signatures.mjs）。圧縮版（.gz / .br）と、判定表に無い拡張子（プラグインが
+// file-type で判別して付けたもの）は対象外。
+// - 不一致は警告にとどめ、失敗にはしない。ビルド時の取得結果はリンク先のサイト次第で、失敗にすると外部サイトの
+//   ファビコンの形式だけで本番のデプロイが止まるため。追跡しているファイルは、ユニットテスト
+//   （src/utils/__tests__/link-card-cache.test.ts）が厳密に検査する。
+// - SVG の能動的な内容は失敗にする（.svg はプラグインが書かないので、追跡しているファイルにしか現れない）。
 const LINK_CARD_DIR = 'remark-link-card-plus';
 const COMPRESSED_VARIANT = /\.(?:gz|br)$/i;
 
-const auditLinkCardImages = async (violations, files) => {
+const auditLinkCardImages = async (violations, warnings, files) => {
   for (const file of files) {
     const relative = path.relative(DIST_DIR, file);
     if (!relative.startsWith(`${LINK_CARD_DIR}/`) || COMPRESSED_VARIANT.test(relative)) continue;
+    const name = path.basename(file);
     const buffer = await readFile(file);
-    const mismatch = signatureMismatch(path.basename(file), buffer);
+    const mismatch = hasKnownSignature(name) ? signatureMismatch(name, buffer) : null;
     if (mismatch) {
-      violations.push(`[dist-security] ${LINK_CARD_DIR}/${mismatch}; delete it from public/ or fix the extension with git mv.`);
+      warnings.push(
+        `[dist-security][warn] ${LINK_CARD_DIR}/${mismatch}: this link-card image will not render. ` +
+          'Build locally, then commit the file under public/remark-link-card-plus/ with the right extension (git add -f / git mv).'
+      );
     }
     if (relative.toLowerCase().endsWith('.svg') && ACTIVE_SVG_CONTENT.test(buffer.toString('utf8'))) {
       violations.push(`[dist-security] ${relative} contains active SVG content.`);
@@ -205,11 +214,12 @@ const main = async () => {
   const files = await walk(DIST_DIR);
   const textFiles = await readTextFiles(files);
   const violations = [];
+  const warnings = [];
 
   for (const page of REQUIRED_SEO_PAGES) {
     await auditSeoPage(violations, page);
   }
-  await auditLinkCardImages(violations, files);
+  await auditLinkCardImages(violations, warnings, files);
 
   for (const file of textFiles) {
     auditJsonLd(violations, file);
@@ -218,6 +228,8 @@ const main = async () => {
     auditLocalStorage(violations, file);
     auditHeavyRuntime(violations, file);
   }
+
+  for (const warning of warnings) console.warn(warning);
 
   if (violations.length > 0) {
     throw new Error(violations.join('\n'));

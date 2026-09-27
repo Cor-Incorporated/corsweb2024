@@ -7,23 +7,31 @@
 // そのまま配信されると画像は表示されない（404 ページの HTML や SVG が .png になっていた）。
 
 const startsWithBytes = (buffer, bytes) => buffer.subarray(0, bytes.length).equals(Buffer.from(bytes));
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 // XML 宣言・コメント・DOCTYPE の後に <svg が来るもの。
 const SVG_PROLOG = /^\s*(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*(<!DOCTYPE\s+svg[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg\b/i;
 
 export const SIGNATURES = {
-  png: buffer => startsWithBytes(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  png: buffer => startsWithBytes(buffer, PNG),
+  // file-type はアニメーション PNG を .apng として返す（中身は PNG の形式）。
+  apng: buffer => startsWithBytes(buffer, PNG),
   jpg: buffer => startsWithBytes(buffer, [0xff, 0xd8, 0xff]),
   jpeg: buffer => startsWithBytes(buffer, [0xff, 0xd8, 0xff]),
   gif: buffer => ['GIF87a', 'GIF89a'].includes(buffer.subarray(0, 6).toString('latin1')),
   webp: buffer =>
     buffer.subarray(0, 4).toString('latin1') === 'RIFF' && buffer.subarray(8, 12).toString('latin1') === 'WEBP',
-  avif: buffer => buffer.subarray(4, 12).toString('latin1') === 'ftypavif',
+  // 静止画（avif）と連続画像（avis）のどちらのブランドも AVIF として扱う。
+  avif: buffer =>
+    buffer.subarray(4, 8).toString('latin1') === 'ftyp' && /avi[fs]/.test(buffer.subarray(8, 32).toString('latin1')),
   ico: buffer => buffer.length >= 4 && buffer.readUInt32LE(0) === 0x00010000,
   svg: buffer => SVG_PROLOG.test(buffer.subarray(0, 2048).toString('utf8')),
 };
 
+export const hasKnownSignature = name => Object.hasOwn(SIGNATURES, name.slice(name.lastIndexOf('.') + 1).toLowerCase());
+
 // 拡張子が中身と一致すれば null、一致しなければ診断用のメッセージ（ファイル名・拡張子・先頭 16 バイト）を返す。
+// 判定表に無い拡張子も不一致として返す（追跡するファイルは既知の形式に限るため）。
 export const signatureMismatch = (name, buffer) => {
   const extension = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
   if (SIGNATURES[extension]?.(buffer)) return null;
