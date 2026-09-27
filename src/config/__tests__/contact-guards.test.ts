@@ -8,16 +8,20 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
+import { PHONE_INQUIRY_ACCIDENTS } from '../../../tests/fixtures/phone-inquiry-accidents';
 import {
   AVAILABILITY_CLAIM_PATTERNS,
   CLOUDIA_CHAT_PLACEHOLDER_TITLES,
   CLOUDIA_SPA_ROOT_ID,
   CONTACT_PAGE_PATHS,
   LAUNCHER_FALLBACK_LINK_SELECTOR,
+  PHONE_INQUIRY_PHRASE_PATTERNS,
   PHONE_LEAD_PATTERNS,
+  PRIVACY_PAGE_PATHS,
   findCalendarCopyMismatches,
   findContactSelfLoops,
   findLauncherFallbackSelfLinks,
+  findPhoneInquiryPhrases,
   findPhoneLeads,
   inspectCloudiaChatDocument,
   isCloudiaChatHtmlServed,
@@ -46,14 +50,17 @@ function readSource(relativeToThisFile: string): string {
 describe('判定パターンの網羅性', () => {
   const locales = Object.keys(CONTACT_PAGE_PATHS).sort();
 
-  it('電話誘導・時間帯の断言とも 5 言語すべてにパターンがある', () => {
+  it('電話誘導（語・句）・時間帯の断言とも 5 言語すべてにパターンがあり、対象パスも 5 言語ある', () => {
     expect(Object.keys(PHONE_LEAD_PATTERNS).sort()).toEqual(locales);
+    expect(Object.keys(PHONE_INQUIRY_PHRASE_PATTERNS).sort()).toEqual(locales);
     expect(Object.keys(AVAILABILITY_CLAIM_PATTERNS).sort()).toEqual(locales);
+    expect(Object.keys(PRIVACY_PAGE_PATHS).sort()).toEqual(locales);
   });
 
   it('共有するパターンは状態を持たない（g / y フラグ無し。test() の lastIndex 汚染を防ぐ）', () => {
     const stateful = [
       ...Object.values(PHONE_LEAD_PATTERNS),
+      ...Object.values(PHONE_INQUIRY_PHRASE_PATTERNS),
       ...Object.values(AVAILABILITY_CLAIM_PATTERNS),
     ].filter((pattern) => pattern.global || pattern.sticky);
     expect(stateful).toEqual([]);
@@ -81,7 +88,7 @@ describe('B-1 findPhoneLeads', () => {
     expect(term.toLowerCase()).toContain(findings[0].match.toLowerCase());
   });
 
-  it('zh ページに残った「电话」を文脈付きで返す（#323 背景 1 の再発）', () => {
+  it('zh の「电话」を文脈付きで返す', () => {
     const findings = findPhoneLeads(parsePage('<main><p>也可以通过电话联系我们。</p></main>'));
     expect(findings).toEqual([
       expect.objectContaining({ kind: 'text', match: '电话', context: expect.stringContaining('通过电话联系') }),
@@ -112,6 +119,39 @@ describe('B-1 findPhoneLeads', () => {
     const document = parsePage('<main></main>', '<meta name="format-detection" content="telephone=no">');
     findPhoneLeads(document);
     expect(document.querySelectorAll('meta[name="format-detection"]')).toHaveLength(1);
+  });
+});
+
+describe('B-1 findPhoneInquiryPhrases（/privacy 用の句レベル）', () => {
+  // #323 背景 1 の事故入力そのもの（PR #324 が削除した実際の文言）。
+  const accidents = Object.entries(PHONE_INQUIRY_ACCIDENTS).flatMap(([locale, texts]) => [
+    [locale, 'privacy', texts.privacy] as const,
+    [locale, 'calendarNote', texts.calendarNote] as const,
+  ]);
+
+  it.each(accidents)('%s の %s（削除済みの実文言）を検出する', (_locale, _field, text) => {
+    const findings = findPhoneInquiryPhrases(parsePage(`<main><p>${text}</p></main>`));
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings.every((finding) => finding.kind === 'phrase')).toBe(true);
+  });
+
+  // 収集項目としての「電話番号」は正当な記載。語レベル（/contact 用）なら拾うが、句レベルでは拾わない。
+  it.each([
+    ['ja', '氏名・会社名・部署・役職・メールアドレス・電話番号・取引に関する情報等'],
+    ['ja', 'お電話番号をお預かりします'],
+    ['en', 'Name, company name, department, job title, email address, telephone number, information'],
+    ['zh', '姓名、公司名称、部门、职务、电子邮箱地址、电话号码、与交易相关的信息等'],
+    ['ko', '성명·회사명·부서·직책·이메일 주소·전화번호·거래에 관한 정보 등'],
+    ['es', 'Nombre, empresa, departamento, cargo, correo electrónico, número de teléfono, información'],
+  ])('%s: 収集項目としての電話番号は誤検知しない', (_locale, text) => {
+    const document = parsePage(`<main><dd>${text}</dd></main>`);
+    expect(findPhoneLeads(document).length).toBeGreaterThan(0);
+    expect(findPhoneInquiryPhrases(document)).toEqual([]);
+  });
+
+  it('format-detection の meta は句レベルでも誤検出しない', () => {
+    const head = '<meta name="format-detection" content="telephone=no">';
+    expect(findPhoneInquiryPhrases(parsePage('<main><p>所在地</p></main>', head))).toEqual([]);
   });
 });
 

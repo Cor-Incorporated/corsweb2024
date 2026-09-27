@@ -1,4 +1,5 @@
 // /contact の回帰ガードの判定基準（Issue #323 B-1〜B-3・C）。
+// B-1 は /contact（語レベル）と /privacy（句レベル）の 2 段構え。詳細は B-1 節を参照。
 //
 // ここが唯一の定義。ビルド済み dist の検査（tests/build-output/contact-regression.test.ts）と
 // Cloudia 可用性の合成監視（Issue #322）は、この値と関数を import して同じ基準で判定する。
@@ -24,6 +25,15 @@ export const CONTACT_PAGE_PATHS = {
   es: '/es/contact/',
 } as const satisfies Record<Locale, string>;
 
+/** 5 言語のプライバシーポリシー（B-1 の句レベル検査の対象）。 */
+export const PRIVACY_PAGE_PATHS = {
+  ja: '/privacy/',
+  en: '/en/privacy/',
+  zh: '/zh/privacy/',
+  ko: '/ko/privacy/',
+  es: '/es/privacy/',
+} as const satisfies Record<Locale, string>;
+
 /**
  * Cloudia SPA の配信パス。本番では別途デプロイされた SPA が配信され、本リポジトリの
  * ビルドでは SPA 未配信時のプレースホルダ（ja のみ・src/pages/contact/chat/index.astro）が出る。
@@ -31,16 +41,19 @@ export const CONTACT_PAGE_PATHS = {
 export const CLOUDIA_CHAT_PATH = '/contact/chat/';
 
 // ---------------------------------------------------------------------------
-// B-1: 電話導線の不在
+// B-1: 電話導線の不在（2 段構え）
+// - /contact（問い合わせの入口）: 電話を指す語・tel: リンクが一切出ないこと（語レベル）。
+// - /privacy: 収集項目として「電話番号」が正当に載る（zh「电话号码」・ko「전화번호」など）ため、
+//   語レベルでは誤検知する。「電話で受け付ける／電話してほしい」を述べる句で判定する（句レベル）。
+//   #323 背景 1（zh/ko/es のプライバシーポリシーに「電話でも受け付ける」が残存）はこちらの事故。
 // ---------------------------------------------------------------------------
 
 /**
- * 電話への誘導表現。言語ごとに持ち、satisfies で 5 言語すべてを必須にする。
- * 日本語・英語のパターンだけで検索して zh/ko/es の「電話でも受け付ける」を見逃した事故
- * （#323 背景 1）の再発防止。ページの言語では絞らず、全言語のパターンを全ページに当てる
- * （zh/ko/es に英語文言がそのまま出た事故もあったため）。
- * Issue #323 の検索式 `電話|电话|전화|[Tt]el[eé]f[oó]n|[Pp]hone|telephone|call us` を包含し、
- * 大文字小文字は区別しない（文頭の "Call us" や "PHONE" も拾う）。
+ * /contact に出てはならない、電話を指す語。言語ごとに持ち、satisfies で 5 言語すべてを必須にする。
+ * 背景 1 の教訓（日本語・英語のパターンだけで検索して zh/ko/es の残存を見逃した）を当てはめ、
+ * ページの言語では絞らず全言語のパターンを全ページに当てる（zh/ko/es に英語文言がそのまま出た
+ * 事故もあったため）。Issue #323 の検索式 `電話|电话|전화|[Tt]el[eé]f[oó]n|[Pp]hone|telephone|call us`
+ * を包含し、大文字小文字は区別しない（文頭の "Call us" や "PHONE" も拾う）。
  */
 export const PHONE_LEAD_PATTERNS = {
   ja: /電話/iu,
@@ -57,28 +70,44 @@ export const PHONE_LEAD_PATTERNS = {
  */
 export const PHONE_LEAD_EXCLUDED_META_NAMES = ['format-detection'] as const;
 
+/**
+ * 「電話で問い合わせ・相談を受け付ける／電話で連絡してほしい」を述べる句（/privacy 用の句レベル）。
+ * 「電話番号」のような収集項目には一致しない。PR #324（ad40cd6）が削除した実際の文言
+ * （tests/fixtures/phone-inquiry-accidents.ts）にすべて一致することをユニットテストで固定している。
+ * zh の実例は「或电话受理」で、「通过电话」「电话咨询」だけでは拾えない点に注意。
+ */
+export const PHONE_INQUIRY_PHRASE_PATTERNS = {
+  ja: /お電話(?!番号)|電話(?:でも|にて|で(?:の)?(?:ご?連絡|お?問い?合わせ|ご?相談|受け?付|承))/u,
+  en: /by (?:tele)?phone|over the (?:tele)?phone|via (?:tele)?phone|(?:call|phone|ring) us\b|telephone us/iu,
+  zh: /或电话|电话(?:受理|联系|咨询|预约)|通过电话|致电|拨打|或電話|電話(?:受理|聯繫|諮詢)|透過電話/u,
+  ko: /전화로|전화\s?(?:문의|상담|접수|연락)/u,
+  es: /por tel[eé]fono|v[ií]a telef[oó]nica|telef[oó]nicamente|ll[aá]m(?:enos|anos|arnos)/iu,
+} as const satisfies Record<Locale, RegExp>;
+
 export type PhoneLeadFinding = {
-  readonly kind: 'text' | 'tel-link';
+  readonly kind: 'text' | 'tel-link' | 'phrase';
   readonly match: string;
   readonly context: string;
 };
 
 /**
- * 電話への誘導を列挙する。本文・属性値・インラインスクリプトを含む HTML 全体に
+ * /contact 用（語レベル）。本文・属性値・インラインスクリプトを含む HTML 全体に
  * PHONE_LEAD_PATTERNS を当て（除外 meta を除く）、加えて tel: リンクを構造で拾う。
  */
 export function findPhoneLeads(document: Document): PhoneLeadFinding[] {
   const html = serializeWithoutExcludedMeta(document);
-  const textFindings = Array.from(html.matchAll(combineGlobal(PHONE_LEAD_PATTERNS)), (match) => ({
-    kind: 'text' as const,
-    match: match[0],
-    context: contextAround(html, match.index ?? 0, match[0].length),
-  }));
+  const textFindings = findingsIn(html, combineGlobal(PHONE_LEAD_PATTERNS), 'text');
   const telLinkFindings = Array.from(document.querySelectorAll('a[href], area[href]'))
     .map((element) => (element.getAttribute('href') ?? '').trim())
     .filter((href) => /^tel:/iu.test(href))
     .map((href) => ({ kind: 'tel-link' as const, match: href, context: href }));
   return [...textFindings, ...telLinkFindings];
+}
+
+/** /privacy 用（句レベル）。「電話番号」のような収集項目の記載は拾わない。 */
+export function findPhoneInquiryPhrases(document: Document): PhoneLeadFinding[] {
+  const html = serializeWithoutExcludedMeta(document);
+  return findingsIn(html, combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase');
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +309,18 @@ function serializeWithoutExcludedMeta(document: Document): string {
     .filter((meta) => excluded.has((meta.getAttribute('name') ?? '').trim().toLowerCase()))
     .forEach((meta) => meta.remove());
   return copy.outerHTML;
+}
+
+function findingsIn<K extends PhoneLeadFinding['kind']>(
+  html: string,
+  pattern: RegExp,
+  kind: K
+): Array<PhoneLeadFinding & { readonly kind: K }> {
+  return Array.from(html.matchAll(pattern), (match) => ({
+    kind,
+    match: match[0],
+    context: contextAround(html, match.index ?? 0, match[0].length),
+  }));
 }
 
 function combineGlobal(patterns: Readonly<Record<string, RegExp>>): RegExp {

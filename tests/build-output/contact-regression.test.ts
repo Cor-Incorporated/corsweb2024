@@ -14,14 +14,17 @@ import {
   CLOUDIA_SPA_ROOT_ID,
   CONTACT_PAGE_PATHS,
   LAUNCHER_FALLBACK_LINK_SELECTOR,
+  PRIVACY_PAGE_PATHS,
   findCalendarCopyMismatches,
   findContactSelfLoops,
   findLauncherFallbackSelfLinks,
+  findPhoneInquiryPhrases,
   findPhoneLeads,
   inspectCloudiaChatDocument,
   isCloudiaChatHtmlServed,
   isContactPagePath,
 } from '../../src/config/contact-guards';
+import { PHONE_INQUIRY_ACCIDENTS } from '../fixtures/phone-inquiry-accidents';
 
 // 反証の実測では、壊した dist の複製を CONTACT_GUARD_DIST_DIR で渡す（既定は ./dist）。
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
@@ -81,10 +84,18 @@ function lastMain(document: Document): Element {
   return mains[mains.length - 1];
 }
 
-describe('B-1 5 言語の /contact に電話導線が無い', () => {
+describe('B-1 5 言語の /contact に電話導線が無い（語レベル）', () => {
   it.each(LOCALES)('%s', (locale) => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
     expect(findPhoneLeads(document)).toEqual([]);
+  });
+});
+
+// /privacy は収集項目として「電話番号」が正当に載るため、句レベルで判定する（#323 背景 1 の事故現場）。
+describe('B-1 5 言語の /privacy に「電話で受け付ける」旨が無い（句レベル・#323 背景 1）', () => {
+  it.each(LOCALES)('%s', (locale) => {
+    const { document } = loadDistPage(PRIVACY_PAGE_PATHS[locale]);
+    expect(findPhoneInquiryPhrases(document)).toEqual([]);
   });
 });
 
@@ -141,10 +152,17 @@ describe('B-3 /contact 上のランチャーのフォールバックが自分自
 // F2: dist の実物に既知の事故入力を注入し、判定が赤になることを毎回確かめる。
 // ページ構造が変わって判定が空振りし始めたら（素通り）、ここが先に落ちる。
 describe('反証: dist の実物へ事故を注入すると検出する', () => {
-  it('zh の /contact に「电话」が残る（#323 背景 1）', () => {
+  it('zh の /contact に「电话」が出る', () => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS.zh);
     lastMain(document).insertAdjacentHTML('beforeend', '<p>也可以通过电话联系我们。</p>');
     expect(findPhoneLeads(document).map((finding) => finding.match)).toContain('电话');
+  });
+
+  it.each(LOCALES)('%s の /privacy に削除済みの「電話でも受け付ける」文言が戻る（#323 背景 1）', (locale) => {
+    const { document } = loadDistPage(PRIVACY_PAGE_PATHS[locale]);
+    const before = findPhoneInquiryPhrases(document).length;
+    lastMain(document).insertAdjacentHTML('beforeend', `<p>${PHONE_INQUIRY_ACCIDENTS[locale].privacy}</p>`);
+    expect(findPhoneInquiryPhrases(document).length).toBeGreaterThan(before);
   });
 
   it('en の /contact に tel: リンクが戻る', () => {
