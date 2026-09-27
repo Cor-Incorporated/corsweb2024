@@ -171,9 +171,13 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
 - **Frontmatter**: only translatable fields are translated (blog keeps the ja
   tags; cases/news translate tags); everything else is copied from ja
 - **CI**: `.github/workflows/translate-content.yml` translates the articles
-  changed in a PR and commits them to that PR; `i18n-check` verifies
+  changed in a PR (`translate`: read-only token, `npm ci --ignore-scripts`,
+  outputs a patch) and commits them to that PR (`push`: write token, runs no
+  repo code, applies the patch only after checking paths and file modes);
+  `i18n-check` verifies
 - **Model / secrets**: `GEMINI_MODEL` (default `gemini-3.8-flash`),
-  `GEMINI_API_KEY` (required), `TRANSLATION_BOT_TOKEN` (recommended)
+  `GEMINI_API_KEY` (required), `TRANSLATION_BOT_TOKEN` (optional; broader and
+  longer-lived than GITHUB_TOKEN, see `docs/i18n-translation.md` section 6)
 
 ### Blog Routing & Pages
 

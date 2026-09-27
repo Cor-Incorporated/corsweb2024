@@ -12,7 +12,10 @@
 編集者: ja の記事を追加・修正して PR を作る（develop 宛て）
    │
    ▼  GitHub Actions「Translate content (i18n)」
-translate ジョブ … PR で変わった記事だけを翻訳 → 検証 → bot コミットを PR に追加
+translate ジョブ … PR で変わった記事だけを翻訳 → 検証 → 変更をパッチにする（書き込み権限なし）
+   │
+   ▼
+push ジョブ … パッチの変更先を検査してから、bot コミットとして PR に追加（コードは実行しない）
    │
    ▼
 i18n-check ジョブ … 翻訳の欠け・古さを検査（翻訳コミットを積んだ場合は、その新しいコミットで検査）
@@ -111,24 +114,54 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 
 ## 6. CI（`.github/workflows/translate-content.yml`）
 
+### ジョブと権限（信頼境界）
+
+書き込みトークンと、信頼しないコード（PR の `scripts/i18n` と npm 依存）を同じジョブに置きません。翻訳の結果は、書き込み権限のないジョブからパッチ（`git diff --binary`）として受け渡します。
+
+| ジョブ | 権限 | 実行するもの | 渡す秘密情報 |
+|---|---|---|---|
+| `translate` | contents: read | `npm ci --ignore-scripts`（npm キャッシュなし）→ `translate-content.mjs` → 変更をパッチにして artifact（保存 1 日）へ | `GEMINI_API_KEY` |
+| `push` | contents: write | パッチの検査 → `git apply` → hooks を無効にして commit / push。npm もリポジトリのコードも実行しない | `TRANSLATION_BOT_TOKEN`（登録したときだけ） |
+| `dispatch-check` | actions: write | GITHUB_TOKEN で push したとき、i18n-check を workflow_dispatch で再実行する（checkout もしない） | なし |
+| `translate-result` | なし | 翻訳・同期・削除の一部が失敗したとき赤にする（成功分は push 済み） | なし |
+| `i18n-check` | contents: read | `scripts/i18n` の単体テストと `--check` | なし |
+
+push ジョブがパッチを適用する条件（1 つでも外れたら何も適用・push しない）:
+
+- 変更パスがすべて `src/content/<collection>/{en,zh,ko,es}/<slug>.md`（ワークフローの `ALLOWED_CHANGE_RE`。`scripts/i18n/config.mjs` と一致することをテストで照合）
+- 通常ファイル（mode 100644）の変更・作成・削除だけ（シンボリックリンク・実行権限・改名・バイナリは拒否）
+- パッチが 5 MB 以下で、そのまま当たる（`git apply --check`）
+
+残るリスク: translate ジョブは PR head のコードを `GEMINI_API_KEY` 付きで実行します（同一リポジトリの PR だけ。fork の PR には secrets が渡りません）。また、リポジトリへの書き込み権限を持つ人は、PR でワークフローを書き換えれば secrets を読み出せます（GitHub の仕様）。キーが漏れた疑いがあれば Google AI Studio でキーを削除し、再発行して secret を登録し直してください。
+
 ### pull_request（`src/content/**`・`scripts/i18n/**`・このワークフローを変更した PR）
 
-1. **translate**（GEMINI_API_KEY があり、同一リポジトリの PR で、head が develop / main / master でないとき）
-   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ）
-   - 変更が `src/content/<collection>/{en,zh,ko,es}/*.md` だけであることを確かめてから、`github-actions[bot]` 名義でコミットし PR の head ブランチへ push
-   - 一部の記事が失敗しても成功分は push し、最後にジョブを失敗させる
-2. **i18n-check**（translate の後）
-   - translate が翻訳コミットを push した場合: この実行の SHA はもう PR の HEAD ではないので、新しい HEAD 側の実行に検査を委ねて成功で終わる
+1. **translate**（`GEMINI_API_KEY` があり、同一リポジトリの PR で、head が develop / main / master でないとき）
+   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ。1 回あたり `I18N_MAX_ITEMS=20` 件まで）
+   - 一部の記事が失敗しても成功分はパッチに含め、終了コードを translate-result に渡す
+2. **push**（パッチがあるとき）: 上の条件で検査して適用し、`github-actions[bot]` 名義でコミットして PR の head ブランチへ push（PR に新しいコミットが積まれていた場合は push せず、新しいコミットの実行に任せる）
+3. **dispatch-check**（GITHUB_TOKEN で push したとき）: i18n-check を新しいコミットに対して workflow_dispatch で再実行
+4. **translate-result**（一部が失敗したとき）: 赤にして知らせる
+5. **i18n-check**
+   - push した場合: この実行の SHA はもう PR の HEAD ではないので、新しい HEAD 側の実行に検査を委ねて成功で終わる
    - push しなかった場合（キー未設定・fork・翻訳不要・失敗）: `scripts/i18n` の単体テストと `--check --since <base>` を実行
 
-push に使うトークン:
+push に使うトークン（既定は GITHUB_TOKEN）:
 
-| 方式 | 条件 | 翻訳コミット後の CI | 追加操作 |
-|---|---|---|---|
-| **TRANSLATION_BOT_TOKEN（推奨）** | secret が登録されている | 通常の `synchronize` で全 CI（required check 含む）が自動で再実行 | なし |
-| GITHUB_TOKEN（フォールバック） | secret が無い | PR の各チェックは GitHub の仕様で「承認待ち」になる。i18n-check だけは `workflow_dispatch`（mode=check）で即時に再実行 | 書き込み権限者が PR の Checks で「Approve workflows to run」を 1 回押す |
+| 方式 | 条件 | 翻訳コミット後の CI | 追加操作 | リスク |
+|---|---|---|---|---|
+| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | GitHub Docs によれば、PR の各チェックは「承認待ち」になる（**本リポジトリでは未検証**）。i18n-check だけは dispatch-check が即時に再実行する | 書き込み権限者が PR の Checks で「Approve workflows to run」を押す。ボタンが出ない・押しても動かない場合は、人が空コミットを push して CI を起動する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
+| TRANSLATION_BOT_TOKEN（任意） | secret が登録されている | 通常の `synchronize` として全 CI（required check 含む）が自動で再実行 | なし | 大きい: fine-grained PAT は有効期限まで、発行者の権限で使える（漏れると他のブランチへの push にも使える）。push ジョブ以外には渡さないが、書き込み権限者は PR でワークフローを変えれば読み出せる。使う場合は対象リポジトリをこの 1 つ・権限を Contents だけ・有効期限を短くする |
 
-根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認）。
+承認ボタンが出ない場合の手順（空コミットで CI を起動する。PR のブランチで実行）:
+
+```bash
+git pull --rebase                      # bot の翻訳コミットを取り込む
+git commit --allow-empty -m "chore: CI を再実行"
+git push
+```
+
+根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認。本リポジトリでの挙動は、初回の翻訳 PR で確認する）。
 
 ### workflow_dispatch（Actions タブ → Translate content (i18n) → Run workflow、または `gh workflow run`）
 
@@ -136,7 +169,7 @@ push に使うトークン:
 
 | 入力 | 必須 | 既定値 | 意味 |
 |---|---|---|---|
-| `mode` | はい | `translate` | `translate` = 翻訳して `chore/i18n-backfill-<YYYYMMDD>` を push / `adopt` = 既存翻訳を採用して `chore/i18n-adopt-<YYYYMMDD>` を push / `check` = 検査のみ |
+| `mode` | はい | `translate` | `translate` = 翻訳して `chore/i18n-backfill-<YYYYMMDD>` を push（`I18N_MAX_ITEMS=500`）/ `adopt` = 既存翻訳を採用して `chore/i18n-adopt-<YYYYMMDD>` を push / `check` = 検査のみ。translate / adopt も translate ジョブ（読み取りのみ）→ push ジョブ（検査して push）の 2 段で動く |
 | `collections` | いいえ | 空（全部） | `blog,cases,news` のカンマ区切り |
 | `langs` | いいえ | 空（全部） | `en,zh,ko,es` のカンマ区切り |
 | `only` | いいえ | 空（全記事） | `slug` または `collection/slug` のカンマ区切り |
@@ -155,12 +188,12 @@ push に使うトークン:
 | 項目 | 現在値（2026-09-27 `gh secret list` / `gh variable list` 実測） | 設定する値 | コマンド |
 |---|---|---|---|
 | secret `GEMINI_API_KEY` | 未登録 | Google AI Studio（<https://aistudio.google.com/apikey>）で発行した API キー | `gh secret set GEMINI_API_KEY -R Cor-Incorporated/corsweb2024`（実行後にキーを貼り付けて Enter。チャット等には貼らない） |
-| secret `TRANSLATION_BOT_TOKEN`（任意・推奨） | 未登録 | fine-grained PAT: Repository access = `Cor-Incorporated/corsweb2024` のみ、Permissions = Contents: Read and write（Metadata: Read は自動）。有効期限を設定し、期限前に再発行 | `gh secret set TRANSLATION_BOT_TOKEN -R Cor-Incorporated/corsweb2024` |
+| secret `TRANSLATION_BOT_TOKEN`（任意。6 章のリスクを読んでから） | 未登録 | 登録しなくても動く（GITHUB_TOKEN で push）。翻訳コミット後の CI の承認操作を無くしたい場合だけ、fine-grained PAT: Repository access = `Cor-Incorporated/corsweb2024` のみ、Permissions = Contents: Read and write（Metadata: Read は自動）、有効期限は短く（例: 30 日）して期限前に再発行 | `gh secret set TRANSLATION_BOT_TOKEN -R Cor-Incorporated/corsweb2024` |
 | variable `GEMINI_MODEL`（任意） | 未設定（既定 `gemini-3.8-flash` を使用） | 変える場合のみ。例: `gemini-3.5-flash-lite` | `gh variable set GEMINI_MODEL -R Cor-Incorporated/corsweb2024 --body gemini-3.5-flash-lite` |
 
 - 設定後の確認: `gh secret list -R Cor-Incorporated/corsweb2024 | grep -E 'GEMINI_API_KEY|TRANSLATION_BOT_TOKEN'`
-- PAT の代わりに GitHub App のインストールトークンを使う場合は、`actions/create-github-app-token` で発行したトークンを translate ジョブの push に渡す形に変更します（App の権限は Contents: Read and write のみ）。
-- PAT は発行者本人の権限で push されます（コミットの作者は `github-actions[bot]`）。退職・権限変更で失効するため、長期運用では GitHub App を推奨します。
+- PAT の代わりに GitHub App のインストールトークンを使う場合は、`actions/create-github-app-token` で発行したトークンを push ジョブだけに渡す形に変更します（App の権限は Contents: Read and write のみ。translate ジョブには渡さない）。
+- PAT は発行者本人の権限で push されます（コミットの作者は `github-actions[bot]`）。退職・権限変更で失効するため、長期運用するなら PAT より GitHub App が適しています。
 
 ## 8. 初回移行（既存の翻訳 72 件 + 未翻訳 40 件）
 
@@ -204,9 +237,12 @@ push に使うトークン:
 | `削除が多すぎるため中止しました（blog: N 件 / 翻訳 M 件、上限 K 件）` | 1 回の削除が上限を超えた | 意図した削除なら `I18N_MAX_PRUNE_RATIO=1 npm run i18n:translate` のように上限を上げて手元で実行する |
 | `[source-error]` | ja の frontmatter が壊れている | ja を直す（`npm run build` でも同じ箇所が落ちる） |
 | `ja ディレクトリが空のため削除を中止しました（安全装置）` | ja が 1 本も無いのに翻訳だけある | 意図した削除なら翻訳ファイルを手で削除する |
-| `翻訳ディレクトリ以外が変更されたため push しません` | スクリプトが想定外のファイルを変更した | バグ。ログを添えて開発者に連絡（何も push されていない） |
+| `許可されていない変更のため適用しません` / `許可されていない種類の変更のため適用しません` | 翻訳が翻訳ディレクトリ以外・ja を変えた、またはシンボリックリンク・実行権限を作った | バグか改ざんの疑い。ログを添えて開発者に連絡（何も push されていない） |
+| `パッチが大きすぎるため適用しません` | 1 回の変更が 5 MB を超えた | 記事を分けて処理する |
+| `push できませんでした` | 翻訳中に PR へ新しいコミットが積まれた | 新しいコミットの実行で処理し直されるので待つ |
+| translate-result が赤（`一部の翻訳・同期・削除が失敗または検証に通らず`） | 一部の記事が失敗した（成功分は push 済み） | translate ジョブの Translate ステップのログで記事と理由を確認し、上の各行に従う |
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
-| 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式 | PR の Checks で「Approve workflows to run」を押す。恒久対応は `TRANSLATION_BOT_TOKEN` の登録 |
+| 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式 | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順。毎回の操作を無くしたい場合だけ、リスクを理解したうえで `TRANSLATION_BOT_TOKEN` を登録 |
 | `i18n-check の再実行を起動できませんでした` | ワークフローがまだ main に無い（workflow_dispatch 不可） | main 反映後は自動で解消。それまでは承認で代替 |
 | `翻訳が必要な件数 N 件が上限 20 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる | 記事を分けて PR を出す。意図した一括翻訳なら workflow_dispatch の mode=translate（バックフィル）を使うか、手元で `I18N_MAX_ITEMS=100` のように上限を上げて実行 |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
