@@ -9,12 +9,13 @@
  *    翻訳ディレクトリ以外・ja・シンボリックリンク・実行権限・巨大パッチを拒否し、正しいパッチだけを適用する。
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, rm, symlink, writeFile, chmod, unlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, symlink, writeFile, chmod, unlink } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { afterEach, describe, expect, it } from 'vitest';
+import { GIT_TEST_CONFIG, removeTempDir } from './helpers.mjs';
 
 const root = path.resolve(import.meta.dirname, '../../..');
 const workflow = yaml.load(
@@ -92,11 +93,11 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
 const verifyScript = workflow.jobs.push?.steps.find(
   (s) => s.name === 'Verify and apply the patch'
 )?.run;
-const GIT = ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false'];
+const GIT = GIT_TEST_CONFIG;
 const IDENTITY = ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid'];
 
 let tmp;
-afterEach(async () => tmp && rm(tmp, { recursive: true, force: true }));
+afterEach(async () => tmp && removeTempDir(tmp));
 
 function git(cwd, ...args) {
   return execFileSync('git', [...GIT, ...IDENTITY, ...args], { cwd, encoding: 'utf8' });
@@ -139,7 +140,7 @@ function runVerify({ repo, runnerTemp }, env = {}) {
       RUNNER_TEMP: runnerTemp,
       ALLOWED_CHANGE_RE: workflow.env.ALLOWED_CHANGE_RE,
       MAX_PATCH_BYTES: workflow.env.MAX_PATCH_BYTES,
-      GIT_CONFIG_PARAMETERS: "'core.hooksPath=/dev/null'",
+      GIT_CONFIG_PARAMETERS: "'core.hooksPath=/dev/null' 'gc.auto=0' 'maintenance.auto=false'",
       ...env,
     },
   });
