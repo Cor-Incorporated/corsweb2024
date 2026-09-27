@@ -42,7 +42,6 @@
     "astro": "^4.8.7",
     "astro-compress": "^2.2.5",
     "astro-compressor": "^0.4.1",
-    "dotenv": "^16.5.0",
     "firebase": "^10.7.1",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
