@@ -1,7 +1,8 @@
 name: CI
 
 # PR ごとにユニットテスト・ビルド・dist の監査と回帰ガードを走らせる（Issue #323）。
-# 以前は vitest も dist の監査（security:audit:dist）もどのワークフローでも実行されていなかった。
+# 以前はルート（src/・tests/）の vitest も dist の監査（security:audit:dist）も、どのワークフローでも
+# 実行されていなかった（workers/yomimono の vitest だけは deploy-yomimono-worker.yml が実行していた）。
 # develop 宛 PR の build は visual-text.yml（2026-07-02〜）が表示監査の前段として走らせるだけだった。
 # テストを足すだけでは動かないため、アサーションとこの実行経路はセットで扱う。
 #
