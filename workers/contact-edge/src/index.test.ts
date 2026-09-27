@@ -121,4 +121,25 @@ describe('cor-contact-edge', () => {
     expect(response.headers.get('location')).toBe('https://cor-jp.com/contact/chat/');
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('marks the Cloudia HTML as noindex but leaves static assets indexable-neutral', async () => {
+    const env: Env = { CONTACT_ORIGIN: 'pages', CLOUDIA_PAGES_ORIGIN: 'https://cloudia.example' };
+    const html = new Response('<!doctype html><title>Cloudia</title>', {
+      status: 200,
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
+    const asset = new Response('console.log(1)', {
+      status: 200,
+      headers: { 'content-type': 'application/javascript' },
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(html).mockResolvedValueOnce(asset));
+
+    const page = await fetchContactEdge(request('/contact/chat/'), env);
+    const script = await fetchContactEdge(request('/contact/chat/assets/app.js'), env);
+
+    expect(page.headers.get('x-robots-tag')).toBe('noindex');
+    expect(page.headers.get('cache-control')).toBe('no-store');
+    expect(script.headers.get('x-robots-tag')).toBeNull();
+    expect(script.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+  });
 });
