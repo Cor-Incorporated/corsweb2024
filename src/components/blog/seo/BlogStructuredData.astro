@@ -36,8 +36,8 @@ const authorProfile = findAuthor(article.author);
 const personJsonLd = authorProfile ? buildPersonJsonLd(authorProfile, currentLocale) : undefined;
 ---
 
-<script type="application/ld+json" set:html={safeJsonLd(articleJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(breadcrumbJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(websiteJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(organizationJsonLd)} />
-{personJsonLd && <script type="application/ld+json" set:html={safeJsonLd(personJsonLd)} />}
+<script type="application/ld+json" is:inline set:html={safeJsonLd(articleJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(breadcrumbJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(websiteJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(organizationJsonLd)} />
+{personJsonLd && <script type="application/ld+json" is:inline set:html={safeJsonLd(personJsonLd)} />}

@@ -1,5 +1,6 @@
 /**
- * ブログ記事の SEO 出力（hreflang / BreadcrumbList / Article JSON-LD）の生成。M1 / H2 の是正:
+ * ブログ記事の SEO 出力（hreflang / BreadcrumbList / Article JSON-LD）の生成。ADR-0017（構造化データは
+ * 本文に表示している内容だけ・hreflang は実在する言語版だけ・会社は @id で参照）に沿って:
  * - hreflang は実在する翻訳（articleLocales）から 5 言語 + x-default を出す。どの言語版から見ても
  *   同じ集合になるよう「現在の言語」に依存させない（相互参照が崩れないように）
  * - BreadcrumbList はロケール別の URL / ラベル

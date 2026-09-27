@@ -9,7 +9,7 @@ import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
 import { getRobotsContent } from '../config/site';
 import { safeJsonLd } from '../utils/json-ld';
-import { buildOrganizationJsonLd } from '../utils/structured-data';
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
 
 interface Props {
   description: string;
@@ -72,6 +72,7 @@ const ogImage = ogImageProp
     ? new URL(`/og/page/${ogPageSlug}.png`, Astro.site)
     : new URL('/logo.png', Astro.site);
 const usesGeneratedOgImage = !ogImageProp && Boolean(ogPageSlug);
+const isHome = ogBaseKey === '/';
 // Preview / develop は noindex（ADR-0010）。canonical は本番向きのままでよい。
 const robotsContent = getRobotsContent();
 ---
@@ -133,7 +134,9 @@ const robotsContent = getRobotsContent();
     <meta name="twitter:image:alt" content={socialTitle} />
     
     <!-- Structured Data - Organization（@id 固定・ロケール別表記・会社アカウントのみ。FAQPage は Q&A を表示するページだけ） -->
-    <script type="application/ld+json" set:html={safeJsonLd(buildOrganizationJsonLd(currentLocale))} />
+    <script type="application/ld+json" is:inline set:html={safeJsonLd(buildOrganizationJsonLd(currentLocale))} />
+    {/* WebSite はトップページに出す（検索結果のサイト名の認識に使われる。ブログ記事は BlogStructuredData が出す） */}
+    {isHome && <script type="application/ld+json" is:inline set:html={safeJsonLd(buildWebSiteJsonLd(currentLocale))} />}
     <!-- Performance optimizations -->
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
