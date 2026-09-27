@@ -94,5 +94,10 @@ jobs:
         env:
           CONTACT_GUARD_EXPECT_CALENDAR: '1'
 
+      # firebase.json のヘッダー（キャッシュ・セキュリティヘッダー）の基準監査。ビルド不要で 1 秒未満。
+      # 以前はどのワークフローでも実行されず、手動でしか確かめられていなかった。
+      - name: Firebase hosting header audit
+        run: npm run security:audit:firebase
+
       - name: Worker security header audit
         run: npm run security:audit:workers
