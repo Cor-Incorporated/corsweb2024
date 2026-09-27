@@ -1,22 +1,34 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   collectSnapshot,
+  contentHash,
   diffJson,
   diffSnapshots,
+  excerptPair,
   extractPageSeo,
+  foldSelfUrl,
   formatDiff,
+  hasDifferences,
   htmlFileToUrlPath,
+  jsonLdByKey,
   jsonLdTypes,
   logicalAssetName,
+  multisetDiff,
   normalizeJson,
   parseArgs,
+  parseSitemapIndex,
   parseSitemapUrls,
+  SNAPSHOT_VERSION,
   staticImports,
 } from '../seo-snapshot.mjs';
+
+const SCRIPT = fileURLToPath(new URL('../seo-snapshot.mjs', import.meta.url));
 
 // astro-compress 後の実出力と同じく、属性の引用符が省かれた minify 済み HTML で検証する。
 const MINIFIED_PAGE = [
@@ -28,13 +40,17 @@ const MINIFIED_PAGE = [
   '<link href=https://cor-jp.com/blog/a/ rel=alternate hreflang=ja>',
   '<link href=https://cor-jp.com/blog/a/ rel=alternate hreflang=x-default>',
   '<link href=/rss.xml rel=alternate type=application/rss+xml title=RSS>',
+  '<meta content=article property=og:type><meta content=T property=og:title>',
+  '<meta content=https://cor-jp.com/og/a.png property=og:image><meta content=1200 property=og:image:width>',
+  '<meta content=summary_large_image name=twitter:card><meta content=@cor name=twitter:site>',
+  '<meta content=2025-01-01 property=article:published_time>',
   '<script type=application/ld+json>{"name":"x","@type":"Organization","@context":"https://schema.org"}</script>',
   '<script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person"},{"@type":["WebSite","Thing"]}]}</script>',
   '<script type=application/ld+json>{broken</script>',
   '<title>  記事  タイトル｜Cor.株式会社 </title>',
   '<link href=/_astro/index.AbCd1234.css rel=stylesheet>',
   '<link href=https://cdn.example.com/k.css rel=stylesheet>',
-  '<link as=font href=/f.woff2 rel=preload crossorigin>',
+  '<link as=font href=/_astro/KaTeX_Main.B22Nviop.woff2 rel=preload crossorigin>',
   '<script type=module src=/_astro/hoisted.Dgzzfq7E.js></script>',
   '<script>document.documentElement.classList.add("js")</script>',
   '<style>body{margin:0}</style>',
@@ -72,23 +88,45 @@ describe('extractPageSeo', () => {
     ]);
   });
 
+  it('collects og:* and twitter:* metas (not article:*) with sorted keys', () => {
+    expect(page.social).toEqual({
+      'og:image': ['https://cor-jp.com/og/a.png'],
+      'og:image:width': ['1200'],
+      'og:title': ['T'],
+      'og:type': ['article'],
+      'twitter:card': ['summary_large_image'],
+      'twitter:site': ['@cor'],
+    });
+  });
+
   it('parses JSON-LD with @type (incl. @graph) and key-sorted JSON; broken JSON is reported, not thrown', () => {
     expect(page.jsonLd.map((block) => block.types)).toEqual([['Organization'], ['Person', 'WebSite', 'Thing'], []]);
     expect(Object.keys(page.jsonLd[0].json)).toEqual(['@context', '@type', 'name']);
     expect(page.jsonLd[2].error).toMatch(/^invalid JSON/);
   });
 
-  it('collects referenced JS/CSS and counts inline scripts without JSON-LD', () => {
+  it('collects referenced JS/CSS/preloads and hashes inline scripts/styles (JSON-LD excluded)', () => {
     expect(page.scripts).toEqual(['/_astro/hoisted.Dgzzfq7E.js']);
     expect(page.stylesheets).toEqual(['/_astro/index.AbCd1234.css', 'https://cdn.example.com/k.css']);
-    expect(page.preloads).toEqual([{ rel: 'preload', as: 'font', href: '/f.woff2' }]);
-    expect(page.inline.scripts).toBe(1);
-    expect(page.inline.styles).toBe(1);
+    expect(page.preloads).toEqual([{ rel: 'preload', as: 'font', href: '/_astro/KaTeX_Main.B22Nviop.woff2' }]);
+    expect(page.inline).toMatchObject({
+      scripts: 1,
+      scriptHashes: [contentHash('document.documentElement.classList.add("js")')],
+      styles: 1,
+      styleHashes: [contentHash('body{margin:0}')],
+    });
   });
 
-  it('keeps duplicated robots metas visible', () => {
-    const html = '<html><head><meta name=robots content=noindex><meta name=ROBOTS content="index, follow"></head></html>';
-    expect(extractPageSeo(html).robots).toBe('noindex | index, follow');
+  it('keeps duplicated robots / canonical / description visible', () => {
+    const html = [
+      '<html><head><meta name=robots content=noindex><meta name=ROBOTS content="index, follow">',
+      '<link rel=canonical href=https://cor-jp.com/a/><link rel=canonical href=https://cor-jp.com/b/>',
+      '<meta name=description content=one><meta name=description content=two></head></html>',
+    ].join('');
+    const seo = extractPageSeo(html);
+    expect(seo.robots).toBe('noindex | index, follow');
+    expect(seo.canonical).toBe('https://cor-jp.com/a/ | https://cor-jp.com/b/');
+    expect(seo.description).toBe('one | two');
   });
 });
 
@@ -101,25 +139,53 @@ describe('helpers', () => {
     expect(jsonLdTypes([{ '@type': 'A' }, { '@type': ['B', 'C'] }, 'x', null])).toEqual(['A', 'B', 'C']);
   });
 
-  it('logicalAssetName strips the 8-char content hash', () => {
+  it('logicalAssetName strips the 8-char content hash of scripts, styles and fonts', () => {
     expect(logicalAssetName('/_astro/hoisted.Dgzzfq7E.js')).toBe('/_astro/hoisted.js');
     expect(logicalAssetName('/_astro/_slug_.B-_x1Yz9.css?v=1')).toBe('/_astro/_slug_.css');
+    expect(logicalAssetName('/_astro/KaTeX_Main-Regular.B22Nviop.woff2')).toBe('/_astro/KaTeX_Main-Regular.woff2');
+    expect(logicalAssetName('/assets/k-terada.avif')).toBe('/assets/k-terada.avif');
     expect(logicalAssetName('https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js')).toBe(
       'https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js',
     );
   });
 
-  it('staticImports finds static imports in minified ESM but not dynamic import()', () => {
-    const code = 'import{a as b}from"./chunk.A1b2C3d4.js";import"./side.js";import*as n from "/abs.js";const l=()=>import("./lazy.js");';
-    expect(staticImports(code).sort()).toEqual(['./chunk.A1b2C3d4.js', './side.js', '/abs.js']);
+  it('staticImports follows static imports and re-exports, but not dynamic import()', () => {
+    const code = [
+      'import{a as b}from"./chunk.A1b2C3d4.js";import"./side.js";import*as n from "/abs.js";',
+      'export{c as d}from"./re.js";export*from"./star.js";export * as ns from "./ns.js";',
+      'const l=()=>import("./lazy.js");',
+    ].join('');
+    expect(staticImports(code).sort()).toEqual(
+      ['./chunk.A1b2C3d4.js', './side.js', '/abs.js', './re.js', './star.js', './ns.js'].sort(),
+    );
   });
 
-  it('parseSitemapUrls reads loc and optional lastmod', () => {
-    const xml =
-      '<urlset><url><loc>https://cor-jp.com/</loc><lastmod>2026-01-01</lastmod></url><url><loc>https://cor-jp.com/a/</loc></url></urlset>';
+  it('parseSitemapUrls reads loc, optional lastmod and xhtml:link alternates', () => {
+    const xml = [
+      '<urlset><url><loc>https://cor-jp.com/</loc><lastmod>2026-01-01</lastmod>',
+      '<xhtml:link rel="alternate" hreflang="en" href="https://cor-jp.com/en/"/>',
+      '<xhtml:link rel="alternate" hreflang="ja" href="https://cor-jp.com/"/></url>',
+      '<url><loc>https://cor-jp.com/a/</loc></url></urlset>',
+    ].join('');
     expect(parseSitemapUrls(xml)).toEqual([
-      { loc: 'https://cor-jp.com/', lastmod: '2026-01-01' },
-      { loc: 'https://cor-jp.com/a/', lastmod: null },
+      {
+        loc: 'https://cor-jp.com/',
+        lastmod: '2026-01-01',
+        alternates: [
+          { hreflang: 'en', href: 'https://cor-jp.com/en/' },
+          { hreflang: 'ja', href: 'https://cor-jp.com/' },
+        ],
+      },
+      { loc: 'https://cor-jp.com/a/', lastmod: null, alternates: [] },
+    ]);
+  });
+
+  it('parseSitemapIndex reads each child sitemap', () => {
+    const xml =
+      '<sitemapindex><sitemap><loc>https://cor-jp.com/sitemap-0.xml</loc></sitemap><sitemap><loc>https://cor-jp.com/sitemap-1.xml</loc><lastmod>x</lastmod></sitemap></sitemapindex>';
+    expect(parseSitemapIndex(xml)).toEqual([
+      { loc: 'https://cor-jp.com/sitemap-0.xml', lastmod: null },
+      { loc: 'https://cor-jp.com/sitemap-1.xml', lastmod: 'x' },
     ]);
   });
 
@@ -132,10 +198,41 @@ describe('helpers', () => {
     ]);
   });
 
-  it('parseArgs rejects unknown or value-less flags', () => {
-    expect(parseArgs(['--compare', 'b.json'])).toMatchObject({ dist: 'dist', compare: 'b.json' });
+  it('excerptPair shows the region around the first difference of long values', () => {
+    const head = 'x'.repeat(300);
+    const [before, after] = excerptPair(`${head}-OLD-tail`, `${head}-NEW-tail`);
+    expect(before).toContain('-OLD-tail');
+    expect(after).toContain('-NEW-tail');
+    expect(before.startsWith('…')).toBe(true);
+    expect(excerptPair('short', 'value')).toEqual(['short', 'value']);
+  });
+
+  it('multisetDiff counts duplicates', () => {
+    expect(multisetDiff(['a', 'a', 'b'], ['a', 'c'])).toEqual({ removed: ['a', 'b'], added: ['c'] });
+  });
+
+  it('foldSelfUrl folds only the exact quoted page URL', () => {
+    expect(foldSelfUrl('{"url":"https://cor-jp.com/blog/"}', '/blog/')).toBe('{"url":"{self}"}');
+    expect(foldSelfUrl('"https://cor-jp.com/blog/a/"', '/blog/')).toBe('"https://cor-jp.com/blog/a/"');
+    expect(foldSelfUrl(null, '/blog/')).toBeNull();
+  });
+
+  it('jsonLdByKey keeps every block of the same @type', () => {
+    const blocks = [
+      { types: ['Organization'], json: { n: 1 } },
+      { types: ['Organization'], json: { n: 2 } },
+      { types: [], error: 'invalid' },
+    ];
+    expect([...jsonLdByKey(blocks).keys()]).toEqual(['Organization', 'Organization#2', '(no @type)']);
+  });
+
+  it('parseArgs handles value flags and the boolean --fail-on-diff', () => {
+    expect(parseArgs(['--compare', 'b.json'])).toMatchObject({ dist: 'dist', compare: 'b.json', failOnDiff: false });
+    expect(parseArgs(['--compare', 'b.json', '--fail-on-diff'])).toMatchObject({ failOnDiff: true });
     expect(() => parseArgs(['--bogus', 'x'])).toThrow(/invalid argument/);
     expect(() => parseArgs(['--out'])).toThrow(/invalid argument/);
+    expect(() => parseArgs(['--out', '--fail-on-diff'])).toThrow(/invalid argument/);
+    expect(() => parseArgs(['--fail-on-diff'])).toThrow(/requires --compare/);
   });
 });
 
@@ -147,21 +244,30 @@ const pageFixture = (overrides = {}) => ({
   robots: 'index, follow',
   hreflang: [],
   h1: ['H'],
+  social: { 'og:title': ['T'] },
   jsonLd: [{ types: ['Organization'], json: { '@type': 'Organization', url: 'https://cor-jp.com/a/' } }],
   preloads: [],
-  inline: { scripts: 1, scriptBytes: 10, styles: 1, styleBytes: 10 },
-  assets: { js: [], css: [], jsRaw: 0, jsBr: 0, cssRaw: 0, cssBr: 0 },
+  inline: { scripts: 1, scriptBytes: 10, scriptHashes: ['aaa'], styles: 1, styleBytes: 10, styleHashes: ['sss'] },
+  assets: { js: [], css: [], jsRaw: 0, jsBr: 100, cssRaw: 0, cssBr: 100 },
   ...overrides,
 });
 
+const snapshotOf = (pages, site = {}) => ({
+  version: SNAPSHOT_VERSION,
+  meta: { gitSha: null, gitDirty: null, publicSiteEnv: null },
+  site: { robotsTxt: 'User-agent: *', sitemapIndex: [], sitemap: [], ...site },
+  pages,
+});
+
+const onePageDiff = (before, after) => diffSnapshots(snapshotOf({ '/a/': before }), snapshotOf({ '/a/': after }));
+
 describe('diffSnapshots / formatDiff', () => {
-  const baseline = {
-    site: { robotsTxt: 'User-agent: *\nDisallow: /_astro/', sitemap: [{ loc: 'https://cor-jp.com/a/', lastmod: 'x' }] },
-    pages: { '/a/': pageFixture(), '/b/': pageFixture(), '/gone/': pageFixture() },
-  };
-  const current = {
-    site: { robotsTxt: 'User-agent: *\nAllow: /', sitemap: [{ loc: 'https://cor-jp.com/a/', lastmod: 'y' }] },
-    pages: {
+  const baseline = snapshotOf(
+    { '/a/': pageFixture(), '/b/': pageFixture(), '/gone/': pageFixture() },
+    { robotsTxt: 'User-agent: *\nDisallow: /_astro/', sitemap: [{ loc: 'https://cor-jp.com/a/', lastmod: 'x' }] },
+  );
+  const current = snapshotOf(
+    {
       '/a/': pageFixture({ robots: 'noindex, follow' }),
       '/b/': pageFixture({
         robots: 'noindex, follow',
@@ -169,18 +275,19 @@ describe('diffSnapshots / formatDiff', () => {
       }),
       '/new/': pageFixture(),
     },
-  };
+    { robotsTxt: 'User-agent: *\nAllow: /', sitemap: [{ loc: 'https://cor-jp.com/a/', lastmod: 'y' }] },
+  );
   const diff = diffSnapshots(baseline, current);
 
   it('groups identical changes across pages and lists added/removed pages', () => {
     expect(diff.pages).toMatchObject({ before: 3, after: 3, added: ['/new/'], removed: ['/gone/'] });
     expect(diff.fields.robots).toEqual([
-      { detail: '"index, follow" → "noindex, follow"', urls: ['/a/', '/b/'] },
+      { detail: 'robots: "index, follow" → "noindex, follow"', urls: ['/a/', '/b/'] },
     ]);
     expect(diff.fields.title).toBeUndefined();
   });
 
-  it('detects JSON-LD content changes with the page URL folded to {self}', () => {
+  it('folds the page URL to {self} in JSON-LD changes', () => {
     expect(diff.fields['jsonLd.content']).toEqual([
       { detail: 'Organization.url: "https://cor-jp.com/a/" → "{self}"', urls: ['/b/'] },
     ]);
@@ -193,16 +300,116 @@ describe('diffSnapshots / formatDiff', () => {
     expect(text).toContain('[robots] 2 page(s), 1 distinct change(s)');
     expect(text).toContain('robots.txt changed:');
     expect(text).toContain('added: /new/');
+    expect(hasDifferences(diff)).toBe(true);
   });
 
-  it('reports no page-level differences for identical snapshots', () => {
+  it('reports no differences for identical snapshots', () => {
     const same = diffSnapshots(baseline, baseline);
     expect(same.fields).toEqual({});
+    expect(hasDifferences(same)).toBe(false);
     expect(formatDiff(same)).toContain('(ページ単位の差分なし)');
+  });
+
+  it('refuses to compare snapshots of different formats', () => {
+    expect(() => diffSnapshots({ ...baseline, version: 1 }, current)).toThrow(/version mismatch/);
   });
 });
 
-describe('collectSnapshot (temporary dist)', () => {
+describe('diffSnapshots: detection of each kind of change', () => {
+  it('does not merge changes that differ only after the display width', () => {
+    const long = 'd'.repeat(300);
+    const diff = diffSnapshots(
+      snapshotOf({ '/a/': pageFixture(), '/b/': pageFixture() }),
+      snapshotOf({
+        '/a/': pageFixture({ description: `${long}-first` }),
+        '/b/': pageFixture({ description: `${long}-second` }),
+      }),
+    );
+    expect(diff.fields.description.map((group) => group.urls)).toEqual([['/a/'], ['/b/']]);
+  });
+
+  it('reports hreflang changes per language line', () => {
+    const diff = onePageDiff(
+      pageFixture({ hreflang: [{ lang: 'ja', href: 'https://cor-jp.com/a/' }] }),
+      pageFixture({
+        hreflang: [
+          { lang: 'ja', href: 'https://cor-jp.com/a/' },
+          { lang: 'zh', href: 'https://cor-jp.com/zh/a/' },
+        ],
+      }),
+    );
+    expect(diff.fields.hreflang[0].detail).toBe('hreflang.zh: (なし) → ["https://cor-jp.com/zh/a/"]');
+  });
+
+  it('reports og:* / twitter:* changes', () => {
+    const diff = onePageDiff(pageFixture(), pageFixture({ social: { 'og:title': ['New'] } }));
+    expect(diff.fields.social[0].detail).toBe('meta.og:title[0]: "T" → "New"');
+  });
+
+  it('reports a second canonical (duplicates are kept in the joined value)', () => {
+    const diff = onePageDiff(pageFixture(), pageFixture({ canonical: 'https://cor-jp.com/a/ | https://cor-jp.com/x/' }));
+    expect(diff.fields.canonical).toHaveLength(1);
+  });
+
+  it('compares every JSON-LD block of the same @type (no overwrite by the later block)', () => {
+    const org = (n) => ({ types: ['Organization'], json: { '@type': 'Organization', n } });
+    const diff = onePageDiff(pageFixture({ jsonLd: [org(1), org(2)] }), pageFixture({ jsonLd: [org(9), org(2)] }));
+    expect(diff.fields['jsonLd.content'][0].detail).toBe('Organization.n: 1 → 9');
+  });
+
+  it('reports JS and CSS brotli sizes separately (a +N / -N swap is not hidden)', () => {
+    const diff = onePageDiff(
+      pageFixture(),
+      pageFixture({ assets: { js: [], css: [], jsRaw: 0, jsBr: 150, cssRaw: 0, cssBr: 50 } }),
+    );
+    expect(diff.fields['assets.jsBytes'][0].detail).toBe('JS brotli 100B → 150B (+50B)');
+    expect(diff.fields['assets.cssBytes'][0].detail).toBe('CSS brotli 100B → 50B (-50B)');
+  });
+
+  it('reports preload changes (hash-insensitive names)', () => {
+    const diff = onePageDiff(
+      pageFixture({ preloads: [{ rel: 'preload', as: 'font', href: '/_astro/a.AAAAAAAA.woff2' }] }),
+      pageFixture({ preloads: [{ rel: 'preload', as: 'style', href: 'https://cdn.example.com/k.css' }] }),
+    );
+    expect(diff.fields.preloads[0].detail).toBe('- preload font /_astro/a.woff2\n+ preload style https://cdn.example.com/k.css');
+    const sameName = onePageDiff(
+      pageFixture({ preloads: [{ rel: 'preload', as: 'font', href: '/_astro/a.AAAAAAAA.woff2' }] }),
+      pageFixture({ preloads: [{ rel: 'preload', as: 'font', href: '/_astro/a.BBBBBBBB.woff2' }] }),
+    );
+    expect(sameName.fields.preloads).toBeUndefined();
+  });
+
+  it('reports inline script/style content changes even when the counts are equal', () => {
+    const inline = { scripts: 1, scriptBytes: 10, scriptHashes: ['bbb'], styles: 1, styleBytes: 10, styleHashes: ['sss'] };
+    const diff = onePageDiff(pageFixture(), pageFixture({ inline }));
+    expect(diff.fields.inline[0].detail).toBe('inline <script> 1 → 1; removed aaa; added bbb');
+  });
+
+  it('reports sitemap-index and sitemap hreflang alternates changes', () => {
+    const alternates = (hreflang) => [{ hreflang, href: `https://cor-jp.com/${hreflang}/` }];
+    const diff = diffSnapshots(
+      snapshotOf({}, {
+        sitemapIndex: [{ loc: 'https://cor-jp.com/sitemap-0.xml', lastmod: null }],
+        sitemap: [{ loc: 'https://cor-jp.com/a/', lastmod: null, alternates: alternates('en') }],
+      }),
+      snapshotOf({}, {
+        sitemapIndex: [{ loc: 'https://cor-jp.com/sitemap-1.xml', lastmod: null }],
+        sitemap: [{ loc: 'https://cor-jp.com/a/', lastmod: null, alternates: alternates('zh') }],
+      }),
+    );
+    expect(diff.site.sitemapIndex).toMatchObject({
+      added: ['https://cor-jp.com/sitemap-1.xml'],
+      removed: ['https://cor-jp.com/sitemap-0.xml'],
+    });
+    expect(diff.site.sitemap.alternatesChanged).toEqual([
+      { loc: 'https://cor-jp.com/a/', removed: ['en https://cor-jp.com/en/'], added: ['zh https://cor-jp.com/zh/'] },
+    ]);
+    expect(hasDifferences(diff)).toBe(true);
+    expect(formatDiff(diff)).toContain('hreflang alternates changed 1');
+  });
+});
+
+describe('collectSnapshot (temporary dist) and CLI', () => {
   let dist;
 
   beforeAll(async () => {
@@ -215,13 +422,18 @@ describe('collectSnapshot (temporary dist)', () => {
     );
     await writeFile(path.join(dist, 'about', 'index.html'), '<html lang=en><head><title>About</title></head></html>');
     await writeFile(path.join(dist, '_astro', 'entry.AAAAAAAA.js'), 'import{x}from"./dep.CCCCCCCC.js";x();');
-    await writeFile(path.join(dist, '_astro', 'dep.CCCCCCCC.js'), 'export const x=()=>1;');
+    await writeFile(path.join(dist, '_astro', 'dep.CCCCCCCC.js'), 'export{y as x}from"./leaf.EEEEEEEE.js";');
+    await writeFile(path.join(dist, '_astro', 'leaf.EEEEEEEE.js'), 'export const y=()=>1;');
     await writeFile(path.join(dist, '_astro', 'Server.DDDDDDDD.js'), 'const $$C=createComponent(()=>renderTemplate``);');
     await writeFile(path.join(dist, '_astro', 'site.BBBBBBBB.css'), 'body{color:red}');
     await writeFile(path.join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\n');
     await writeFile(
+      path.join(dist, 'sitemap-index.xml'),
+      '<sitemapindex><sitemap><loc>https://cor-jp.com/sitemap-0.xml</loc></sitemap></sitemapindex>',
+    );
+    await writeFile(
       path.join(dist, 'sitemap-0.xml'),
-      '<urlset><url><loc>https://cor-jp.com/about/</loc></url><url><loc>https://cor-jp.com/</loc></url></urlset>',
+      '<urlset><url><loc>https://cor-jp.com/about/</loc></url><url><loc>https://cor-jp.com/</loc><xhtml:link rel="alternate" hreflang="en" href="https://cor-jp.com/en/"/></url></urlset>',
     );
   });
 
@@ -229,21 +441,41 @@ describe('collectSnapshot (temporary dist)', () => {
     await rm(dist, { recursive: true, force: true });
   });
 
-  it('follows static imports, measures raw/brotli sizes and inventories server chunks', async () => {
+  it('follows imports and re-exports, measures sizes and records site files and build meta', async () => {
     const snapshot = await collectSnapshot(dist);
+    expect(snapshot.version).toBe(SNAPSHOT_VERSION);
+    expect(Object.keys(snapshot.meta)).toEqual(['gitSha', 'gitDirty', 'publicSiteEnv']);
     expect(snapshot.pageCount).toBe(2);
-    expect(Object.keys(snapshot.pages)).toEqual(['/about/', '/']);
     const home = snapshot.pages['/'];
     expect(home.assets.js.map((asset) => [asset.file, asset.via])).toEqual([
       ['/_astro/entry.AAAAAAAA.js', 'script'],
       ['/_astro/dep.CCCCCCCC.js', 'import'],
+      ['/_astro/leaf.EEEEEEEE.js', 'import'],
     ]);
-    expect(home.assets.jsRaw).toBe(
-      Buffer.byteLength('import{x}from"./dep.CCCCCCCC.js";x();') + Buffer.byteLength('export const x=()=>1;'),
-    );
     expect(home.assets.jsBr).toBeGreaterThan(0);
     expect(home.assets.css[0]).toMatchObject({ file: '/_astro/site.BBBBBBBB.css', raw: 15 });
-    expect(snapshot.site.sitemap.map((entry) => entry.loc)).toEqual(['https://cor-jp.com/', 'https://cor-jp.com/about/']);
-    expect(snapshot.site.astroDir).toMatchObject({ jsFiles: 3, serverChunkFiles: 1, serverChunks: ['/_astro/Server.js'] });
+    expect(snapshot.site.sitemapIndex).toEqual([{ loc: 'https://cor-jp.com/sitemap-0.xml', lastmod: null }]);
+    expect(snapshot.site.sitemap[0]).toEqual({
+      loc: 'https://cor-jp.com/',
+      lastmod: null,
+      alternates: [{ hreflang: 'en', href: 'https://cor-jp.com/en/' }],
+    });
+    expect(snapshot.site.astroDir).toMatchObject({ jsFiles: 4, serverChunkFiles: 1, serverChunks: ['/_astro/Server.js'] });
+  });
+
+  it('--fail-on-diff exits 0 without differences, 1 with differences and 2 on errors', async () => {
+    const same = path.join(dist, 'same.json');
+    const changed = path.join(dist, 'changed.json');
+    const snapshot = await collectSnapshot(dist);
+    await writeFile(same, JSON.stringify(snapshot));
+    await writeFile(changed, JSON.stringify({ ...snapshot, site: { ...snapshot.site, robotsTxt: 'User-agent: *\nDisallow: /' } }));
+    const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
+    expect(run('--compare', same, '--current', same, '--fail-on-diff').status).toBe(0);
+    expect(run('--compare', same, '--current', changed, '--fail-on-diff').status).toBe(1);
+    expect(run('--compare', same, '--current', changed).status).toBe(0);
+    await writeFile(changed, JSON.stringify({ ...snapshot, version: 1 }));
+    const mismatch = run('--compare', changed, '--current', same, '--fail-on-diff');
+    expect(mismatch.status).toBe(2);
+    expect(mismatch.stderr).toContain('version mismatch');
   });
 });
