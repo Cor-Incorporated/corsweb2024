@@ -145,7 +145,8 @@ collections:
           - name: url
             label: 画像
             widget: image
-            accept: image/*
+            # SVG は受け付けない（スクリプトを含められるため。ADR-0018 の stored XSS 対策）。
+            accept: image/avif,image/webp,image/jpeg,image/png,image/heic
           - name: alt
             label: 代替テキスト
             widget: string
