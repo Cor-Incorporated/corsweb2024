@@ -161,7 +161,7 @@ push に使うトークン（既定は GITHUB_TOKEN）:
 
 | 方式 | 条件 | 翻訳コミット後の CI | 追加操作 | リスク |
 |---|---|---|---|---|
-| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | GitHub Docs によれば、PR の各チェックは「承認待ち」になる（**本リポジトリでは未検証**）。i18n-check だけは dispatch-check が即時に再実行する | 書き込み権限者が PR の Checks で「Approve workflows to run」を押す。ボタンが出ない・押しても動かない場合は、人が空コミットを push して CI を起動する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
+| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックは「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。i18n-check だけは dispatch-check が即時に再実行する（実測: run 36329711063） | 書き込み権限者が PR の Checks で「Approve workflows to run」を押す。ボタンが出ない・押しても動かない場合は、人が空コミットを push して CI を起動する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
 | TRANSLATION_BOT_TOKEN（任意） | secret が登録されている | 通常の `synchronize` として全 CI（required check 含む）が自動で再実行 | なし | 大きい: fine-grained PAT は有効期限まで、発行者の権限で使える（漏れると他のブランチへの push にも使える）。push ジョブ以外には渡さないが、書き込み権限者は PR でワークフローを変えれば読み出せる。使う場合は対象リポジトリをこの 1 つ・権限を Contents だけ・有効期限を短くする |
 
 承認ボタンが出ない場合の手順（空コミットで CI を起動する。PR のブランチで実行）:
@@ -172,7 +172,7 @@ git commit --allow-empty -m "chore: CI を再実行"
 git push
 ```
 
-根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認。本リポジトリでの挙動は、初回の翻訳 PR で確認する）。
+根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認）。本リポジトリでも、GITHUB_TOKEN で翻訳コミットを push した後の `pull_request` の実行（run 36329708078）が `action_required` になることを 2026-09-27 に確認した。
 
 ### workflow_dispatch（Actions タブ → Translate content (i18n) → Run workflow、または `gh workflow run`）
 

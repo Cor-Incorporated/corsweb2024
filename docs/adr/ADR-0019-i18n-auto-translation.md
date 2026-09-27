@@ -34,7 +34,7 @@
 - 公開ページを壊すリスク（コードや URL の改変、見出しの欠落、frontmatter 不正によるビルド失敗）は翻訳品質の低さより重い。構造パリティとスキーマ検証を満たさない出力は書かず、次の実行で再挑戦させる方が安全。
 - UI 文言（ADR-0006）とコンテンツで「正本は 1 つ、他は派生物」という同じ原則を適用でき、編集者の運用が単純になる（ja だけを見ればよい）。
 - 翻訳ジョブは PR のコードと npm 依存（install script を含む）を動かすため、同じジョブに書き込みトークンがあると、`.git/hooks` の仕込みやランナー上のプロセスからトークンが漏れうる（PR #339 レビュー H1）。ジョブを分けて、書き込むジョブではコードを一切実行しない形にすれば、漏れうるのは読み取り専用の GITHUB_TOKEN と `GEMINI_API_KEY` に限られる。
-- `GITHUB_TOKEN` による push は後続の CI を通常起動しない（PR 更新時は承認待ちの実行になる。GitHub Docs「Triggering a workflow from a workflow」。本リポジトリでは未検証）。追加操作なしで回すには別トークンが必要だが、PAT / App トークンはジョブ終了後も有効で権限も広いため、既定にはせず任意とした。
+- `GITHUB_TOKEN` による push は後続の CI を通常起動しない（PR 更新時は承認待ちの実行になる。GitHub Docs「Triggering a workflow from a workflow」。本リポジトリでも 2026-09-27 に実測: 翻訳コミット後の run 36329708078 が action_required）。追加操作なしで回すには別トークンが必要だが、PAT / App トークンはジョブ終了後も有効で権限も広いため、既定にはせず任意とした。
 
 ## 影響
 - 翻訳ファイルに `translationSourceHash` / `translatedAt` / `translationModel` が増える。`src/content/config.ts` の `z.object` は未知キーを捨てるため、ビルド・型に影響しない（2026-09-27、既存 72 翻訳に付与した状態で `npm run build` 成功を確認）。
@@ -43,6 +43,7 @@
 - 機械翻訳による対外表現の変化（ADR-0007）: `blog-guardrails.mjs` は日本語表現を検査するため訳文には効かない。プロンプトで「主張の確度を強めも弱めもしない」を指示し、PR の差分で人が確認する。訳文向けの機械検査は今後の課題。
 - 運用に必要な設定: secret `GEMINI_API_KEY`（必須）、secret `TRANSLATION_BOT_TOKEN`（任意。リスクは運用文書 6 章）、variable `GEMINI_MODEL`（任意）。
 - 残るリスク: 翻訳ジョブは PR head のコードを `GEMINI_API_KEY` 付きで実行する（同一リポジトリの PR だけ）。書き込み権限者は PR でワークフローを書き換えれば secrets を読み出せる（GitHub の仕様）。キー漏えい時は AI Studio で削除・再発行する。
+- 実 API での確認（2026-09-27、PR #344、1 記事 × 4 言語）: translate（run 36329614066、75 秒）→ 検査済みパッチの push（翻訳コミット 6883105）→ dispatch-check による i18n-check の起動（run 36329711063）までは動いた。その i18n-check は、テストの一時 git リポジトリの後片付けが git の自動メンテナンスと競合する flaky なテスト（`ENOTEMPTY`）で failure になった（テストは本 PR で修正。修正後に同じ経路を通す確認はまだ）。翻訳コミット後の pull_request の実行（run 36329708078）は action_required。見つかった社名の表記ゆれ・H1 と title の不一致は、決定 7 と決定 3 の対応で決定的にそろえる。
 - Gemini API の従量課金が発生する（未翻訳 40 件の一括翻訳で数ドル以内の見込み・推定）。
 - 関連: ADR-0006（UI 文言の正本。本 ADR はそれを置き換えず、同じ原則をコンテンツへ拡張する）、ADR-0007（対外表現ガードレール）、ADR-0008 / ADR-0009（記事 bot・静的 SSG 方針。bot トークンに GitHub App を使う場合は同様の最小権限にする）。hreflang の出し分けは別途対応する。
 

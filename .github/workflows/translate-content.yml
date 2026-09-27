@@ -17,8 +17,9 @@ name: Translate content (i18n)
 #   PR で変更された記事を `--write --since <base>` で処理する（1 回あたり I18N_MAX_ITEMS=20 件まで）。
 #   i18n-check は translate / push の後に走る。push した場合は新しい HEAD 側の実行に検査を委ねて成功で終える。
 #   push に使うトークン:
-#     - 既定: GITHUB_TOKEN。GitHub Docs によれば、GITHUB_TOKEN による PR 更新で作られる pull_request の実行は
-#       「承認待ち」になる（本リポジトリでは未検証）。i18n-check だけは dispatch-check が即時に再実行する。
+#     - 既定: GITHUB_TOKEN。GITHUB_TOKEN による PR 更新で作られる pull_request の実行は「承認待ち」になる
+#       （GitHub Docs。本リポジトリでも実測: run 36329708078 が action_required）。i18n-check だけは
+#       dispatch-check が即時に再実行する。
 #     - 任意: secrets.TRANSLATION_BOT_TOKEN（fine-grained PAT / GitHub App）。push が通常の synchronize を起こし
 #       全 CI が再実行されるが、GITHUB_TOKEN より権限・有効期間が広い。リスクは docs/i18n-translation.md 6 章。
 #
