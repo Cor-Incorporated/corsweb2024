@@ -20,9 +20,11 @@ permissions:
 
 # 同じ PR の実行は 1 本ずつにし、古い run は取り消す。CMS（ADR-0018）から続けて保存したとき、
 # 古い run が後から終わってプレビューチャネルを古い内容で上書きしないようにするため。
-# push（本番・develop チャネル）と手動実行は取り消さず順に実行する（待機中の run は新しい run に置き換わる）。
+# push（本番・develop チャネル）は取り消さず順に実行する（待機中の run は新しい run に置き換わる）。
+# 手動実行（workflow_dispatch）はビルドだけでデプロイしないので、push と別のグループにする。
+# 同じグループだと、待機中の本番デプロイが手動実行に置き換えられて消える。
 concurrency:
-  group: deploy-${{ github.event.pull_request.number || github.ref }}
+  group: deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
