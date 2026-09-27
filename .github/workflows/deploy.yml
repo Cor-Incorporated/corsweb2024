@@ -6,8 +6,11 @@ on:
       - main
       - develop
   pull_request:
+    # develop 宛 PR にもプレビューチャネル（pr<番号>-<ブランチ名先頭20字>、30 日で失効）を作る。
+    # CMS（ADR-0018）の「プレビューを見る」は、下の Preview ステップが作る "Deploy Preview" check run の URL を読む。
     branches:
       - main
+      - develop
   workflow_dispatch:
 
 permissions:
