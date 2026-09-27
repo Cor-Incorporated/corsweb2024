@@ -111,6 +111,15 @@
         ]
       },
       {
+        "source": "/remark-link-card-plus/**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(js|css)",
         "headers": [
           {

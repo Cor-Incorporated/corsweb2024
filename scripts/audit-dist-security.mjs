@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { ACTIVE_SVG_CONTENT, signatureMismatch } from './lib/file-signatures.mjs';
 
 const DIST_DIR = path.resolve('dist');
 const TEXT_EXTENSIONS = new Set([
@@ -161,6 +162,26 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
+// remark-link-card-plus の画像（追跡しているものと、ビルド時に取得したもの）の拡張子と中身の形式が
+// 一致するかを確かめる（#340。理由は scripts/lib/file-signatures.mjs）。圧縮版（.gz / .br）は対象外。
+const LINK_CARD_DIR = 'remark-link-card-plus';
+const COMPRESSED_VARIANT = /\.(?:gz|br)$/i;
+
+const auditLinkCardImages = async (violations, files) => {
+  for (const file of files) {
+    const relative = path.relative(DIST_DIR, file);
+    if (!relative.startsWith(`${LINK_CARD_DIR}/`) || COMPRESSED_VARIANT.test(relative)) continue;
+    const buffer = await readFile(file);
+    const mismatch = signatureMismatch(path.basename(file), buffer);
+    if (mismatch) {
+      violations.push(`[dist-security] ${LINK_CARD_DIR}/${mismatch}; delete it from public/ or fix the extension with git mv.`);
+    }
+    if (relative.toLowerCase().endsWith('.svg') && ACTIVE_SVG_CONTENT.test(buffer.toString('utf8'))) {
+      violations.push(`[dist-security] ${relative} contains active SVG content.`);
+    }
+  }
+};
+
 const auditHeavyRuntime = (violations, file) => {
   if (!file.relative.startsWith('_astro/') || !file.relative.endsWith('.js')) return;
   const heavyRuntimePatterns = [
@@ -188,6 +209,7 @@ const main = async () => {
   for (const page of REQUIRED_SEO_PAGES) {
     await auditSeoPage(violations, page);
   }
+  await auditLinkCardImages(violations, files);
 
   for (const file of textFiles) {
     auditJsonLd(violations, file);

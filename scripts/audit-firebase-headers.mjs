@@ -50,6 +50,7 @@ const routeMatches = (source, requestPath) => {
   if (source === '/') return requestPath === '/';
   if (source === '**/') return requestPath.endsWith('/');
   if (source === '/images/blog/uploads/**') return requestPath.startsWith('/images/blog/uploads/');
+  if (source === '/remark-link-card-plus/**') return requestPath.startsWith('/remark-link-card-plus/');
   if (source === '**/*.@(js|css)') return /\.(js|css)$/i.test(requestPath);
   if (source === '**/*.@(jpg|jpeg|png|gif|webp|avif|svg)') {
     return /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(requestPath);
@@ -120,6 +121,9 @@ const main = async () => {
     /immutable/
   );
   requireRouteHeader(violations, headers, '/images/blog/uploads/**', 'X-Content-Type-Options', 'nosniff');
+  // リンクカードのキャッシュの SVG は、直接開くと cor-jp.com のオリジンで文書として動くので、sandbox で無害化する（#340）。
+  requireRouteHeader(violations, headers, '/remark-link-card-plus/**', 'Content-Security-Policy', /\bsandbox\b/);
+  requireEffectiveHeader(violations, headers, '/remark-link-card-plus/x.svg', 'Content-Security-Policy', /\bsandbox\b/);
 
   const samplePaths = ['/', '/blog/', '/blog/index.html', '/assets/app.js', '/og/page/home.png', '/sitemap-index.xml'];
   for (const requestPath of samplePaths) {
