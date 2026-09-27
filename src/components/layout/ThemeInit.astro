@@ -1,0 +1,25 @@
+---
+// 初回描画前にテーマ（<html> の dark クラス）を当てる。<head> 内で同期実行するため、
+// <html x-cloak> を外しても配色のちらつき（FOUC）が出ない。Alpine には依存しない。
+// View Transitions は遷移のたびに <html> の属性を新しいページのもので置き換える（class も消える）
+// ため、astro:after-swap でも同じ判定を当て直す。
+// Layout / BlogLayout の両方がこのコンポーネントを使うこと: 同一テキストの inline script は
+// 遷移時に再実行されないので、リスナーが二重登録されない。
+---
+
+<script is:inline>
+  (() => {
+    const applyTheme = () => {
+      let stored = null;
+      try {
+        stored = localStorage.getItem('theme');
+      } catch (_) {
+        stored = null;
+      }
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.toggle('dark', stored === 'dark' || (!stored && prefersDark));
+    };
+    applyTheme();
+    document.addEventListener('astro:after-swap', applyTheme);
+  })();
+</script>

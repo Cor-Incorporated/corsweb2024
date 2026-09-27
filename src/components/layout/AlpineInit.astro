@@ -1,0 +1,17 @@
+---
+// Alpine.js を npm からビルドに同梱して起動する（C1）。
+// 以前は jsDelivr の CDN から読み込み、<html x-cloak> でページ全体を Alpine 起動まで非表示に
+// していたため、CDN が遮断されると白紙、CDN が遅いとそのまま初回表示（FCP）が遅れていた。
+// 処理対象の <script>（属性なし）は Astro がモジュールとしてバンドルし、同一 URL のため
+// View Transitions の遷移では再実行されない（Alpine は 1 回だけ start する）。遷移後の body は
+// Alpine の MutationObserver が新しいノードとして初期化する。
+---
+
+<script>
+  import Alpine from 'alpinejs';
+  import { registerAlpineStores } from '../../utils/alpine-stores';
+
+  registerAlpineStores(Alpine);
+  window.Alpine = Alpine;
+  Alpine.start();
+</script>
