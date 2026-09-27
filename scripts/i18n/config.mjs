@@ -117,6 +117,9 @@ const RuntimeEnvSchema = z.object({
   // ja の無い翻訳（orphan）を 1 回で消してよい量: コレクションの翻訳ファイル数に対する割合
   // （ただし最低でも記事 1 本分 = 対象言語数）。超えたらそのコレクションでは 1 件も消さない。
   I18N_MAX_PRUNE_RATIO: ratioFromEnv(0.25),
+  // 1 回の --write で API 翻訳してよい件数（記事 × 言語）。超えたら何もせずに失敗させる（課金・事故の上限）。
+  // PR では既定のまま、全記事のバックフィル（workflow_dispatch）ではワークフロー側で引き上げる。
+  I18N_MAX_ITEMS: intFromEnv(1, 10_000, 20),
 });
 
 /**
@@ -139,6 +142,7 @@ export function readRuntimeConfig(env) {
     maxValidationAttempts: e.I18N_MAX_VALIDATION_ATTEMPTS,
     requestTimeoutMs: e.I18N_REQUEST_TIMEOUT_MS,
     maxPruneRatio: e.I18N_MAX_PRUNE_RATIO,
+    maxItems: e.I18N_MAX_ITEMS,
     baseDelayMs: 2_000,
     maxDelayMs: 60_000,
   });

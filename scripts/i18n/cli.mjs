@@ -33,7 +33,7 @@ export const USAGE = `使い方: node scripts/i18n/translate-content.mjs [モー
 環境変数
   GEMINI_API_KEY（--write で翻訳するときのみ必須）, GEMINI_MODEL, GEMINI_THINKING_LEVEL,
   I18N_RPM, I18N_CONCURRENCY(1-2), I18N_MAX_API_ATTEMPTS, I18N_MAX_VALIDATION_ATTEMPTS, I18N_REQUEST_TIMEOUT_MS,
-  I18N_MAX_PRUNE_RATIO`;
+  I18N_MAX_PRUNE_RATIO, I18N_MAX_ITEMS（1 回の翻訳件数の上限。既定 20）`;
 
 /** "a, b" → ['a', 'b']。未指定・空文字（CI の空入力）は null = 全部。 */
 const splitList = (v) =>

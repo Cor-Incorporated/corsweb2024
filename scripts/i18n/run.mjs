@@ -233,6 +233,21 @@ export function planWrite(plan, { retranslateUntracked, pruneUntracked, maxPrune
   };
 }
 
+/** 翻訳件数が上限を超えていれば、その旨の報告行（超えていなければ空配列）。 */
+export function overLimitLines(work, maxItems) {
+  const n = work.translate.length;
+  if (n <= maxItems) return [];
+  const sample = work.translate
+    .slice(0, 10)
+    .map((i) => `  - ${i.collection}/${i.slug} [${i.lang}]（${i.status}）`);
+  return [
+    `翻訳が必要な件数 ${n} 件が上限 ${maxItems} 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました。` +
+      ' 記事を分けて PR を出すか、意図した一括翻訳なら I18N_MAX_ITEMS を上げて実行してください（全記事のバックフィルは workflow_dispatch の mode=translate）',
+    ...sample,
+    ...(n > sample.length ? [`  …ほか ${n - sample.length} 件`] : []),
+  ];
+}
+
 function printPlan(work, out) {
   const rows = [
     ...work.resync.map((i) => ['resync', i]),
@@ -262,9 +277,15 @@ export async function runWrite({ plan, retranslateUntracked, pruneUntracked = fa
     pruneUntracked,
     maxPruneRatio: ctx.config.maxPruneRatio,
   });
+  const overLimit = overLimitLines(work, ctx.config.maxItems);
   if (ctx.dryRun) {
     printPlan(work, ctx.out);
+    overLimit.forEach((line) => ctx.out.info(`(dry-run) ${line}`));
     return 0;
+  }
+  if (overLimit.length > 0) {
+    overLimit.forEach((line) => ctx.out.error(line));
+    return 1;
   }
   // API キー不足などはファイルに触る前に失敗させる。
   const client = work.translate.length > 0 ? await ctx.createClient() : null;

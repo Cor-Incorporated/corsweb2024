@@ -104,6 +104,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 | `I18N_MAX_API_ATTEMPTS` | いいえ | `5` | 429 / 5xx / ネットワーク失敗時の試行回数（指数バックオフ、`retryDelay` も尊重） |
 | `I18N_MAX_VALIDATION_ATTEMPTS` | いいえ | `2` | 検証に落ちたときの再生成を含む試行回数 |
 | `I18N_REQUEST_TIMEOUT_MS` | いいえ | `180000` | 1 リクエストのタイムアウト |
+| `I18N_MAX_ITEMS` | いいえ | `20` | 1 回の `--write` で API 翻訳する件数（記事 × 言語）の上限（1〜10000）。超えたら何も変更せずに失敗する。全記事のバックフィル（workflow_dispatch）ではワークフローが引き上げる |
 | `I18N_MAX_PRUNE_RATIO` | いいえ | `0.25` | orphan を 1 回で削除してよい割合（コレクションの翻訳ファイル数に対して。0 より大きく 1 以下。最低でも記事 1 本分は許可） |
 
 モデル ID の根拠: <https://ai.google.dev/gemini-api/docs/models>（2026-09-27 確認）。`gemini-3.8-flash` は Stable の最新 Flash で、新規プロジェクトには「3.5 Flash-Lite or 3.8 Flash」が推奨されています（2.5 系は既存ユーザー限定）。公開記事なので品質優先で 3.8 Flash を既定にしています。
@@ -207,6 +208,7 @@ push に使うトークン:
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
 | 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式 | PR の Checks で「Approve workflows to run」を押す。恒久対応は `TRANSLATION_BOT_TOKEN` の登録 |
 | `i18n-check の再実行を起動できませんでした` | ワークフローがまだ main に無い（workflow_dispatch 不可） | main 反映後は自動で解消。それまでは承認で代替 |
+| `翻訳が必要な件数 N 件が上限 20 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる | 記事を分けて PR を出す。意図した一括翻訳なら workflow_dispatch の mode=translate（バックフィル）を使うか、手元で `I18N_MAX_ITEMS=100` のように上限を上げて実行 |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
 | `--only と --since は同時に指定できません` など | 引数の誤り | `--help` を参照 |
 
