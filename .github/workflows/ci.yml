@@ -85,6 +85,10 @@ jobs:
         env:
           PUBLIC_GCAL_ID: contact-guard-dummy@example.invalid
 
+      # 本番と同じカレンダーありの HTML も監査する（deploy.yml は監査を実行しない）。
+      - name: Dist security and SEO audit (calendar enabled)
+        run: AUDIT_DIST_DIR="$RUNNER_TEMP/dist-calendar" npm run security:audit:dist
+
       - name: Contact regression guards on dist (calendar enabled)
         run: CONTACT_GUARD_DIST_DIR="$RUNNER_TEMP/dist-calendar" npm run test:dist
         env:
