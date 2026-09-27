@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { includeInSitemap } from './src/config/indexing';
 import { collectBlogLastmod } from './src/config/sitemap';
 
-// 記事 URL → lastmod（updatedDate ?? pubDate）。記事以外の URL には lastmod を付けない（M2）。
+// 記事 URL → lastmod（updatedDate ?? pubDate）。記事以外の URL には lastmod を付けない（Epic #330 / #334）。
 const blogLastmod = collectBlogLastmod(fileURLToPath(new URL('./src/content/blog/', import.meta.url)));
 
 export default defineConfig({

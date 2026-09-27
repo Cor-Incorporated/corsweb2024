@@ -1,5 +1,5 @@
 /**
- * sitemap の lastmod（M2）。astro.config.mjs の @astrojs/sitemap serialize から使う。
+ * sitemap の lastmod（Epic #330 / #334）。astro.config.mjs の @astrojs/sitemap serialize から使う。
  *
  * 以前は `lastmod: new Date()` で全 URL がビルド時刻になり、更新の合図として意味を持たなかった。
  * 記事だけに frontmatter の updatedDate ?? pubDate を付け、記事以外には付けない。

@@ -1,5 +1,5 @@
 /**
- * インデックス制御の正本（M3 / L1）。
+ * インデックス制御の正本（Epic #330 / #334）。
  *
  * meta robots（Layout.astro）と sitemap の filter（astro.config.mjs）の両方がこのモジュールを読む。
  * 「noindex なのに sitemap に載っている」「sitemap から外したのに index のまま」というずれを、

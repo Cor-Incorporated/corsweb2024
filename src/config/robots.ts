@@ -1,5 +1,6 @@
 /**
- * robots.txt の正本（H1）。src/pages/robots.txt.ts から呼ぶ。
+ * robots.txt の正本（ADR-0017: 描画に必要な CSS/JS を拒否しない・AI クローラーは検索用・学習用とも許可）。
+ * src/pages/robots.txt.ts から呼ぶ。
  *
  * - AI クローラーは検索・回答・学習のいずれの用途も許可する（CEO 決定 2026-09-27）。
  * - /_astro/ は拒否しない。拒否すると Google がページ描画に使う JS/CSS を取得できない。
