@@ -57,9 +57,9 @@ jobs:
       - name: Type check and build
         run: npm run build
         env:
-          # カレンダー未設定の状態でビルドする。#323 背景 4（説明文だけが「打ち合わせ可能な時間」を
-          # 断言する）はこの状態でしか顕在化しない。設定時の文言は src/config/__tests__/contact-guards.test.ts
-          # がソースを読んで検証している。秘密情報はこのジョブに渡さない。
+          # まずカレンダー未設定の状態でビルドする。#323 背景 4（説明文だけが「打ち合わせ可能な時間」を
+          # 断言する）はこの状態でしか顕在化しない。カレンダー表示ありの状態は後段で別にビルドする。
+          # 秘密情報はこのジョブに渡さない。
           PUBLIC_GCAL_ID: ''
 
       # dist の SEO メタ・JSON-LD・秘密情報らしき文字列・非 HTTPS / 開発用オリジン・localStorage の
@@ -69,6 +69,19 @@ jobs:
 
       - name: Contact regression guards on dist
         run: npm run test:dist
+
+      # 本番（deploy.yml）は PUBLIC_GCAL_ID を渡してビルドするため、カレンダー表示時だけ /contact に出る
+      # 文言（calendar.note・FALLBACK_WITH_CALENDAR）と、B-2 の逆向き（calendar-without-claim）は
+      # 上の未設定ビルドでは検査できない。ダミーの ID でもう一度ビルドし、同じ回帰ガードを当てる。
+      # ID はビルド時に埋め込み URL の文字列になるだけで、外部には出ない。型検査は上で済んでいるので
+      # astro build だけを実行し、出力は作業ツリーの外（RUNNER_TEMP）に置く。
+      - name: Build with the calendar enabled (dummy ID)
+        run: npm run astro -- build --outDir "$RUNNER_TEMP/dist-calendar"
+        env:
+          PUBLIC_GCAL_ID: contact-guard-dummy@example.invalid
+
+      - name: Contact regression guards on dist (calendar enabled)
+        run: CONTACT_GUARD_DIST_DIR="$RUNNER_TEMP/dist-calendar" npm run test:dist
 
       - name: Worker security header audit
         run: npm run security:audit:workers
