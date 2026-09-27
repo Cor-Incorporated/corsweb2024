@@ -41,14 +41,11 @@ export default defineConfig({
   },
   integrations: [
     tailwind(), 
+    // HTML キーは指定しない（= astro-compress 既定の html-minifier-terser 設定。これまでの実効設定と同じ）。
+    // 以前ここにあった 'remove-comments' / 'remove-tags' / 'minify-js' / 'minify-css' は astro-compress 2.x が
+    // 読まない無効キーだった（効いていれば JSON-LD を全削除する 'remove-tags' まで含んでいた）。
     compress({
       CSS: true,
-      HTML: {
-        'remove-comments': true,
-        'remove-tags': ['script[type="application/ld+json"]'],
-        'minify-js': true,
-        'minify-css': true
-      },
       Image: false,
       JavaScript: true,
       SVG: true
@@ -104,16 +101,11 @@ export default defineConfig({
     optimizeDeps: {
       exclude: []
     },
+    // rollupOptions.output の出力名を上書きしない。上書きは Astro のサーバー描画（SSR）ビルドにも効き、
+    // 記事本文を含む SSR チャンクが公開ディレクトリ dist/_astro/*.js に残っていた（S1）。
+    // クライアント用の名前は Astro 既定でも _astro/[name].[hash].js になる。
     build: {
       minify: 'terser',
-      rollupOptions: {
-        output: {
-          manualChunks: undefined,
-          entryFileNames: '_astro/[name].[hash].js',
-          chunkFileNames: '_astro/[name].[hash].js',
-          assetFileNames: '_astro/[name].[hash].[ext]'
-        }
-      }
     },
     plugins: [
       // 必要に応じてViteプラグインを追加

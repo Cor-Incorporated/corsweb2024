@@ -175,6 +175,17 @@ const auditHeavyRuntime = (violations, file) => {
   }
 };
 
+// サーバー描画（SSR）チャンクが公開ディレクトリ _astro に残っていないこと（S1）。
+// vite の rollupOptions.output で出力名を上書きすると SSR ビルドにも効き、記事本文を含むチャンクが
+// _astro/*.js として公開されていた。HTML から参照されないので表示は壊れず、目視では気づけない。
+const SERVER_RENDER_MARKERS = /\bcreateComponent\b|\brenderTemplate\b/;
+const auditServerRenderChunks = (violations, file) => {
+  if (!file.relative.startsWith('_astro/') || !file.relative.endsWith('.js')) return;
+  if (SERVER_RENDER_MARKERS.test(file.text)) {
+    violations.push(`[dist-security] ${file.relative} is a server-render chunk (createComponent/renderTemplate) published under _astro/.`);
+  }
+};
+
 const main = async () => {
   const distStat = await stat(DIST_DIR).catch(() => null);
   if (!distStat?.isDirectory()) {
@@ -195,6 +206,7 @@ const main = async () => {
     auditOrigins(violations, file);
     auditLocalStorage(violations, file);
     auditHeavyRuntime(violations, file);
+    auditServerRenderChunks(violations, file);
   }
 
   if (violations.length > 0) {
