@@ -1,5 +1,5 @@
 /**
- * CMS（Sveltia CMS, ADR-0018）の設定 public/admin/config.yml と、サイト側の定義を結ぶリンクテスト。
+ * CMS（Sveltia CMS, ADR-0018）の設定 cms/public/config.yml と、サイト側の定義を結ぶリンクテスト。
  *
  * 同じ事実が 2 箇所にある:
  *   - カテゴリの選択肢      config.yml ↔ src/config/categories.ts（と blog-schema.ts の enum）
@@ -49,7 +49,7 @@ type Schema = z.AnyZodObject;
 type Category = { id: string; label: { ja: string } };
 
 const ROOT = process.cwd();
-const CONFIG_PATH = path.join(ROOT, 'public/admin/config.yml');
+const CONFIG_PATH = path.join(ROOT, 'cms/public/config.yml');
 const BLOG_JA_DIR = path.join(ROOT, 'src/content/blog/ja');
 const JA_FOLDER = /^src\/content\/(?:blog|news|cases)\/ja$/;
 
@@ -221,7 +221,7 @@ const readFrontmatterKeys = (dir: string): Map<string, string[]> => {
   );
 };
 
-describe('CMS 設定（public/admin/config.yml）とサイト定義の照合', () => {
+describe('CMS 設定（cms/public/config.yml）とサイト定義の照合', () => {
   const config = loadConfig();
 
   it('(a) カテゴリの選択肢がカテゴリ定義・Zod の enum と一致する', () => {

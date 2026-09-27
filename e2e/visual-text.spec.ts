@@ -125,8 +125,7 @@ function htmlFileToRoute(filePath: string): string | null {
 }
 
 function shouldAuditRoute(route: string): boolean {
-  // /admin is the Sveltia CMS UI (ADR-0018): a third-party app, not site content.
-  return !/^\/(?:styleguide|test-blog|admin)(?:\/|$)/.test(route);
+  return !/^\/(?:styleguide|test-blog)(?:\/|$)/.test(route);
 }
 
 function discoverRoutes(): string[] {

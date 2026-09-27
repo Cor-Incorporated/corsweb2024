@@ -1,8 +1,10 @@
-# Sveltia CMS の設定（ADR-0018）。管理画面: https://cor-jp.com/admin/
+# Sveltia CMS の設定（ADR-0018、#329）。管理画面: https://cor-jp-cms.web.app/
+# 配信は cms/（npm run build:cms → cms/dist）。main に入ると deploy-cms.yml が cor-jp-cms サイトへデプロイする。
+# この設定の変更が編集画面に届くのは、develop → main のリリースと、そのデプロイの後。
 #
 # 二重管理に注意: ここのフィールド定義は src/config/blog-schema.ts（Zod スキーマ）と、
-# カテゴリの選択肢は src/config/categories.ts と同じ事実を持つ。
-# src/config/__tests__/cms-config.test.ts が両側を照合し、片方だけ変えると両側の値を出して落ちる。
+# カテゴリの選択肢は src/config/categories.ts と、base_url は workers/sveltia-cms-auth/wrangler.toml と
+# 同じ事実を持つ。src/config/__tests__/cms-config.test.ts が両側を照合し、片方だけ変えると両側の値を出して落ちる。
 #
 # 設定項目の正本は、固定した版の型定義 node_modules/@sveltia/cms/types/public.d.ts と
 # https://sveltiacms.app/en/docs 。UI の言語はブラウザの言語に従う（設定項目は無い）。
@@ -14,6 +16,7 @@ backend:
   branch: develop
   # 認証 Worker（workers/sveltia-cms-auth）の URL。デプロイ後に実際の URL へ置き換える。
   # 形式: https://cor-sveltia-cms-auth.<Cloudflare アカウントの workers.dev サブドメイン>.workers.dev
+  # Worker がトークンを渡す先は wrangler.toml の [vars] ALLOWED_DOMAINS（cor-jp-cms.web.app だけ）。
   # 手順は docs/cms-sveltia.md の「管理者向けセットアップ」。
   base_url: https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev
   # ログイン画面には「GitHub にログイン」だけを出す（アクセストークンの入力欄は出さない）。
@@ -71,7 +74,7 @@ collections:
   - name: blog
     label: ブログ
     label_singular: ブログ記事
-    description: 日本語の記事だけを編集します。英語・中国語・韓国語・スペイン語は、レビューに送った PR に翻訳 CI が自動で追加します。
+    description: 日本語の記事だけを編集します。英語・中国語・韓国語・スペイン語は、翻訳 CI（#339 のマージ後）がレビューに送った PR に自動で追加します。
     icon: article
     # CMS が書くのは ja だけ。en / zh / ko / es は翻訳 CI（ADR-0019）の専有。
     folder: src/content/blog/ja

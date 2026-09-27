@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  Sveltia CMS の管理画面（ADR-0018）。https://cor-jp-cms.web.app/
+  公開サイト（cor-jp.com）とは別の Firebase Hosting サイト・別オリジンで配信する。
+  CMS は GitHub のトークンを localStorage に置くため、第三者スクリプトを読む公開サイトとオリジンを分ける。
+  ヘッダー（CSP など）は cms/firebase.json。ビルドは npm run build:cms（出力は cms/dist）。
+-->
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="same-origin" />
+    <title>Cor.inc コンテンツ管理</title>
+    <link rel="cms-config-url" href="/config.yml" type="application/yaml" />
+  </head>
+  <body>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

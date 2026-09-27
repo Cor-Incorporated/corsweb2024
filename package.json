@@ -8,6 +8,7 @@
     "build": "./node_modules/.bin/astro check && ./node_modules/.bin/astro build",
     "preview": "./node_modules/.bin/astro preview",
     "preview:ci": "./node_modules/.bin/astro preview --host 127.0.0.1 --port 4322",
+    "build:cms": "./node_modules/.bin/vite build --config cms/vite.config.mjs",
     "astro": "./node_modules/.bin/astro",
     "translate": "node scripts/translate-blog.js",
     "translate:all": "node scripts/translate-all-blog.js",
@@ -70,6 +71,7 @@
     "happy-dom": "^18.0.1",
     "jsdom": "^26.1.0",
     "playwright": "^1.53.1",
+    "vite": "^5.4.19",
     "vitest": "^3.2.4"
   }
 }

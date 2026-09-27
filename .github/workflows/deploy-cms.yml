@@ -1,0 +1,66 @@
+name: Deploy CMS admin (cor-jp-cms)
+
+# CMS の管理画面（Sveltia CMS、ADR-0018・#329）を、公開サイトとは別の Firebase Hosting サイト
+# cor-jp-cms（https://cor-jp-cms.web.app/）へ main からだけ配信する。
+# - 公開サイト（deploy.yml）とは別オリジンにして、CMS が localStorage に置く GitHub のトークンを、
+#   公開サイトの第三者スクリプトや XSS から切り離す。develop チャネルや PR プレビューには載せない。
+# - 止めるときはリポジトリ変数 CMS_DEPLOY_ENABLED を true 以外にする（ジョブがスキップされる）。
+# - ヘッダー（CSP など）は cms/firebase.json。デプロイ前に、そのヘッダーを付けて e2e を通す。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cms/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-cms.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cms
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, test and deploy the CMS admin
+    # workflow_dispatch を main 以外で実行しても配信しない（main からだけ配信する）。
+    if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CMS admin
+        run: npm run build:cms
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: CMS admin e2e (cms/firebase.json headers, CSP violations 0)
+        run: npm run test:e2e:admin
+
+      - name: Deploy to Firebase Hosting (cor-jp-cms, live)
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
+          projectId: cor-jp-web
+          channelId: live
+          entryPoint: cms

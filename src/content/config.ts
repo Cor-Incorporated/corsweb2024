@@ -2,7 +2,7 @@ import { z, defineCollection } from 'astro:content';
 import { blogFrontmatterSchema } from '../config/blog-schema';
 import { getNewsCategoryIds } from '../config/news-categories';
 
-// スキーマ本体は src/config/blog-schema.ts。CMS の public/admin/config.yml と照合するテストが
+// スキーマ本体は src/config/blog-schema.ts。CMS の cms/public/config.yml と照合するテストが
 // astro:content を経由せずに同じ定義を読めるよう、別ファイルに置いている（ADR-0018）。
 const blogCollection = defineCollection({
   type: 'content',
