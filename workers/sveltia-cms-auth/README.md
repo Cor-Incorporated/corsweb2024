@@ -1,8 +1,8 @@
 # workers/sveltia-cms-auth — Sveltia CMS Authenticator（上流コードの取り込み）
 
-CMS の管理画面（https://cor-jp.com/admin/ 、ADR-0018）の「GitHub にログイン」を仲介する Cloudflare Worker。
+CMS の管理画面（https://cor-jp-cms.web.app/ 、ADR-0018・#329）の「GitHub にログイン」を仲介する Cloudflare Worker。
 GitHub OAuth App の client secret をブラウザに出さずにアクセストークンを受け取り、
-`ALLOWED_DOMAINS` に入っているホストで開かれた CMS にだけ渡す。
+`ALLOWED_DOMAINS`（`wrangler.toml` の `[vars]`、`cor-jp-cms.web.app` だけ）のホストで開かれた CMS にだけ渡す。
 
 ## 上流
 
@@ -14,7 +14,9 @@ GitHub OAuth App の client secret をブラウザに出さずにアクセスト
 
 - `src/index.js` と `LICENSE.txt` は上流のファイルそのまま。git の blob SHA が上流と一致する
   （`src/index.js` = `8c4c3beb721245c30b43e8b5e8444be7038f1789`、`LICENSE.txt` = `0d1f75bec76122bd15bcdf7a895119b2fe5a7f71`）。
-- 変えたのは `wrangler.toml`（`name`・`account_id`・`workers_dev`・コメント）と、この README だけ。
+- 変えたのは `wrangler.toml`（`name`・`account_id`・`workers_dev`・`[vars]`・コメント）と、この README だけ。
+- `ALLOWED_DOMAINS` は secret ではなく `[vars]` に置く。値を git で確認でき、デプロイのたびにこの値で上書きされる。
+  `cms/firebase.json` の `hosting.site` との一致は `src/config/__tests__/cms-config.test.ts` が検査する。
 - 上流の `package.json`・`pnpm-lock.yaml`・lint 設定は取り込まない。Worker は外部パッケージを使わず、デプロイは wrangler だけで足りる。
 - ルートの `tsconfig.json`（`exclude` に `workers`）・`astro check`・vitest（`src/**` のみ）の対象外。
 
@@ -35,10 +37,9 @@ git diff -- workers/sveltia-cms-auth   # 差分を読んでから、上の表の
 
 ```bash
 cd workers/sveltia-cms-auth
-npx wrangler@4.135.0 deploy                           # 上流が固定している wrangler の版
+npx wrangler@4.135.0 deploy                           # 上流が固定している wrangler の版。ALLOWED_DOMAINS もここで入る
 npx wrangler@4.135.0 secret put GITHUB_CLIENT_ID
 npx wrangler@4.135.0 secret put GITHUB_CLIENT_SECRET
-npx wrangler@4.135.0 secret put ALLOWED_DOMAINS       # 例: cor-jp.com, cor-jp-main--develop-*.web.app
 ```
 
-`ALLOWED_DOMAINS` は必ず設定する。未設定だと、どのサイトで開かれた CMS にもトークンを渡す。
+`ALLOWED_DOMAINS` を空・`*` 入り・プレビューチャネルのホストにしない。上流の Worker は空だと、どのサイトで開かれた CMS にもトークンを渡す。

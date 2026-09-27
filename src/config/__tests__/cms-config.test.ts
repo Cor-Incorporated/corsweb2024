@@ -1,11 +1,13 @@
 /**
- * CMS（Sveltia CMS, ADR-0018）の設定 cms/public/config.yml と、サイト側の定義を結ぶリンクテスト。
+ * CMS（Sveltia CMS, ADR-0018・#329）の設定 cms/public/config.yml と、サイト側の定義を結ぶリンクテスト。
  *
  * 同じ事実が 2 箇所にある:
  *   - カテゴリの選択肢      config.yml ↔ src/config/categories.ts（と blog-schema.ts の enum）
  *   - 必須・任意の項目      config.yml ↔ src/config/blog-schema.ts（Zod）
  *   - 書き込み先・ブランチ  config.yml ↔ ADR-0018（ja のフォルダだけ・develop・PR 経由）
- * 片方だけ変えると、両側の値を並べたメッセージで落ちる。後半の「F3 変異」で、
+ *   - トークンを渡す先      wrangler.toml [vars] ALLOWED_DOMAINS ↔ cms/firebase.json hosting.site
+ *   - 認証 Worker の URL    config.yml backend.base_url ↔ wrangler.toml name
+ * 片方だけ変えると、両側の値を並べたメッセージで落ちる。「F3 変異」の describe で、
  * 片側だけを変えた入力に対して検査が実際に赤くなることを毎回確かめている。
  */
 import { readdirSync, readFileSync } from 'node:fs';
@@ -37,6 +39,7 @@ type CmsConfig = {
     name?: string;
     repo?: string;
     branch?: string;
+    base_url?: string;
     squash_merges?: boolean;
     open_authoring?: boolean;
   };
@@ -47,9 +50,14 @@ type CmsConfig = {
 };
 type Schema = z.AnyZodObject;
 type Category = { id: string; label: { ja: string } };
+type Wrangler = { name?: string; allowedDomains?: string };
+type HeaderRule = { source: string; headers: Array<{ key: string; value: string }> };
+type CmsHosting = { site?: string; headers?: HeaderRule[] };
 
 const ROOT = process.cwd();
 const CONFIG_PATH = path.join(ROOT, 'cms/public/config.yml');
+const WRANGLER_PATH = path.join(ROOT, 'workers/sveltia-cms-auth/wrangler.toml');
+const CMS_FIREBASE_PATH = path.join(ROOT, 'cms/firebase.json');
 const BLOG_JA_DIR = path.join(ROOT, 'src/content/blog/ja');
 const JA_FOLDER = /^src\/content\/(?:blog|news|cases)\/ja$/;
 
@@ -210,6 +218,117 @@ function checkExistingKeys(config: CmsConfig, keysByFile: Map<string, string[]>)
   );
 }
 
+// wrangler.toml から name と [vars] の ALLOWED_DOMAINS だけを読む（TOML パーサーは入れない）。
+// 見つからないときは undefined になり、下の検査が落ちる。
+const readWrangler = (text: string): Wrangler => {
+  const top = text.split(/^\[/m)[0];
+  const vars = text.split(/^\[vars\][ \t]*$/m)[1]?.split(/^\[/m)[0] ?? '';
+  return {
+    name: top.match(/^name\s*=\s*"([^"]*)"/m)?.[1],
+    allowedDomains: vars.match(/^ALLOWED_DOMAINS\s*=\s*"([^"]*)"/m)?.[1],
+  };
+};
+const loadWrangler = () => readWrangler(readFileSync(WRANGLER_PATH, 'utf8'));
+const loadCmsHosting = (): CmsHosting =>
+  (JSON.parse(readFileSync(CMS_FIREBASE_PATH, 'utf8')) as { hosting: CmsHosting }).hosting;
+
+/** (f) 認証 Worker がトークンを渡す先 ↔ CMS を配信する Firebase Hosting サイト */
+function checkAllowedDomains(wrangler: Wrangler, hosting: CmsHosting): string[] {
+  const expected = `${hosting.site}.web.app`;
+  const both = `wrangler.toml [vars] ALLOWED_DOMAINS "${
+    wrangler.allowedDomains ?? '（未定義）'
+  }" / cms/firebase.json hosting.site "${hosting.site}"（期待 ${expected}）`;
+  const hosts = (wrangler.allowedDomains ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
+  if (hosts.length === 0) {
+    return [
+      `ALLOWED_DOMAINS が空（上流の Worker は空だとどのオリジンにもトークンを渡す）。${both}`,
+    ];
+  }
+  return hosts.flatMap((host) =>
+    [
+      host.includes('*') && 'ワイルドカード * を含む',
+      host.includes('--') && 'Firebase のプレビューチャネル（--）を含む',
+      /develop/i.test(host) && 'develop を含む',
+      host !== expected && 'CMS のホストと違う',
+    ]
+      .filter(Boolean)
+      .map((problem) => `ALLOWED_DOMAINS の ${host} は不可（${problem}）。${both}`)
+  );
+}
+
+/** (g) config.yml の base_url ↔ 認証 Worker の名前（workers.dev の URL） */
+function checkBaseUrl(config: CmsConfig, wrangler: Wrangler): string[] {
+  const baseUrl = config.backend.base_url ?? '（未定義）';
+  const pattern = new RegExp(
+    `^https://${wrangler.name}\\.(?:REPLACE-WITH-CF-SUBDOMAIN|[a-z0-9-]+)\\.workers\\.dev$`
+  );
+  if (pattern.test(baseUrl)) return [];
+  return [
+    `base_url が認証 Worker の URL の形ではない: config.yml base_url "${baseUrl}" / wrangler.toml name "${wrangler.name}"（期待 https://${wrangler.name}.<サブドメイン>.workers.dev）`,
+  ];
+}
+
+const headerValue = (hosting: CmsHosting, source: string, name: string): string =>
+  hosting.headers
+    ?.find((rule) => rule.source === source)
+    ?.headers.find((header) => header.key.toLowerCase() === name.toLowerCase())?.value ??
+  '（なし）';
+
+const parseCsp = (csp: string): Map<string, string[]> =>
+  new Map(
+    csp
+      .split(';')
+      .map((directive) => directive.trim().split(/\s+/))
+      .filter(([name]) => name)
+      .map(([name, ...sources]): [string, string[]] => [name, sources])
+  );
+
+/** (h) CMS の配信ヘッダー（cms/firebase.json）。実際に付くことは e2e/admin-cms.spec.ts が確かめる */
+function checkCmsHeaders(hosting: CmsHosting): string[] {
+  const violations: string[] = [];
+  const expected: Array<[string, string, string | RegExp]> = [
+    ['**', 'X-Frame-Options', 'DENY'],
+    ['**', 'X-Content-Type-Options', 'nosniff'],
+    ['**', 'Referrer-Policy', 'same-origin'],
+    ['**', 'Cross-Origin-Opener-Policy', 'same-origin-allow-popups'],
+    ['**', 'X-Robots-Tag', /noindex/],
+    ['/assets/**', 'Cache-Control', /immutable/],
+    ['/', 'Cache-Control', /^no-cache$/],
+  ];
+  for (const [source, name, want] of expected) {
+    const actual = headerValue(hosting, source, name);
+    if (typeof want === 'string' ? actual !== want : !want.test(actual)) {
+      violations.push(`${source} の ${name}: 期待 ${want} / cms/firebase.json "${actual}"`);
+    }
+  }
+  const csp = headerValue(hosting, '**', 'Content-Security-Policy');
+  const directives = parseCsp(csp);
+  const required: Array<[string, string]> = [
+    ['default-src', "'none'"],
+    ['frame-ancestors', "'none'"],
+    ['object-src', "'none'"],
+    ['base-uri', "'none'"],
+  ];
+  for (const [name, source] of required) {
+    if (!(directives.get(name) ?? []).includes(source)) {
+      violations.push(`CSP の ${name} に ${source} が無い: "${csp}"`);
+    }
+  }
+  const forbidden = /unpkg\.com|jsdelivr\.net|^'unsafe-eval'$|^\*$|^https?:$/;
+  for (const [name, sources] of directives) {
+    for (const source of sources.filter((value) => forbidden.test(value))) {
+      violations.push(`CSP の ${name} に許可しない送信元 ${source} がある: "${csp}"`);
+    }
+  }
+  if ((directives.get('script-src') ?? []).includes("'unsafe-inline'")) {
+    violations.push(`CSP の script-src に 'unsafe-inline' がある: "${csp}"`);
+  }
+  return violations;
+}
+
 const readFrontmatterKeys = (dir: string): Map<string, string[]> => {
   const entries = readdirSync(dir).filter((name) => name.endsWith('.md'));
   return new Map(
@@ -335,5 +454,89 @@ describe('F3 変異: 片側だけ変えると両側の値を出して落ちる',
     const message = checkExistingKeys(loadConfig(), keysByFile).join('\n');
     expect(message).toContain('example.md の ogImage が config.yml に無い');
     expect(message).toContain('title');
+  });
+});
+
+describe('CMS の配信と認証 Worker（cms/firebase.json ↔ wrangler.toml ↔ config.yml）', () => {
+  it('(f) ALLOWED_DOMAINS は CMS のホスト（hosting.site + .web.app）だけ', () => {
+    expect(checkAllowedDomains(loadWrangler(), loadCmsHosting())).toEqual([]);
+    expect(loadWrangler().allowedDomains).toBe(`${loadCmsHosting().site}.web.app`);
+  });
+
+  it('(g) base_url は認証 Worker（wrangler.toml の name）の workers.dev の URL', () => {
+    expect(checkBaseUrl(loadConfig(), loadWrangler())).toEqual([]);
+  });
+
+  it('(h) CSP と保護ヘッダー: frame-ancestors none、CDN なし、キャッシュの区別', () => {
+    expect(checkCmsHeaders(loadCmsHosting())).toEqual([]);
+  });
+});
+
+describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側だけを変える', () => {
+  const hosting = loadCmsHosting();
+  const withAllowed = (allowedDomains: string) =>
+    checkAllowedDomains({ ...loadWrangler(), allowedDomains }, hosting).join('\n');
+
+  it('ALLOWED_DOMAINS を空にする', () => {
+    const message = withAllowed('');
+    expect(message).toContain('ALLOWED_DOMAINS が空');
+    expect(message).toContain('hosting.site "cor-jp-cms"（期待 cor-jp-cms.web.app）');
+  });
+
+  it('ALLOWED_DOMAINS にワイルドカードを使う', () => {
+    const message = withAllowed('*.web.app');
+    expect(message).toContain('ALLOWED_DOMAINS の *.web.app は不可（ワイルドカード * を含む）');
+    expect(message).toContain(
+      'ALLOWED_DOMAINS "*.web.app" / cms/firebase.json hosting.site "cor-jp-cms"'
+    );
+  });
+
+  it('ALLOWED_DOMAINS に PR のプレビューチャネルを足す', () => {
+    const message = withAllowed('cor-jp-cms.web.app, cor-jp-main--pr342-feat-cms-abc123.web.app');
+    expect(message).toContain('プレビューチャネル（--）を含む');
+    expect(message).not.toContain('ALLOWED_DOMAINS の cor-jp-cms.web.app は不可');
+  });
+
+  it('ALLOWED_DOMAINS に develop のホストを入れる', () => {
+    const message = withAllowed('cor-jp-main--develop-v6sxy3wv.web.app');
+    expect(message).toContain('develop を含む');
+    expect(message).toContain('CMS のホストと違う');
+  });
+
+  it('cms/firebase.json の site だけを変える', () => {
+    const message = checkAllowedDomains(loadWrangler(), { ...hosting, site: 'cor-jp-cms-2' });
+    expect(message.join('\n')).toContain(
+      'ALLOWED_DOMAINS "cor-jp-cms.web.app" / cms/firebase.json hosting.site "cor-jp-cms-2"（期待 cor-jp-cms-2.web.app）'
+    );
+  });
+
+  it('base_url を別のホストにする', () => {
+    const config = loadConfig();
+    const mutated = {
+      ...config,
+      backend: { ...config.backend, base_url: 'https://auth.example.com' },
+    };
+    expect(checkBaseUrl(mutated, loadWrangler())).toEqual([
+      'base_url が認証 Worker の URL の形ではない: config.yml base_url "https://auth.example.com" / wrangler.toml name "cor-sveltia-cms-auth"（期待 https://cor-sveltia-cms-auth.<サブドメイン>.workers.dev）',
+    ]);
+  });
+
+  it('CSP に unpkg を足し、frame-ancestors を消す', () => {
+    const csp = headerValue(hosting, '**', 'Content-Security-Policy')
+      .replace("script-src 'self'", "script-src 'self' https://unpkg.com")
+      .replace("; frame-ancestors 'none'", '');
+    const headers = hosting.headers?.map((rule) =>
+      rule.source === '**'
+        ? {
+            ...rule,
+            headers: rule.headers.map((header) =>
+              header.key === 'Content-Security-Policy' ? { ...header, value: csp } : header
+            ),
+          }
+        : rule
+    );
+    const message = checkCmsHeaders({ ...hosting, headers }).join('\n');
+    expect(message).toContain("CSP の frame-ancestors に 'none' が無い");
+    expect(message).toContain('CSP の script-src に許可しない送信元 https://unpkg.com がある');
   });
 });
