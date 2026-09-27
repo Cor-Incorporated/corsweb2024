@@ -21,7 +21,7 @@
 5. **SDK は `@google/genai`（2.24.0 に固定）、既定モデルは `gemini-3.8-flash`**（Stable、<https://ai.google.dev/gemini-api/docs/models> 2026-09-27 確認。新規プロジェクトには 3.5 Flash-Lite / 3.8 Flash が推奨、2.5 系は既存ユーザー限定）。`GEMINI_MODEL` で差し替え可能（コスト重視の代替は `gemini-3.5-flash-lite`）。429 / 5xx は指数バックオフで再試行し、並列度は 1〜2。
 6. **CI（`.github/workflows/translate-content.yml`）は、書き込みトークンと信頼しないコードを同じジョブに置かない**:
    - `translate`（contents: read、`GEMINI_API_KEY`）が PR head のコードを `npm ci --ignore-scripts` で動かして翻訳し、結果を `git diff --binary --no-renames` のパッチとして artifact に渡す（ja の改名は、旧 slug の翻訳の削除と新 slug の翻訳の追加になる）。
-   - `push`（contents: write）は npm もリポジトリのコードも実行せず、パッチの変更パス（`src/content/<collection>/{en,zh,ko,es}/*.md` だけ）とファイル種別（通常ファイルだけ）・大きさを検査してから適用し、hooks を無効にして commit / push する。
+   - `push`（contents: write）は npm もリポジトリのコードも実行せず、パッチの変更パス（`src/content/<collection>/{en,zh,ko,es}/*.md` だけ）とファイル種別（通常ファイルだけ）・大きさ・削除件数（翻訳ファイル数 × 25%、最低 4 件）を検査してから適用し、stage された内容を 1 行ずつ照合して（追加・変更・削除だけ、mode 100644 だけ、同じ許可パスだけ、追加・変更した `.md` の 1 行目が厳密に `---`）から、hooks を無効にして commit / push する。
    - `dispatch-check`（actions: write だけ）が GITHUB_TOKEN で push したときに i18n-check を再実行する。`i18n-check` は push した場合は新しい HEAD 側の実行に検査を委ねる。統合ブランチ（develop / main / master）が head の PR には push しない。
    - push トークンは既定で `GITHUB_TOKEN`。`TRANSLATION_BOT_TOKEN`（fine-grained PAT / GitHub App）は任意とし、登録すると push 後の CI が承認なしで再実行されるが、有効期間と権限が GITHUB_TOKEN より広い（漏えい時の影響が大きい）ことを運用文書に明記する。
    - `workflow_dispatch`: 既存記事のバックフィル（`chore/i18n-backfill-<日付>`）と既存翻訳の採用（`chore/i18n-adopt-<日付>`）も同じ 2 段で、ブランチの push まで。PR は人が作る。

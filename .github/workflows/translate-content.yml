@@ -7,8 +7,10 @@ name: Translate content (i18n)
 #   translate        contents: read だけ。PR head のコード（scripts/i18n と npm 依存）を GEMINI_API_KEY 付きで動かし、
 #                    結果を `git diff --binary --no-renames` のパッチとして artifact に渡す（ja の改名は、旧 slug の
 #                    翻訳の削除と新 slug の翻訳の追加になる）。`npm ci --ignore-scripts`、npm キャッシュなし。
-#   push             contents: write。npm もリポジトリのコードも実行しない。パッチ（信頼しないデータ）の変更パスと
-#                    ファイル種別を検査してから適用し、hooks を無効にして commit / push する。
+#   push             contents: write。npm もリポジトリのコードも実行しない。パッチ（信頼しないデータ）の変更パス・
+#                    ファイル種別・大きさ・削除件数を検査してから適用し、stage された内容を行ごとに照合して
+#                    （追加・変更・削除だけ、mode 100644 だけ、許可パスだけ、.md の 1 行目が ---）から、
+#                    hooks を無効にして commit / push する。
 #   dispatch-check   actions: write だけ。GITHUB_TOKEN で push したとき i18n-check を workflow_dispatch で再実行する。
 #   i18n-check       contents: read。単体テストと --check（キー不要）。
 #   translate-result 権限なし。翻訳の一部が失敗・検証落ちしたとき、成功分を push したうえで赤にする。
@@ -79,6 +81,10 @@ env:
   ALLOWED_CHANGE_RE: '^src/content/(blog|cases|news)/(en|zh|ko|es)/[A-Za-z0-9][A-Za-z0-9._-]*\.md$'
   PATCH_ARTIFACT: i18n-translation-patch
   MAX_PATCH_BYTES: '5000000'
+  # push ジョブで 1 回に削除してよい翻訳ファイルの上限: 翻訳ファイル数 × 25%（最低 4 件 = 記事 1 本分）。
+  # scripts/i18n の I18N_MAX_PRUNE_RATIO の既定値と対象言語数と同じ値（workflow-link.test.mjs が照合する）。
+  MAX_DELETE_PERCENT: '25'
+  MIN_DELETE_ALLOWANCE: '4'
 
 jobs:
   translate:
@@ -231,7 +237,8 @@ jobs:
           name: ${{ env.PATCH_ARTIFACT }}
           path: ${{ runner.temp }}/i18n-patch
 
-      # パッチは信頼しないジョブの出力なので、中身ではなく「どこを・どういう種類で変えるか」だけを検査して適用する。
+      # パッチは信頼しないジョブの出力なので、「どこを・どういう種類で・何件変えるか」と、適用後の frontmatter の
+      # 1 行目（(5)）を検査して適用する。本文の妥当性はここでは見ない（i18n-check と PR のレビューで見る）。
       - name: Verify and apply the patch
         run: |
           set -euo pipefail
@@ -268,15 +275,46 @@ jobs:
             fail=1
           done <<< "$(git apply --summary "$patch")"
           if [ "$fail" -ne 0 ]; then exit 1; fi
+          # (3) 削除件数: 翻訳ファイル数 × MAX_DELETE_PERCENT%（最低 MIN_DELETE_ALLOWANCE 件）まで
+          total="$(git ls-tree -r --name-only HEAD -- src/content | grep -cE "$ALLOWED_CHANGE_RE" || true)"
+          deletions="$(git apply --summary "$patch" | grep -c '^ delete mode ' || true)"
+          allowance=$(( total * MAX_DELETE_PERCENT / 100 ))
+          if [ "$allowance" -lt "$MIN_DELETE_ALLOWANCE" ]; then allowance="$MIN_DELETE_ALLOWANCE"; fi
+          if [ "$deletions" -gt "$allowance" ]; then
+            echo "::error title=i18n::削除が多すぎるため適用しません（${deletions} 件 / 翻訳 ${total} 件、上限 ${allowance} 件）"
+            exit 1
+          fi
           git apply --check "$patch"
           git apply --index "$patch"
-          # (3) 念のため、実際に stage された内容も同じ条件で照合する
-          while IFS= read -r file; do
-            if ! [[ "$file" =~ $ALLOWED_CHANGE_RE ]]; then
-              echo "::error title=i18n::許可されていないパスが stage されました: ${file}"
-              exit 1
+          # 適用した後の検査に落ちたら、stage も作業ツリーも元に戻してから失敗させる
+          reject() {
+            echo "::error title=i18n::$1"
+            git reset -q --hard HEAD
+            exit 1
+          }
+          # (4) stage された内容を 1 行ずつ照合する（パッチの見た目ではなく、実際に index に入ったもの）。
+          #     改名は検出しない（--no-renames）ので、保護パスからの改名は「保護パスの削除」として拒否される。
+          #     状態は A/M/D、モードは通常ファイル 100644（無しは 000000）、パスは翻訳ディレクトリの .md だけ。
+          tab=$'\t'
+          raw_re="^:([0-7]{6}) ([0-7]{6}) [0-9a-f]+ [0-9a-f]+ ([A-Z])[0-9]*${tab}(.+)\$"
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            [[ "$line" =~ $raw_re ]] || reject "許可されていない変更が stage されました: ${line}"
+            status="${BASH_REMATCH[3]}:${BASH_REMATCH[1]}:${BASH_REMATCH[2]}"
+            file="${BASH_REMATCH[4]}"
+            case "$status" in
+              A:000000:100644 | D:100644:000000 | M:100644:100644) ;;
+              *) reject "許可されていない種類の変更が stage されました: ${line}" ;;
+            esac
+            [[ "$file" =~ $ALLOWED_CHANGE_RE ]] || reject "許可されていないパスが stage されました: ${file}"
+            # (5) 追加・変更した .md の 1 行目は厳密に "---"（Astro が使う gray-matter は "---js" の frontmatter を
+            #     JavaScript として評価するため。翻訳パイプラインの書き出しは常に "---" で始まる）
+            if [ "${status%%:*}" != "D" ]; then
+              first=""
+              IFS= read -r first < <(git cat-file -p ":$file") || true
+              [ "$first" = "---" ] || reject "frontmatter の 1 行目が --- ではありません: ${file}（${first:0:40}）"
             fi
-          done < <(git diff --cached --name-only)
+          done < <(git diff --cached --raw --no-renames --no-abbrev)
           git diff --cached --stat
 
       - name: Commit and push

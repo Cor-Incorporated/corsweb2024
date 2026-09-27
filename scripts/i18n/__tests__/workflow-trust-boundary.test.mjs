@@ -11,7 +11,7 @@
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, symlink, writeFile, chmod, unlink } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import yaml from 'js-yaml';
@@ -96,9 +96,9 @@ const buildScript = stepScript('translate', 'Build the translation patch');
 const verifyScript = stepScript('push', 'Verify and apply the patch');
 const GIT = GIT_TEST_CONFIG;
 const IDENTITY = ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid'];
+// ワークフロー全体の env（ALLOWED_CHANGE_RE・MAX_PATCH_BYTES・削除上限など）をそのまま渡す
 const STEP_ENV = {
-  ALLOWED_CHANGE_RE: workflow.env.ALLOWED_CHANGE_RE,
-  MAX_PATCH_BYTES: workflow.env.MAX_PATCH_BYTES,
+  ...workflow.env,
   GIT_CONFIG_PARAMETERS: "'core.hooksPath=/dev/null' 'gc.auto=0' 'maintenance.auto=false'",
 };
 
@@ -196,83 +196,164 @@ function runVerify({ repo, runnerTemp }, env = {}) {
   return { code: result.status, output: result.stdout + result.stderr, staged };
 }
 
-describe('H1: push ジョブはパッチの変更パスと種別を検査してから適用する', () => {
-  it('翻訳ディレクトリの .md の変更・追加・削除は適用して stage する', async () => {
-    const ctx = await buildPatch(async (repo) => {
-      const en = path.join(repo, 'src/content/blog/en');
-      await writeFile(path.join(en, 'keep.md'), article('Keep', 'Changed.'));
-      await writeFile(path.join(en, 'new.md'), article('New'));
-      await unlink(path.join(en, 'gone.md'));
+// git と bash を何度も起動するため、負荷の高い環境でも既定の 5 秒で切れないよう余裕を持たせる
+describe(
+  'H1: push ジョブはパッチの変更パスと種別を検査してから適用する',
+  { timeout: 30_000 },
+  () => {
+    it('翻訳ディレクトリの .md の変更・追加・削除は適用して stage する', async () => {
+      const ctx = await buildPatch(async (repo) => {
+        const en = path.join(repo, 'src/content/blog/en');
+        await writeFile(path.join(en, 'keep.md'), article('Keep', 'Changed.'));
+        await writeFile(path.join(en, 'new.md'), article('New'));
+        await unlink(path.join(en, 'gone.md'));
+      });
+      const result = runVerify(ctx);
+      expect(result.code, result.output).toBe(0);
+      expect(result.staged.sort()).toEqual([
+        'A src/content/blog/en/new.md',
+        'D src/content/blog/en/gone.md',
+        'M src/content/blog/en/keep.md',
+      ]);
     });
-    const result = runVerify(ctx);
-    expect(result.code, result.output).toBe(0);
-    expect(result.staged.sort()).toEqual([
-      'A src/content/blog/en/new.md',
-      'D src/content/blog/en/gone.md',
-      'M src/content/blog/en/keep.md',
-    ]);
-  });
 
-  it('ja の改名（slug 変更）: 旧 slug の翻訳の削除と、ほぼ同じ内容の新 slug の追加を適用する（HIGH-1）', async () => {
-    const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i} of the article.`).join(
-      '\n\n'
-    );
-    const files = { ...DEFAULT_FILES, 'src/content/blog/en/old-slug.md': article('Same', long) };
-    const ctx = await buildPatch(async (repo) => {
-      const en = path.join(repo, 'src/content/blog/en');
-      await unlink(path.join(en, 'old-slug.md'));
-      // 新しい翻訳は来歴行（ハッシュ）だけが違う
-      await writeFile(
-        path.join(en, 'new-slug.md'),
-        article('Same', long).replace('0'.repeat(64), 'f'.repeat(64))
+    it('ja の改名（slug 変更）: 旧 slug の翻訳の削除と、ほぼ同じ内容の新 slug の追加を適用する（HIGH-1）', async () => {
+      const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i} of the article.`).join(
+        '\n\n'
       );
-    }, files);
-    const patch = readFileSync(path.join(ctx.runnerTemp, 'i18n-patch/translation.patch'), 'utf8');
-    expect(patch).not.toMatch(/^rename (from|to) /m);
-    const result = runVerify(ctx);
-    expect(result.code, result.output).toBe(0);
-    expect(result.staged.sort()).toEqual([
-      'A src/content/blog/en/new-slug.md',
-      'D src/content/blog/en/old-slug.md',
-    ]);
-  });
+      const files = { ...DEFAULT_FILES, 'src/content/blog/en/old-slug.md': article('Same', long) };
+      const ctx = await buildPatch(async (repo) => {
+        const en = path.join(repo, 'src/content/blog/en');
+        await unlink(path.join(en, 'old-slug.md'));
+        // 新しい翻訳は来歴行（ハッシュ）だけが違う
+        await writeFile(
+          path.join(en, 'new-slug.md'),
+          article('Same', long).replace('0'.repeat(64), 'f'.repeat(64))
+        );
+      }, files);
+      const patch = readFileSync(path.join(ctx.runnerTemp, 'i18n-patch/translation.patch'), 'utf8');
+      expect(patch).not.toMatch(/^rename (from|to) /m);
+      const result = runVerify(ctx);
+      expect(result.code, result.output).toBe(0);
+      expect(result.staged.sort()).toEqual([
+        'A src/content/blog/en/new-slug.md',
+        'D src/content/blog/en/old-slug.md',
+      ]);
+    });
 
-  it.each([
-    [
-      'ja（正本）の変更',
-      (repo) => writeFile(path.join(repo, 'src/content/blog/ja/keep.md'), 'changed\n'),
-    ],
-    [
-      '翻訳ディレクトリ以外（ワークフロー）',
-      async (repo) => {
-        await mkdir(path.join(repo, '.github/workflows'), { recursive: true });
-        await writeFile(path.join(repo, '.github/workflows/evil.yml'), 'on: push\n');
-      },
-    ],
-    [
-      'シンボリックリンクの作成',
-      (repo) => symlink('/etc/passwd', path.join(repo, 'src/content/blog/en/link.md')),
-    ],
-    ['実行権限の付与', (repo) => chmod(path.join(repo, 'src/content/blog/en/keep.md'), 0o755)],
-    [
-      '.md 以外のファイル',
-      (repo) => writeFile(path.join(repo, 'src/content/blog/en/keep.mjs'), 'x\n'),
-    ],
-  ])('拒否して何も stage しない: %s', async (_name, change) => {
-    const ctx = await craftPatch(change);
-    const result = runVerify(ctx);
-    expect(result.code, result.output).toBe(1);
-    expect(result.output).toContain('::error title=i18n::');
-    expect(result.staged).toEqual([]);
-  });
+    it.each([
+      [
+        'ja（正本）の変更',
+        (repo) => writeFile(path.join(repo, 'src/content/blog/ja/keep.md'), 'changed\n'),
+      ],
+      [
+        '翻訳ディレクトリ以外（ワークフロー）',
+        async (repo) => {
+          await mkdir(path.join(repo, '.github/workflows'), { recursive: true });
+          await writeFile(path.join(repo, '.github/workflows/evil.yml'), 'on: push\n');
+        },
+      ],
+      [
+        'シンボリックリンクの作成',
+        (repo) => symlink('/etc/passwd', path.join(repo, 'src/content/blog/en/link.md')),
+      ],
+      ['実行権限の付与', (repo) => chmod(path.join(repo, 'src/content/blog/en/keep.md'), 0o755)],
+      [
+        '.md 以外のファイル',
+        (repo) => writeFile(path.join(repo, 'src/content/blog/en/keep.mjs'), 'x\n'),
+      ],
+    ])('拒否して何も stage しない: %s', async (_name, change) => {
+      const ctx = await craftPatch(change);
+      const result = runVerify(ctx);
+      expect(result.code, result.output).toBe(1);
+      expect(result.output).toContain('::error title=i18n::');
+      expect(result.staged).toEqual([]);
+    });
 
-  it('上限を超える大きさのパッチは適用しない', async () => {
-    const ctx = await craftPatch((repo) =>
-      writeFile(path.join(repo, 'src/content/blog/en/keep.md'), article('Keep', 'x'.repeat(2000)))
+    it('上限を超える大きさのパッチは適用しない', async () => {
+      const ctx = await craftPatch((repo) =>
+        writeFile(path.join(repo, 'src/content/blog/en/keep.md'), article('Keep', 'x'.repeat(2000)))
+      );
+      const result = runVerify(ctx, { MAX_PATCH_BYTES: '100' });
+      expect(result.code).toBe(1);
+      expect(result.output).toContain('パッチが大きすぎるため適用しません');
+      expect(result.staged).toEqual([]);
+    });
+  }
+);
+
+describe(
+  'push ジョブの検査は、stage された内容を行ごとに照合する（MEDIUM-3 / LOW-1 / LOW-2）',
+  { timeout: 30_000 },
+  () => {
+    it('保護パスからの改名（.github/workflows/ci.yml → src/content/blog/en/ci.md）は拒否する', async () => {
+      const files = {
+        ...DEFAULT_FILES,
+        // 1 行目を --- にして、frontmatter の検査 (5) ではなくパス・種別の検査で拒否されることを確かめる
+        '.github/workflows/ci.yml': '---\nname: CI\non: push\njobs: {}\n',
+      };
+      const ctx = await craftPatch((repo) => {
+        git(repo, 'mv', '.github/workflows/ci.yml', 'src/content/blog/en/ci.md');
+      }, files);
+      const result = runVerify(ctx);
+      expect(result.code, result.output).toBe(1);
+      expect(result.output).toMatch(/::error title=i18n::/);
+      expect(result.staged).toEqual([]);
+      expect(existsSync(path.join(ctx.repo, '.github/workflows/ci.yml'))).toBe(true);
+    });
+
+    it('既存のシンボリックリンクの中身だけの差し替え（120000 のまま）は拒否する', async () => {
+      const files = { ...DEFAULT_FILES, 'src/content/blog/en/link.md': { symlink: 'keep.md' } };
+      const ctx = await craftPatch(async (repo) => {
+        const link = path.join(repo, 'src/content/blog/en/link.md');
+        await unlink(link);
+        await symlink('/etc/passwd', link);
+      }, files);
+      const result = runVerify(ctx);
+      expect(result.code, result.output).toBe(1);
+      expect(result.output).toContain(
+        '許可されていない種類の変更が stage されました: :120000 120000'
+      );
+      expect(result.staged).toEqual([]);
+    });
+
+    it.each([
+      ['追加', 'src/content/blog/en/js.md'],
+      ['変更', 'src/content/blog/en/keep.md'],
+    ])(
+      '1 行目が --- でない .md（---js は gray-matter が JavaScript として評価する）の%sは拒否する',
+      async (_name, file) => {
+        const ctx = await craftPatch((repo) =>
+          writeFile(path.join(repo, file), '---js\n{ title: (() => "x")() }\n---\n\nBody.\n')
+        );
+        const result = runVerify(ctx);
+        expect(result.code, result.output).toBe(1);
+        expect(result.output).toContain(
+          `frontmatter の 1 行目が --- ではありません: ${file}（---js）`
+        );
+        expect(result.staged).toEqual([]);
+      }
     );
-    const result = runVerify(ctx, { MAX_PATCH_BYTES: '100' });
-    expect(result.code).toBe(1);
-    expect(result.output).toContain('パッチが大きすぎるため適用しません');
-    expect(result.staged).toEqual([]);
-  });
-});
+
+    const EIGHT = Object.fromEntries(
+      Array.from({ length: 8 }, (_, i) => [`src/content/blog/en/p${i}.md`, article(`P${i}`)])
+    );
+
+    it('削除は翻訳ファイル数 × 25%（最低 4 件）まで: 8 件中 4 件は適用、5 件は拒否', async () => {
+      const remove = (n) => async (repo) => {
+        for (let i = 0; i < n; i += 1)
+          await unlink(path.join(repo, `src/content/blog/en/p${i}.md`));
+      };
+      const four = runVerify(await craftPatch(remove(4), EIGHT));
+      expect(four.code, four.output).toBe(0);
+      expect(four.staged).toHaveLength(4);
+      await removeTempDir(tmp);
+      const five = runVerify(await craftPatch(remove(5), EIGHT));
+      expect(five.code, five.output).toBe(1);
+      expect(five.output).toContain(
+        '削除が多すぎるため適用しません（5 件 / 翻訳 8 件、上限 4 件）'
+      );
+      expect(five.staged).toEqual([]);
+    });
+  }
+);

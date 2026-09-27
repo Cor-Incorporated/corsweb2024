@@ -8,7 +8,13 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { describe, expect, it } from 'vitest';
-import { COLLECTION_NAMES, CONTENT_ROOT, SOURCE_LANG, TARGET_LANGS } from '../config.mjs';
+import {
+  COLLECTION_NAMES,
+  CONTENT_ROOT,
+  readRuntimeConfig,
+  SOURCE_LANG,
+  TARGET_LANGS,
+} from '../config.mjs';
 import { SLUG_RE } from '../plan.mjs';
 
 const workflowPath = '.github/workflows/translate-content.yml';
@@ -48,5 +54,19 @@ describe(`${workflowPath} env.ALLOWED_CHANGE_RE ↔ scripts/i18n の定義`, () 
     'scripts/i18n/cli.mjs',
   ])('それ以外は許可しない: %s', (file) => {
     expect(allowed.test(file)).toBe(false);
+  });
+});
+
+describe(`${workflowPath} の削除上限 ↔ scripts/i18n の既定値`, () => {
+  it('MAX_DELETE_PERCENT は I18N_MAX_PRUNE_RATIO の既定値、MIN_DELETE_ALLOWANCE は対象言語数（記事 1 本分）', () => {
+    expect({
+      'workflow env.MAX_DELETE_PERCENT': workflow.env.MAX_DELETE_PERCENT,
+      'workflow env.MIN_DELETE_ALLOWANCE': workflow.env.MIN_DELETE_ALLOWANCE,
+    }).toEqual({
+      'workflow env.MAX_DELETE_PERCENT': String(
+        Math.round(readRuntimeConfig({}).maxPruneRatio * 100)
+      ),
+      'workflow env.MIN_DELETE_ALLOWANCE': String(TARGET_LANGS.length),
+    });
   });
 });
