@@ -11,6 +11,9 @@ image:
 lang: "zh"
 featured: true
 isDraft: false
+translationSourceHash: "7586bfc2c8375645439c90fb49b1669b1cc49c8f3ac391a4d605e79a6bc1ecb6"
+translatedAt: "2026-09-27T15:04:04.308Z"
+translationModel: "adopted-legacy"
 ---
 
 # 【完全五语支持】日英博客拓展至中韩西的史诗级三小时战记
@@ -111,7 +114,7 @@ async function translateToLanguage(inputFile, targetLang, body, frontmatter) {
 }
 ```
 
-https://github.com/Cor-Incorporated/corsweb2024/blob/develop/scripts/translate-blog-all-languages.js
+https://github.com/Cor-Incorporated/corsweb2024/blob/52f7f174d7f2b32cd655b5d3c0e786cf137ab9fa/scripts/translate-blog-all-languages.js
 
 ### 步骤三：与错误殊死搏斗
 

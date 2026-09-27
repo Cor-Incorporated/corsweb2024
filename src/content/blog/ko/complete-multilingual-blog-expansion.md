@@ -11,6 +11,9 @@ image:
 lang: "ko"
 featured: true
 isDraft: false
+translationSourceHash: "7586bfc2c8375645439c90fb49b1669b1cc49c8f3ac391a4d605e79a6bc1ecb6"
+translatedAt: "2026-09-27T15:04:04.309Z"
+translationModel: "adopted-legacy"
 ---
 
 # 【완전 5개 언어 지원】 영일 이중 언어만 지원하던 블로그를 중한서까지 확장한 격렬한 3시간 분투기
@@ -111,7 +114,7 @@ async function translateToLanguage(inputFile, targetLang, body, frontmatter) {
 }
 ```
 
-https://github.com/Cor-Incorporated/corsweb2024/blob/develop/scripts/translate-blog-all-languages.js
+https://github.com/Cor-Incorporated/corsweb2024/blob/52f7f174d7f2b32cd655b5d3c0e786cf137ab9fa/scripts/translate-blog-all-languages.js
 
 ### 단계 3: 오류와의 사투
 

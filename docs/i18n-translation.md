@@ -197,9 +197,9 @@ git push
 - PAT の代わりに GitHub App のインストールトークンを使う場合は、`actions/create-github-app-token` で発行したトークンを push ジョブだけに渡す形に変更します（App の権限は Contents: Read and write のみ。translate ジョブには渡さない）。
 - PAT は発行者本人の権限で push されます（コミットの作者は `github-actions[bot]`）。退職・権限変更で失効するため、長期運用するなら PAT より GitHub App が適しています。
 
-## 8. 初回移行（既存の翻訳 72 件 + 未翻訳 40 件）
+## 8. 初回移行（既存の翻訳 68 件 + 未翻訳 40 件）
 
-2026-09-27 時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言語）、`untracked=72`（blog 10 本・cases 6 本・news 2 本 × 4 言語）。
+PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言語）、`untracked=68`（blog 9 本・cases 6 本・news 2 本 × 4 言語）、`ok=4`（`blog/complete-multilingual-blog-expansion` は、リンクの修正と同時に PR #339 で採用済み）。
 
 1. このブランチを develop → main までマージする（workflow_dispatch は main にワークフローが必要）
 2. 既存翻訳の扱いを決める

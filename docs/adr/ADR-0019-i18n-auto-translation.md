@@ -36,7 +36,7 @@
 
 ## 影響
 - 翻訳ファイルに `translationSourceHash` / `translatedAt` / `translationModel` が増える。`src/content/config.ts` の `z.object` は未知キーを捨てるため、ビルド・型に影響しない（2026-09-27、既存 72 翻訳に付与した状態で `npm run build` 成功を確認）。
-- 既存の 72 翻訳は `untracked`。移行時に `--adopt`（そのまま採用）か `--retranslate-untracked`（再翻訳）を選ぶ。手順は `docs/i18n-translation.md`。
+- 既存の 72 翻訳は `untracked`（うち 1 記事 4 件は、旧スクリプトへのリンク修正と同時に PR #339 で採用済み。残り 68 件）。移行時に `--adopt`（そのまま採用）か `--retranslate-untracked`（再翻訳）を選ぶ。手順は `docs/i18n-translation.md`。
 - 人が翻訳ファイルを直接直しても、ja が次に変わった時点で CI が上書きする（派生物のため）。訳の手直しが必要なら ja 側の表現を調整する。
 - 機械翻訳による対外表現の変化（ADR-0007）: `blog-guardrails.mjs` は日本語表現を検査するため訳文には効かない。プロンプトで「主張の確度を強めも弱めもしない」を指示し、PR の差分で人が確認する。訳文向けの機械検査は今後の課題。
 - 運用に必要な設定: secret `GEMINI_API_KEY`（必須）、secret `TRANSLATION_BOT_TOKEN`（任意。リスクは運用文書 6 章）、variable `GEMINI_MODEL`（任意）。
