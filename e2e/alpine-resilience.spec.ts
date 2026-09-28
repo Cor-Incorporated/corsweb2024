@@ -65,7 +65,7 @@ test.describe('Alpine without CDN (ADR-0017)', () => {
   });
 
   // ネットワーク経由のスクリプト（Alpine を含むモジュール）を止め、インラインのスクリプトだけが動く状態の初期表示。
-  // TODO（フォローアップ）: この状態ではファーストビューの [data-reveal] が opacity 0 のまま残る（html.js は
+  // TODO(#346): この状態ではファーストビューの [data-reveal] が opacity 0 のまま残る（html.js は
   // インラインで付くが、表示を戻す IntersectionObserver はモジュール側にある）。以前からの設計のため別途扱う。
   test('renders sensible defaults while network scripts are blocked (inline scripts only)', async ({ page }) => {
     await page.route('**/*', (route) =>
