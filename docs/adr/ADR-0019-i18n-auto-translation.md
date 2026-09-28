@@ -1,6 +1,6 @@
 # ADR-0019 コンテンツの多言語化は ja を正本とし、他言語は CI が Gemini で差分翻訳・検証して専有する
 
-## ステータス: Proposed (2026-09-27)
+## ステータス: Accepted (2026-09-28)（Proposed 2026-09-27。既存記事の初回移行を develop で実施した: PR #353・#354）
 
 ## 背景
 - CEO 決定: ブログ・ニュース・実績の全記事を 5 言語（ja / en / zh / ko / es）で出す。以前 Gemini を手動で呼んでいたスクリプトを活かし、自動翻訳にする。CMS は Sveltia CMS（Git ベース）を採用予定で、CMS は ja だけを編集する。
@@ -39,11 +39,12 @@
 ## 影響
 - 翻訳ファイルに `translationSourceHash` / `translatedAt` / `translationModel` が増える。`src/content/config.ts` の `z.object` は未知キーを捨てるため、ビルド・型に影響しない（2026-09-27、既存 72 翻訳に付与した状態で `npm run build` 成功を確認）。
 - 既存の 72 翻訳は `untracked`（うち 1 記事 4 件は、旧スクリプトへのリンク修正と同時に PR #339 で採用済み。残り 68 件）。移行時に `--adopt`（そのまま採用）か `--retranslate-untracked`（再翻訳）を選ぶ。手順は `docs/i18n-translation.md`。
+- 初回移行（2026-09-28、develop）: 採用（run 36385011470 → PR #353、68 ファイル。本文と値は来歴の 3 キー以外は変えていない）と、未翻訳の翻訳（run 36386199640 → PR #354、blog 9 本 × 4 言語の 36 ファイル。残りの 1 本 × 4 言語は PR #344 の実 API 検証で翻訳済み）。両方のマージ後の `npm run i18n:check` は `ok=112`（それ以外の状態は 0）。
 - 人が翻訳ファイルを直接直しても、ja が次に変わった時点で CI が上書きする（派生物のため）。訳の手直しが必要なら ja 側の表現を調整する。
 - 機械翻訳による対外表現の変化（ADR-0007）: `blog-guardrails.mjs` は日本語表現を検査するため訳文には効かない。プロンプトで「主張の確度を強めも弱めもしない」を指示し、PR の差分で人が確認する。訳文向けの機械検査は今後の課題。
 - 運用に必要な設定: secret `GEMINI_API_KEY`（必須）、secret `TRANSLATION_BOT_TOKEN`（任意。リスクは運用文書 6 章）、variable `GEMINI_MODEL`（任意）。
 - 残るリスク: 翻訳ジョブは PR head のコードを `GEMINI_API_KEY` 付きで実行する（同一リポジトリの PR だけ）。書き込み権限者は PR でワークフローを書き換えれば secrets を読み出せる（GitHub の仕様）。キー漏えい時は AI Studio で削除・再発行する。
-- 実 API での確認（2026-09-27、PR #344、1 記事 × 4 言語）: translate（run 36329614066、75 秒）→ 検査済みパッチの push（翻訳コミット 6883105）→ dispatch-check による i18n-check の起動（run 36329711063）までは動いた。その i18n-check は、テストの一時 git リポジトリの後片付けが git の自動メンテナンスと競合する flaky なテスト（`ENOTEMPTY`）で failure になった（テストは本 PR で修正。修正後に同じ経路を通す確認はまだ）。翻訳コミット後の pull_request の実行（run 36329708078）は action_required。見つかった社名の表記ゆれ・H1 と title の不一致は、決定 7 と決定 3 の対応で決定的にそろえる。
+- 実 API での確認（2026-09-27、PR #344、1 記事 × 4 言語）: translate（run 36329614066、75 秒）→ 検査済みパッチの push（翻訳コミット 6883105）→ dispatch-check による i18n-check の起動（run 36329711063）までは動いた。その i18n-check は、テストの一時 git リポジトリの後片付けが git の自動メンテナンスと競合する flaky なテスト（`ENOTEMPTY`）で failure になった（テストは PR #339 で修正）。修正後の run 36359737684（2026-09-27）では translate → push（翻訳コミット d967a78、4 ファイル）→ dispatch-check → i18n-check がすべて success。翻訳コミット後の pull_request の実行（run 36329708078）は action_required。見つかった社名の表記ゆれ・H1 と title の不一致は、決定 7 と決定 3 の対応で決定的にそろえる。
 - Gemini API の従量課金が発生する（未翻訳 40 件の一括翻訳で数ドル以内の見込み・推定）。
 - 関連: ADR-0006（UI 文言の正本を 1 つにする原則。Superseded 後も正本は `src/i18n/locales/*.json` の 1 つ。本 ADR はそれを置き換えず、同じ原則をコンテンツへ拡張する）、ADR-0017（静的 Astro の継続）、ADR-0018（CMS は ja だけを編集する）、ADR-0007（対外表現ガードレール）、ADR-0008 / ADR-0009（記事 bot・静的 SSG 方針。bot トークンに GitHub App を使う場合は同様の最小権限にする）。hreflang の出し分けは別途対応する。
 
