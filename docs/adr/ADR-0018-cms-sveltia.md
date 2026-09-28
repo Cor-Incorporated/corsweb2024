@@ -18,7 +18,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
   - サイトは Astro の静的出力で、Firebase Hosting の静的配信（ADR-0017）。
   - 本文は `src/content/<collection>/<lang>/<slug>.md`（blog / news / cases × ja / en / zh / ko / es）。スキーマは `src/content/config.ts`。ja が原文。
   - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019）。
-  - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop も 2026-09-27 に保護を設定した（PR 必須・承認 0 件・必須チェック 2 本・管理者にも適用）。2026-09-28 には push 制限を加え、develop に merge できるのは terisuke と cloudia-Cor だけにした。
+  - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop も 2026-09-27 に保護を設定した（PR 必須・承認 0 件・必須チェック 2 本・管理者にも適用）。2026-09-28 には push 制限を加え、develop に merge できるのは terisuke と cloudia-Cor だけにした。同日、`verify`（PR ごとのテスト・ビルド・dist の監査）を develop と main の必須チェックに加えた（develop 3 本・main 5 本）。
   - Sveltia CMS は、ログインした GitHub のトークンをブラウザの localStorage に保存する。GitHub の OAuth App のトークンには有効期限がなく、取り消すまで有効である。localStorage はオリジン単位なので、同じオリジンで動くスクリプトはすべてトークンを読める。要求するスコープは `public_repo,user` で、そのユーザーが書き込める全ての公開リポジトリに及ぶ。
   - 公開サイト（cor-jp.com）には CSP が無く、計測や reCAPTCHA などの第三者スクリプトを読み込んでいる（2026-09-28 のレビューで確認）。
 
