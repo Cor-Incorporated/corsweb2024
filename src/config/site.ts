@@ -63,11 +63,16 @@ export function isAnalyticsEnabled(enabled: boolean): boolean {
   return enabled && isProductionSite();
 }
 
-/** robots メタタグの値（Layout / BlogSeoMeta 共通） */
-export function getRobotsContent(): string {
-  return isProductionSite()
-    ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
-    : 'noindex, nofollow';
+/**
+ * robots メタタグの値（Layout / BlogSeoMeta 共通）。
+ * `noindex` はページ単位の除外（タグ一覧・検証用・404 等。判定の正本は config/indexing.ts）。
+ * リンクは辿らせたいので production では `noindex, follow` にする。
+ */
+export function getRobotsContent({ noindex = false }: { noindex?: boolean } = {}): string {
+  if (!isProductionSite()) return 'noindex, nofollow';
+  return noindex
+    ? 'noindex, follow'
+    : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 }
 
 export function getGriftBaseUrl(): string {
