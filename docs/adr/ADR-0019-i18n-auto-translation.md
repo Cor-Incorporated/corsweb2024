@@ -9,7 +9,7 @@
   - SDK `@google/generative-ai` は 2025-11-30 でサポート終了（<https://github.com/google-gemini/deprecated-generative-ai-js>）。モデル ID はプレビュー版 `gemini-2.5-flash-lite-preview-06-17` の直書き。
   - 手動実行・全文上書きで、ja が変わったかどうかの判定（鮮度）が無い。
   - 出力の検証が無い（コードブロック・URL・画像パスも訳文に含めて送り、壊れても気づけない。frontmatter は "Title:" 行の文字列解析）。
-- UI 文言の i18n は ADR-0006 で `src/utils/i18n.ts` を唯一の正本にしたが、Content Collections（`src/content/<collection>/<lang>/*.md`）には同等の「正本と派生物」の取り決めが無かった。
+- UI 文言の i18n は ADR-0006 で正本を 1 つにした（現在の正本は `src/i18n/locales/*.json`。ADR-0006 は 2026-09-27 に Superseded）が、Content Collections（`src/content/<collection>/<lang>/*.md`）には同等の「正本と派生物」の取り決めが無かった。
 
 ## 決定
 1. **正本は ja**。`src/content/{blog,news,cases}/ja/*.md` だけを人（CMS）が編集し、`en / zh / ko / es` は翻訳 CI が生成・更新・削除する派生物とする。
@@ -45,7 +45,7 @@
 - 残るリスク: 翻訳ジョブは PR head のコードを `GEMINI_API_KEY` 付きで実行する（同一リポジトリの PR だけ）。書き込み権限者は PR でワークフローを書き換えれば secrets を読み出せる（GitHub の仕様）。キー漏えい時は AI Studio で削除・再発行する。
 - 実 API での確認（2026-09-27、PR #344、1 記事 × 4 言語）: translate（run 36329614066、75 秒）→ 検査済みパッチの push（翻訳コミット 6883105）→ dispatch-check による i18n-check の起動（run 36329711063）までは動いた。その i18n-check は、テストの一時 git リポジトリの後片付けが git の自動メンテナンスと競合する flaky なテスト（`ENOTEMPTY`）で failure になった（テストは本 PR で修正。修正後に同じ経路を通す確認はまだ）。翻訳コミット後の pull_request の実行（run 36329708078）は action_required。見つかった社名の表記ゆれ・H1 と title の不一致は、決定 7 と決定 3 の対応で決定的にそろえる。
 - Gemini API の従量課金が発生する（未翻訳 40 件の一括翻訳で数ドル以内の見込み・推定）。
-- 関連: ADR-0006（UI 文言の正本。本 ADR はそれを置き換えず、同じ原則をコンテンツへ拡張する）、ADR-0007（対外表現ガードレール）、ADR-0008 / ADR-0009（記事 bot・静的 SSG 方針。bot トークンに GitHub App を使う場合は同様の最小権限にする）。hreflang の出し分けは別途対応する。
+- 関連: ADR-0006（UI 文言の正本を 1 つにする原則。Superseded 後も正本は `src/i18n/locales/*.json` の 1 つ。本 ADR はそれを置き換えず、同じ原則をコンテンツへ拡張する）、ADR-0017（静的 Astro の継続）、ADR-0018（CMS は ja だけを編集する）、ADR-0007（対外表現ガードレール）、ADR-0008 / ADR-0009（記事 bot・静的 SSG 方針。bot トークンに GitHub App を使う場合は同様の最小権限にする）。hreflang の出し分けは別途対応する。
 
 ## 代替案
 - **手動スクリプトの継続（旧方式）**: 実行漏れで翻訳が止まった実績があり、SDK もサポート終了。鮮度判定と検証が無く、壊れた訳が混入しても気づけないため却下。

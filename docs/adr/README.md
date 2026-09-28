@@ -35,7 +35,7 @@
 - **Phase2（C案UI刷新・新ページ）**: ADR-0004／ADR-0005 Phase2 着手。
 - **Phase3（公開前・導線真実性・有料入口・証拠）**: ADR-0010／ADR-0011／ADR-0007 証拠ルール。
 - **Phase4（Cloudia 統合）**: ADR-0005 rev／ADR-0012（org 移管・Cloudflare・フォーム代用カットオーバー）。
-- **2026Q4（HP リニューアル、Epic #330）**: ADR-0017（静的 Astro の継続）／ADR-0018（CMS: Sveltia、Proposed）／ADR-0019（翻訳パイプライン、作成予定）／ADR-0020（ブログ CTA と intent、Proposed）。同時期に ADR-0001〜0003・0006 を Superseded、ADR-0008・0009（yomimono 部分）を Deprecated とした。
+- **2026Q4（HP リニューアル、Epic #330）**: ADR-0017（静的 Astro の継続）／ADR-0018（CMS: Sveltia、Proposed）／ADR-0019（翻訳パイプライン、Proposed）／ADR-0020（ブログ CTA と intent、Proposed）。同時期に ADR-0001〜0003・0006 を Superseded、ADR-0008・0009（yomimono 部分）を Deprecated とした。
 
 ## intent 正本（他リポ共通・7 キー、ADR-0014）
 

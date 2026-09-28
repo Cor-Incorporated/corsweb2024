@@ -17,7 +17,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 - 制約:
   - サイトは Astro の静的出力で、Firebase Hosting の静的配信（ADR-0017）。
   - 本文は `src/content/<collection>/<lang>/<slug>.md`（blog / news / cases × ja / en / zh / ko / es）。スキーマは `src/content/config.ts`。ja が原文。
-  - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019、別 PR で作成予定）。
+  - 全記事を 5 言語で出す。ja を含む PR に、翻訳 CI が他の 4 言語を同じ PR へ追加する（ADR-0019）。
   - main はブランチ保護で PR 経由の更新のみ（必須チェック・承認 1 件）。main への PR は develop からのみ。develop も 2026-09-27 に保護を設定した（PR 必須・承認 0 件・必須チェック 2 本・管理者にも適用）。2026-09-28 には push 制限を加え、develop に merge できるのは terisuke と cloudia-Cor だけにした。
   - Sveltia CMS は、ログインした GitHub のトークンをブラウザの localStorage に保存する。GitHub の OAuth App のトークンには有効期限がなく、取り消すまで有効である。localStorage はオリジン単位なので、同じオリジンで動くスクリプトはすべてトークンを読める。要求するスコープは `public_repo,user` で、そのユーザーが書き込める全ての公開リポジトリに及ぶ。
   - 公開サイト（cor-jp.com）には CSP が無く、計測や reCAPTCHA などの第三者スクリプトを読み込んでいる（2026-09-28 のレビューで確認）。
@@ -86,7 +86,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 - 最初に cor-jp-web に作ったサイト `cor-jp-cms` は使わない（退役予定）。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
-- 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019、別 PR で作成予定）。
+- 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019 の決定 6: 既定は GITHUB_TOKEN で push し、i18n-check だけ workflow_dispatch で再実行する。追加操作なしで全 CI を回すなら任意の TRANSLATION_BOT_TOKEN）。
 - ja 記事の削除や slug の変更で翻訳ファイルが孤立しないよう、翻訳 CI 側で追随する。
 - スキーマが `config.yml` と `src/content/config.ts` の二重管理になるため、照合テストで結ぶ。
 - Sveltia は 1.0 未満で、主な保守者が 1 人。版の固定と Decap への退避手順を維持する。
@@ -103,4 +103,4 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 ## 関連
 
-ADR-0007（対外表現ガードレール）、ADR-0017（静的 Astro の継続）、ADR-0019（翻訳パイプライン、別 PR で作成予定）
+ADR-0007（対外表現ガードレール）、ADR-0017（静的 Astro の継続）、ADR-0019（翻訳パイプライン）
