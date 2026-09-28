@@ -3,7 +3,9 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { findServerOutputRemnants, findUnreachableBundles } from './dist-bundle-reachability.mjs';
 
-const DIST_DIR = path.resolve('dist');
+// 監査する出力先（既定は ./dist）。CI はカレンダーありの 2 回目のビルド（$RUNNER_TEMP/dist-calendar）も
+// AUDIT_DIST_DIR で渡して監査する（.github/workflows/ci.yml）。
+const DIST_DIR = path.resolve(process.env.AUDIT_DIST_DIR || 'dist');
 const TEXT_EXTENSIONS = new Set([
   '.css',
   '.html',
@@ -202,7 +204,7 @@ const auditBundleReachability = async (violations, files) => {
 const main = async () => {
   const distStat = await stat(DIST_DIR).catch(() => null);
   if (!distStat?.isDirectory()) {
-    throw new Error('[dist-security] dist/ not found. Run npm run build first.');
+    throw new Error(`[dist-security] ${DIST_DIR} not found. Run npm run build first (or set AUDIT_DIST_DIR).`);
   }
 
   const files = await walk(DIST_DIR);
