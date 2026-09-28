@@ -3,10 +3,16 @@ import { ViewTransitions } from 'astro:transitions';
 import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
 import CloudiaLauncher from '../components/contact/CloudiaLauncher.astro';
+import AlpineInit from '../components/layout/AlpineInit.astro';
+import ThemeInit from '../components/layout/ThemeInit.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
 import { getRobotsContent } from '../config/site';
+import { safeJsonLd } from '../utils/json-ld';
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
+import { ORGANIZATION_NAMES } from '../config/organization';
+import { isNoindexPath } from '../config/indexing';
 
 interface Props {
   description: string;
@@ -69,12 +75,14 @@ const ogImage = ogImageProp
     ? new URL(`/og/page/${ogPageSlug}.png`, Astro.site)
     : new URL('/logo.png', Astro.site);
 const usesGeneratedOgImage = !ogImageProp && Boolean(ogPageSlug);
+const isHome = ogBaseKey === '/';
 // Preview / develop は noindex（ADR-0010）。canonical は本番向きのままでよい。
-const robotsContent = getRobotsContent();
+// タグ一覧・検証用・404 等は production でも noindex（判定の正本は config/indexing.ts。sitemap と共有）。
+const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathname) });
 ---
 
 <!doctype html>
-<html lang={currentLocale} x-cloak x-data :class="{ 'dark': $store.theme?.isDark || false }">
+<html lang={currentLocale} x-data :class="{ 'dark': $store.theme?.isDark || false }">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -116,7 +124,8 @@ const robotsContent = getRobotsContent();
     {usesGeneratedOgImage && <meta property="og:image:height" content="630" />}
     <meta property="og:image:alt" content={socialTitle} />
     <meta property="og:locale" content={OG_LOCALES[currentLocale]} />
-    <meta property="og:site_name" content="Cor.Inc." />
+    {/* サイト名は WebSite.name と同じ正本（config/organization.ts のロケール別社名） */}
+    <meta property="og:site_name" content={ORGANIZATION_NAMES[currentLocale]} />
     <meta property="article:author" content="寺田康佑" />
     
     <!-- Twitter -->
@@ -129,90 +138,14 @@ const robotsContent = getRobotsContent();
     <meta name="twitter:image" content={ogImage} />
     <meta name="twitter:image:alt" content={socialTitle} />
     
-    <!-- Structured Data - Organization -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Cor.株式会社",
-        "legalName": "Cor.株式会社",
-        "alternateName": ["Cor.株式会社", "Cor.Inc."],
-        "url": "https://cor-jp.com",
-        "logo": "https://cor-jp.com/logo.png",
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer service",
-          "availableLanguage": ["Japanese", "English"]
-        },
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "福岡県福岡市中央区天神",
-          "addressLocality": "福岡市",
-          "addressRegion": "福岡県",
-          "postalCode": "810-0001",
-          "addressCountry": "JP"
-        },
-        "sameAs": [
-          "https://github.com/Cor-Incorporated",
-          "https://x.com/cor_terisuke",
-          "https://www.linkedin.com/in/kousuketerada/",
-          "https://www.facebook.com/kousuke.terada.35",
-          "https://note.com/cor_instrument",
-          "https://qiita.com/terisuke",
-          "https://zenn.dev/cloudia"
-        ],
-        "founder": {
-          "@type": "Person",
-          "name": "寺田康佑",
-          "alternateName": ["寺田 康佑", "Kosuke Terada", "Terada Kosuke", "寺田 康佑 CEO", "寺田康佑 代表取締役", "テラダコウスケ", "terisuke", "テリスケ"],
-          "jobTitle": "代表取締役",
-          "worksFor": {
-            "@type": "Organization",
-            "name": "Cor.株式会社"
-          }
-        }
-      }
-    </script>
-    
-    <!-- FAQ Schema for better search visibility -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "どのようなサービスを提供していますか？",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "AI受託開発、AI顧問・AI研修、ローカルLLM・セキュアAI、自社AIツールGriftなど、現場の課題をAIで解決するサービスを提供しています。"
-            }
-          },
-          {
-            "@type": "Question", 
-            "name": "対応可能な地域はどこですか？",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "福岡を拠点としていますが、オンラインでの対応により全国のお客様にサービスを提供しています。"
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "代表取締役の寺田康佑について教えてください",
-            "acceptedAnswer": {
-              "@type": "Answer", 
-              "text": "寺田康佑（terisuke）は、AI・DX分野の専門家として、Python開発、機械学習、アプリ開発において豊富な経験を持ち、企業のデジタル変革を支援しています。"
-            }
-          }
-        ]
-      }
-    </script>
+    <!-- Structured Data - Organization（@id 固定・ロケール別表記・会社アカウントのみ。FAQPage は Q&A を表示するページだけ） -->
+    <script type="application/ld+json" is:inline set:html={safeJsonLd(buildOrganizationJsonLd(currentLocale))} />
+    {/* WebSite はトップページに出す（検索結果のサイト名の認識に使われる。ブログ記事は BlogStructuredData が出す） */}
+    {isHome && <script type="application/ld+json" is:inline set:html={safeJsonLd(buildWebSiteJsonLd(currentLocale))} />}
     <!-- Performance optimizations -->
     <link rel="preload" href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="//fonts.gstatic.com" />
-    <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
     <link rel="dns-prefetch" href="//ssgform.com" />
 
     <title>{title}</title>
@@ -222,6 +155,8 @@ const robotsContent = getRobotsContent();
     <script is:inline>
       document.documentElement.classList.add('js');
     </script>
+    <!-- テーマ（dark クラス）を初回描画前に適用（FOUC 防止。Alpine 非依存） -->
+    <ThemeInit />
 
     <!-- Critical inline CSS for fastest initial render - v4 cache bust -->
     <style is:inline>
@@ -395,94 +330,8 @@ const robotsContent = getRobotsContent();
     </main>
     <Footer />
     {CLOUDIA_LAUNCHER_ENABLED && cloudiaLauncher && <CloudiaLauncher />}
-    <script data-cfasync="false">
-      // Global store fallback - ストアが未定義の場合のデフォルト値
-      // @ts-ignore
-      window.alpineStoreDefaults = {
-        theme: { isDark: false, toggle: () => {} },
-        lang: { current: 'ja', toggle: () => {} }
-      };
-
-      // Alpine.jsストア初期化 - 確実にAlpine読み込み前に実行
-      // @ts-ignore
-      window.alpineInitStores = function() {
-        // @ts-ignore
-        if (!window.Alpine) return;
-        
-        // @ts-ignore
-        Alpine.store('theme', {
-          isDark: document.documentElement.classList.contains('dark'),
-          toggle() {
-            this.isDark = !this.isDark;
-            document.documentElement.classList.toggle('dark', this.isDark);
-            localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
-          },
-        });
-        
-        // @ts-ignore
-        Alpine.store('lang', {
-          current: document.documentElement.lang,
-          toggle() {
-            const localeOrder = ['ja', 'en', 'zh', 'ko', 'es'];
-            const currentIndex = localeOrder.indexOf(this.current);
-            const nextIndex = (currentIndex + 1) % localeOrder.length;
-            const newLang = localeOrder[nextIndex];
-            
-            const currentPath = window.location.pathname;
-            let newPath;
-            
-            if (newLang === 'ja') {
-              newPath = currentPath.replace(/^\/(en|zh|ko|es)/, '') || '/';
-            } else {
-              newPath = currentPath.replace(/^\/(en|zh|ko|es)/, '') || '/';
-              newPath = newPath === '/' ? `/${newLang}` : `/${newLang}${newPath}`;
-            }
-            
-            window.location.href = newPath;
-          }
-        });
-        
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          // @ts-ignore
-          console.log('Alpine stores initialized:', !!Alpine.store('theme'), !!Alpine.store('lang'));
-        }
-      };
-
-      // Alpine.js読み込み前にストア初期化を確実に実行
-      // @ts-ignore
-      document.addEventListener('alpine:init', function() {
-        // @ts-ignore
-        window.alpineInitStores();
-      });
-      
-      // 代替手段 - scriptタグ実行直後に待機開始
-      (function ensureAlpineStores() {
-        // @ts-ignore
-        if (window.Alpine && typeof window.Alpine.store === 'function') {
-          // @ts-ignore
-          window.alpineInitStores();
-        } else {
-          setTimeout(ensureAlpineStores, 5);
-        }
-      })();
-      
-      // 最終手段 - DOMContentLoadedでも確認
-      document.addEventListener('DOMContentLoaded', function() {
-        // @ts-ignore
-        if (window.Alpine && typeof window.alpineInitStores === 'function') {
-          // @ts-ignore
-          window.alpineInitStores();
-        }
-      });
-    </script>
-    <!-- Alpine.js本体 - Cloudflare Rocket Loader無効化 -->
-    <script 
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"
-      integrity="sha384-O8NPfezTLQ/sgLfQYBJEnezJLlum9L6KOqHsfIWauzaFfD1TQSuvA4iUpgWGHeuZ"
-      crossorigin="anonymous"
-      data-cfasync="false"
-      defer
-    ></script>
+    <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
+    <AlpineInit />
     <!-- no-JS fallback -->
     <noscript>
       <style>[x-cloak]{ display: block !important; }</style>
@@ -490,18 +339,6 @@ const robotsContent = getRobotsContent();
         JavaScriptが無効なため、一部機能がご利用いただけません。
       </div>
     </noscript>
-    <!-- CSP例: script-src 'self' https://cdn.jsdelivr.net; -->
-    <script data-cfasync="false">
-      // ダークモードの初期設定（ちらつき防止）
-      (() => {
-        const theme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (!theme && prefersDark)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
-    
     <script data-cfasync="false">
       // フォント読み込み検知
       if ('fonts' in document) {

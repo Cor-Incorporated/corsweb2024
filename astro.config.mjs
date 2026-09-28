@@ -3,6 +3,13 @@ import tailwind from '@astrojs/tailwind';
 import compress from 'astro-compress';
 import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
+import { remarkHasMath } from './src/utils/remark-has-math';
+import { fileURLToPath } from 'node:url';
+import { includeInSitemap } from './src/config/indexing';
+import { collectBlogLastmod } from './src/config/sitemap';
+
+// 記事 URL → lastmod（updatedDate ?? pubDate）。記事以外の URL には lastmod を付けない（Epic #330 / #334）。
+const blogLastmod = collectBlogLastmod(fileURLToPath(new URL('./src/content/blog/', import.meta.url)));
 
 export default defineConfig({
   site: 'https://cor-jp.com',
@@ -27,6 +34,8 @@ export default defineConfig({
         showImage: true,
         imagePosition: 'right'
       }],
+      // 数式の有無を remarkPluginFrontmatter.hasMath に記録（KaTeX CSS を数式記事だけで読むため）
+      remarkHasMath,
     ],
     rehypePlugins: [
       'rehype-slug',
@@ -41,14 +50,11 @@ export default defineConfig({
   },
   integrations: [
     tailwind(), 
+    // HTML キーは指定しない（= astro-compress 既定の html-minifier-terser 設定。これまでの実効設定と同じ）。
+    // 以前ここにあった 'remove-comments' / 'remove-tags' / 'minify-js' / 'minify-css' は astro-compress 2.x が
+    // 読まない無効キーだった（効いていれば JSON-LD を全削除する 'remove-tags' まで含んでいた）。
     compress({
       CSS: true,
-      HTML: {
-        'remove-comments': true,
-        'remove-tags': ['script[type="application/ld+json"]'],
-        'minify-js': true,
-        'minify-css': true
-      },
       Image: false,
       JavaScript: true,
       SVG: true
@@ -56,7 +62,6 @@ export default defineConfig({
     sitemap({
       changefreq: 'weekly',
       priority: 0.7,
-      lastmod: new Date(),
       i18n: {
         defaultLocale: 'ja',
         locales: {
@@ -67,30 +72,13 @@ export default defineConfig({
           es: 'es'
         }
       },
-      customPages: [
-        'https://cor-jp.com/blog',
-        'https://cor-jp.com/en/blog',
-        'https://cor-jp.com/news',
-        'https://cor-jp.com/blog/category/ai',
-        'https://cor-jp.com/blog/category/engineering',
-        'https://cor-jp.com/blog/category/founder',
-        'https://cor-jp.com/blog/category/lab',
-      ],
-      filter: (page) => {
-        // Exclude API routes and build assets.
-        if (page.includes('/api/') ||
-            page.includes('/_astro/') ||
-            page.includes('/remark-link-card-plus/')) {
-          return false;
-        }
-        // Exclude non-indexable utility / test / payment-callback pages
-        // (slug must be the final path segment, optionally locale-prefixed, so
-        //  real blog posts like /blog/test-blog-foo are NOT excluded).
-        if (/\/(styleguide|test-blog|tip-success|tip-cancelled)\/?$/.test(page)) {
-          return false;
-        }
-        return true;
-      }
+      // noindex のページ（タグ一覧・検証用・決済コールバック・404・/contact/chat/）と非ページを除外。
+      // 判定は Layout の meta robots と同じ src/config/indexing.ts を使う（ずれを構造的に防ぐ）。
+      filter: includeInSitemap,
+      serialize: (item) => {
+        const lastmod = blogLastmod.get(new URL(item.url).pathname);
+        return lastmod ? { ...item, lastmod } : item;
+      },
     }), 
     compressor({
       gzip: true,
@@ -104,16 +92,11 @@ export default defineConfig({
     optimizeDeps: {
       exclude: []
     },
+    // rollupOptions.output の出力名を上書きしない。上書きは Astro のサーバー描画（SSR）ビルドにも効き、
+    // 記事本文を含む SSR チャンクが公開ディレクトリ dist/_astro/*.js に残っていた（Epic #330 / #337）。
+    // クライアント用の名前は Astro 既定でも _astro/[name].[hash].js になる。
     build: {
       minify: 'terser',
-      rollupOptions: {
-        output: {
-          manualChunks: undefined,
-          entryFileNames: '_astro/[name].[hash].js',
-          chunkFileNames: '_astro/[name].[hash].js',
-          assetFileNames: '_astro/[name].[hash].[ext]'
-        }
-      }
     },
     plugins: [
       // 必要に応じてViteプラグインを追加

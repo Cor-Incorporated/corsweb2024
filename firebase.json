@@ -111,7 +111,16 @@
         ]
       },
       {
-        "source": "**/*.@(js|css)",
+        "source": "/images/blog/**/*.svg",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "sandbox; default-src 'none'"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css|woff|woff2|ttf)",
         "headers": [
           {
             "key": "Cache-Control",

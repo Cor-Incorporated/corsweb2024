@@ -1,6 +1,8 @@
 # ADR-0002 ホスティングを Firebase App Hosting（cor-jp-web）＋Astro SSR に移行（静的SSGから）
 
-## ステータス: Accepted (2026-06-13)
+## ステータス: Superseded by ADR-0017 (2026-09-27)
+
+旧ステータス: Accepted (2026-06-13)。SSR 移行は実施されず、サイトは `firebase.json`（public: `dist`）の静的配信のまま。静的 Astro の継続を ADR-0017 で決定した。以下は当時の記録。
 
 ## 背景
 - 現行は `firebase.json`（public: `dist`）の純静的 Hosting で、`.github/workflows/deploy.yml` が `projectId: cor-jp-web` ＋ `FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB` で固定。ライブ `cor-jp-main.web.app` の稼働を確認済。
