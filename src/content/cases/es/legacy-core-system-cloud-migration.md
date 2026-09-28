@@ -1,14 +1,17 @@
 ---
-title: 'Migración a la nube de un sistema central heredado — ordenar 25 años de datos para poder heredarlos'
-description: 'Proyecto de migración progresiva a la nube de la base de datos central de una institución educativa, operada durante unos 25 años, separando los hechos confirmados de las hipótesis por verificar.'
-category: 'ai-contract'
-tags: ['migración a la nube', 'sistema central', 'PostgreSQL', 'migración de datos']
+title: "Migración a la nube de un sistema central heredado — ordenar 25 años de datos para poder heredarlos"
+description: "Proyecto de migración progresiva a la nube de la base de datos central de una institución educativa, operada durante unos 25 años, separando los hechos confirmados de las hipótesis por verificar."
+category: "ai-contract"
+tags: ["migración a la nube", "sistema central", "PostgreSQL", "migración de datos"]
 publishedAt: 2026-07-02
-summary: 'Estamos migrando a la nube la base de datos central de una institución educativa, operada durante unos 25 años, empezando por un análisis que separa hechos de hipótesis y avanzando por fases.'
-securityNote: 'Este proyecto está sujeto a un NDA, por lo que publicamos de forma abstracta la información que podría identificar al cliente o al sistema.'
+summary: "Estamos migrando a la nube la base de datos central de una institución educativa, operada durante unos 25 años, empezando por un análisis que separa hechos de hipótesis y avanzando por fases."
+securityNote: "Este proyecto está sujeto a un NDA, por lo que publicamos de forma abstracta la información que podría identificar al cliente o al sistema."
 isDraft: false
 featured: false
-lang: 'es'
+lang: "es"
+translationSourceHash: "37960edd140adde429710164d510afa265da98478bd7fcb0f13018c5be949384"
+translatedAt: "2026-09-28T06:09:16.043Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Desafío

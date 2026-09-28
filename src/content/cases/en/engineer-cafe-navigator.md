@@ -1,13 +1,16 @@
 ---
-title: 'Engineer Cafe Navigator — Multilingual voice AI supporting a reception desk, released as OSS'
-description: 'A look at our work building a multilingual voice AI reception agent for Engineer Cafe in Fukuoka City on a multi-agent architecture, and releasing it as open source.'
-category: 'ai-contract'
-tags: ['Voice AI', 'Multi-agent', 'RAG', 'OSS', 'Multilingual']
+title: "Engineer Cafe Navigator — Multilingual voice AI supporting a reception desk, released as OSS"
+description: "A look at our work building a multilingual voice AI reception agent for Engineer Cafe in Fukuoka City on a multi-agent architecture, and releasing it as open source."
+category: "ai-contract"
+tags: ["Voice AI", "Multi-agent", "RAG", "OSS", "Multilingual"]
 publishedAt: 2026-07-02
-summary: 'We developed and now run a multilingual voice AI agent that supports the reception desk at Engineer Cafe in Fukuoka City, built on a multi-agent architecture and published as OSS under the ISC license.'
+summary: "We developed and now run a multilingual voice AI agent that supports the reception desk at Engineer Cafe in Fukuoka City, built on a multi-agent architecture and published as OSS under the ISC license."
 isDraft: false
 featured: true
-lang: 'en'
+lang: "en"
+translationSourceHash: "f1d9811033cd2eeb1dce387db8407c3fd02863f9cae4c4cff8084d191ca6fdd3"
+translatedAt: "2026-09-28T06:09:16.028Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Challenge

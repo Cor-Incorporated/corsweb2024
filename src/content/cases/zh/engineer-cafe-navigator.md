@@ -1,13 +1,16 @@
 ---
-title: 'Engineer Cafe Navigator —— 以多语言语音 AI 支撑接待的 OSS 实绩'
-description: '介绍我们为福冈市 Engineer Cafe 开发多语言语音 AI 接待智能体、以多智能体架构实装并作为 OSS 公开的实绩。'
-category: 'ai-contract'
-tags: ['语音 AI', '多智能体', 'RAG', 'OSS', '多语言支持']
+title: "Engineer Cafe Navigator —— 以多语言语音 AI 支撑接待的 OSS 实绩"
+description: "介绍我们为福冈市 Engineer Cafe 开发多语言语音 AI 接待智能体、以多智能体架构实装并作为 OSS 公开的实绩。"
+category: "ai-contract"
+tags: ["语音 AI", "多智能体", "RAG", "OSS", "多语言支持"]
 publishedAt: 2026-07-02
-summary: '我们以多智能体架构开发并实际运维支撑福冈市 Engineer Cafe 接待工作的多语言语音 AI 智能体，并以 ISC 许可证作为 OSS 公开。'
+summary: "我们以多智能体架构开发并实际运维支撑福冈市 Engineer Cafe 接待工作的多语言语音 AI 智能体，并以 ISC 许可证作为 OSS 公开。"
 isDraft: false
 featured: true
-lang: 'zh'
+lang: "zh"
+translationSourceHash: "f1d9811033cd2eeb1dce387db8407c3fd02863f9cae4c4cff8084d191ca6fdd3"
+translatedAt: "2026-09-28T06:09:16.033Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 课题

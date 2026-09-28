@@ -1,14 +1,17 @@
 ---
-title: '机密数据 AI 应用诊断 —— 在交出去之前，先一起梳理处理方式'
-description: '介绍这项诊断服务的内容：在把合同、客户信息等机密数据用于 AI 之前，先从信息的设计开始与您一同思考。'
-category: 'confidential-ai'
-tags: ['机密数据', 'AI 应用诊断', '本地 LLM', '安全']
+title: "机密数据 AI 应用诊断 —— 在交出去之前，先一起梳理处理方式"
+description: "介绍这项诊断服务的内容：在把合同、客户信息等机密数据用于 AI 之前，先从信息的设计开始与您一同思考。"
+category: "confidential-ai"
+tags: ["机密数据", "AI 应用诊断", "本地 LLM", "安全"]
 publishedAt: 2026-07-02
-summary: '想把合同、会议纪要、客户信息用于 AI，却无法就这样交给外部 AI。面对这样的困扰，我们不急着开发，而是从梳理信息开始。'
-relatedSlugs: ['local-llm-poc']
+summary: "想把合同、会议纪要、客户信息用于 AI，却无法就这样交给外部 AI。面对这样的困扰，我们不急着开发，而是从梳理信息开始。"
+relatedSlugs: ["local-llm-poc"]
 isDraft: false
 featured: true
-lang: 'zh'
+lang: "zh"
+translationSourceHash: "eaac26262096196ef50f76a62b92316ea31feaa5bf1239f905556a365edb685e"
+translatedAt: "2026-09-28T06:09:16.032Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 课题

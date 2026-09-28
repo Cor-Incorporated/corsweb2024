@@ -1,14 +1,17 @@
 ---
-title: '本地 LLM／AI 基础设施 PoC —— 备齐可供判断的依据'
-description: '介绍这项 PoC 服务的内容：面向无法把机密数据交给外部 AI 的业务，用 3 个月备齐可判断是否投产的依据。'
-category: 'local-llm'
-tags: ['本地 LLM', 'PoC', '安全 AI', 'AI 基础设施']
+title: "本地 LLM／AI 基础设施 PoC —— 备齐可供判断的依据"
+description: "介绍这项 PoC 服务的内容：面向无法把机密数据交给外部 AI 的业务，用 3 个月备齐可判断是否投产的依据。"
+category: "local-llm"
+tags: ["本地 LLM", "PoC", "安全 AI", "AI 基础设施"]
 publishedAt: 2026-07-02
-summary: '因为有机密数据，无法把全部内容交给云端 AI；可本地 LLM 是否真能用于业务，自家又判断不了。这项 3 个月的 PoC，正是要从这种状态出发，备齐可判断是否投产的依据。'
-relatedSlugs: ['confidential-data-ai-assessment']
+summary: "因为有机密数据，无法把全部内容交给云端 AI；可本地 LLM 是否真能用于业务，自家又判断不了。这项 3 个月的 PoC，正是要从这种状态出发，备齐可判断是否投产的依据。"
+relatedSlugs: ["confidential-data-ai-assessment"]
 isDraft: false
 featured: false
-lang: 'zh'
+lang: "zh"
+translationSourceHash: "33f83b15c265210a24ee60d462581cdc34b0e4631f22d4ae5397b9ee967f7307"
+translatedAt: "2026-09-28T06:09:16.035Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 课题

@@ -10,6 +10,9 @@ image:
   alt: "YouTube LIVEの企画"
 lang: "en"
 featured: true
+translationSourceHash: "a97ec2074a35e85ec15b09d1bda3dc8ecd0ba3aad616a0b27e12e504e1a2fea7"
+translatedAt: "2026-09-28T06:09:16.003Z"
+translationModel: "adopted-legacy"
 ---
 
 # 【Lightning Fast 15 Minutes】Making an MCP Server with an MCP Server! The Development Story of "The 'Make it Nice' App"

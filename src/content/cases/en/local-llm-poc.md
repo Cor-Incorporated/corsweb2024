@@ -1,14 +1,17 @@
 ---
-title: 'Local LLM / AI platform PoC — Putting the material for a decision in your hands'
-description: 'A look inside the PoC service that spends three months assembling the material you need to decide on production, for work where confidential data cannot be sent to an external AI.'
-category: 'local-llm'
-tags: ['Local LLM', 'PoC', 'Secure AI', 'AI platform']
+title: "Local LLM / AI platform PoC — Putting the material for a decision in your hands"
+description: "A look inside the PoC service that spends three months assembling the material you need to decide on production, for work where confidential data cannot be sent to an external AI."
+category: "local-llm"
+tags: ["Local LLM", "PoC", "Secure AI", "AI platform"]
 publishedAt: 2026-07-02
-summary: 'You hold confidential data, so you cannot send everything to a cloud AI. Yet you cannot judge on your own whether a local LLM will really hold up in your work. This three-month PoC takes you from there to a point where you can decide on production.'
-relatedSlugs: ['confidential-data-ai-assessment']
+summary: "You hold confidential data, so you cannot send everything to a cloud AI. Yet you cannot judge on your own whether a local LLM will really hold up in your work. This three-month PoC takes you from there to a point where you can decide on production."
+relatedSlugs: ["confidential-data-ai-assessment"]
 isDraft: false
 featured: false
-lang: 'en'
+lang: "en"
+translationSourceHash: "33f83b15c265210a24ee60d462581cdc34b0e4631f22d4ae5397b9ee967f7307"
+translatedAt: "2026-09-28T06:09:16.031Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Challenge

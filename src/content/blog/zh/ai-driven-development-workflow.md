@@ -7,6 +7,9 @@ category: "ai"
 tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "zh"
 featured: true
+translationSourceHash: "e44a175f9b52f956850c28731e793da30a7af7639f6841f41f631a9c03f67fbd"
+translatedAt: "2026-09-28T06:09:16.007Z"
+translationModel: "adopted-legacy"
 ---
 
 ## AI 驱动开发，效率提升 7 倍：我的亲身经历

@@ -1,14 +1,17 @@
 ---
-title: 'PoC de LLM local y plataforma de IA — reunimos los elementos para poder decidir'
-description: 'Presentamos en qué consiste el servicio de PoC que, en tres meses, reúne los elementos necesarios para decidir el paso a producción en procesos cuyos datos confidenciales no pueden enviarse a una IA externa.'
-category: 'local-llm'
-tags: ['LLM local', 'PoC', 'IA segura', 'plataforma de IA']
+title: "PoC de LLM local y plataforma de IA — reunimos los elementos para poder decidir"
+description: "Presentamos en qué consiste el servicio de PoC que, en tres meses, reúne los elementos necesarios para decidir el paso a producción en procesos cuyos datos confidenciales no pueden enviarse a una IA externa."
+category: "local-llm"
+tags: ["LLM local", "PoC", "IA segura", "plataforma de IA"]
 publishedAt: 2026-07-02
-summary: 'Hay datos confidenciales y no se puede enviar todo a una IA en la nube, pero la propia empresa tampoco puede juzgar si un LLM local sirve realmente para su trabajo. Es una PoC de tres meses que parte de ese punto y reúne los elementos para decidir el paso a producción.'
-relatedSlugs: ['confidential-data-ai-assessment']
+summary: "Hay datos confidenciales y no se puede enviar todo a una IA en la nube, pero la propia empresa tampoco puede juzgar si un LLM local sirve realmente para su trabajo. Es una PoC de tres meses que parte de ese punto y reúne los elementos para decidir el paso a producción."
+relatedSlugs: ["confidential-data-ai-assessment"]
 isDraft: false
 featured: false
-lang: 'es'
+lang: "es"
+translationSourceHash: "33f83b15c265210a24ee60d462581cdc34b0e4631f22d4ae5397b9ee967f7307"
+translatedAt: "2026-09-28T06:09:16.043Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Desafío

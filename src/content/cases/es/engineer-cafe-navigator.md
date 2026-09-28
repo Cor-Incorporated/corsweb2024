@@ -1,13 +1,16 @@
 ---
-title: 'Engineer Cafe Navigator — un proyecto de código abierto que apoya la recepción con IA de voz multilingüe'
-description: 'Presentamos el proyecto en el que desarrollamos, con una arquitectura multiagente, un agente de recepción con IA de voz multilingüe para el Engineer Cafe de la ciudad de Fukuoka, publicado como código abierto.'
-category: 'ai-contract'
-tags: ['IA de voz', 'multiagente', 'RAG', 'OSS', 'soporte multilingüe']
+title: "Engineer Cafe Navigator — un proyecto de código abierto que apoya la recepción con IA de voz multilingüe"
+description: "Presentamos el proyecto en el que desarrollamos, con una arquitectura multiagente, un agente de recepción con IA de voz multilingüe para el Engineer Cafe de la ciudad de Fukuoka, publicado como código abierto."
+category: "ai-contract"
+tags: ["IA de voz", "multiagente", "RAG", "OSS", "soporte multilingüe"]
 publishedAt: 2026-07-02
-summary: 'Desarrollamos y mantenemos en producción un agente de IA de voz multilingüe con arquitectura multiagente que apoya la recepción del Engineer Cafe de Fukuoka, publicado como código abierto bajo licencia ISC.'
+summary: "Desarrollamos y mantenemos en producción un agente de IA de voz multilingüe con arquitectura multiagente que apoya la recepción del Engineer Cafe de Fukuoka, publicado como código abierto bajo licencia ISC."
 isDraft: false
 featured: true
-lang: 'es'
+lang: "es"
+translationSourceHash: "f1d9811033cd2eeb1dce387db8407c3fd02863f9cae4c4cff8084d191ca6fdd3"
+translatedAt: "2026-09-28T06:09:16.041Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Desafío

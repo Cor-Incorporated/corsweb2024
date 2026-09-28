@@ -10,6 +10,9 @@ image:
   alt: "高性能Webサイトのイメージ"
 lang: "es"
 featured: true
+translationSourceHash: "85871aef8ac9f5e6f95e4d9a1ce2058781b6b9ae5ea5ff7d34f3ba23b7574b4e"
+translatedAt: "2026-09-28T06:09:16.020Z"
+translationModel: "adopted-legacy"
 ---
 
 # La historia de cómo intenté superar la página web de Hiroshi Abe y creé una página web increíble

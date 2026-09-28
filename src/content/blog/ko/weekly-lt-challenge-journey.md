@@ -7,6 +7,9 @@ category: "founder"
 tags: ["LT", "成長", "コミュニティ", "起業", "エンジニア"]
 lang: "ko"
 featured: true
+translationSourceHash: "325f48c7497ecead1646e12ca98fef0b2c3f57c2c331dad99a9bf5ee42a9738c"
+translatedAt: "2026-09-28T06:09:16.019Z"
+translationModel: "adopted-legacy"
 ---
 
 # 매주 LT 발표를 1년 동안 지속했더니 인생이 완전히 달라졌다

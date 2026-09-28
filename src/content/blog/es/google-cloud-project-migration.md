@@ -10,6 +10,9 @@ image:
   alt: "Google Cloud Platform ロゴ"
 lang: "es"
 featured: false
+translationSourceHash: "65d2d8e4ee3fb4c439d95c88fea7fca7e8286479aa45bbc964a3c502518304aa"
+translatedAt: "2026-09-28T06:09:16.025Z"
+translationModel: "adopted-legacy"
 ---
 
 # Cómo la migración completa de un proyecto de Google Cloud entre organizaciones se completó en un día

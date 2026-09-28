@@ -1,14 +1,17 @@
 ---
-title: 'Cloud migration of a legacy core system — Carrying 25 years of data forward, in order'
-description: 'How we migrated a core database at an educational institution, run for roughly 25 years, to the cloud in stages while separating established facts from hypotheses.'
-category: 'ai-contract'
-tags: ['Cloud migration', 'Core system', 'PostgreSQL', 'Data migration']
+title: "Cloud migration of a legacy core system — Carrying 25 years of data forward, in order"
+description: "How we migrated a core database at an educational institution, run for roughly 25 years, to the cloud in stages while separating established facts from hypotheses."
+category: "ai-contract"
+tags: ["Cloud migration", "Core system", "PostgreSQL", "Data migration"]
 publishedAt: 2026-07-02
-summary: 'At an educational institution, we began with a survey that separated established facts from hypotheses, and are carrying a core database of roughly 25 years to the cloud through a staged migration.'
-securityNote: 'This project is under NDA, so the client name, the system name, and other identifying information are presented in abstracted form.'
+summary: "At an educational institution, we began with a survey that separated established facts from hypotheses, and are carrying a core database of roughly 25 years to the cloud through a staged migration."
+securityNote: "This project is under NDA, so the client name, the system name, and other identifying information are presented in abstracted form."
 isDraft: false
 featured: false
-lang: 'en'
+lang: "en"
+translationSourceHash: "37960edd140adde429710164d510afa265da98478bd7fcb0f13018c5be949384"
+translatedAt: "2026-09-28T06:09:16.030Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Challenge

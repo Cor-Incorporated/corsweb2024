@@ -10,6 +10,9 @@ image:
   alt: "YouTube LIVEの企画"
 lang: "ko"
 featured: true
+translationSourceHash: "a97ec2074a35e85ec15b09d1bda3dc8ecd0ba3aad616a0b27e12e504e1a2fea7"
+translatedAt: "2026-09-28T06:09:16.018Z"
+translationModel: "adopted-legacy"
 ---
 
 # 【초고속 15분】MCP 서버로 MCP 서버 만들기! "적당히 알아서 해주는 앱" 개발 비화
