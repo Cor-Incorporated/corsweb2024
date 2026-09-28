@@ -244,12 +244,15 @@ async function buildPatch(change, files = DEFAULT_FILES) {
   return ctx;
 }
 
-/** 攻撃者の経路: 信頼しない translate ジョブが任意のパッチを作った想定（git の既定どおり改名も検出する）。 */
-async function craftPatch(change, files = DEFAULT_FILES) {
+/**
+ * 攻撃者の経路: 信頼しない translate ジョブが任意のパッチを作った想定（git の既定どおり改名も検出する）。
+ * edit でパッチの文字列を書き換えられる（git diff が作らない形、例えばテキストのハンクの NUL を作るため）。
+ */
+async function craftPatch(change, files = DEFAULT_FILES, edit = (patch) => patch) {
   const ctx = await baseRepo(files);
   await change(ctx.repo);
   git(ctx.repo, 'add', '--', '.');
-  const patch = git(ctx.repo, 'diff', '--cached', '--binary');
+  const patch = edit(git(ctx.repo, 'diff', '--cached', '--binary'));
   resetToBase(ctx.repo);
   await writeFile(path.join(ctx.runnerTemp, 'i18n-patch/translation.patch'), patch);
   return ctx;
@@ -411,6 +414,25 @@ describe(
         expect(result.staged).toEqual([]);
       }
     );
+
+    // #339 最終レビュー LOW-1: テキストのハンクに NUL を入れると、numstat はテキスト扱いで (1) を通り、
+    // bash の read が NUL を捨てるので 1 行目が "---" に見えて (5) も通っていた
+    it.each([
+      ['追加', 'src/content/blog/en/nul.md'],
+      ['変更', 'src/content/blog/en/keep.md'],
+    ])('NUL を含む .md（テキストのハンクの "---\\0"）の%sは拒否する', async (_name, file) => {
+      const ctx = await craftPatch(
+        (repo) => writeFile(path.join(repo, file), '---X\ntitle: "x"\n---\n\nBody.\n'),
+        DEFAULT_FILES,
+        (patch) => patch.replace('\n+---X\n', '\n+---\0\n')
+      );
+      const patch = readFileSync(path.join(ctx.runnerTemp, 'i18n-patch/translation.patch'));
+      expect(patch.includes(Buffer.from('+---\0\n')), 'パッチに NUL を入れられていません').toBe(true);
+      const result = runVerify(ctx);
+      expect(result.code, result.output).toBe(1);
+      expect(result.output).toContain(`NUL を含むファイルは適用しません: ${file}`);
+      expect(result.staged).toEqual([]);
+    });
 
     const EIGHT = Object.fromEntries(
       Array.from({ length: 8 }, (_, i) => [`src/content/blog/en/p${i}.md`, article(`P${i}`)])
