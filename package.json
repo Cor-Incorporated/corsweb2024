@@ -49,6 +49,7 @@
     "firebase": "^10.7.1",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
+    "katex": "^0.16.22",
     "marked": "^15.0.12",
     "prettier": "3.0.2",
     "prettier-plugin-astro": "0.12.0",
@@ -72,6 +73,7 @@
     "happy-dom": "^18.0.1",
     "jsdom": "^26.1.0",
     "playwright": "^1.53.1",
+    "semver": "^7.7.2",
     "vite": "^5.4.19",
     "vitest": "^3.2.4"
   }

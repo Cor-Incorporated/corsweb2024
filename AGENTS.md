@@ -273,7 +273,9 @@ GEMINI_API_KEY=your_gemini_api_key_here
   - Enhanced SEO with structured data (Article, BreadcrumbList)
   - Auto-generated OGP images at `/og/[slug].svg`
   - Multilingual hreflang tags (5 languages)
-  - KaTeX CSS for math rendering
+  - KaTeX CSS for math rendering: self-hosted (`katex` from npm, inlined by
+    `src/components/blog/KatexStyles.astro`) and emitted only on posts that contain
+    math (`remarkPluginFrontmatter.hasMath` from `src/utils/remark-has-math.ts`)
   - Performance optimizations (critical CSS, Web Vitals)
 
 ### Blog Components

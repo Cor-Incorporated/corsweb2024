@@ -53,7 +53,8 @@ const routeMatches = (source, requestPath) => {
   if (source === '/images/blog/**/*.svg') {
     return requestPath.startsWith('/images/blog/') && /\.svg$/i.test(requestPath);
   }
-  if (source === '**/*.@(js|css)') return /\.(js|css)$/i.test(requestPath);
+  // 自前ホストのフォント（KaTeX 等。/_astro/ にハッシュ付きで出力）も JS/CSS と同じく immutable
+  if (source === '**/*.@(js|css|woff|woff2|ttf)') return /\.(js|css|woff|woff2|ttf)$/i.test(requestPath);
   if (source === '**/*.@(jpg|jpeg|png|gif|webp|avif|svg)') {
     return /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(requestPath);
   }
@@ -114,7 +115,7 @@ const main = async () => {
   requireRouteHeader(violations, headers, '**/*.html', 'Pragma', 'no-cache');
   requireRouteHeader(violations, headers, '**/*.html', 'Expires', '0');
 
-  requireRouteHeader(violations, headers, '**/*.@(js|css)', 'Cache-Control', /immutable/);
+  requireRouteHeader(violations, headers, '**/*.@(js|css|woff|woff2|ttf)', 'Cache-Control', /immutable/);
   requireRouteHeader(
     violations,
     headers,
@@ -140,6 +141,10 @@ const main = async () => {
   requireEffectiveHeader(violations, headers, '/blog/', 'Cache-Control', /no-cache/);
   requireEffectiveHeader(violations, headers, '/blog/index.html', 'Cache-Control', /no-cache/);
   requireEffectiveHeader(violations, headers, '/assets/app.js', 'Cache-Control', /immutable/);
+  // 自前ホストのフォント（/_astro/ にハッシュ付きで出力される）の代表パス
+  for (const font of ['/_astro/example-font.woff2', '/_astro/example-font.woff', '/_astro/example-font.ttf']) {
+    requireEffectiveHeader(violations, headers, font, 'Cache-Control', /immutable/);
+  }
   requireEffectiveHeader(violations, headers, '/og/page/home.png', 'Cache-Control', /immutable/);
   requireEffectiveHeader(violations, headers, '/sitemap-index.xml', 'Cache-Control', /max-age=86400/);
 

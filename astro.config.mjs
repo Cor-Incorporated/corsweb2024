@@ -3,6 +3,7 @@ import tailwind from '@astrojs/tailwind';
 import compress from 'astro-compress';
 import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
+import { remarkHasMath } from './src/utils/remark-has-math';
 import { fileURLToPath } from 'node:url';
 import { includeInSitemap } from './src/config/indexing';
 import { collectBlogLastmod } from './src/config/sitemap';
@@ -33,6 +34,8 @@ export default defineConfig({
         showImage: true,
         imagePosition: 'right'
       }],
+      // 数式の有無を remarkPluginFrontmatter.hasMath に記録（KaTeX CSS を数式記事だけで読むため）
+      remarkHasMath,
     ],
     rehypePlugins: [
       'rehype-slug',
