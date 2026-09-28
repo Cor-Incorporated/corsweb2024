@@ -1,8 +1,11 @@
 ---
-// ブログ記事の構造化データ (JSON-LD): Article/BreadcrumbList/WebSite。
-// BlogLayout から抽出（出力は抽出前と同一）。
+// ブログ記事の構造化データ (JSON-LD): Article / BreadcrumbList / WebSite / Organization。
+// 生成ロジックは utils/blog-structured-data.ts と utils/structured-data.ts（vitest で検証）。
+// Organization ノードをこのページにも出し、Article の publisher / copyrightHolder の @id 参照を解決させる。
 import type { Locale } from '../../../utils/i18n';
 import { safeJsonLd } from '../../../utils/json-ld';
+import { buildBlogArticleJsonLd, buildBlogBreadcrumbJsonLd } from '../../../utils/blog-structured-data';
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../../../utils/structured-data';
 
 interface Props {
   title: string;
@@ -15,152 +18,21 @@ interface Props {
   tags: string[];
   // CollectionEntry 由来では url/alt が optional 推論になるため緩めに受ける
   image?: { url?: string; alt?: string };
-  estimatedReadingTime: number;
+  // 本文から数えた語数（ja / zh は文字数）。本文が無いページでは undefined。
+  wordCount?: number;
   currentLocale: Locale;
 }
 
-const {
-  title,
-  description,
-  keywords,
-  author,
-  pubDate,
-  updatedDate,
-  category,
-  tags,
-  image,
-  estimatedReadingTime,
-  currentLocale,
-} = Astro.props;
+const { currentLocale, ...article } = Astro.props;
+const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
-// Enhanced structured data for tech blog
-const articleJsonLd = {
-  "@context": "https://schema.org",
-  "@type": category === 'ai' || category === 'engineering' ? "TechArticle" : "BlogPosting",
-  "headline": title,
-  "description": description,
-  "keywords": keywords,
-  "inLanguage": currentLocale,
-  "author": {
-    "@type": "Person",
-    "@id": "https://cor-jp.com/about#terisuke",
-    "name": author,
-    "url": "https://cor-jp.com/about",
-    "sameAs": [
-      "https://twitter.com/cor_terisuke",
-      "https://github.com/Cor-Incorporated",
-      "https://www.linkedin.com/in/teradakousuke/"
-    ]
-  },
-  "datePublished": pubDate.toISOString(),
-  "dateModified": (updatedDate || pubDate).toISOString(),
-  "publisher": {
-    "@type": "Organization",
-    "@id": "https://cor-jp.com#organization",
-    "name": "Cor.inc",
-    "url": "https://cor-jp.com",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://cor-jp.com/logo.png",
-      "width": 400,
-      "height": 400
-    },
-    "sameAs": [
-      "https://twitter.com/cor_terisuke",
-      "https://github.com/Cor-Incorporated"
-    ]
-  },
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": new URL(Astro.url.pathname, Astro.site).toString()
-  },
-  "url": new URL(Astro.url.pathname, Astro.site).toString(),
-  "articleSection": category,
-  "articleBody": description, // This should ideally be the full content
-  "wordCount": estimatedReadingTime * 200, // Estimated based on reading time
-  "commentCount": 0,
-  "isAccessibleForFree": true,
-  "isFamilyFriendly": true,
-  "copyrightHolder": {
-    "@type": "Organization",
-    "@id": "https://cor-jp.com#organization"
-  },
-  "copyrightYear": new Date(pubDate).getFullYear(),
-  "genre": currentLocale === 'ja' ? "技術ブログ" : "Technology Blog",
-  "about": tags.map(tag => ({
-    "@type": "Thing",
-    "name": tag
-  })),
-  ...(image?.url && {
-    "image": {
-      "@type": "ImageObject",
-      "url": new URL(image.url, Astro.site).toString(),
-      "caption": image.alt,
-      "width": 1200,
-      "height": 630
-    }
-  }),
-  "speakable": {
-    "@type": "SpeakableSpecification",
-    "cssSelector": ["h1", "h2", "h3"]
-  }
-};
-
-const breadcrumbJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": currentLocale === 'ja' ? "ホーム" : "Home",
-      "item": `https://cor-jp.com${currentLocale === 'en' ? '/en' : ''}`
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": currentLocale === 'ja' ? "ブログ" : "Blog",
-      "item": `https://cor-jp.com${currentLocale === 'en' ? '/en' : ''}/blog`
-    },
-    {
-      "@type": "ListItem",
-      "position": 3,
-      "name": title
-    }
-  ]
-};
-
-// Website schema with search action for better search engine integration
-const websiteJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": "https://cor-jp.com#website",
-  "name": "Cor.inc",
-  "alternateName": currentLocale === 'ja' ? "コー株式会社" : "Cor Inc",
-  "url": "https://cor-jp.com",
-  "description": currentLocale === 'ja'
-    ? "AI技術でコミュニケーションの未来を創造する技術ブログ"
-    : "Creating the future of communication with AI technology - Tech Blog",
-  "publisher": {
-    "@type": "Organization",
-    "@id": "https://cor-jp.com#organization"
-  },
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": {
-      "@type": "EntryPoint",
-      "urlTemplate": `https://cor-jp.com${currentLocale === 'en' ? '/en' : ''}/blog?search={search_term_string}`
-    },
-    "query-input": "required name=search_term_string"
-  },
-  "inLanguage": [currentLocale],
-  "copyrightHolder": {
-    "@type": "Organization",
-    "@id": "https://cor-jp.com#organization"
-  }
-};
+const articleJsonLd = buildBlogArticleJsonLd({ ...article, locale: currentLocale, pageUrl });
+const breadcrumbJsonLd = buildBlogBreadcrumbJsonLd(currentLocale, article.title);
+const websiteJsonLd = buildWebSiteJsonLd(currentLocale);
+const organizationJsonLd = buildOrganizationJsonLd(currentLocale);
 ---
 
-<script type="application/ld+json" set:html={safeJsonLd(articleJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(breadcrumbJsonLd)} />
-<script type="application/ld+json" set:html={safeJsonLd(websiteJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(articleJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(breadcrumbJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(websiteJsonLd)} />
+<script type="application/ld+json" is:inline set:html={safeJsonLd(organizationJsonLd)} />

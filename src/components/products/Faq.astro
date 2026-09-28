@@ -1,5 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import { safeJsonLd } from '../../utils/json-ld';
+import { buildFaqPageJsonLd } from '../../utils/structured-data';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -12,7 +14,11 @@ type FaqQuestion = {
   linkLabel?: string;
 };
 const questions: FaqQuestion[] = t.faq.questions;
+// FAQPage は、この Q&A を本文に表示しているページにだけ、表示と同じデータから出す。
+const faqJsonLd = buildFaqPageJsonLd(questions);
 ---
+
+<script type="application/ld+json" is:inline set:html={safeJsonLd(faqJsonLd)} />
 
 <section class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">

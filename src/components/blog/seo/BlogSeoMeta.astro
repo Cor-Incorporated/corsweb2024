@@ -1,8 +1,8 @@
 ---
 // ブログ記事の基本SEOメタタグ: description/keywords/canonical/RSS/article:*/hreflang。
-// BlogLayout から抽出（出力は抽出前と同一）。
-import type { Locale } from '../../../utils/i18n';
+// hreflang は実在する翻訳だけ（utils/blog-structured-data.ts の buildBlogHreflang で生成）。
 import { getRobotsContent } from '../../../config/site';
+import type { HreflangLink } from '../../../utils/blog-structured-data';
 import { isNoindexPath } from '../../../config/indexing';
 
 interface Props {
@@ -13,11 +13,10 @@ interface Props {
   updatedDate?: Date;
   category: string;
   tags: string[];
-  currentLocale: Locale;
+  hreflangLinks: HreflangLink[];
 }
 
-const { description, keywords, author, pubDate, updatedDate, category, tags, currentLocale } =
-  Astro.props;
+const { description, keywords, author, pubDate, updatedDate, category, tags, hreflangLinks } = Astro.props;
 
 // Layout と同じ判定（config/indexing.ts）を通す。記事ページは現状 noindex 対象外だが、判定を 1 か所に保つ。
 const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathname) });
@@ -43,17 +42,5 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
 <meta property="article:section" content={category} />
 {tags.map(tag => <meta property="article:tag" content={tag} />)}
 
-<!-- Hreflang tags for bilingual SEO -->
-{currentLocale === 'ja' ? (
-  <>
-    <link rel="alternate" href={new URL(Astro.url.pathname, Astro.site)} hreflang="ja" />
-    <link rel="alternate" href={new URL(`/en${Astro.url.pathname}`, Astro.site)} hreflang="en" />
-    <link rel="alternate" href={new URL(Astro.url.pathname, Astro.site)} hreflang="x-default" />
-  </>
-) : (
-  <>
-    <link rel="alternate" href={new URL(Astro.url.pathname.replace('/en', '') || '/', Astro.site)} hreflang="ja" />
-    <link rel="alternate" href={new URL(Astro.url.pathname, Astro.site)} hreflang="en" />
-    <link rel="alternate" href={new URL(Astro.url.pathname.replace('/en', '') || '/', Astro.site)} hreflang="x-default" />
-  </>
-)}
+<!-- Hreflang: 実在する言語版のみ + x-default（どの言語版からも同じ集合を出して相互参照を保つ） -->
+{hreflangLinks.map((link) => <link rel="alternate" href={link.href} hreflang={link.hreflang} />)}

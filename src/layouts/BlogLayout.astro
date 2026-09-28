@@ -6,8 +6,10 @@ import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import AlpineInit from '../components/layout/AlpineInit.astro';
 import ThemeInit from '../components/layout/ThemeInit.astro';
-import { getCurrentLocale, type Locale } from '../utils/i18n';
-import { generateKeywords, estimateReadingTime } from '../utils/blog-seo';
+import { getCurrentLocale } from '../utils/i18n';
+import { generateKeywords } from '../utils/blog-seo';
+import { buildBlogHreflang, countContentWords } from '../utils/blog-structured-data';
+import { ORGANIZATION_NAMES } from '../config/organization';
 import BlogSeoMeta from '../components/blog/seo/BlogSeoMeta.astro';
 import BlogOgp from '../components/blog/seo/BlogOgp.astro';
 import BlogStructuredData from '../components/blog/seo/BlogStructuredData.astro';
@@ -50,8 +52,10 @@ const { title, description, pubDate, updatedDate, author, category, tags, image,
 const finalOgImage = ogImage || new URL(`/og/${post.slug}.png`, Astro.site).toString();
 const usesGeneratedOgImage = !ogImage;
 
-const estimatedReadingTime = estimateReadingTime(description);
 const keywords = generateKeywords(tags, category, currentLocale);
+// JSON-LD の wordCount は本文から数える（以前は description 由来の推定値 × 200 で全記事 200 固定だった）。
+const body = 'body' in post ? post.body : undefined;
+const wordCount = body ? countContentWords(body, currentLocale) : undefined;
 
 // この記事が翻訳されている言語を算出する（言語切替の飛び先判定用・#307）。記事の slug は
 // "{lang}/{cleanSlug}" 形式。同じ cleanSlug を持つ記事が存在する言語だけを対象にすることで、
@@ -62,22 +66,17 @@ const allBlogPosts = await getCollection('blog', ({ data }) => !data.isDraft);
 const articleLocales = ALL_LOCALES.filter((loc) =>
   allBlogPosts.some((p) => p.data.lang === loc && p.slug.replace(/^[a-z]{2}\//, '') === cleanSlug)
 );
+// hreflang も同じ articleLocales から出す（実在しない言語版を指して 404 にしない。ADR-0017）。
+const hreflangLinks = buildBlogHreflang(cleanSlug, articleLocales);
 
 // 検索結果に出るタイトル。会社名表記をロケール別の正式表記に統一（#306）。ブログは全5言語で
 // 出力されるため、日本語ブランドを全言語に固定してはいけない（英語記事に全角日本語が混入する）。
 // i18n の meta タイトルと同じ規約: CJK は全角｜、ラテンは半角パイプ。
 // なお全角｜を <title> のテンプレートに直書きすると astro-compress が誤動作しサフィックスが
 // </head> の外へ漏れるため、必ず1つの文字列変数として組み立ててから {pageTitle} で描画する。
-// Record<Locale,...> にして全ロケール網羅を型で強制する（6言語目を足したら型エラーで気づける）。
-const BLOG_BRAND: Record<Locale, string> = {
-  ja: 'Cor.株式会社',
-  zh: 'Cor.株式会社',
-  ko: 'Cor.주식회사',
-  en: 'Cor.Inc.',
-  es: 'Cor.Inc.',
-};
+// 表記の正本は config/organization.ts の ORGANIZATION_NAMES（JSON-LD の Organization.name と共有）。
 const brandSep = currentLocale === 'en' || currentLocale === 'es' ? ' | ' : '｜';
-const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
+const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
 
 ---
 
@@ -104,7 +103,7 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       updatedDate={updatedDate}
       category={category}
       tags={tags}
-      currentLocale={currentLocale}
+      hreflangLinks={hreflangLinks}
     />
 
     <BlogOgp
@@ -128,7 +127,7 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       category={category}
       tags={tags}
       image={image}
-      estimatedReadingTime={estimatedReadingTime}
+      wordCount={wordCount}
       currentLocale={currentLocale}
     />
     
