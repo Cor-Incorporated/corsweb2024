@@ -18,7 +18,7 @@
 ## 🏗️ 技術スタック
 
 - **Framework**: Astro 4.8.7 (Islands Architecture)
-- **Interactivity**: Alpine.js 3.14.0 (CDN配信)
+- **Interactivity**: Alpine.js 3.14（npm からバンドル。CDN 非依存）
 - **Styling**: Tailwind CSS + @tailwindcss/typography
 - **Hosting**: Firebase Hosting
 - **Language**: TypeScript
@@ -71,18 +71,18 @@ node scripts/translate-all-blog.js
 - **画像圧縮**: astro-compressで追加圧縮（平均60%削減）
 
 ### 2. アセット配信の最適化
-- **CDN配信**: Alpine.jsはCDNから配信（ブラウザキャッシュ活用）
+- **自己ホスト**: Alpine.js は npm からバンドルし同一オリジンで配信（外部 CDN の遮断・遅延で白紙にならない）
 - **DNS Prefetch**: 外部リソースのDNS解決を事前実行
   ```html
-  <link rel="preconnect" href="https://esm.sh" crossorigin>
-  <link rel="dns-prefetch" href="https://ssgform.com">
+  <link rel="dns-prefetch" href="//fonts.gstatic.com">
+  <link rel="dns-prefetch" href="//ssgform.com">
   ```
 - **長期キャッシュ**: Firebase設定で静的アセットは1年間キャッシュ
 
 ### 3. JavaScript最適化
 - **Islands Architecture**: Astroの部分的ハイドレーション
-- **遅延実行**: Alpine.jsはdefer属性で遅延実行
-- **インライン初期化**: ダークモード設定はインラインで即座に実行（ちらつき防止）
+- **遅延実行**: Alpine.js はモジュールスクリプト（defer 相当）で実行。`<html>` に x-cloak を付けないため起動前でも本文を描画
+- **インライン初期化**: ダークモード設定は `<head>` のインラインで即座に実行（ちらつき防止。View Transitions 後も再適用）
 - **最小限のバンドル**: 必要な機能のみを含む軽量実装
 
 ### 4. CSS最適化
@@ -146,7 +146,6 @@ src/
 │   ├── blog/        # ブログ専用コンポーネント
 │   ├── home/        # ホームページコンポーネント
 │   ├── layout/      # 共通レイアウト
-│   ├── performance/ # パフォーマンス監視
 │   ├── products/    # プロダクト紹介コンポーネント
 │   └── youtube/     # YouTube API統合コンポーネント
 ├── content/         # コンテンツコレクション
@@ -210,7 +209,7 @@ https://github.com
 - Service Workerによるオフライン対応
 - Resource Hintsの追加最適化
 - 画像のLazy Loading戦略の改善
-- Web Vitalsモニタリングの強化
+- Core Web Vitals の実測値（Cloudflare Web Analytics）を改善に使う仕組み
 - 翻訳精度のさらなる向上
 - ブログ管理UI/CMSの実装
 - 投げ銭履歴の管理機能

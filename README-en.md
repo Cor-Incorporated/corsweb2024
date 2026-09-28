@@ -18,7 +18,7 @@ A corporate website with extreme loading speed optimization. Achieves loading sp
 ## 🏗️ Tech Stack
 
 - **Framework**: Astro 4.8.7 (Islands Architecture)
-- **Interactivity**: Alpine.js 3.14.0 (CDN delivery)
+- **Interactivity**: Alpine.js 3.14 (bundled from npm, no CDN dependency)
 - **Styling**: Tailwind CSS + @tailwindcss/typography
 - **Hosting**: Firebase Hosting
 - **Language**: TypeScript
@@ -71,18 +71,18 @@ node scripts/translate-all-blog.js
 - **Image Compression**: Additional compression with astro-compress (60% average reduction)
 
 ### 2. Asset Delivery Optimization
-- **CDN Delivery**: Alpine.js delivered from CDN (utilizing browser cache)
+- **Self-hosted**: Alpine.js is bundled from npm and served from the same origin (a blocked or slow CDN can no longer blank the page)
 - **DNS Prefetch**: Pre-resolve DNS for external resources
   ```html
-  <link rel="preconnect" href="https://esm.sh" crossorigin>
-  <link rel="dns-prefetch" href="https://ssgform.com">
+  <link rel="dns-prefetch" href="//fonts.gstatic.com">
+  <link rel="dns-prefetch" href="//ssgform.com">
   ```
 - **Long-term Cache**: Static assets cached for 1 year in Firebase configuration
 
 ### 3. JavaScript Optimization
 - **Islands Architecture**: Astro's partial hydration
-- **Deferred Execution**: Alpine.js loaded with defer attribute
-- **Inline Initialization**: Dark mode settings execute inline immediately (prevents flicker)
+- **Deferred Execution**: Alpine.js runs as a module script (deferred). `<html>` has no x-cloak, so content renders before Alpine starts
+- **Inline Initialization**: Dark mode settings execute inline in `<head>` (prevents flicker; re-applied after View Transitions)
 - **Minimal Bundle**: Lightweight implementation with only necessary features
 
 ### 4. CSS Optimization
@@ -146,7 +146,6 @@ src/
 │   ├── blog/        # Blog-specific components
 │   ├── home/        # Homepage components
 │   ├── layout/      # Shared layouts
-│   ├── performance/ # Performance monitoring
 │   ├── products/    # Product showcase components
 │   └── youtube/     # YouTube API integration components
 ├── content/         # Content collections
@@ -210,7 +209,7 @@ https://github.com
 - Service Worker for offline support
 - Additional optimization of Resource Hints
 - Improved image Lazy Loading strategy
-- Enhanced Web Vitals monitoring
+- Using Core Web Vitals field data (Cloudflare Web Analytics) to drive improvements
 - Further improvement of translation accuracy
 - Blog management UI/CMS implementation
 - Tip history management feature

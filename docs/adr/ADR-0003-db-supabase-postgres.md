@@ -1,6 +1,8 @@
 # ADR-0003 DB に Supabase（Postgres・東京 ap-northeast-1・既存org再利用）を採用。PII は対象外（別管理）
 
-## ステータス: Accepted (2026-06-13)
+## ステータス: Superseded by ADR-0017 (2026-09-27)
+
+旧ステータス: Accepted (2026-06-13)。前提の StudioCMS（ADR-0001）が導入されず、コードからの Supabase 利用は 0 件。静的 Astro の継続（ADR-0017）と Git ベースの CMS（ADR-0018）により DB は不要になった。以下は当時の記録。
 
 ## 背景
 - StudioCMS（ADR-0001）は DB ストレージとして **libsql / postgresql / mysql の複数方言に対応**しており、`db.dialect` で選択する（StudioCMS 公式ドキュメント `config-reference` で確認済）。CMS コンテンツ（ブログ・お知らせ）の永続化に DB が必要。
