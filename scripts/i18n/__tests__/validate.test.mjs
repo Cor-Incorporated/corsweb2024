@@ -1,0 +1,420 @@
+// @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { bodyCore, parseDocument } from '../frontmatter.mjs';
+import { protect } from '../markdown.mjs';
+import {
+  checkBodyOutput,
+  checkFieldsOutput,
+  checkTokens,
+  compareStructure,
+  japaneseRatio,
+  unwrapOuterFence,
+} from '../validate.mjs';
+import { dropFirstBlockToken, fakeTranslate, JA_BLOG } from './helpers.mjs';
+
+const sourceCore = bodyCore(parseDocument(JA_BLOG).body);
+const { text: protectedText, store } = protect(sourceCore);
+const goodOutput = fakeTranslate(protectedText);
+const check = (output, lang = 'en') =>
+  checkBodyOutput({ output, finishReason: 'STOP', protectedText, store, sourceCore, lang });
+
+/** 正しい翻訳（復元済み）からコードブロックを 1 本取り除いた Markdown。 */
+function withoutFirstCodeFence(markdown) {
+  return markdown.replace(/```js\n[\s\S]*?\n```\n\n/, '');
+}
+
+describe('compareStructure (parity)', () => {
+  const translated = check(goodOutput).text;
+
+  it('accepts a translation with the same structure', () => {
+    expect(compareStructure(sourceCore, translated)).toEqual([]);
+  });
+
+  it('F2: a translation that lost one code fence is rejected', () => {
+    const broken = withoutFirstCodeFence(translated);
+    expect(broken).not.toBe(translated);
+    expect(compareStructure(sourceCore, broken)).toContain(
+      'コードブロックの数が一致しません（ja 2 / 翻訳 1）'
+    );
+  });
+
+  it.each([
+    [
+      'heading removed',
+      (t) => t.replace('### lorem\n', ''),
+      '見出し H3 の数が一致しません（ja 1 / 翻訳 0）',
+    ],
+    [
+      'heading level changed',
+      (t) => t.replace('## lorem', '### lorem'),
+      '見出し H2 の数が一致しません（ja 1 / 翻訳 0）',
+    ],
+    [
+      'image dropped',
+      (t) => t.replace(/!\[lorem\]\([^)]*\)/, ''),
+      '画像の数が一致しません（ja 1 / 翻訳 0）',
+    ],
+    [
+      'link URL changed',
+      (t) => t.replace('https://cor-jp.com', 'https://evil.example'),
+      'リンクの内容が一致しません',
+    ],
+    [
+      'link card dropped',
+      (t) => t.replace('https://github.com\n', ''),
+      'リンクカード行の数が一致しません（ja 1 / 翻訳 0）',
+    ],
+    [
+      'table row dropped',
+      (t) => t.replace('| A | lorem |\n', ''),
+      '表の行数が一致しません（ja 3 / 翻訳 2）',
+    ],
+    [
+      'code edited',
+      (t) => t.replace('console.log', 'console.error'),
+      'コードブロック #1 の内容が ja と一致しません',
+    ],
+    [
+      'math block dropped',
+      (t) => t.replace(/\$\$\nE = mc\^2\n\$\$\n/, ''),
+      '数式ブロックの数が一致しません（ja 1 / 翻訳 0）',
+    ],
+  ])('rejects: %s', (_name, mutate, message) => {
+    const broken = mutate(translated);
+    expect(broken).not.toBe(translated);
+    expect(compareStructure(sourceCore, broken).join('\n')).toContain(message);
+  });
+
+  // P7b: 見出し・コード・リンクの数が変わらない「段落 1 つ」「リスト項目 1 つ」の欠落も落とす。
+  it.each([
+    [
+      'P7b: paragraph dropped',
+      (t) => t.replace('Second paragraph stays in English.\n\n', ''),
+      '段落などのブロック数が一致しません（ja 13 / 翻訳 12）',
+    ],
+    [
+      'P7b: two paragraphs merged',
+      (t) =>
+        t.replace('\n\nSecond paragraph stays in English.', ' Second paragraph stays in English.'),
+      '段落などのブロック数が一致しません（ja 13 / 翻訳 12）',
+    ],
+    [
+      'P7b: list item dropped',
+      (t) => t.replace('- Third item\n', ''),
+      'リスト項目の数が一致しません（ja 3 / 翻訳 2）',
+    ],
+  ])('rejects: %s', (_name, mutate, message) => {
+    const broken = mutate(translated);
+    expect(broken).not.toBe(translated);
+    expect(compareStructure(sourceCore, broken)).toContain(message);
+  });
+
+  it('P7b: the model dropping a paragraph is rejected end-to-end (nothing to write)', () => {
+    const result = check(goodOutput.replace('Second paragraph stays in English.\n\n', ''));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain('段落などのブロック数が一致しません（ja 13 / 翻訳 12）');
+  });
+});
+
+describe('checkBodyOutput (tokens → restore → parity)', () => {
+  it('restores a well-formed translation', () => {
+    const result = check(goodOutput);
+    expect(result.ok).toBe(true);
+    expect(result.text).toContain('```js\n// コメントは訳さない\nconsole.log("こんにちは");\n```');
+    expect(result.text).toContain('[lorem](https://cor-jp.com)');
+    // 画像の宛先はそのまま、title（"タイトル"）は訳される（Codex 指摘）
+    expect(result.text).toContain('![lorem](/images/blog/図1.avif "lorem")');
+  });
+
+  it('F2: the model dropping one code-fence placeholder is rejected (nothing to write)', () => {
+    const result = check(dropFirstBlockToken(goodOutput));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toMatch(/プレースホルダ ⟦B\d+⟧ が欠落しています/);
+  });
+
+  it.each([
+    ['duplicated token', (t) => t.replace(/⟦P(\d+)⟧/, '⟦P$1⟧ ⟦P$1⟧'), /2 回出現しています/],
+    [
+      'mangled token',
+      (t) => t.replace(/⟦P(\d+)⟧/, '⟦P $1⟧'),
+      /欠落しています|壊れたプレースホルダ/,
+    ],
+    ['unknown token', (t) => `${t}\n⟦P999⟧`, /未知のプレースホルダ ⟦P999⟧/],
+    [
+      'block token merged into text',
+      (t) => t.replace(/\n\n(⟦B\d+⟧)/, ' $1'),
+      /単独行になっていません/,
+    ],
+    ['model invented a fence', (t) => `${t}\n\n\`\`\`\nextra\n\`\`\``, /コードフェンスがあります/],
+    ['Japanese left untranslated', () => protectedText, /日本語が残っています/],
+    ['empty output', () => '   ', /翻訳結果が空です/],
+  ])('rejects: %s', (_name, mutate, pattern) => {
+    const result = check(mutate(goodOutput));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toMatch(pattern);
+  });
+
+  it('rejects a truncated generation (finishReason != STOP)', () => {
+    const result = checkBodyOutput({
+      output: goodOutput,
+      finishReason: 'MAX_TOKENS',
+      protectedText,
+      store,
+      sourceCore,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors[0]).toMatch(/finishReason=MAX_TOKENS/);
+  });
+
+  it('unwraps a whole-document ```markdown fence added by the model', () => {
+    expect(check(`\`\`\`markdown\n${goodOutput}\n\`\`\``).ok).toBe(true);
+    expect(unwrapOuterFence('```\nonly\n```')).toBe('only');
+    expect(unwrapOuterFence('a\n```\nb\n```')).toBe('a\n```\nb\n```');
+  });
+});
+
+describe('リンク・画像の title の引用符が曲がった訳（“…”）は書き込まない（LOW-5）', () => {
+  // title を “…” にすると、宛先に空白が入った扱いになり、リンク・画像として解釈されなくなる
+  const source = '画像 ![図](/images/a.avif "図の説明") と [公式](https://cor-jp.com "会社の説明")';
+  const { text, store } = protect(source);
+  const curly = fakeTranslate(text).replaceAll('"lorem"', '“lorem”');
+
+  it('画像・リンクの数が ja と一致しないとして落とす', () => {
+    const result = checkBodyOutput({
+      output: curly,
+      finishReason: 'STOP',
+      protectedText: text,
+      store,
+      sourceCore: source,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        '画像の数が一致しません（ja 1 / 翻訳 0）',
+        'リンクの数が一致しません（ja 1 / 翻訳 0）',
+      ])
+    );
+  });
+
+  it('直線の引用符のままなら通る', () => {
+    const result = checkBodyOutput({
+      output: fakeTranslate(text),
+      finishReason: 'STOP',
+      protectedText: text,
+      store,
+      sourceCore: source,
+      lang: 'en',
+    });
+    expect(result.ok).toBe(true);
+    expect(result.text).toBe(
+      'lorem ![lorem](/images/a.avif "lorem") lorem [lorem](https://cor-jp.com "lorem")'
+    );
+  });
+});
+
+describe('japaneseRatio', () => {
+  it('counts kana + kanji for en/ko/es but only kana for zh', () => {
+    expect(japaneseRatio('これは日本語です', 'en')).toBe(1);
+    expect(japaneseRatio('这是中文', 'zh')).toBe(0);
+    expect(japaneseRatio('これは中文', 'zh')).toBeCloseTo(3 / 5);
+    expect(japaneseRatio('Plain English ⟦P0⟧', 'en')).toBe(0);
+  });
+});
+
+describe('checkTokens', () => {
+  it('passes when every expected token appears exactly once', () => {
+    expect(checkTokens('a ⟦P0⟧\n⟦B1⟧', 'x ⟦P0⟧\n⟦B1⟧')).toEqual([]);
+  });
+});
+
+describe('checkFieldsOutput', () => {
+  const input = {
+    title: 'タイトル',
+    description: '説明 https://example.com/a',
+    tags: ['お知らせ', 'AI'],
+  };
+  const run = (value, lang = 'en') =>
+    checkFieldsOutput({
+      output: typeof value === 'string' ? value : JSON.stringify(value),
+      finishReason: 'STOP',
+      input,
+      lang,
+    });
+
+  it('accepts same keys, same tag count, URLs kept', () => {
+    const result = run({
+      title: ' Title ',
+      description: 'Desc https://example.com/a',
+      tags: ['News', 'AI'],
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: { title: 'Title', description: 'Desc https://example.com/a', tags: ['News', 'AI'] },
+    });
+  });
+
+  it.each([
+    ['not JSON', 'Title: x', /JSON オブジェクト/],
+    ['missing key', { title: 'T', tags: ['a', 'b'] }, /キーが一致しません/],
+    [
+      'extra key',
+      { title: 'T', description: 'D https://example.com/a', tags: ['a', 'b'], lang: 'en' },
+      /キーが一致しません/,
+    ],
+    [
+      'tag count changed',
+      { title: 'T', description: 'D https://example.com/a', tags: ['a'] },
+      /要素数が一致しません/,
+    ],
+    [
+      'URL changed',
+      { title: 'T', description: 'D https://example.com/b', tags: ['a', 'b'] },
+      /URL が変わっています/,
+    ],
+    [
+      'empty value',
+      { title: ' ', description: 'D https://example.com/a', tags: ['a', 'b'] },
+      /空または文字列ではありません/,
+    ],
+    [
+      'newline injected',
+      { title: 'T\nU', description: 'D https://example.com/a', tags: ['a', 'b'] },
+      /改行が混入/,
+    ],
+    [
+      'left in Japanese',
+      { title: 'タイトル', description: '説明 https://example.com/a', tags: ['お知らせ', 'AI'] },
+      /日本語が残っています/,
+    ],
+  ])('rejects: %s', (_name, value, pattern) => {
+    const result = run(value);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toMatch(pattern);
+  });
+});
+
+describe('checkFieldsOutput — 社名トークン ⟦N…⟧', () => {
+  const input = { title: '導入は⟦N0⟧へ', source: '⟦N1⟧' };
+  const run = (value, lang = 'en') =>
+    checkFieldsOutput({ output: JSON.stringify(value), finishReason: 'STOP', input, lang });
+
+  it('トークンがそのまま残れば通り、モデルが書いた表記ゆれは正式表記にそろえる', () => {
+    expect(run({ title: 'Turn to ⟦N0⟧ (Cor. Inc.)', source: '⟦N1⟧' })).toEqual({
+      ok: true,
+      value: { title: 'Turn to ⟦N0⟧ (Cor.Inc.)', source: '⟦N1⟧' },
+    });
+  });
+
+  it.each([
+    [
+      'token dropped',
+      { title: 'Turn to Cor. Inc.', source: '⟦N1⟧' },
+      /title: プレースホルダ（社名）が一致しません/,
+    ],
+    [
+      'token duplicated',
+      { title: '⟦N0⟧ ⟦N0⟧', source: '⟦N1⟧' },
+      /title: プレースホルダ（社名）が一致しません/,
+    ],
+    [
+      'token moved to another field',
+      { title: 'Turn to ⟦N1⟧', source: '⟦N0⟧' },
+      /プレースホルダ（社名）が一致しません/,
+    ],
+    ['broken token', { title: 'Turn to ⟦N0', source: '⟦N1⟧' }, /予約文字 ⟦ ⟧ が混入/],
+  ])('rejects: %s', (_name, value, pattern) => {
+    const result = run(value);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toMatch(pattern);
+  });
+});
+
+// #339 Codex 最終レビュー P2-1: 行き先のプレースホルダだけを入れ替えた訳（[A](⟦P1⟧) [B](⟦P0⟧)）は、
+// 各トークンが 1 回ずつ現れるので多重集合の比較を通り、A が B の行き先を指したまま公開されうる。
+// 訳では語順が変わるのでラベルとは照合できない。ブロックごとに行き先のプレースホルダの出現順を ja とそろえる。
+describe('リンク・画像などの行き先の順序（ブロックごと。Codex P2-1）', () => {
+  const source =
+    '詳細は[公式サイト](https://cor-jp.com)と[GitHub](https://github.com/Cor-Incorporated)を参照。\n\n' +
+    '![構成図](/images/a.avif) と ![画面](/images/b.avif)\n\n' +
+    '- 手順は[ガイド](https://example.com/guide)を参照\n- 補足は[FAQ](https://example.com/faq)';
+  const { text, store: linkStore } = protect(source);
+  const run = (output) =>
+    checkBodyOutput({
+      output,
+      finishReason: 'STOP',
+      protectedText: text,
+      store: linkStore,
+      sourceCore: source,
+      lang: 'en',
+    });
+  const translated = fakeTranslate(text);
+  const idsOf = (kind) => [...linkStore].filter(([, e]) => e.kind === kind).map(([id]) => id);
+  /** 2 つのトークンを入れ替える（モデルが行き先だけを取り違えた事故）。 */
+  const swap = (output, a, b) =>
+    output.replace(new RegExp(`⟦(${a}|${b})⟧`, 'g'), (_m, id) => `⟦${id === a ? b : a}⟧`);
+
+  it('並びが同じなら通る', () => {
+    expect(run(translated).ok).toBe(true);
+  });
+
+  it.each([
+    ['同じ段落のリンク 2 つ', 'link-dest', 0, 1, 1],
+    ['同じ段落の画像 2 つ', 'image-dest', 0, 1, 2],
+    ['別のリスト項目どうしのリンク', 'link-dest', 2, 3, 3],
+  ])('%s の行き先を入れ替えた訳は落とす', (_name, kind, i, j, block) => {
+    const [a, b] = [idsOf(kind)[i], idsOf(kind)[j]];
+    const result = run(swap(translated, a, b));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toContain(
+      `リンク・画像などの行き先の順序が ja と一致しません（ブロック #${block}`
+    );
+  });
+
+  it('全体の並び順は同じでも、リンクを別のリスト項目へ移した訳は落とす（リスト項目ごとに照合する）', () => {
+    const [, , guide, faq] = idsOf('link-dest');
+    const moved = translated
+      .replace(`[lorem](⟦${guide}⟧)lorem`, `[lorem](⟦${guide}⟧) [FAQ](⟦${faq}⟧)`)
+      .replace(`- lorem[FAQ](⟦${faq}⟧)`, '- lorem');
+    expect(moved).toContain(`[lorem](⟦${guide}⟧) [FAQ](⟦${faq}⟧)\n- lorem`);
+    const result = run(moved);
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual([
+      `リンク・画像などの行き先の順序が ja と一致しません（ブロック #3: ja ⟦${guide}⟧ / 翻訳 ⟦${guide}⟧ ⟦${faq}⟧）`,
+      `リンク・画像などの行き先の順序が ja と一致しません（ブロック #4: ja ⟦${faq}⟧ / 翻訳 なし）`,
+    ]);
+  });
+});
+
+// #339 Codex 最終レビュー P2-2: 3 列の表の行からセルを 1 つ落としても、行数（tableRows）は変わらないので通っていた。
+describe('表の各行のセルの数（Codex P2-2）', () => {
+  const source = '| 項目 | 説明 | 備考 |\n|---|---|---|\n| A | 高品質 | なし |\n| B | `a|b` と \\| | あり |';
+  const { text, store: tableStore } = protect(source);
+  const run = (output) =>
+    checkBodyOutput({
+      output,
+      finishReason: 'STOP',
+      protectedText: text,
+      store: tableStore,
+      sourceCore: source,
+      lang: 'en',
+    });
+  const translated = fakeTranslate(text);
+
+  it('セルの数が同じなら通る（インラインコードの中の | と \\| はセルの区切りに数えない）', () => {
+    expect(run(translated).ok).toBe(true);
+  });
+
+  it.each([
+    ['本文の行のセルを 1 つ落とした', (t) => t.replace('| A | lorem | lorem |', '| A | lorem |'), 3],
+    ['見出し行のセルを 1 つ落とした', (t) => t.replace(/^\| lorem \| lorem \| lorem \|$/m, '| lorem | lorem |'), 1],
+    ['区切り行の列を 1 つ落とした', (t) => t.replace('|---|---|---|', '|---|---|'), 2],
+  ])('%s訳は落とす', (_name, mutate, row) => {
+    const broken = mutate(translated);
+    expect(broken).not.toBe(translated);
+    const result = run(broken);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toContain(`表の ${row} 行目のセルの数が一致しません（ja 3 / 翻訳 2）`);
+  });
+});

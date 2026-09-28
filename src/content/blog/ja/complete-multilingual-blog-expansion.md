@@ -111,7 +111,7 @@ async function translateToLanguage(inputFile, targetLang, body, frontmatter) {
 }
 ```
 
-https://github.com/Cor-Incorporated/corsweb2024/blob/develop/scripts/translate-blog-all-languages.js
+https://github.com/Cor-Incorporated/corsweb2024/blob/52f7f174d7f2b32cd655b5d3c0e786cf137ab9fa/scripts/translate-blog-all-languages.js
 
 ### ステップ3: エラーとの死闘
 

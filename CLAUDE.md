@@ -29,8 +29,8 @@ npm run preview  # Preview production build locally
 - **Styling**: Tailwind CSS with stone color palette as primary,
   @tailwindcss/typography for blog content
 - **TypeScript**: Custom Alpine.js type definitions in `/types/types.d.ts`
-- **AI Translation**: Google Generative AI (Gemini 1.5 Flash) for automated
-  blog translation
+- **AI Translation**: Gemini API (`@google/genai`, default `gemini-3.8-flash`)
+  run in CI for incremental content translation (ADR-0019)
 - **Content Management**: Astro Content Collections with Zod schema validation
 
 ### Component Structure
@@ -88,8 +88,8 @@ Comprehensive blog functionality with AI-powered translation, featuring:
 - **Content Collections**: Astro's built-in content management using Zod schemas
 - **Multilingual Support**: Japanese, English, Chinese, Korean, and Spanish blog
   posts with separate routing
-- **AI Translation**: Automated translation from Japanese to all other languages
-  using Google Gemini API
+- **AI Translation**: CI translates the Japanese source into all other
+  languages with the Gemini API (`scripts/i18n/`, ADR-0019)
 - **Rich Markdown**: GitHub Flavored Markdown, math equations (KaTeX), syntax
   highlighting, rich link cards with automatic metadata fetching
 - **SEO**: Auto-generated OGP images, structured data, meta tags, breadcrumbs
@@ -155,73 +155,38 @@ const blogCollection = defineCollection({
 
 ### AI Translation System
 
-#### Translation Scripts
-
-Four Node.js scripts handle automated translation:
-
-**1. Single Language Translation** (`scripts/translate-blog-multi.js`)
-
-```bash
-node scripts/translate-blog-multi.js [lang] src/content/blog/ja/your-post.md
-# Example: node scripts/translate-blog-multi.js zh src/content/blog/ja/your-post.md
-```
-
-- Translates a single Japanese blog post to specified language (en, zh, ko, es)
-- Uses Google Generative AI (Gemini 1.5 Flash) with GEMINI_API_KEY
-- Preserves frontmatter structure and metadata
-- Handles YAML parsing/formatting with proper escaping
-- Updates language metadata dynamically
-- Outputs to `/src/content/blog/[lang]/` with same filename
-
-**2. All Languages Translation** (`scripts/translate-blog-all-languages.js`)
+Japanese is the single source of truth. Humans (and the CMS) edit only
+`src/content/{blog,news,cases}/ja/*.md`; `en/zh/ko/es` are generated and owned
+by CI. Full guide: `docs/i18n-translation.md`. Decision:
+`docs/adr/ADR-0019-i18n-auto-translation.md`.
 
 ```bash
-node scripts/translate-blog-all-languages.js src/content/blog/ja/your-post.md
+npm run i18n:check                   # list missing/outdated translations (no API key; exit 1 if any)
+npm run i18n:translate -- --dry-run  # show the plan without API calls or writes
+node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your-post
 ```
 
-- Translates a single Japanese post to all 4 languages (en, zh, ko, es) simultaneously
-- Includes rate limiting (3-second delay between languages)
-- Provides progress reporting and error handling
-- Creates language directory structures if needed
-- Processes translations in parallel with retry logic
-
-**3. Legacy English Translation** (`scripts/translate-blog.js`)
-
-```bash
-node scripts/translate-blog.js src/content/blog/ja/your-post.md
-```
-
-- Original script for English-only translation
-- Maintained for backward compatibility
-
-**4. Batch Translation** (`scripts/translate-all-blog.js`)
-
-```bash
-node scripts/translate-all-blog.js
-```
-
-- Automatically translates all Japanese posts to English only
-- Legacy script maintained for backward compatibility
-
-#### Translation Features
-
-- **Smart Parsing**: Robust frontmatter parsing that handles complex YAML
-  structures
-- **Content Preservation**: Maintains markdown formatting, code blocks, and
-  special syntax
-- **Metadata Translation**: Translates title and description while preserving
-  other metadata
-- **YAML Safety**: Proper escaping and quoting for YAML compatibility
-- **Error Handling**: Comprehensive error reporting and recovery
-- **Rate Limiting**: Built-in delays to respect API rate limits
-
-#### Environment Setup
-
-Create `.env` file in project root:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-```
+- **Freshness**: the SHA-256 of the translatable parts of the ja file is stored
+  as `translationSourceHash` (with `translatedAt` and `translationModel`) in
+  each translation; statuses are missing / stale / untracked / meta-drift /
+  orphan / invalid / source-error / ok
+- **Protection**: code blocks, inline code, URLs, link-card lines, math, HTML
+  and image paths are replaced by placeholders and restored exactly
+- **Validation**: heading / code block / link / image / table (rows and cells
+  per row) parity, the order of link and image destinations per heading, table
+  cell, list item and paragraph, untranslated-Japanese detection and a Zod
+  mirror of `src/content/config.ts` (linked by a test); a translation that
+  fails any check is never written
+- **Frontmatter**: only translatable fields are translated (blog keeps the ja
+  tags; cases/news translate tags); everything else is copied from ja
+- **CI**: `.github/workflows/translate-content.yml` translates the articles
+  changed in a PR (`translate`: read-only token, `npm ci --ignore-scripts`,
+  outputs a patch) and commits them to that PR (`push`: write token, runs no
+  repo code, applies the patch only after checking paths and file modes);
+  `i18n-check` verifies
+- **Model / secrets**: `GEMINI_MODEL` (default `gemini-3.8-flash`),
+  `GEMINI_API_KEY` (required), `TRANSLATION_BOT_TOKEN` (optional; broader and
+  longer-lived than GITHUB_TOKEN, see `docs/i18n-translation.md` section 6)
 
 ### Blog Routing & Pages
 
@@ -351,9 +316,9 @@ they'll automatically appear on the site.
    ---
    ```
 
-3. **Auto-translate** (Optional):
-   - For all languages: `node scripts/translate-blog-all-languages.js src/content/blog/ja/your-post-name.md`
-   - For specific language: `node scripts/translate-blog-multi.js [lang] src/content/blog/ja/your-post-name.md`
+3. **Auto-translate**: open a PR; CI translates to en/zh/ko/es and commits the
+   translations to the PR (local runs: `npm run i18n:translate`, see
+   `docs/i18n-translation.md`)
 4. **Build & Deploy**: Run `npm run build` - the post automatically appears
 
 #### **Automatic Features**
@@ -423,11 +388,11 @@ immutable headers.
 - **Multilingual Workflow**:
 
   1. Write Japanese post in `/src/content/blog/ja/`
-  2. Auto-translate to all languages with `node scripts/translate-blog-all-languages.js`
+  2. Open a PR; CI translates to all languages (`npm run i18n:check` verifies)
   3. Review translations for accuracy (optional)
   4. Deploy with `npm run build`
-- **Environment Variables**: Store `GEMINI_API_KEY` securely for translation
-  features
+- **Environment Variables**: `GEMINI_API_KEY` is a GitHub secret for CI; for
+  local translation runs pass it via `node --env-file=.env`
 - **Category System**: Use exact category names: `"ai"`, `"engineering"`,
   `"founder"`, `"lab"`
 - **URL Structure**: Posts are available in all languages:

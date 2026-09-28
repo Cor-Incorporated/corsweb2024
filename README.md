@@ -23,17 +23,17 @@
 - **Hosting**: Firebase Hosting
 - **Language**: TypeScript
 - **i18n**: 5言語対応（日本語、英語、中国語、韓国語、スペイン語）
-- **AI Translation**: Google Generative AI (Gemini 1.5 Flash)
+- **AI Translation**: Gemini API（`@google/genai`、既定モデル `gemini-3.8-flash`）を CI で実行（[docs/i18n-translation.md](docs/i18n-translation.md)）
 - **Content Management**: Astro Content Collections with Zod
 - **YouTube Integration**: YouTube Data API v3 for dynamic video content
 
 ## 🤖 新機能: AI駆動ブログシステム
 
 ### 自動翻訳機能
-- **日本語 → 4言語**: Gemini APIで英語・中国語・韓国語・スペイン語への高品質自動翻訳
-- **一括翻訳**: 全言語への同時翻訳対応
-- **バッチ処理**: 全記事の一括翻訳対応
-- **メタデータ保持**: frontmatterとマークダウン構造を完全保持
+- **日本語だけ書けば 5 言語が揃う**: `src/content/{blog,news,cases}/ja` を編集した PR で、CI が英語・中国語・韓国語・スペイン語を自動翻訳してコミット（他言語は CI が専有）
+- **差分翻訳**: ja の翻訳対象部分のハッシュ（`translationSourceHash`）で、未翻訳・古い翻訳だけを翻訳
+- **壊さない検証**: コード・URL・数式・画像パスを保護し、見出し・リンク・画像などの構造とスキーマを検証。違反した翻訳は書き込まない
+- 詳細: [docs/i18n-translation.md](docs/i18n-translation.md) / [ADR-0019](docs/adr/ADR-0019-i18n-auto-translation.md)
 
 ### ブログ機能
 - **Content Collections**: 型安全なコンテンツ管理
@@ -45,22 +45,19 @@
 ### 翻訳コマンド
 
 ```bash
-# 単一記事を全4言語に翻訳
-node scripts/translate-blog-all-languages.js src/content/blog/ja/your-post.md
+# 未翻訳・古い翻訳を一覧（API キー不要。問題があれば exit 1）
+npm run i18n:check
 
-# 単一記事を特定言語に翻訳
-node scripts/translate-blog-multi.js zh src/content/blog/ja/your-post.md
-# 言語オプション: en (英語), zh (中国語), ko (韓国語), es (スペイン語)
+# 何をするかだけ表示（API も書き込みもしない）
+npm run i18n:translate -- --dry-run
 
-# 英語のみに翻訳（レガシー）
-node scripts/translate-blog.js src/content/blog/ja/your-post.md
-
-# 全記事を英語に一括翻訳（レガシー）
-node scripts/translate-all-blog.js
-
-# 環境変数設定が必要
-# .env ファイルに GEMINI_API_KEY を設定
+# 不足・古い翻訳を翻訳して書き込む（GEMINI_API_KEY が必要。.env は自動では読まない）
+node --env-file=.env scripts/i18n/translate-content.mjs --write
+# 1 記事・特定言語だけ
+node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your-post --langs zh
 ```
+
+通常は PR 上の CI（`.github/workflows/translate-content.yml`）が自動で翻訳するため、手元での実行は不要です。
 
 ## ⚡ 高速化の工夫（詳細）
 
@@ -123,17 +120,16 @@ npm run preview
 # バンドル分析
 node bundle-analyzer.js
 
-# ブログ翻訶全言語翻訳
-node scripts/translate-blog-all-languages.js src/content/blog/ja/your-post.md
-# 特定言語への翻訳
-node scripts/translate-blog-multi.js zh src/content/blog/ja/your-post.md
+# 翻訳の検査 / 翻訳（docs/i18n-translation.md）
+npm run i18n:check
+npm run i18n:translate -- --dry-run
 ```
 
 ### 環境変数設定
 
 ```bash
 # .env ファイルに以下を設定
-GEMINI_API_KEY=your_gemini_api_key_here              # Gemini APIキー（ブログ自動翻訳用）
+GEMINI_API_KEY=your_gemini_api_key_here              # Gemini APIキー（ローカルで翻訳するときのみ。CI は GitHub secret を使用）
 PUBLIC_STRIPE_PAYMENT_LINK=your_stripe_payment_link_here  # Stripe Payment Link URL（投げ銭機能用）
 PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key_here     # YouTube Data API v3キー（動画ランダム表示用）
 ```
@@ -162,18 +158,15 @@ src/
 └── types/          # TypeScript型定義
 
 scripts/            # 自動化スクリプト
-├── translate-blog-all-languages.js  # 单一記事ₒ全4言語に翻訳
-├── translate-blog-multi.js         # 単一記事を指定言語に翻訳
-├── translate-blog.js               # 単一記事英語翻訳（レガシー）
-└── translate-all-blog.js          # 全記事英語一括翻訳（レガシー）
+└── i18n/           # ja → en/zh/ko/es の差分翻訳・検証（translate-content.mjs）
 ```
 
 ## 📝 ブログ投稿の流れ
 
 1. **日本語記事作成**: `/src/content/blog/ja/` に Markdown ファイルを作成
 2. **リッチコンテンツ活用**: リンクカード、数式、コードハイライトを活用
-3. **自動翻訳実行**: `node scripts/translate-blog-all-languages.js` で全4言語版を同時生成
-4. **内容確認**: 翻訳された各言語記事の内容を確認・調整（オプション）
+3. **PR を作成**: CI が en/zh/ko/es を自動翻訳して同じ PR にコミット（`i18n-check` で欠けを検査）
+4. **内容確認**: PR の差分で各言語の訳を確認（訳を直したいときは ja 側の表現を調整）
 5. **デプロイ**: Firebase Hosting に自動デプロイ
 
 ## ✨ サポートされているマークダウン機能

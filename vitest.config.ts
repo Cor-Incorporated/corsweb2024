@@ -5,7 +5,8 @@ export default defineConfig({
     environment: 'happy-dom',
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
-      // ビルド成果物を検査する Node スクリプト（scripts/seo-snapshot.mjs 等）のテスト
+      // Node で動くスクリプトのテスト: ビルド成果物を検査する scripts/seo-snapshot.mjs 等と、scripts/i18n の
+      // 翻訳パイプライン（各ファイルは `// @vitest-environment node` で DOM 環境を使わない）
       'scripts/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
     ],
     exclude: ['node_modules', 'dist', '.astro'],
