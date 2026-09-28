@@ -237,10 +237,11 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       }
 
       /* 中国語・韓国語では word-break: auto-phrase が効かない（Chromium は日本語だけ）。
-         リンクの文字列の最後の 1〜2 文字だけが次の行に取り残されないよう、語の途中では折らない
-         （1 行に収まらない長さのときは、上の overflow-wrap: anywhere で折る）。 */
-      .prose :where(a):lang(zh),
-      .prose :where(a):lang(ko) {
+         リンクの文字列の最後の 1〜2 文字だけが次の行に取り残されないよう、リンクの中では
+         空白と句読点でだけ折る（中国語は漢字と漢字の間、韓国語は語の途中で折らない）。
+         1 行に収まらない長さのときは、上の overflow-wrap: anywhere で折る。
+         詳細度はほかの .prose の要素のルールと同じ (0,1,0) にそろえる。 */
+      .prose :where(a:lang(zh), a:lang(ko)) {
         word-break: keep-all;
       }
 
