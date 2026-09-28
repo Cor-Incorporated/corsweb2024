@@ -143,10 +143,14 @@ export async function collectSiteFiles(distDir, allFiles) {
   };
 }
 
-/** 全 URL が同じ lastmod なら、それはビルド時刻（astro.config の `lastmod: new Date()`）とみなして返す。 */
+/**
+ * 全 URL が同じ lastmod なら、それはビルド時刻（astro.config の `lastmod: new Date()`）とみなして返す。
+ * lastmod が全く無い（全 URL が null）の sitemap はビルド時刻ではない。これを除かないと、一律の lastmod が
+ * 復活した（null → 全 URL に同じ日時）変化を「ビルド時刻だけの変化」として見逃す。
+ */
 const buildTimeLastmod = (sitemap) => {
   const values = new Set(sitemap.map((entry) => entry.lastmod));
-  return sitemap.length > 1 && values.size === 1 ? [...values][0] : undefined;
+  return sitemap.length > 1 && values.size === 1 && !values.has(null) ? [...values][0] : undefined;
 };
 
 function compareSitemap(baseSitemap = [], curSitemap = []) {

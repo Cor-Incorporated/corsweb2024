@@ -19,11 +19,11 @@
 // を変えたら、それを実際に読む側（HTML / sitemap / robots.txt）の出力で確かめる。
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
 import {
   collectSiteFiles,
@@ -581,7 +581,17 @@ export async function runCli(argv, { write = (text) => process.stdout.write(text
   return args.failOnDiff && hasDifferences(diff) ? 1 : 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+// 直接実行されたときだけ CLI として動く。シンボリックリンク経由（例: /tmp → /private/tmp）で起動しても
+// 一致するよう、実体のパスどうしで比べる（Node は import.meta.url を実体のパスにする）。
+const isDirectRun = () => {
+  try {
+    return Boolean(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+};
+
+if (isDirectRun()) {
   runCli(process.argv.slice(2))
     .then((code) => {
       process.exitCode = code;

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -468,6 +468,10 @@ describe('diffSnapshots: site-level details', () => {
     const churn = diffSnapshots(snapshotOf({}, { sitemap: two('2026-09-27T00:00:00.000Z') }), snapshotOf({}, { sitemap: two('2026-09-28T00:00:00.000Z') }));
     expect(churn.site.sitemap).toMatchObject({ lastmodChanged: 0, lastmodBuildTimeOnly: 2 });
     expect(hasDifferences(churn)).toBe(false);
+    // lastmod が無い sitemap（全 URL が null）はビルド時刻ではない: 一律の lastmod が復活したら差分として出す
+    const revived = diffSnapshots(snapshotOf({}, { sitemap: two(null) }), snapshotOf({}, { sitemap: two('2026-09-28T00:00:00.000Z') }));
+    expect(revived.site.sitemap).toMatchObject({ lastmodChanged: 2, lastmodBuildTimeOnly: 0 });
+    expect(hasDifferences(revived)).toBe(true);
     const real = diffSnapshots(
       snapshotOf({}, { sitemap: two('2025-01-01T00:00:00.000Z') }),
       snapshotOf({}, { sitemap: [url('2025-02-01T00:00:00.000Z'), { ...url('2025-01-01T00:00:00.000Z'), loc: 'https://cor-jp.com/b/' }] }),
@@ -576,13 +580,16 @@ describe('collectSnapshot (temporary dist) and CLI', () => {
     expect(output.join('')).toContain('robots.txt changed:');
   }, 30_000);
 
-  it('exits 2 with the reason when the snapshot formats do not match (child process)', async () => {
+  it('exits 2 with the reason when the snapshot formats do not match (child process via a symlink)', async () => {
     const snapshot = await collectSnapshot(dist);
     const current = path.join(dist, 'current.json');
     const old = path.join(dist, 'old.json');
     await writeFile(current, JSON.stringify(snapshot));
     await writeFile(old, JSON.stringify({ ...snapshot, version: 1 }));
-    const result = spawnSync(process.execPath, [SCRIPT, '--compare', old, '--current', current, '--fail-on-diff'], {
+    // シンボリックリンク経由（/tmp → /private/tmp と同じ状況）でも CLI として動くこと。動かないと何も出さずに exit 0
+    const linked = path.join(dist, 'seo-snapshot-link.mjs');
+    await symlink(SCRIPT, linked);
+    const result = spawnSync(process.execPath, [linked, '--compare', old, '--current', current, '--fail-on-diff'], {
       encoding: 'utf8',
     });
     expect(result.status).toBe(2);
