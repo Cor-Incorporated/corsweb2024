@@ -41,11 +41,13 @@ export const PRIVACY_PAGE_PATHS = {
 export const CLOUDIA_CHAT_PATH = '/contact/chat/';
 
 // ---------------------------------------------------------------------------
-// B-1: 電話導線の不在（2 段構え）
+// B-1: 電話導線の不在（2 段構え。判定の設計は docs/adr/ADR-0021-contact-guard-phone-detection.md）
 // - /contact（問い合わせの入口）: 電話を指す語・電話番号・tel: リンクが一切出ないこと（語レベル）。
 // - /privacy: 収集項目として「電話番号」が正当に載る（zh「电话号码」・ko「전화번호」など）ため、
-//   語レベルでは誤検知する。「電話で受け付ける／電話してほしい」を述べる句で判定する（句レベル）。
+//   語レベルでは誤検知する。「電話で受け付ける／電話してほしい」を述べる句・電話番号・tel: で判定する。
 //   #323 背景 1（zh/ko/es のプライバシーポリシーに「電話でも受け付ける」が残存）はこちらの事故。
+// どちらも照合するのは HTML ではなく、readableTextOf が作る「読み手に届く文字列」（NFKC 正規化済み）。
+// 見逃し・誤検知の実例は tests/fixtures/phone-detection-cases.ts に 1 行足して固定する。
 // ---------------------------------------------------------------------------
 
 /**
@@ -63,30 +65,33 @@ export const PHONE_LEAD_PATTERNS = {
   es: /tel[eé]f[oó]n/iu,
 } as const satisfies Record<Locale, RegExp>;
 
-/**
- * 電話誘導の検査から除外する meta 要素の name（大文字小文字は区別しない）。
- * `<meta name="format-detection" content="telephone=no">` は iOS Safari の番号自動リンク化を
- * 止める指定で、誘導ではない（ブログ全ページに入っており、除外しないと誤検出する）。
- */
-export const PHONE_LEAD_EXCLUDED_META_NAMES = ['format-detection'] as const;
+// 番号の区切り（ADR-0021 §2）: 空白（ブロック境界の改行は除く）・Unicode のダッシュ類（\p{Pd}）・
+// ドット・−（U+2212）・ー（U+30FC）。1 か所の区切りは 3 文字まで（"092 - 000 - 0000"）。
+// 全角の数字・記号（０９２－… / ＋81）は readableTextOf の NFKC 正規化で半角になっている。
+const NUMBER_SEPARATORS = String.raw`(?:[^\S\n]|\p{Pd}|[.−ー]){0,3}`;
+// 番号の直前に置かれるラベル（℡ は NFKC で TEL になる）。前が英字なら単独のラベルとみなさない
+// （hotel0120… / Intel090… の "tel" はラベルではない）。
+const NUMBER_LABEL = String.raw`(?<![A-Za-z])(?:TEL|Tel|tel|PHONE|Phone|phone|FAX|Fax|fax)[.:\-]?`;
+// 番号の開始位置: 英数字・+・/・.・ダッシュ類の続きではない位置（英数字の ID の途中を避ける）、
+// またはラベルの直後。日本語の文字や「:」の直後は前者に当たる。
+const NUMBER_START = String.raw`(?:(?<![A-Za-z0-9+/.\p{Pd}])|(?<=${NUMBER_LABEL}))`;
+// 3 群の形。市外局番と中間の群は括弧付きも可（(092) 000-0000 / 03(1234)5678）。
+const NUMBER_GROUPS =
+  String.raw`\(?\d{1,4}\)?${NUMBER_SEPARATORS}\(?\d{1,4}\)?${NUMBER_SEPARATORS}\d{3,4}(?!\d)`;
 
-// 番号の区切りとして認める文字（1 か所に 1 文字まで）: 空白・ハイフン類（- ‐ ‑ – —）・ドット。
-// 全角の数字・記号（０９２－… / ＋81）は照合前に NFKC で半角へ寄せる（findPhoneLeads など）。
-const NUMBER_SEPARATOR = String.raw`[\s\-‐‑–—.]`;
-
 /**
- * 電話番号の候補（/contact・/privacy 用）。語を伴わず番号だけが出る回帰を捕まえる。
- * 国際表記（+81 …、+81 (0)…）と国内表記（0 始まり。括弧・区切りなしも可: (092) 000-0000 /
- * 0920000000）。base64・SVG のパスデータ・長い数字列の一部に一致しないよう前を制限している。
- * これは候補であり、isPlausiblePhoneNumber の桁数判定（国内 10〜11 桁、+81 は国番号を除き 9〜10 桁）
- * を通ったものだけを番号とみなす（09-27-2026 のような日付は 8 桁なので落ちる）。
- * 実測（2026-09-28・dist 全 481 ページ）で番号と判定されたのは、法令で番号を表示する特商法ページ
- * 5 言語だけ。
+ * 電話番号の候補（/contact・/privacy 用・ADR-0021 §2）。語を伴わず番号だけが出る回帰を捕まえる。
+ * 国内表記（0 始まり）と国際表記（+81、+81 (0)…）。これは候補であり、isPlausiblePhoneNumber の
+ * 桁数判定（国内 10〜11 桁、+81 は国番号を除き 9〜10 桁）を通ったものだけを番号とみなす
+ * （09-27-2026 のような日付は 8 桁なので落ちる）。readableTextOf の文字列に当てる前提で、
+ * 属性値（class・data-*・SVG のパスデータ・base64）は照合の対象に入らない。
+ * 実測（2026-09-28・dist 全 481 ページ × カレンダーあり／なし）で番号と判定されたのは、法令で番号を
+ * 表示する特商法ページ 5 言語だけ。
  */
 export const PHONE_NUMBER_PATTERN = new RegExp(
-  String.raw`(?<![\w+/])\+81${NUMBER_SEPARATOR}?(?:\(0\)${NUMBER_SEPARATOR}?)?\(?\d{1,4}\)?` +
-    String.raw`${NUMBER_SEPARATOR}?\d{1,4}${NUMBER_SEPARATOR}?\d{3,4}(?!\d)` +
-    String.raw`|(?<![\w+/.\-‐‑–—])\(?0\d{1,4}\)?${NUMBER_SEPARATOR}?\d{1,4}${NUMBER_SEPARATOR}?\d{3,4}(?!\d)`,
+  NUMBER_START +
+    String.raw`(?:\+81${NUMBER_SEPARATORS}(?:\(0\)${NUMBER_SEPARATORS})?|(?=\(?0))` +
+    NUMBER_GROUPS,
   'u'
 );
 
@@ -101,20 +106,29 @@ export function isPlausiblePhoneNumber(candidate: string): boolean {
 }
 
 /**
- * 「電話で問い合わせ・相談を受け付ける／電話で連絡してほしい」を述べる句（/privacy 用の句レベル）。
+ * 「電話で問い合わせ・相談を受け付ける／電話で連絡してほしい」を述べる句（/privacy 用・ADR-0021 §3）。
  * 「電話番号」のような収集項目には一致しない。PR #324（ad40cd6）が削除した実際の文言
- * （tests/fixtures/phone-inquiry-accidents.ts）と、#331 再レビューで挙がった見逃し・誤検知の実例を
- * ユニットテストで固定している。zh の実例は「或电话受理」で、「通过电话」「电话咨询」だけでは拾えない。
- * ja は「電話でのお問い合わせは受け付けておりません」のような否定文を除く（同じ文の 40 字以内）。
- * 他言語の否定文は除いていない（該当する文言が出たら誤検知として判定を見直す）。
+ * （tests/fixtures/phone-inquiry-accidents.ts）と、レビューで挙がった見逃し・誤検知の実例
+ * （tests/fixtures/phone-detection-cases.ts）をユニットテストで固定している。
+ * zh の実例は「或电话受理」で、「通过电话」「电话咨询」だけでは拾えない。
+ * ja は句の続き（でのお問い合わせ など）まで含めて一致させ、直後の否定を
+ * PHONE_INQUIRY_NEGATION_AFTER_PHRASE で見る（否定の除外は ja だけ）。
  */
 export const PHONE_INQUIRY_PHRASE_PATTERNS = {
-  ja: /(?:お電話(?!番号)|電話(?:でも|にて|受付|窓口|相談|連絡|による|で(?:の)?(?:ご?連絡|お?問い?合わ?せ|ご?相談|受け?付|承))|[（(]\s*電話\s*[)）])(?![^。<]{0,40}?(?:受け付けて(?:おりません|いません)|承って(?:おりません|いません)|お受けして(?:おりません|いません)|できません|ご遠慮))/u,
-  en: /by (?:tele)?phone|over the (?:tele)?phone|via (?:tele)?phone|(?:call|phone|ring) us\b|telephone us|(?:tele)?phone (?:inquir\w*|consultations?|support)\b/iu,
-  zh: /或电话(?!号码)|电话(?:受理|联系|咨询|预约)|通过电话|致电|拨打|来电|或電話(?!號碼)|電話(?:受理|聯繫|諮詢)|透過電話|來電/u,
-  ko: /전화나|전화로|전화\s?(?:문의|상담|접수|연락)/u,
-  es: /por tel[eé]fono|v[ií]a telef[oó]nica|telef[oó]nicamente|ll[aá]m(?:enos|anos|arnos)|atenci[oó]n telef[oó]nica|consultas? telef[oó]nicas?|l[ií]nea telef[oó]nica/iu,
+  ja: /お?電話(?:でも|にて|受付|窓口|相談|連絡|による|で(?:の)?(?:ご?連絡|お?問い?合わ?せ|ご?相談|受け?付|承))|お電話(?!番号)|[(（] ?電話 ?[)）]/u,
+  en: /by (?:tele)?phone|over the (?:tele)?phone|via (?:tele)?phone|(?:call|phone|ring) us\b|telephone us|(?:tele)?phone (?:inquir\w*|consultations?|support|calls?)\b|give us a (?:phone )?call\b/iu,
+  zh: /或电话(?!号码)|电话(?:受理|联系|咨询|预约|垂询)|通过电话|打电话|致电|拨打|来电|或電話(?!號碼)|電話(?:受理|聯繫|諮詢|垂詢)|透過電話|打電話|來電/u,
+  ko: /전화나|전화로|전화 ?(?:문의|상담|접수|연락|주세요|주십시오|주시면|해 ?주세요)/u,
+  es: /por tel[eé]fono|v[ií]a telef[oó]nica|telef[oó]nicamente|ll[aá]m(?:enos|anos|arnos)|atenci[oó]n telef[oó]nica|consultas? telef[oó]nicas?|l[ií]nea telef[oó]nica|llamadas? telef[oó]nicas?/iu,
 } as const satisfies Record<Locale, RegExp>;
+
+/**
+ * 句の直後に続くと「受け付けない」旨になる否定（ja だけ・ADR-0021 §3）。同じ句の直後だけを見る
+ * （助詞「は・も・では・を・に」と空白 1 つを挟んでもよい）。文の離れた位置の否定
+ * （「営業時間外は受け付けておりません」など）では除外しない。
+ */
+export const PHONE_INQUIRY_NEGATION_AFTER_PHRASE =
+  /^(?:は|も|では|を|に)? ?(?:受け付けて(?:おりません|いません)|受け付けません|受付して(?:おりません|いません)|承って(?:おりません|いません)|承りません|お受けして(?:おりません|いません)|お受けできません|対応して(?:おりません|いません)|行って(?:おりません|いません)|できません|ご遠慮)/u;
 
 export type PhoneLeadFinding = {
   readonly kind: 'text' | 'number' | 'tel-link' | 'phrase';
@@ -123,12 +137,11 @@ export type PhoneLeadFinding = {
 };
 
 /**
- * /contact 用（語レベル）。本文・属性値・インラインスクリプトを含む HTML 全体（除外 meta を除き、
- * NFKC で正規化したもの）に PHONE_LEAD_PATTERNS と電話番号の判定を当て、加えて tel: リンクを構造で拾う。
- * match / context は正規化後の文字列（全角は半角になっている）。
+ * /contact 用（語レベル）。readableTextOf の文字列に PHONE_LEAD_PATTERNS と電話番号の判定を当て、
+ * 加えて tel: リンクを属性で拾う。match / context は正規化後の文字列（全角は半角になっている）。
  */
 export function findPhoneLeads(document: Document): PhoneLeadFinding[] {
-  const text = scanTextOf(document);
+  const text = readableTextOf(document);
   return [
     ...findingsIn(text, combineGlobal(PHONE_LEAD_PATTERNS), 'text'),
     ...phoneNumberFindingsIn(text),
@@ -138,7 +151,7 @@ export function findPhoneLeads(document: Document): PhoneLeadFinding[] {
 
 /** 句レベルだけの判定（/privacy の判定の一部。ユニットテストで句パターン単体を検証するのに使う）。 */
 export function findPhoneInquiryPhrases(document: Document): PhoneLeadFinding[] {
-  return findingsIn(scanTextOf(document), combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase');
+  return phraseFindingsIn(readableTextOf(document));
 }
 
 /**
@@ -146,12 +159,67 @@ export function findPhoneInquiryPhrases(document: Document): PhoneLeadFinding[] 
  * 語レベル（「電話番号」という語）は収集項目として正当に載るので当てない。
  */
 export function findPhoneInquiryLeads(document: Document): PhoneLeadFinding[] {
-  const text = scanTextOf(document);
-  return [
-    ...findingsIn(text, combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS), 'phrase'),
-    ...phoneNumberFindingsIn(text),
-    ...telLinkFindingsIn(document),
+  const text = readableTextOf(document);
+  return [...phraseFindingsIn(text), ...phoneNumberFindingsIn(text), ...telLinkFindingsIn(document)];
+}
+
+// readableTextOf の組み立て（ADR-0021 §1）。
+// ブロック要素の境界には改行を入れ、行内要素（strong / span / a など）は区切らずにつなぐ。
+const BLOCK_ELEMENTS: ReadonlySet<string> = new Set([
+  'address', 'article', 'aside', 'blockquote', 'body', 'br', 'button', 'caption', 'dd', 'details',
+  'dialog', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3',
+  'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'iframe', 'img', 'input', 'label', 'legend', 'li',
+  'main', 'meta', 'nav', 'noscript', 'ol', 'option', 'p', 'pre', 'script', 'section', 'select',
+  'summary', 'svg', 'table', 'tbody', 'td', 'textarea', 'tfoot', 'th', 'thead', 'title', 'tr', 'ul',
+]);
+// 人が読む属性（ツールチップ・読み上げ・代替テキスト・入力例）。
+const READABLE_ATTRIBUTES = ['alt', 'title', 'aria-label', 'placeholder'] as const;
+// 検索結果や SNS のカードに出る meta（name または property）。
+const READABLE_META_KEYS: ReadonlySet<string> = new Set([
+  'description', 'og:title', 'og:description', 'twitter:title', 'twitter:description',
+]);
+const ELEMENT_NODE = 1;
+const TEXT_NODE = 3;
+
+/**
+ * 電話の判定に使う「読み手に届く文字列」（ADR-0021 §1）。HTML の outerHTML ではなく、
+ * 本文の textContent（タグを除き、文字参照は解決済み）・人が読む属性・description 系の meta・
+ * JSON-LD をつなぐ。実行用の script・style・template と、それ以外の属性（class・data-*・href・src・
+ * SVG の d など）は含めない。各部分は NFKC で正規化し（全角→半角・℡→TEL・NBSP→空白）、空白の連続を
+ * 1 つにまとめる。ブロック境界の改行は残す（番号の区切りは改行をまたがない）。
+ */
+export function readableTextOf(document: Document): string {
+  return readablePartsOf(document.documentElement).join('');
+}
+
+function readablePartsOf(node: Node): string[] {
+  if (node.nodeType === TEXT_NODE) return [normalizeReadable(node.nodeValue)];
+  if (node.nodeType !== ELEMENT_NODE) return [];
+  const element = node as Element;
+  if (!isReadableElement(element)) return [];
+  const parts = [
+    ...readableAttributeValuesOf(element).map((value) => `\n${normalizeReadable(value)}\n`),
+    ...Array.from(element.childNodes).flatMap(readablePartsOf),
   ];
+  return BLOCK_ELEMENTS.has(element.localName) ? ['\n', ...parts, '\n'] : parts;
+}
+
+function isReadableElement(element: Element): boolean {
+  if (element.localName === 'style' || element.localName === 'template') return false;
+  if (element.localName !== 'script') return true;
+  return (element.getAttribute('type') ?? '').trim().toLowerCase() === 'application/ld+json';
+}
+
+function readableAttributeValuesOf(element: Element): string[] {
+  const attributes = READABLE_ATTRIBUTES.map((name) => element.getAttribute(name) ?? '');
+  const metaKey = (element.getAttribute('name') ?? element.getAttribute('property') ?? '').trim().toLowerCase();
+  const meta =
+    element.localName === 'meta' && READABLE_META_KEYS.has(metaKey) ? [element.getAttribute('content') ?? ''] : [];
+  return [...attributes, ...meta].filter((value) => value.trim() !== '');
+}
+
+function normalizeReadable(text: string | null): string {
+  return (text ?? '').normalize('NFKC').replace(/\s+/gu, ' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -353,15 +421,17 @@ export function isCloudiaChatHtmlServed(inspection: CloudiaChatInspection): bool
 // 内部ヘルパ
 // ---------------------------------------------------------------------------
 
-// 電話誘導の検査対象の文字列: 除外 meta を落とした HTML を NFKC で正規化したもの（全角→半角）。
-function scanTextOf(document: Document): string {
-  return serializeWithoutExcludedMeta(document).normalize('NFKC');
-}
-
 function phoneNumberFindingsIn(text: string): PhoneLeadFinding[] {
   return findingsIn(text, new RegExp(PHONE_NUMBER_PATTERN.source, 'gu'), 'number').filter((finding) =>
     isPlausiblePhoneNumber(finding.match)
   );
+}
+
+// 句の判定。ja の句の直後が否定（受け付けておりません など）なら、その一致は数えない。
+function phraseFindingsIn(text: string): PhoneLeadFinding[] {
+  return Array.from(text.matchAll(combineGlobal(PHONE_INQUIRY_PHRASE_PATTERNS)))
+    .filter((match) => !PHONE_INQUIRY_NEGATION_AFTER_PHRASE.test(text.slice((match.index ?? 0) + match[0].length)))
+    .map((match) => findingOf('phrase', text, match));
 }
 
 function telLinkFindingsIn(document: Document): PhoneLeadFinding[] {
@@ -371,26 +441,20 @@ function telLinkFindingsIn(document: Document): PhoneLeadFinding[] {
     .map((href) => ({ kind: 'tel-link' as const, match: href, context: href }));
 }
 
-function serializeWithoutExcludedMeta(document: Document): string {
-  const excluded: ReadonlySet<string> = new Set(PHONE_LEAD_EXCLUDED_META_NAMES);
-  // 入力は変更しない。除外 meta を落とすのは複製に対してだけ行う。
-  const copy = document.documentElement.cloneNode(true) as Element;
-  Array.from(copy.querySelectorAll('meta[name]'))
-    .filter((meta) => excluded.has((meta.getAttribute('name') ?? '').trim().toLowerCase()))
-    .forEach((meta) => meta.remove());
-  return copy.outerHTML;
-}
-
 function findingsIn<K extends PhoneLeadFinding['kind']>(
-  html: string,
+  text: string,
   pattern: RegExp,
   kind: K
 ): Array<PhoneLeadFinding & { readonly kind: K }> {
-  return Array.from(html.matchAll(pattern), (match) => ({
-    kind,
-    match: match[0],
-    context: contextAround(html, match.index ?? 0, match[0].length),
-  }));
+  return Array.from(text.matchAll(pattern), (match) => findingOf(kind, text, match));
+}
+
+function findingOf<K extends PhoneLeadFinding['kind']>(
+  kind: K,
+  text: string,
+  match: RegExpMatchArray
+): PhoneLeadFinding & { readonly kind: K } {
+  return { kind, match: match[0], context: contextAround(text, match.index ?? 0, match[0].length) };
 }
 
 function combineGlobal(patterns: Readonly<Record<string, RegExp>>): RegExp {

@@ -8,6 +8,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
+import {
+  PHONE_INQUIRY_PHRASE_DETECT,
+  PHONE_INQUIRY_PHRASE_IGNORE,
+  PHONE_NUMBER_DETECT,
+  PHONE_NUMBER_IGNORE,
+} from '../../../tests/fixtures/phone-detection-cases';
 import { PHONE_INQUIRY_ACCIDENTS } from '../../../tests/fixtures/phone-inquiry-accidents';
 import {
   AVAILABILITY_CLAIM_PATTERNS,
@@ -30,6 +36,7 @@ import {
   isCloudiaChatHtmlServed,
   isContactPagePath,
   normalizeSitePath,
+  readableTextOf,
 } from '../contact-guards';
 
 // fixture 用の架空オリジン（実在サイトには一切アクセスしない）。
@@ -119,40 +126,15 @@ describe('B-1 findPhoneLeads', () => {
     expect(findings).toEqual([{ kind: 'tel-link', match: 'TEL:0000', context: 'TEL:0000' }]);
   });
 
-  // 語を伴わず番号だけが出る回帰（PR #331 レビュー L6）と、再レビュー LOW-1 で挙がった見逃しの実例
-  // （全角・空白区切り・括弧・区切りなし・en dash・U+2010・全角＋・ドット区切り）。番号はすべて架空。
-  it.each([
-    '070-0000-0000',
-    '092-000-0000',
-    '0120-000-000',
-    '+81-70-0000-0000',
-    '+81 70 0000 0000',
-    '+81(0)70-0000-0000',
-    '０９２－０００－００００',
-    '092 000 0000',
-    '(092) 000-0000',
-    '0920000000',
-    '092–000–0000',
-    '092‐000‐0000',
-    '＋81-92-000-0000',
-    '092.000.0000',
-  ])('番号だけの「%s」を検出する', (number) => {
-    const findings = findPhoneLeads(parsePage(`<main><p>${number}</p></main>`));
-    expect(findings.map((finding) => finding.kind)).toEqual(['number']);
+  // 電話番号の検出・非検出の実例は fixture（tests/fixtures/phone-detection-cases.ts）に 1 行ずつ足す（ADR-0021 §5）。
+  it.each(PHONE_NUMBER_DETECT)('番号として検出する: %s「%s」', (_note, html) => {
+    const kinds = findPhoneLeads(parsePage(`<main>${html}</main>`)).map((finding) => finding.kind);
+    expect(kinds).toContain('number');
   });
 
-  it.each([
-    ['日付', '2026-09-27'],
-    ['時刻付き日付', '2026-09-27T12:00:00+09:00'],
-    ['月-日-年の日付', '更新日 09-27-2026'],
-    ['es の日付', 'Fecha: 05-12-2025'],
-    ['英数字の ID', 'id=A012-34-5678'],
-    ['版番号', 'ver 0.12-3-456'],
-    ['郵便番号と番地', '810-0001 福岡県 福岡市 中央区天神2丁目3-10'],
-    ['SVG のパスデータ', '<svg><path d="M1.05-12-345 0-1.5-2L10.0-120-3456"></path></svg>'],
-    ['base64', '<img alt="" src="data:image/png;base64,AB+81Cd9+8100a/+81234==">'],
-  ])('番号に似た%sは誤検知しない', (_label, html) => {
-    expect(findPhoneLeads(parsePage(`<main><p>${html}</p></main>`))).toEqual([]);
+  it.each(PHONE_NUMBER_IGNORE)('番号として検出しない: %s「%s」', (_note, html) => {
+    const numbers = findPhoneLeads(parsePage(`<main>${html}</main>`)).filter((finding) => finding.kind === 'number');
+    expect(numbers).toEqual([]);
   });
 
   it('渡した Document を変更しない', () => {
@@ -194,32 +176,49 @@ describe('B-1 findPhoneInquiryPhrases（/privacy 用の句レベル）', () => {
     expect(findPhoneInquiryPhrases(parsePage('<main><p>所在地</p></main>', head))).toEqual([]);
   });
 
-  // 再レビュー LOW-2 で挙がった見逃しの実例。「或电话」「或電話」は他のどの句でも拾えない文（邮件或电话）で固定する。
-  it.each([
-    ['ja', '電話受付：平日10時〜17時'],
-    ['ja', '電話によるお問い合わせも可能です'],
-    ['ja', '電話で問合せいただけます'],
-    ['ja', '苦情窓口（電話）'],
-    ['en', 'telephone inquiries are accepted'],
-    ['es', 'atención telefónica'],
-    ['ko', '전화나 이메일로 문의'],
-    ['zh', '也可来电咨询'],
-    ['zh', '也可以通过邮件或电话与我们联系'],
-    ['zh', '也可透過郵件或電話與我們聯繫'],
-  ])('%s: 「%s」を句として検出する', (_locale, text) => {
-    expect(findPhoneInquiryPhrases(parsePage(`<main><p>${text}</p></main>`)).length).toBeGreaterThan(0);
+  // 句の検出・非検出の実例は fixture（tests/fixtures/phone-detection-cases.ts）に 1 行ずつ足す（ADR-0021 §5）。
+  it.each(PHONE_INQUIRY_PHRASE_DETECT)('%s: 句として検出する「%s」', (_locale, html) => {
+    expect(findPhoneInquiryPhrases(parsePage(`<main><p>${html}</p></main>`)).length).toBeGreaterThan(0);
   });
 
-  // 再レビュー LOW-2 で挙がった誤検知の実例（収集項目の列挙と、ja の否定文）。
-  it.each([
-    ['zh', '电子邮箱或电话号码'],
-    ['zh', '電子郵件或電話號碼'],
-    ['en', 'email or phone number'],
-    ['es', 'correo o número de teléfono'],
-    ['ko', '이메일 또는 전화번호'],
-    ['ja', '電話でのお問い合わせは受け付けておりません'],
-  ])('%s: 「%s」は句として誤検知しない', (_locale, text) => {
-    expect(findPhoneInquiryLeads(parsePage(`<main><p>${text}</p></main>`))).toEqual([]);
+  it.each(PHONE_INQUIRY_PHRASE_IGNORE)('%s: /privacy の判定で検出しない「%s」', (_locale, html) => {
+    expect(findPhoneInquiryLeads(parsePage(`<main><p>${html}</p></main>`))).toEqual([]);
+  });
+});
+
+describe('B-1 readableTextOf（照合の対象・ADR-0021 §1）', () => {
+  it('行内要素はつなぎ、文字参照は解決し、NFKC で正規化する', () => {
+    const text = readableTextOf(parsePage('<main><p>お<strong>電話</strong>で&nbsp;０９２－０００－００００ ℡</p></main>'));
+    expect(text).toContain('お電話で 092-000-0000 TEL');
+  });
+
+  it('ブロック要素の境界には改行を入れる（表のセルをまたいでつながらない）', () => {
+    const text = readableTextOf(parsePage('<main><table><tr><td>092</td><td>000-0000</td></tr></table></main>'));
+    expect(text).toMatch(/092\n+000-0000/u);
+  });
+
+  it('人が読む属性と description 系の meta と JSON-LD を含める', () => {
+    const head = [
+      '<meta name="description" content="説明文">',
+      '<meta property="og:description" content="カードの説明">',
+      '<script type="application/ld+json">{"name":"構造化データ"}</script>',
+    ].join('');
+    const body = '<main><img alt="代替テキスト" src="/a.png"><button aria-label="読み上げ" title="ツールチップ"></button>' +
+      '<input placeholder="入力例"></main>';
+    const text = readableTextOf(parsePage(body, head));
+    ['説明文', 'カードの説明', '構造化データ', '代替テキスト', '読み上げ', 'ツールチップ', '入力例'].forEach((part) =>
+      expect(text).toContain(part)
+    );
+  });
+
+  it('実行用の script・style・template と、それ以外の属性（class・data-*・href・src・d）は含めない', () => {
+    const head = '<style>.phone{color:red}</style><script>const tel = "092-000-0000";</script>';
+    const body =
+      '<main><template><p>テンプレート</p></template><a class="phone-card" data-tel="092-000-0000" href="/x">リンク</a>' +
+      '<svg><path d="M1.05-12-345"></path></svg></main>';
+    const text = readableTextOf(parsePage(body, head));
+    expect(text).toContain('リンク');
+    ['phone', '092-000-0000', 'テンプレート', 'M1.05'].forEach((part) => expect(text).not.toContain(part));
   });
 });
 
