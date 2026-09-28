@@ -28,7 +28,7 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 ### 1-2. 管理画面の URL
 
-**https://cor-jp-cms-admin.web.app/** だけを使います（`cor-jp-cms-admin.firebaseapp.com` や cor-jp.com の下では使えません。以前の `cor-jp-cms.web.app` は退役予定で使いません）。
+**https://cor-jp-cms-admin.web.app/** だけを使います（`cor-jp-cms-admin.firebaseapp.com` や cor-jp.com の下では使えません。以前の `cor-jp-cms.web.app` は 2026-09-28 に削除しました）。
 
 認証の仕組み（Worker と GitHub の OAuth App）が用意できるまでは、画面は開いても「GitHub にログイン」が失敗します（2-1 の表の 13〜16）。
 
@@ -93,11 +93,11 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 | レビューに送る | 保存後に出る確認で「**レビューを依頼**」（あとからでも、記事のステータスを「レビュー中」に変更） | PR にラベル `sveltia-cms/pending_review` が付く |
 | プレビューを見る | 保存から数分後、「プレビューを確認中」が「**プレビューを見る**」に変わったら押す（#341 のマージ後） | PR ごとのプレビューサイト（Firebase、30 日で失効）で記事が開く |
 | 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する |
-| チェックを待つ | PR の必須チェック 2 本（`h5-admission` と `Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない |
+| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない |
 | 公開 | **terisuke か cloudia-Cor** がステータスを「**公開可**」にして「**エントリーを公開**」 | PR が develop に merge commit で取り込まれ、作業ブランチ（`cms/blog/<スラッグ>`）は削除される |
 
 - 公開（develop への取り込み）ができるのは **terisuke と cloudia-Cor の 2 アカウントだけ** です。develop のブランチ保護の push 制限で強制されていて、enforce_admins=true のため admin にも適用されます。ほかのアカウントで「エントリーを公開」を押すと失敗します。
-- 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 4 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`）付きです。
+- 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）付きです。
 
 ### 1-8. この CMS でできないこと（PoC の範囲）
 
@@ -126,12 +126,12 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 | 9 | 公開サイトの SA に権限が無いこと | `cor-jp-cms-admin` の祖先（プロジェクトと組織 460639040363）の IAM のメンバー 39 件に、cor-jp-web の SA は 0 件（継承による権限も無い） | 済 |
 | 10 | GitHub Environment | `cms-production`。deployment branch policy は custom で `main`（branch）だけ。secret は入れない | 済 |
 | 11 | リポジトリ変数 | `CMS_DEPLOY_ENABLED` = `true`（2026-09-27T17:14:23Z） | 済 |
-| 12 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 2 本・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 4 本・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |
+| 12 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 3 本（`h5-admission`・`Chromium visual text audit`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |
 | 13 | 認証 Worker | `cor-sveltia-cms-auth`（Cloudflare、Company@cor-jp.com） | 未 |
 | 14 | GitHub OAuth App | Homepage `https://cor-jp-cms-admin.web.app/`、Callback `<WORKER_URL>/callback` | 未 |
 | 15 | Worker の secret | `GITHUB_CLIENT_ID`・`GITHUB_CLIENT_SECRET` | 未 |
 | 16 | `base_url` | `cms/public/config.yml` を Worker の URL に | 未 |
-| 17 | 旧サイト `cor-jp-cms`（プロジェクト cor-jp-web 内） | 使わない。**退役予定**（削除は CEO 確認のうえ実施） | 退役予定 |
+| 17 | 旧サイト `cor-jp-cms`（プロジェクト cor-jp-web 内） | 2026-09-28 に削除（CEO 確認済み）。cor-jp-web に残るサイトは `cor-jp-main` と `cor-jp-web` | 済 |
 
 `CMS_DEPLOY_ENABLED` は `true` なので、`deploy-cms.yml` が main に入った最初の push で CMS が配信されます。13〜16 が終わるまでは、管理画面は開いても **ログインだけが失敗** します。
 
@@ -165,7 +165,7 @@ gh variable list -R Cor-Incorporated/corsweb2024
 # 12（develop と main）
 for b in develop main; do gh api repos/Cor-Incorporated/corsweb2024/branches/$b/protection \
   --jq "{branch: \"$b\", enforce_admins: .enforce_admins.enabled, reviews: .required_pull_request_reviews.required_approving_review_count, checks: [.required_status_checks.checks[].context], push: [.restrictions.users[].login]}"; done
-# 17（削除の後は cor-jp-cms が出ない）
+# 17（cor-jp-cms が出ない）
 firebase hosting:sites:list --project cor-jp-web
 ```
 
