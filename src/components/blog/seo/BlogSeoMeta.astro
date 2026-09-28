@@ -3,6 +3,7 @@
 // BlogLayout から抽出（出力は抽出前と同一）。
 import type { Locale } from '../../../utils/i18n';
 import { getRobotsContent } from '../../../config/site';
+import { isNoindexPath } from '../../../config/indexing';
 
 interface Props {
   description: string;
@@ -18,7 +19,8 @@ interface Props {
 const { description, keywords, author, pubDate, updatedDate, category, tags, currentLocale } =
   Astro.props;
 
-const robotsContent = getRobotsContent();
+// Layout と同じ判定（config/indexing.ts）を通す。記事ページは現状 noindex 対象外だが、判定を 1 か所に保つ。
+const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathname) });
 ---
 
 <meta name="description" content={description} />

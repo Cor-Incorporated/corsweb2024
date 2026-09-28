@@ -1,0 +1,171 @@
+# Sveltia CMS の設定（ADR-0018、#329）。管理画面: https://cor-jp-cms-admin.web.app/
+# 配信は cms/（npm run build:cms → cms/dist）。main に入ると deploy-cms.yml が cor-jp-cms-admin サイトへデプロイする。
+# この設定の変更が編集画面に届くのは、develop → main のリリースと、そのデプロイの後。
+#
+# 二重管理に注意: ここのフィールド定義は src/config/blog-schema.ts（Zod スキーマ）と、
+# カテゴリの選択肢は src/config/categories.ts と、base_url は workers/sveltia-cms-auth/wrangler.toml と
+# 同じ事実を持つ。src/config/__tests__/cms-config.test.ts が両側を照合し、片方だけ変えると両側の値を出して落ちる。
+#
+# 設定項目の正本は、固定した版の型定義 node_modules/@sveltia/cms/types/public.d.ts と
+# https://sveltiacms.app/en/docs 。UI の言語はブラウザの言語に従う（設定項目は無い）。
+
+backend:
+  name: github
+  repo: Cor-Incorporated/corsweb2024
+  # 編集の行き先。本番（main）へは develop → main のリリース PR でだけ反映される。
+  branch: develop
+  # 認証 Worker（workers/sveltia-cms-auth）の URL。デプロイ後に実際の URL へ置き換える。
+  # 形式: https://cor-sveltia-cms-auth.<Cloudflare アカウントの workers.dev サブドメイン>.workers.dev
+  # Worker がトークンを渡す先は wrangler.toml の [vars] ALLOWED_DOMAINS（cor-jp-cms-admin.web.app だけ）。
+  # 手順は docs/cms-sveltia.md の「管理者向けセットアップ」。
+  base_url: https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev
+  # ログイン画面には「GitHub にログイン」だけを出す（アクセストークンの入力欄は出さない）。
+  auth_methods: [oauth]
+  # 公開リポジトリなので public_repo で足りる。既定の repo は編集者の非公開リポジトリにも及ぶ。
+  # （Sveltia は user スコープを常に加えて public_repo,user を要求する）
+  auth_scope: public_repo
+  # 「公開」は PR を merge commit で取り込む（squash しない。ADR-0018 決定 2）。
+  squash_merges: false
+  # 「プレビューを見る」の URL は、deploy.yml の Firebase デプロイが PR に付ける check run から読む。
+  preview_context: Deploy Preview
+  commit_messages:
+    create: 'feat(blog): {{slug}} を追加'
+    update: 'docs(blog): {{slug}} を更新'
+    delete: 'chore(blog): {{slug}} を削除'
+    uploadMedia: 'chore(blog): 画像 {{path}} を追加'
+    deleteMedia: 'chore(blog): 画像 {{path}} を削除'
+
+# 下書き = PR、レビュー = PR のラベル、公開 = PR の merge（base は上の branch）。
+publish_mode: editorial_workflow
+
+app_title: Cor.inc コンテンツ管理
+logo:
+  src: /logo.png
+site_url: https://cor-jp.com
+
+media_folder: public/images/blog
+public_folder: /images/blog
+media_libraries:
+  default:
+    config:
+      # アップロード時にファイル名を英数字に直す（日本語名や空白を URL に残さない）。
+      slugify_filename: true
+      # 写真は WebP・最大 1600px に変換してから保存する（既存の AVIF はそのまま）。
+      transformations:
+        jpeg: { format: webp, quality: 85, width: 1600, height: 1600 }
+        png: { format: webp, quality: 85, width: 1600, height: 1600 }
+        heic: { format: webp, quality: 85, width: 1600, height: 1600 }
+  # フリー素材サイトの検索は使わない（素材の権利確認を編集者に負わせない）。
+  stock_assets: false
+
+slug:
+  # 手入力のスラッグとアップロード画像のファイル名を英数字とハイフンにそろえる。
+  encoding: ascii
+  clean_accents: true
+
+output:
+  # 空の任意項目（updatedDate・image など）を書き出さない。'' や null を書くと Zod の検証で落ちる。
+  omit_empty_optional_fields: true
+  yaml:
+    # 文字列を引用符で囲まない（既定）。既存記事の日付 2024-01-20 は日付のまま残る。
+    quote: none
+
+collections:
+  - name: blog
+    label: ブログ
+    label_singular: ブログ記事
+    description: 日本語の記事だけを編集します。英語・中国語・韓国語・スペイン語は、翻訳 CI（#339 のマージ後）がレビューに送った PR に自動で追加します。
+    icon: article
+    # CMS が書くのは ja だけ。en / zh / ko / es は翻訳 CI（ADR-0019）の専有。
+    folder: src/content/blog/ja
+    extension: md
+    format: yaml-frontmatter
+    create: true
+    # 削除は CMS ではさせない（翻訳ファイルが孤立するため、エンジニアが PR で行う）。
+    delete: false
+    slug:
+      # 新規作成時に URL 名を手入力する（日本語タイトルから自動生成しない）。公開後は変えない。
+      editable: [create]
+      hint: 記事の URL の末尾になります。例 ai-adoption-roadmap → https://cor-jp.com/blog/ai-adoption-roadmap/ 。英小文字・数字・ハイフンだけ。作成後は変更できません。
+      pattern: ['^[a-z0-9]+(?:-[a-z0-9]+)*$', '英小文字・数字・ハイフンだけで入力してください（例: ai-adoption-roadmap）']
+    # スラッグ変更時に aliases キーを書き足さない（スキーマに無いキーを書かない）。
+    aliases_field: false
+    preview_path: /blog/{{slug}}/
+    sortable_fields:
+      fields: [pubDate, title]
+      default:
+        field: pubDate
+        direction: descending
+    # フィールドの並びは既存記事の frontmatter の並びに合わせている（保存時の差分を減らす）。
+    fields:
+      - name: title
+        label: タイトル
+        widget: string
+        hint: 記事の見出し。検索結果や SNS にもこのまま出ます。
+      - name: description
+        label: 概要
+        widget: text
+        hint: 記事一覧・検索結果・SNS に出る説明文。1〜2 文で、改行は入れません。
+      - name: pubDate
+        label: 公開日
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        default: '{{now}}'
+      - name: updatedDate
+        label: 更新日
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        required: false
+        hint: 内容を大きく直したときだけ入れます。空のままなら書き出しません。
+      - name: author
+        label: 著者
+        widget: string
+        default: Terisuke
+      - name: category
+        label: カテゴリ
+        widget: select
+        options:
+          - { label: AI, value: ai }
+          - { label: エンジニアリング, value: engineering }
+          - { label: 創業, value: founder }
+          - { label: ラボ, value: lab }
+      - name: tags
+        label: タグ
+        widget: list
+        required: false
+        hint: 1 行に 1 つ。Enter で次の行を追加します。
+      - name: image
+        label: アイキャッチ画像
+        widget: object
+        required: false
+        hint: 使うときだけチェックを入れて、画像と代替テキストを入れます。
+        fields:
+          - name: url
+            label: 画像
+            widget: image
+            # SVG は受け付けない（スクリプトを含められるため。ADR-0018 の stored XSS 対策）。
+            accept: image/avif,image/webp,image/jpeg,image/png,image/heic
+          - name: alt
+            label: 代替テキスト
+            widget: string
+            hint: 画像の内容を短く説明します（読み上げ・検索用）。
+      - name: lang
+        label: 言語
+        widget: hidden
+        default: ja
+      - name: featured
+        label: おすすめに表示
+        widget: boolean
+        default: false
+      - name: isDraft
+        label: 下書き
+        widget: hidden
+        default: false
+      - name: body
+        label: 本文
+        widget: markdown
+        # 既定は Markdown のまま編集するモード。既存記事の本文（数式・リンクカード・表など）を
+        # リッチテキスト変換で書き換えないため。右上の切り替えでリッチテキストも使える。
+        modes: [raw, rich_text]

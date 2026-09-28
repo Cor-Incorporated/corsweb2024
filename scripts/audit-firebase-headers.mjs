@@ -50,6 +50,9 @@ const routeMatches = (source, requestPath) => {
   if (source === '/') return requestPath === '/';
   if (source === '**/') return requestPath.endsWith('/');
   if (source === '/images/blog/uploads/**') return requestPath.startsWith('/images/blog/uploads/');
+  if (source === '/images/blog/**/*.svg') {
+    return requestPath.startsWith('/images/blog/') && /\.svg$/i.test(requestPath);
+  }
   // 自前ホストのフォント（KaTeX 等。/_astro/ にハッシュ付きで出力）も JS/CSS と同じく immutable
   if (source === '**/*.@(js|css|woff|woff2|ttf)') return /\.(js|css|woff|woff2|ttf)$/i.test(requestPath);
   if (source === '**/*.@(jpg|jpeg|png|gif|webp|avif|svg)') {
@@ -121,6 +124,12 @@ const main = async () => {
     /immutable/
   );
   requireRouteHeader(violations, headers, '/images/blog/uploads/**', 'X-Content-Type-Options', 'nosniff');
+  // ブログ画像の SVG は、置かれても文書として動かないようにする（ADR-0018 の stored XSS 対策。
+  // CMS の accept と src/config/__tests__/content-safety.test.ts で SVG 自体も止めている）。
+  const svgPolicy = "sandbox; default-src 'none'";
+  requireRouteHeader(violations, headers, '/images/blog/**/*.svg', 'Content-Security-Policy', svgPolicy);
+  requireEffectiveHeader(violations, headers, '/images/blog/x.svg', 'Content-Security-Policy', svgPolicy);
+  requireEffectiveHeader(violations, headers, '/images/blog/a/b.svg', 'Content-Security-Policy', svgPolicy);
 
   const samplePaths = ['/', '/blog/', '/blog/index.html', '/assets/app.js', '/og/page/home.png', '/sitemap-index.xml'];
   for (const requestPath of samplePaths) {
@@ -139,11 +148,10 @@ const main = async () => {
   requireEffectiveHeader(violations, headers, '/og/page/home.png', 'Cache-Control', /immutable/);
   requireEffectiveHeader(violations, headers, '/sitemap-index.xml', 'Cache-Control', /max-age=86400/);
 
-  const allHeaders = headers.flatMap(route => route.headers ?? []);
-  const csp = allHeaders.find(header => normalize(header.key) === 'content-security-policy');
-  const reportOnly = allHeaders.find(
-    header => normalize(header.key) === 'content-security-policy-report-only'
-  );
+  // ページ（/）に効く CSP だけを見る。/images/blog/**/*.svg の sandbox はページの CSP ではない。
+  const pageHeaders = effectiveHeadersFor(headers, '/');
+  const csp = pageHeaders.get('content-security-policy');
+  const reportOnly = pageHeaders.get('content-security-policy-report-only');
   if (csp) {
     console.log('[firebase-headers][csp] enforcing CSP is configured; audit only checks presence here.');
   } else if (reportOnly) {
