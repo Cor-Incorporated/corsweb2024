@@ -29,9 +29,9 @@ const questions: FaqQuestion[] = t.faq.questions;
                 x-data={`{ open: false }`}
                 x-bind:class="{ 'bg-primary-500/10 dark:bg-primary-400/10': open }"
               >
+                {/* 質問行は Alpine 起動前から表示する（x-cloak を付けない）。閉じた状態の枠線色を静的な既定値にする */}
                 <dt
-                  class="border-b text-base transition sm:text-lg"
-                  x-cloak
+                  class="border-b border-primary-900/10 text-base transition dark:border-primary-300/10 sm:text-lg"
                   x-bind:class="{ 'border-transparent': open, 'border-primary-900/10 dark:border-primary-300/10': !open }"
                 >
                   <button
