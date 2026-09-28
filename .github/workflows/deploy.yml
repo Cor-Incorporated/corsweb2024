@@ -62,6 +62,12 @@ jobs:
           PUBLIC_CLARITY_ID: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CLARITY_ID || '' }}
           PUBLIC_CF_BEACON_TOKEN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CF_BEACON_TOKEN || '' }}
 
+      - name: Audit build output before deploying
+        # デプロイする前にビルド結果を監査する（secret の混入、第三者 CDN からのコード、壊れた JSON-LD、
+        # SEO の必須タグなど）。PR の verify（ci.yml）でも同じ監査を実行するが、ここでは本番・プレビュー用の
+        # 環境変数でビルドし直した成果物を検査する。失敗したらデプロイしない。
+        run: npm run security:audit:dist
+
       - name: Debug Firebase service account secret
         # secret はシェルのスクリプトに直接展開せず、環境変数で渡す。
         env:
