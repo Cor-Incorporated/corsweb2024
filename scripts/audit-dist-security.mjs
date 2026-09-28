@@ -46,21 +46,47 @@ const BLOCKED_HOST_PATTERNS = [
 //   URL の import ではないので当たらない。
 const PUBLIC_CDN_HOSTS = String.raw`(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com)`;
 const PUBLIC_CDN_URL = new RegExp(String.raw`^(?:https?:)?//${PUBLIC_CDN_HOSTS}/`, 'i');
+const NON_SCRIPT_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'ico', 'css', 'woff', 'woff2', 'ttf', 'otf', 'json', 'map']);
+// CDN の URL のうち、スクリプトとして読み込まれうるもの（画像・CSS・フォントなどの拡張子でないもの）。
+const isScriptLikeUrl = url => {
+  const lastSegment = url.split(/[?#]/)[0].split('/').pop() ?? '';
+  const extension = /\.([a-z0-9]+)$/i.exec(lastSegment)?.[1]?.toLowerCase();
+  return !extension || !NON_SCRIPT_EXTENSIONS.has(extension);
+};
+const CDN_SRC_ASSIGNMENT = new RegExp(String.raw`\bsrc["']?\s*[:=,]\s*["'\`]((?:https?:)?//${PUBLIC_CDN_HOSTS}/[^"'\`\s]*)`, 'gi');
 const REMOTE_MODULE_PATTERNS = [
-  { name: 'dynamic import of a remote module', pattern: /\bimport\s*\(\s*["'`](?:https?:)?\/\//i },
-  { name: 'static import of a remote module', pattern: /\b(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?["'`](?:https?:)?\/\//i },
+  { name: 'dynamic import of a remote module', test: code => /\bimport\s*\(\s*["'`](?:https?:)?\/\//i.test(code) },
+  {
+    name: 'static import of a remote module',
+    test: code => /\b(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?["'`](?:https?:)?\/\//i.test(code),
+  },
   // script 要素を作って src に入れる読み込み（script.src = …、setAttribute('src', …)、{ src: … }）。
   {
     name: 'script source set to a public JS CDN',
-    pattern: new RegExp(String.raw`\bsrc["']?\s*[:=,]\s*["'\`](?:https?:)?//${PUBLIC_CDN_HOSTS}/`, 'i'),
+    test: code => [...code.matchAll(CDN_SRC_ASSIGNMENT)].some(match => isScriptLikeUrl(match[1])),
   },
 ];
+// 検出しない書き方（Astro の出力には現れないので、回帰を止める範囲として許容する）: 文字列の連結で組み立てた URL、
+// コメント入りの import()、importScripts、fetch().then(eval)、文字参照でエスケープした URL など。
 const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-// src 属性（data-src などは含めず、= の前後の空白と引用符なしの値も扱う）。
-const SRC_ATTRIBUTE_PATTERN = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i;
-const scriptSrc = attributes => {
-  const match = attributes.match(SRC_ATTRIBUTE_PATTERN);
+const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
+// 属性の値（data-src などは含めず、= の前後の空白と引用符なしの値も扱う）。
+const attributeValue = (attributes, name) => {
+  const match = attributes.match(new RegExp(String.raw`(?:^|\s)${name}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>\`]+))`, 'i'));
   return match ? (match[1] ?? match[2] ?? match[3]).trim() : null;
+};
+// 実行される script の type（なし、JavaScript の MIME、module）。JSON などのデータは対象にしない。
+const EXECUTABLE_SCRIPT_TYPES = new Set(['', 'text/javascript', 'application/javascript', 'module']);
+const REMOTE_URL = /^(?:https?:)?\/\//i;
+// import map（<script type="importmap">）が、リモートの URL をモジュールとして割り当てていないか。
+const importMapRemoteUrls = body => {
+  try {
+    const map = JSON.parse(body);
+    const tables = [map.imports ?? {}, ...Object.values(map.scopes ?? {})];
+    return tables.flatMap(table => Object.values(table)).filter(value => typeof value === 'string' && REMOTE_URL.test(value));
+  } catch {
+    return [];
+  }
 };
 const SECRET_PATTERNS = [
   { name: 'private key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
@@ -188,24 +214,34 @@ const auditLocalStorage = (violations, file) => {
 };
 
 const scriptElements = html =>
-  [...html.matchAll(SCRIPT_ELEMENT_PATTERN)].map(([, attributes, body]) => ({ attributes, body, src: scriptSrc(attributes) }));
+  [...html.replace(HTML_COMMENT_PATTERN, '').matchAll(SCRIPT_ELEMENT_PATTERN)].map(([, attributes, body]) => ({
+    body,
+    src: attributeValue(attributes, 'src'),
+    type: (attributeValue(attributes, 'type') ?? '').toLowerCase(),
+  }));
 
 const executableCode = file => {
   const extension = path.extname(file.file);
   if (extension === '.js' || extension === '.mjs') return [file.text];
   if (extension !== '.html') return [];
   return scriptElements(file.text)
-    .filter(script => script.src === null && !/application\/ld\+json/i.test(script.attributes))
+    .filter(script => script.src === null && EXECUTABLE_SCRIPT_TYPES.has(script.type))
     .map(script => script.body);
 };
 
 const auditRemoteCode = (violations, file) => {
-  if (path.extname(file.file) === '.html' && scriptElements(file.text).some(script => script.src && PUBLIC_CDN_URL.test(script.src))) {
-    violations.push(`[dist-security] ${file.relative} loads a script from a public JS CDN.`);
+  if (path.extname(file.file) === '.html') {
+    const scripts = scriptElements(file.text);
+    if (scripts.some(script => script.src && PUBLIC_CDN_URL.test(script.src))) {
+      violations.push(`[dist-security] ${file.relative} loads a script from a public JS CDN.`);
+    }
+    if (scripts.some(script => script.type === 'importmap' && importMapRemoteUrls(script.body).length > 0)) {
+      violations.push(`[dist-security] ${file.relative} has an import map that points to a remote module.`);
+    }
   }
   for (const code of executableCode(file)) {
-    for (const { name, pattern } of REMOTE_MODULE_PATTERNS) {
-      if (pattern.test(code)) {
+    for (const { name, test } of REMOTE_MODULE_PATTERNS) {
+      if (test(code)) {
         violations.push(`[dist-security] ${file.relative} contains ${name}.`);
       }
     }
