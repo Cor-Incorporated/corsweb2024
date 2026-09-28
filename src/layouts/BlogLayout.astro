@@ -4,6 +4,8 @@ import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
 import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
+import AlpineInit from '../components/layout/AlpineInit.astro';
+import ThemeInit from '../components/layout/ThemeInit.astro';
 import { getCurrentLocale } from '../utils/i18n';
 import { generateKeywords } from '../utils/blog-seo';
 import { buildBlogHreflang, countContentWords } from '../utils/blog-structured-data';
@@ -11,6 +13,7 @@ import { ORGANIZATION_NAMES } from '../config/organization';
 import BlogSeoMeta from '../components/blog/seo/BlogSeoMeta.astro';
 import BlogOgp from '../components/blog/seo/BlogOgp.astro';
 import BlogStructuredData from '../components/blog/seo/BlogStructuredData.astro';
+import KatexStyles from '../components/blog/KatexStyles.astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 type BlogPostData = {
@@ -37,9 +40,11 @@ interface Props {
   relatedPosts?: BlogPost[];
   nextPost?: BlogPost;
   prevPost?: BlogPost;
+  // 本文に数式がある記事だけ KaTeX の CSS を読む（remarkPluginFrontmatter.hasMath）
+  hasMath?: boolean;
 }
 
-const { post } = Astro.props;
+const { post, hasMath = false } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
 const { title, description, pubDate, updatedDate, author, category, tags, image, ogImage } = post.data;
 
@@ -76,7 +81,7 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
 ---
 
 <!doctype html>
-<html lang={currentLocale} x-cloak x-data :class="{ 'dark': $store.theme?.isDark || false }">
+<html lang={currentLocale} x-data :class="{ 'dark': $store.theme?.isDark || false }">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -126,12 +131,14 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       currentLocale={currentLocale}
     />
     
-    <!-- KaTeX CSS for math rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <!-- KaTeX CSS: 数式を含む記事だけ。自前ホスト（CDN・SRI・preload 不一致 #293 を解消） -->
+    {hasMath && <KatexStyles />}
     
     {/* pageTitle は frontmatter で組み立て済み（全角｜直書きは圧縮ツールで壊れるため）。 */}
     <title>{pageTitle}</title>
     <ViewTransitions />
+    <!-- テーマ（dark クラス）を初回描画前に適用（FOUC 防止。Alpine 非依存） -->
+    <ThemeInit />
     
     <!-- Include critical CSS from parent layout -->
     <style is:inline>
@@ -466,53 +473,8 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
     <Footer />
     <WebVitals />
     
-    <!-- Alpine.js Stores Plugin -->
-    <script data-cfasync="false">
-      document.addEventListener('alpine:init', () => {
-        Alpine.plugin((Alpine) => {
-          // Theme store
-          Alpine.store('theme', {
-            isDark: document.documentElement.classList.contains('dark'),
-            toggle() {
-              this.isDark = !this.isDark;
-              document.documentElement.classList.toggle('dark', this.isDark);
-              localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
-            },
-          });
-          
-          // Language store
-          Alpine.store('lang', {
-            current: document.documentElement.lang,
-            toggle() {
-              const localeOrder = ['ja', 'en', 'zh', 'ko', 'es'];
-              const currentIndex = localeOrder.indexOf(this.current);
-              const nextIndex = (currentIndex + 1) % localeOrder.length;
-              const newLang = localeOrder[nextIndex];
-              
-              const currentPath = window.location.pathname;
-              let newPath;
-              
-              if (newLang === 'ja') {
-                newPath = currentPath.replace(/^\/(en|zh|ko|es)/, '') || '/';
-              } else {
-                newPath = currentPath.replace(/^\/(en|zh|ko|es)/, '') || '/';
-                newPath = newPath === '/' ? `/${newLang}` : `/${newLang}${newPath}`;
-              }
-              
-              window.location.href = newPath;
-            }
-          });
-        });
-      });
-    </script>
-    
-    <script 
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"
-      integrity="sha384-O8NPfezTLQ/sgLfQYBJEnezJLlum9L6KOqHsfIWauzaFfD1TQSuvA4iUpgWGHeuZ"
-      crossorigin="anonymous"
-      data-cfasync="false"
-      defer
-    ></script>
+    <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
+    <AlpineInit />
     
     <noscript>
       <style>[x-cloak]{ display: block !important; }</style>
@@ -520,16 +482,6 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
         JavaScriptが無効なため、一部機能がご利用いただけません。
       </div>
     </noscript>
-    
-    <script data-cfasync="false">
-      (() => {
-        const theme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (!theme && prefersDark)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
     
     <script data-cfasync="false">
       if ('fonts' in document) {

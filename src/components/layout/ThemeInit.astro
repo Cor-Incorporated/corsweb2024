@@ -1,0 +1,41 @@
+---
+// 初回描画前にテーマ（<html> の dark クラス）を当てる。<head> 内で同期実行するため、
+// <html x-cloak> を外しても配色のちらつき（FOUC）が出ない。Alpine には依存しない。
+// View Transitions は遷移のたびに <html> の属性を新しいページのもので置き換える（class も消える）
+// ため、astro:after-swap でテーマを当て直し、JS 実行中の印（js: [data-reveal] の演出）と
+// フォント読込済みの印（font-loaded: Inter の適用）も戻す。
+// Layout / BlogLayout の両方がこのコンポーネントを使うこと: 同一テキストの inline script は
+// 遷移時に再実行されないので、リスナーが二重登録されない。
+// data-cfasync="false": Cloudflare Rocket Loader に遅延させない（既存の重要スクリプトと同じ扱い）。
+---
+
+<script is:inline data-cfasync="false">
+  (() => {
+    const root = document.documentElement;
+    const applyTheme = () => {
+      let stored = null;
+      try {
+        stored = localStorage.getItem('theme');
+      } catch (_) {
+        stored = null;
+      }
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.toggle('dark', stored === 'dark' || (!stored && prefersDark));
+    };
+    // ヘッダーのテーマ切替スイッチ（[data-theme-switch]）の aria-checked も同じ判定で合わせる。
+    // Alpine が遅れる・読み込めない場合でも、描画前に当てた配色と読み上げの状態が食い違わないようにする
+    // （Alpine が動けば :aria-checked が同じ値で上書きする）。
+    const syncSwitch = () => {
+      const checked = String(root.classList.contains('dark'));
+      document.querySelectorAll('[data-theme-switch]').forEach((el) => el.setAttribute('aria-checked', checked));
+    };
+    applyTheme();
+    document.addEventListener('DOMContentLoaded', syncSwitch);
+    document.addEventListener('astro:after-swap', () => {
+      applyTheme();
+      syncSwitch();
+      root.classList.add('js');
+      if ('fonts' in document) document.fonts.ready.then(() => root.classList.add('font-loaded'));
+    });
+  })();
+</script>

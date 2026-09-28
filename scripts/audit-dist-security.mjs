@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { findServerOutputRemnants, findUnreachableBundles } from './dist-bundle-reachability.mjs';
 
 const DIST_DIR = path.resolve('dist');
 const TEXT_EXTENSIONS = new Set([
@@ -175,6 +176,29 @@ const auditHeavyRuntime = (violations, file) => {
   }
 };
 
+// サーバー描画（SSR）チャンクが公開ディレクトリ _astro に残っていないこと（Epic #330 / #337）。
+// vite の rollupOptions.output で出力名を上書きすると SSR ビルドにも効き、記事本文を含むチャンクが
+// _astro/*.js として公開されていた。HTML から参照されないので表示は壊れず、目視では気づけない。
+// 目印（createComponent 等）の無いチャンクもあるため、主判定は下の到達可能性（auditBundleReachability）で行い、
+// これは補助の判定として残す。
+const SERVER_RENDER_MARKERS = /\bcreateComponent\b|\brenderTemplate\b/;
+const auditServerRenderChunks = (violations, file) => {
+  if (!file.relative.startsWith('_astro/') || !file.relative.endsWith('.js')) return;
+  if (SERVER_RENDER_MARKERS.test(file.text)) {
+    violations.push(`[dist-security] ${file.relative} is a server-render chunk (createComponent/renderTemplate) published under _astro/.`);
+  }
+};
+
+// 公開 _astro/*.js がどの HTML からも辿れない（取り残し）/ サーバービルドの残骸（.mjs・chunks/）が無いこと。
+const auditBundleReachability = async (violations, files) => {
+  for (const relative of await findUnreachableBundles(DIST_DIR, files)) {
+    violations.push(`[dist-security] ${relative} is published under _astro/ but no HTML page loads it (leftover build output).`);
+  }
+  for (const relative of findServerOutputRemnants(DIST_DIR, files)) {
+    violations.push(`[dist-security] ${relative} looks like server build output (.mjs / chunks/) left in dist.`);
+  }
+};
+
 const main = async () => {
   const distStat = await stat(DIST_DIR).catch(() => null);
   if (!distStat?.isDirectory()) {
@@ -195,7 +219,9 @@ const main = async () => {
     auditOrigins(violations, file);
     auditLocalStorage(violations, file);
     auditHeavyRuntime(violations, file);
+    auditServerRenderChunks(violations, file);
   }
+  await auditBundleReachability(violations, files);
 
   if (violations.length > 0) {
     throw new Error(violations.join('\n'));

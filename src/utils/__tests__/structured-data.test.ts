@@ -95,6 +95,16 @@ describe('single source of the Organization', () => {
     expect(offenders).toEqual([]);
   });
 
+  // og:site_name は WebSite.name と一致させる（SNS カードと検索結果でサイト名が割れないように）
+  it('every og:site_name meta takes its value from ORGANIZATION_NAMES (same source as WebSite.name)', () => {
+    const metas = CODE.flatMap(({ file, text }) =>
+      [...text.matchAll(/<meta\s+property=["']og:site_name["']\s+content=([^/>]+?)\s*\/?>/g)].map((match) => ({ file, content: match[1] })),
+    );
+    expect(metas.map(({ file }) => file).sort()).toEqual([path.join('components', 'blog', 'seo', 'BlogOgp.astro'), path.join('layouts', 'Layout.astro')]);
+    for (const { file, content } of metas) expect(content, file).toBe('{ORGANIZATION_NAMES[currentLocale]}');
+    for (const locale of LOCALES) expect(buildWebSiteJsonLd(locale).name).toBe(ORGANIZATION_NAMES[locale]);
+  });
+
   it('no file other than config/organization.ts hard-codes the company name as a name / locale-map value', () => {
     // name: 'Cor.inc' / "name": "Cor.株式会社" / ja: 'Cor.株式会社'（社名マップ）/ alternateName: ['Cor.Inc.'] の形を探す。
     // alt 属性や本文・RSS のタイトル中の社名（UI の文言）は対象外。
