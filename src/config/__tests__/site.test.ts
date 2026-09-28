@@ -81,6 +81,31 @@ describe('isProductionSite (ADR-0010 noindex)', () => {
   });
 });
 
+// meta robots の値。環境（production / preview）× ページ単位 noindex の 4 通りを固定する。
+describe('getRobotsContent (環境 × ページ単位 noindex)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it.each([
+    ['production', false, 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'],
+    ['production', true, 'noindex, follow'],
+    ['preview', false, 'noindex, nofollow'],
+    ['preview', true, 'noindex, nofollow'],
+  ])('%s / noindex=%s → %s', async (env, noindex, expected) => {
+    vi.stubEnv('PUBLIC_SITE_ENV', env);
+    const { getRobotsContent } = await loadSite();
+    expect(getRobotsContent({ noindex })).toBe(expected);
+  });
+
+  it('defaults to indexable in production', async () => {
+    vi.stubEnv('PUBLIC_SITE_ENV', 'production');
+    const { getRobotsContent } = await loadSite();
+    expect(getRobotsContent()).toMatch(/^index, follow/);
+  });
+});
+
 // 計測タグの出力可否（ADR-0004）。Analytics.astro はこの関数の戻り値だけで
 // タグを出す/出さないを決めるため、ここが両条件の AND を守っているかを固定する。
 // 落ちるべき変更: `enabled && isProductionSite()` を `||` にする / どちらかの条件を落とす。
