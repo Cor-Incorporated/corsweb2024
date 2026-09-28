@@ -91,6 +91,8 @@ export const PHONE_INQUIRY_PHRASE_DETECT: readonly LocalizedCase[] = [
   ['ko', '궁금하신 점은 전화 주세요'],
   ['zh', '欢迎打电话'],
   ['zh', '欢迎电话垂询'],
+  // PR #331 再レビュー（6e174cb）LOW-2: 「ご遠慮なく」は肯定（否定の「ご遠慮ください」と取り違えない）
+  ['ja', 'お電話でのご相談もご遠慮なくお寄せください'],
 ];
 
 /** /privacy の判定（句・電話番号・tel:）で検出しないもの（findPhoneInquiryLeads）。 */
@@ -111,4 +113,6 @@ export const PHONE_INQUIRY_PHRASE_IGNORE: readonly LocalizedCase[] = [
   // ja の否定（句の直後の否定だけを除外する）
   ['ja', '電話でのお問い合わせは受け付けておりません'],
   ['ja', 'お電話でのお問い合わせは受け付けておりません'],
+  ['ja', '電話でのお問い合わせは、受け付けておりません'], // 読点を挟む（PR #331 再レビュー（6e174cb）LOW-2）
+  ['ja', 'お電話でのご相談はご遠慮ください'],
 ];
