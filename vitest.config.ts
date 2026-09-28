@@ -3,7 +3,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'happy-dom',
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}'],
+    include: [
+      'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
+      // ビルド成果物を検査する Node スクリプト（scripts/seo-snapshot.mjs 等）のテスト
+      'scripts/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
+    ],
     exclude: ['node_modules', 'dist', '.astro'],
     globals: true,
     coverage: {

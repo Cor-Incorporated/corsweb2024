@@ -3,6 +3,7 @@
 // hreflang は実在する翻訳だけ（utils/blog-structured-data.ts の buildBlogHreflang で生成）。
 import { getRobotsContent } from '../../../config/site';
 import type { HreflangLink } from '../../../utils/blog-structured-data';
+import { isNoindexPath } from '../../../config/indexing';
 
 interface Props {
   description: string;
@@ -17,7 +18,8 @@ interface Props {
 
 const { description, keywords, author, pubDate, updatedDate, category, tags, hreflangLinks } = Astro.props;
 
-const robotsContent = getRobotsContent();
+// Layout と同じ判定（config/indexing.ts）を通す。記事ページは現状 noindex 対象外だが、判定を 1 か所に保つ。
+const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathname) });
 ---
 
 <meta name="description" content={description} />

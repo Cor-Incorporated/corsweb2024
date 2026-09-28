@@ -8,10 +8,10 @@
     "build": "./node_modules/.bin/astro check && ./node_modules/.bin/astro build",
     "preview": "./node_modules/.bin/astro preview",
     "preview:ci": "./node_modules/.bin/astro preview --host 127.0.0.1 --port 4322",
+    "build:cms": "./node_modules/.bin/vite build --config cms/vite.config.mjs",
     "astro": "./node_modules/.bin/astro",
     "translate": "node scripts/translate-blog.js",
     "translate:all": "node scripts/translate-all-blog.js",
-    "blog:draft": "node scripts/generate-blog-draft.mjs",
     "blog:check": "node scripts/blog-guardrails.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -19,9 +19,11 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:admin": "playwright test --config=playwright.admin.config.ts",
     "test:visual-text": "playwright test --config=playwright.visual.config.ts",
     "verify:visual-text": "npm run build && npm run test:visual-text",
     "check:links": "node scripts/check-external-links.mjs",
+    "seo:snapshot": "node scripts/seo-snapshot.mjs",
     "security:audit:firebase": "node scripts/audit-firebase-headers.mjs",
     "security:audit:workers": "node scripts/audit-worker-headers.mjs",
     "security:audit:dist": "node scripts/audit-dist-security.mjs",
@@ -29,7 +31,6 @@
   },
   "dependencies": {
     "@alpinejs/collapse": "3.12.3",
-    "@anthropic-ai/sdk": "^0.105.0",
     "@astrojs/check": "^0.3.3",
     "@astrojs/rss": "^4.0.12",
     "@astrojs/sitemap": "^3.4.1",
@@ -64,12 +65,14 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.53.1",
+    "@sveltia/cms": "0.221.7",
     "@testing-library/dom": "^10.4.0",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "happy-dom": "^18.0.1",
     "jsdom": "^26.1.0",
     "playwright": "^1.53.1",
+    "vite": "^5.4.19",
     "vitest": "^3.2.4"
   }
 }
