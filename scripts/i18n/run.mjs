@@ -311,7 +311,8 @@ export async function runWrite({ plan, retranslateUntracked, pruneUntracked = fa
 /**
  * --adopt で採用しない理由（採用してよければ null）。
  * - --since の差分で ja が追加・変更された記事（M3）
- * - git の履歴で、ja の最後の変更が翻訳の最後の変更より後（または判定できない）記事（MEDIUM-2。history.mjs）
+ * - git の履歴で、ja の最後のコミットが、翻訳を最後に作成・訳し直したコミットより後（または判定できない）記事
+ *   （MEDIUM-2 / LOW-3。翻訳の改名と社名の表記・空白だけの変更は訳し直しとみなさない。history.mjs）
  * どちらも --force-adopt でだけ上書きできる。
  */
 function adoptRefusal(item, ctx) {
