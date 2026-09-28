@@ -185,8 +185,10 @@ const TEXT_NODE = 3;
  * 電話の判定に使う「読み手に届く文字列」（ADR-0021 §1）。HTML の outerHTML ではなく、
  * 本文の textContent（タグを除き、文字参照は解決済み）・人が読む属性・description 系の meta・
  * JSON-LD をつなぐ。実行用の script・style・template と、それ以外の属性（class・data-*・href・src・
- * SVG の d など）は含めない。各部分は NFKC で正規化し（全角→半角・℡→TEL・NBSP→空白）、空白の連続を
- * 1 つにまとめる。ブロック境界の改行は残す（番号の区切りは改行をまたがない）。
+ * SVG の d など）は含めない。各部分は NFKC で正規化し（全角→半角・℡→TEL・NBSP→空白）、不可視の書式文字
+ * （\p{Cf}: ゼロ幅スペース・ソフトハイフン・ワードジョイナーなど）を取り除いて、空白の連続を 1 つにまとめる。
+ * ブロック境界の改行は残す（番号の区切りは改行をまたがない）。
+ * スクリプトが実行時に表示する文言は、この静的な文字列には入らない。dist 検査で実行後の DOM に当てる。
  */
 export function readableTextOf(document: Document): string {
   return readablePartsOf(document.documentElement).join('');
@@ -219,7 +221,7 @@ function readableAttributeValuesOf(element: Element): string[] {
 }
 
 function normalizeReadable(text: string | null): string {
-  return (text ?? '').normalize('NFKC').replace(/\s+/gu, ' ');
+  return (text ?? '').normalize('NFKC').replace(/\p{Cf}/gu, '').replace(/\s+/gu, ' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -421,10 +423,20 @@ export function isCloudiaChatHtmlServed(inspection: CloudiaChatInspection): bool
 // 内部ヘルパ
 // ---------------------------------------------------------------------------
 
+// 電話番号の判定（ADR-0021 §2）。桁数で落ちた候補は、候補の先頭の次の位置から探し直す。候補の終わりから
+// 続けると、落ちた候補（例: "9:00〜18:00 092-000-0000" の "00 092-000"）が直後の本物の番号の先頭を飲み込み、
+// その番号が二度と試されない。
 function phoneNumberFindingsIn(text: string): PhoneLeadFinding[] {
-  return findingsIn(text, new RegExp(PHONE_NUMBER_PATTERN.source, 'gu'), 'number').filter((finding) =>
-    isPlausiblePhoneNumber(finding.match)
-  );
+  const pattern = new RegExp(PHONE_NUMBER_PATTERN.source, 'gu');
+  const findings: PhoneLeadFinding[] = [];
+  for (let match = pattern.exec(text); match !== null; match = pattern.exec(text)) {
+    if (isPlausiblePhoneNumber(match[0])) {
+      findings.push(findingOf('number', text, match));
+    } else {
+      pattern.lastIndex = match.index + 1;
+    }
+  }
+  return findings;
 }
 
 // 句の判定。ja の句の直後が否定（受け付けておりません など）なら、その一致は数えない。
