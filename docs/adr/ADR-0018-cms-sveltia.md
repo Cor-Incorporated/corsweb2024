@@ -29,7 +29,12 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
    - 管理画面は Astro から独立した Vite のビルド（`cms/`）で、npm 版の Sveltia CMS を同梱する。noindex の最小 HTML と `config.yml` だけを置き、フォント・翻訳などの付随ファイルも同じサイトから配信して、外部 CDN を読まない。
    - 厳しい CSP（許可リスト方式、`frame-ancestors 'none'`）を付ける。OAuth のポップアップと通信するため、Cross-Origin-Opener-Policy は `same-origin-allow-popups` にする。
    - 配信は main へのマージ後だけ（`.github/workflows/deploy-cms.yml`）。管理画面のコードの変更は、main の承認 1 件を経る。
-   - 「main からだけ」は技術的に強制する。公開サイトのプロジェクト（cor-jp-web）の配信用 SA 鍵はリポジトリ secret で、書き込み権限者なら任意のブランチのワークフローから使える。同じプロジェクトに CMS を置くと、その鍵で CMS を差し替え、ログインした編集者（CEO の管理者アカウントを含む）のトークンを盗めてしまう。そこで CMS は別プロジェクトに置き、配信には鍵を使わない。Workload Identity Federation のプロバイダ（`projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024`）は、リポジトリが `Cor-Incorporated/corsweb2024`、ref が `refs/heads/main`、ワークフローが `deploy-cms.yml@refs/heads/main` のときだけ、配信用の SA `cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com`（`roles/firebasehosting.admin` のみ）の一時的な認証情報を出す。配信ジョブは GitHub Environment `cms-production`（main だけ）でも縛る。
+   - 「main からだけ」は技術的に強制する。公開サイトのプロジェクト（cor-jp-web）の配信用 SA 鍵はリポジトリ secret で、書き込み権限者なら任意のブランチのワークフローから使える。同じプロジェクトに CMS を置くと、その鍵で CMS を差し替え、ログインした編集者（CEO の管理者アカウントを含む）のトークンを盗めてしまう。そこで CMS は別プロジェクトに置き、配信には鍵を使わない。Workload Identity Federation のプロバイダ（`projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024`）は、次の条件をすべて満たすときだけ、配信用の SA `cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com`（`roles/firebasehosting.admin` のみ）の一時的な認証情報を出す。
+     - リポジトリとオーナーを名前ではなく ID で照合する（`repository_id` 799991752、`repository_owner_id` 233881863。改名後に同じ名前のリポジトリを作られても通らない）。
+     - ref が `refs/heads/main`、ワークフローが `deploy-cms.yml@refs/heads/main`、イベントが push か workflow_dispatch。
+     - ジョブが GitHub Environment `cms-production`（main だけ）を通っている（`environment` の claim）。
+     - SA の利用許可も、この Environment のジョブ（subject `repo:Cor-Incorporated/corsweb2024:environment:cms-production`）だけに付けている。
+     - Environment の制限も、WIF の条件の一部として実際に効く。
    - SSR・adapter・DB は導入しない。
 2. GitHub バックエンドを使う（対象ブランチは develop）。`publish_mode: editorial_workflow` とし、下書きは PR、レビューは PR のラベル、公開は merge commit で行う。
 3. 認証は GitHub OAuth App と Sveltia CMS Authenticator（Cloudflare Workers）で行う。編集者は各自の GitHub アカウント（リポジトリの Write 権限）でログインする。
