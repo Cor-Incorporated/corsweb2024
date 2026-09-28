@@ -179,14 +179,17 @@ const READABLE_ATTRIBUTES = ['alt', 'title', 'aria-label', 'placeholder'] as con
 const READABLE_META_KEYS: ReadonlySet<string> = new Set([
   'description', 'og:title', 'og:description', 'twitter:title', 'twitter:description',
 ]);
+// value が画面に出ない入力欄（それ以外の input の value は、入力済みの値やボタンの文字として人に見える）。
+const UNREADABLE_INPUT_TYPES: ReadonlySet<string> = new Set(['hidden', 'password']);
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 
 /**
  * 電話の判定に使う「読み手に届く文字列」（ADR-0021 §1）。HTML の outerHTML ではなく、
- * 本文の textContent（タグを除き、文字参照は解決済み）・人が読む属性・description 系の meta・
- * JSON-LD をつなぐ。実行用の script・style・template と、それ以外の属性（class・data-*・href・src・
- * SVG の d など）は含めない。各部分は NFKC で正規化し（全角→半角・℡→TEL・NBSP→空白）、不可視の書式文字
+ * 本文の textContent（タグを除き、文字参照は解決済み）・人が読む属性（alt / title / aria-label / placeholder、
+ * hidden・password 以外の input の value、option / optgroup の label）・description 系の meta・JSON-LD を
+ * つなぐ。実行用の script・style・template と、それ以外の属性（class・data-*・href・src・SVG の d・
+ * iframe の srcdoc など）は含めない。各部分は NFKC で正規化し（全角→半角・℡→TEL・NBSP→空白）、不可視の書式文字
  * （\p{Cf}: ゼロ幅スペース・ソフトハイフン・ワードジョイナーなど）を取り除いて、空白の連続を 1 つにまとめる。
  * ブロック境界の改行は残す（番号の区切りは改行をまたがない）。
  * スクリプトが実行時に表示する文言は、この静的な文字列には入らない。dist 検査で実行後の DOM に当てる。
@@ -214,11 +217,14 @@ function isReadableElement(element: Element): boolean {
 }
 
 function readableAttributeValuesOf(element: Element): string[] {
-  const attributes = READABLE_ATTRIBUTES.map((name) => element.getAttribute(name) ?? '');
+  const name = element.localName;
+  const attributes = READABLE_ATTRIBUTES.map((attribute) => element.getAttribute(attribute) ?? '');
   const metaKey = (element.getAttribute('name') ?? element.getAttribute('property') ?? '').trim().toLowerCase();
-  const meta =
-    element.localName === 'meta' && READABLE_META_KEYS.has(metaKey) ? [element.getAttribute('content') ?? ''] : [];
-  return [...attributes, ...meta].filter((value) => value.trim() !== '');
+  const meta = name === 'meta' && READABLE_META_KEYS.has(metaKey) ? [element.getAttribute('content') ?? ''] : [];
+  const inputType = (element.getAttribute('type') ?? '').trim().toLowerCase();
+  const inputValue = name === 'input' && !UNREADABLE_INPUT_TYPES.has(inputType) ? [element.getAttribute('value') ?? ''] : [];
+  const optionLabel = name === 'option' || name === 'optgroup' ? [element.getAttribute('label') ?? ''] : [];
+  return [...attributes, ...meta, ...inputValue, ...optionLabel].filter((value) => value.trim() !== '');
 }
 
 function normalizeReadable(text: string | null): string {

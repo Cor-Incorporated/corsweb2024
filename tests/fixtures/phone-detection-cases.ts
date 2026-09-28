@@ -45,6 +45,10 @@ export const PHONE_NUMBER_DETECT: readonly DetectionCase[] = [
   ['ゼロ幅スペース（U+200B）', '092\u200B-000-0000'],
   ['ソフトハイフン（U+00AD）', '092\u00AD000\u00AD0000'],
   ['ワードジョイナー（U+2060）', '092\u2060-\u2060000-0000'],
+  // #331 再レビュー LOW-3: 画面に出る入力欄の値と option の label
+  ['入力欄の値（text）', '<input type="text" value="092-000-0000">'],
+  ['ボタンの文字（submit の value）', '<input type="submit" value="092-000-0000">'],
+  ['option の label', '<select><option label="092-000-0000" value="x"></option></select>'],
 ];
 
 /** 電話番号として検出しないもの。 */
@@ -65,6 +69,8 @@ export const PHONE_NUMBER_IGNORE: readonly DetectionCase[] = [
   // data-fallback-same-page など）は、dist 検査でスクリプトを実行した後の DOM で見る（ADR-0021 §1）。
   ['data-* 属性の値（静的な照合では対象外）', '<div data-tel="092-000-0000"></div>'],
   ['表のセルをまたぐ数字', '<table><tr><td>092</td><td>000-0000</td></tr></table>'],
+  ['画面に出ない入力欄の値（hidden）', '<input type="hidden" value="092-000-0000">'],
+  ['画面に出ない入力欄の値（password）', '<input type="password" value="0920000000">'],
 ];
 
 /** /privacy の句として検出するもの（findPhoneInquiryPhrases）。 */
