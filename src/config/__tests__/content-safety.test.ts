@@ -9,8 +9,10 @@
  *
  * 違反: on〜 属性 / URL を取る属性（href・src・xlink:href・action・formaction・values・from・to・by）で
  * http(s)・mailto・相対のどれでもないもの / srcdoc / script・iframe・object・embed・base・form・meta・link・style
- * などの要素 / svg・math 要素（KaTeX が数式から出力する .katex の中だけは許す。中の属性は検査する）。
- * 範囲外: 見た目だけの改ざん（class・インラインの style 属性）、外部画像の読み込み（https）。
+ * などの要素 / svg・math 要素。KaTeX が数式から出力する .katex の中だけは、KaTeX が作る要素（svg・path・line と
+ * MathML）に限って許す（中の属性は検査する。SMIL の set・animate などは .katex の中でも違反）。
+ * 範囲外: 見た目だけの改ざん（class・インラインの style 属性）、外部画像の読み込み（https）、
+ * リンクカード（本文の URL だけの行。画像のキャッシュは #340 の監査と sandbox で扱う）。
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -19,6 +21,7 @@ import { createMarkdownProcessor, type AstroMarkdownOptions } from '@astrojs/mar
 import matter from 'gray-matter';
 import { fromHtml } from 'hast-util-from-html';
 import type { Element, Root, RootContent } from 'hast';
+import remarkLinkCardPlus from 'remark-link-card-plus';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
@@ -39,7 +42,16 @@ const BANNED_ELEMENTS = new Set(
     'form',
   ].concat(['meta', 'link', 'style', 'svg', 'math'])
 );
-const KATEX_ONLY = new Set(['svg', 'math']);
+// KaTeX（0.16.22）が出力する SVG と MathML の要素。src/domTree.js の SvgNode・PathNode・LineNode と、
+// src/mathMLTree.js の MathNodeType。.katex の中の svg / math の下では、これ以外の要素を違反にする。
+const KATEX_FOREIGN = new Set(
+  ['svg', 'path', 'line'].concat(
+    ['math', 'annotation', 'semantics', 'mtext', 'mn', 'mo', 'mi', 'mspace'],
+    ['mover', 'munder', 'munderover', 'msup', 'msub', 'msubsup', 'mfrac', 'mroot', 'msqrt'],
+    ['mtable', 'mtr', 'mtd', 'mlabeledtr', 'mrow', 'menclose', 'mstyle', 'mpadded', 'mphantom'],
+    ['mglyph']
+  )
+);
 const URL_PROPERTIES = new Set([
   'href',
   'src',
@@ -65,11 +77,21 @@ const isUnsafeUrl = (value: string) => {
 const classesOf = (element: Element) => [element.properties?.className ?? []].flat().map(String);
 const textOf = (value: unknown) => [value].flat().map(String).join(' ');
 
-function checkElement(element: Element, insideKatex: boolean): string[] {
+type Context = { katex: boolean; foreign: boolean };
+const isForeignRoot = (tag: string) => tag === 'svg' || tag === 'math';
+
+function checkElement(element: Element, context: Context): string[] {
   const tag = element.tagName.toLowerCase();
   const found: string[] = [];
-  if (BANNED_ELEMENTS.has(tag) && !(KATEX_ONLY.has(tag) && insideKatex))
+  if (context.foreign || isForeignRoot(tag)) {
+    // svg / math の中。.katex の外では根の svg / math を、.katex の中では KaTeX が作らない要素を違反にする
+    if (!context.katex && !context.foreign) found.push(`<${tag}> 要素`);
+    if (context.katex && !KATEX_FOREIGN.has(tag)) {
+      found.push(`<${tag}> 要素（.katex の中でも KaTeX が出力しない SVG / MathML）`);
+    }
+  } else if (BANNED_ELEMENTS.has(tag)) {
     found.push(`<${tag}> 要素`);
+  }
   for (const [name, value] of Object.entries(element.properties ?? {})) {
     const key = name.toLowerCase();
     const text = textOf(value);
@@ -84,13 +106,16 @@ function checkElement(element: Element, insideKatex: boolean): string[] {
 
 /** 描画結果の木を歩いて違反を集める */
 function checkTree(tree: Root): string[] {
-  const walk = (nodes: RootContent[], insideKatex: boolean): string[] =>
+  const walk = (nodes: RootContent[], context: Context): string[] =>
     nodes.flatMap((node) => {
       if (node.type !== 'element') return [];
-      const katex = insideKatex || classesOf(node).includes('katex');
-      return [...checkElement(node, insideKatex), ...walk(node.children, katex)];
+      const next = {
+        katex: context.katex || classesOf(node).includes('katex'),
+        foreign: context.foreign || isForeignRoot(node.tagName.toLowerCase()),
+      };
+      return [...checkElement(node, context), ...walk(node.children, next)];
     });
-  return walk(tree.children, false);
+  return walk(tree.children, { katex: false, foreign: false });
 }
 
 type Render = (markdown: string) => Promise<string[]>;
@@ -101,12 +126,23 @@ beforeAll(async () => {
   const { default: config } = (await import(configUrl)) as {
     default: { markdown: AstroMarkdownOptions };
   };
-  const pluginName = (plugin: unknown) => (Array.isArray(plugin) ? plugin[0] : plugin);
+  // 外部の URL を取りに行くリンクカードのプラグインを、名前の文字列ではなく関数の参照で外す。
+  // 設定の書き方（名前・パス・関数そのもの）に依らず、読み込んだ結果が同じ関数なら外れる。
+  // 限界: 別のプラグインの中でリンクカードを呼ぶ形に包むと外せない（そのときは下の件数の検査で落ちる）。
+  const loaded = await Promise.all(
+    (config.markdown.remarkPlugins ?? []).map(async (entry) => {
+      const [plugin, options] = Array.isArray(entry) ? entry : [entry];
+      const fn = typeof plugin === 'string' ? (await import(plugin)).default : plugin;
+      return [fn, options] as [unknown, unknown];
+    })
+  );
+  const kept = loaded.filter(([fn]) => fn !== remarkLinkCardPlus);
+  expect(loaded.length - kept.length, 'リンクカードのプラグインを関数の参照で 1 つ外す想定').toBe(
+    1
+  );
   const processor = await createMarkdownProcessor({
     ...config.markdown,
-    remarkPlugins: (config.markdown.remarkPlugins ?? []).filter(
-      (plugin) => pluginName(plugin) !== 'remark-link-card-plus'
-    ),
+    remarkPlugins: kept as AstroMarkdownOptions['remarkPlugins'],
   });
   render = async (markdown) => {
     const { code } = await processor.render(markdown);
@@ -202,6 +238,26 @@ describe('F3 変異: 行単位の正規表現をすり抜けた書き方も、�
     const disguised =
       '<span class="katex"><svg><set attributeName="href" to="javascript:alert(1)" /></svg></span>\n';
     expect((await render(disguised)).join('\n')).toContain('<set to="javascript:alert(1)">');
+  });
+
+  it.each([
+    ['set', '<span class="katex"><svg><set attributeName="x" to="1" /></svg></span>\n'],
+    [
+      'animate',
+      '<span class="katex"><svg><animate attributeName="x" values="1;2" /></svg></span>\n',
+    ],
+    [
+      'foreignobject',
+      '<span class="katex"><svg><foreignObject><b>x</b></foreignObject></svg></span>\n',
+    ],
+    [
+      'maction',
+      '<span class="katex"><math><maction actiontype="toggle"><mi>x</mi></maction></math></span>\n',
+    ],
+  ])('偽の .katex の中の SVG / MathML の %s は、属性が無害でも落ちる', async (tag, markdown) => {
+    expect((await render(markdown)).join('\n')).toContain(
+      `<${tag}> 要素（.katex の中でも KaTeX が出力しない SVG / MathML）`
+    );
   });
 
   it('コード例の中の <script> と、https・mailto・相対リンク・KaTeX の数式は落ちない', async () => {
