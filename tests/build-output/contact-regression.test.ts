@@ -295,7 +295,12 @@ describe('C 判定基準 ↔ ビルド出力（#322 の合成監視と共有）'
   it('/contact/chat/ のプレースホルダは「Cloudia 未配信」と判定される', () => {
     const { document, pageUrl } = loadDistPage(CLOUDIA_CHAT_PATH);
     const inspection = inspectCloudiaChatDocument(document, pageUrl);
-    expect(inspection).toEqual({ hasSpaRoot: false, entryScriptUrls: [], placeholderLocales: ['ja'] });
+    expect(inspection).toEqual({
+      hasSpaRoot: false,
+      entryScriptUrls: [],
+      preloadScriptUrls: [],
+      placeholderLocales: ['ja'],
+    });
     expect(isCloudiaChatHtmlServed(inspection)).toBe(false);
   });
 

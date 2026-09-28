@@ -332,6 +332,8 @@ const MAIN_NAVIGATION_SELECTOR = 'main a[href], main area[href], main form[actio
  * /contact/chat/ から /contact/（全言語）へ送り返す導線を列挙する（#323 背景 2 の無限ループ）。
  * 対象は `<main>` 内のリンク・フォームと、ページ全体の meta refresh。ヘッダー/フッターの
  * 通常ナビは Layout が出す共通導線なので対象外。
+ * Worker（workers/contact-edge）の障害経路（Pages 障害かつ Firebase 404 で /contact/ へ戻す）は、
+ * ビルド出力に対するこの判定の範囲外で、Issue #352 で扱う。
  */
 export function findContactSelfLoops(root: ParentNode, pageUrl: URL): SelfLoopFinding[] {
   const navigations = Array.from(root.querySelectorAll(MAIN_NAVIGATION_SELECTOR), (element) => ({
@@ -391,32 +393,57 @@ export const CLOUDIA_CHAT_PLACEHOLDER_TITLES = {
 
 export type CloudiaChatInspection = {
   readonly hasSpaRoot: boolean;
+  /** 実行される入口のスクリプト（`<script type="module" src>` など）。SPA を起動するのはこれだけ。 */
   readonly entryScriptUrls: readonly string[];
+  /** `<link rel="modulepreload">` で先読みするだけのスクリプト。SPA は起動しないので、配信の根拠にしない。 */
+  readonly preloadScriptUrls: readonly string[];
   readonly placeholderLocales: readonly string[];
 };
 
+// ブラウザが実行する script の type（未指定・module・JavaScript の MIME type）。application/json などは実行されない。
+const EXECUTABLE_SCRIPT_TYPES: ReadonlySet<string> = new Set([
+  '', 'module', 'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript',
+]);
+
+/**
+ * module 対応のブラウザが実行する `<script src>` か。type が実行される種類で、classic script なら
+ * nomodule が付いていないこと（HTML の仕様どおり、nomodule は classic script にだけ効く）。
+ */
+function isExecutedScript(script: Element): boolean {
+  const type = (script.getAttribute('type') ?? '').trim().toLowerCase();
+  if (!EXECUTABLE_SCRIPT_TYPES.has(type)) return false;
+  return type === 'module' || !script.hasAttribute('nomodule');
+}
+
 /** /contact/chat/ の HTML から、配信判定に使う事実だけを取り出す。 */
 export function inspectCloudiaChatDocument(document: Document, pageUrl: URL): CloudiaChatInspection {
-  const entryScriptUrls = Array.from(
-    document.querySelectorAll('script[src], link[rel="modulepreload"][href]'),
-    (element) => resolveSameOrigin(element.getAttribute('src') ?? element.getAttribute('href') ?? '', pageUrl)
-  )
-    .filter((url): url is URL => url !== null && CLOUDIA_SPA_ENTRY_SCRIPT_PATH.test(url.pathname))
-    .map((url) => url.href);
+  const executableScripts = Array.from(document.querySelectorAll('script[src]')).filter(isExecutedScript);
+  const preloadLinks = Array.from(document.querySelectorAll('link[rel~="modulepreload"][href]'));
   const bodyText = normalizeWhitespace(document.body?.textContent);
   const placeholderLocales = Object.entries(CLOUDIA_CHAT_PLACEHOLDER_TITLES)
     .filter(([, title]) => bodyText.includes(title))
     .map(([locale]) => locale);
   return {
     hasSpaRoot: document.getElementById(CLOUDIA_SPA_ROOT_ID) !== null,
-    entryScriptUrls: [...new Set(entryScriptUrls)],
+    entryScriptUrls: cloudiaScriptUrlsOf(executableScripts, 'src', pageUrl),
+    preloadScriptUrls: cloudiaScriptUrlsOf(preloadLinks, 'href', pageUrl),
     placeholderLocales,
   };
 }
 
+function cloudiaScriptUrlsOf(elements: readonly Element[], attribute: 'src' | 'href', pageUrl: URL): string[] {
+  const urls = elements
+    .map((element) => resolveSameOrigin(element.getAttribute(attribute) ?? '', pageUrl))
+    .filter((url): url is URL => url !== null && CLOUDIA_SPA_ENTRY_SCRIPT_PATH.test(url.pathname))
+    .map((url) => url.href);
+  return [...new Set(urls)];
+}
+
 /**
- * HTML だけで言える範囲の「Cloudia が配信されている」。監視はこれに加えて
- * entryScriptUrls がすべて 200 を返すことを確かめる（HTML は出てもアセット 404 の部分障害がある）。
+ * HTML だけで言える範囲の「Cloudia が配信されている」。#root があり、SPA を起動する入口のスクリプトが
+ * 実行される形（`<script src>`）で入っていて、プレースホルダが出ていないこと。modulepreload だけの HTML は
+ * SPA を起動しないので false（先読みは実行されない）。監視はこれに加えて entryScriptUrls（と
+ * preloadScriptUrls）が 200 を返すことを確かめる（HTML は出てもアセット 404 の部分障害がある）。
  */
 export function isCloudiaChatHtmlServed(inspection: CloudiaChatInspection): boolean {
   return (

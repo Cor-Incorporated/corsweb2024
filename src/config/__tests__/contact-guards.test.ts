@@ -400,9 +400,41 @@ describe('C inspectCloudiaChatDocument（#322 合成監視と共有）', () => {
     expect(inspection).toEqual({
       hasSpaRoot: true,
       entryScriptUrls: [`${ORIGIN}/contact/chat/assets/index-AbC_12-3.js`],
+      preloadScriptUrls: [],
       placeholderLocales: [],
     });
     expect(isCloudiaChatHtmlServed(inspection)).toBe(true);
+  });
+
+  // Codex 最終レビュー P2: modulepreload は先読みだけで SPA を起動しない。preload だけの HTML を配信中と
+  // 判定すると、#322 の監視が壊れた配信を正常と報告する。
+  it('#root と modulepreload だけで、実行されるスクリプトが無ければ配信中とみなさない', () => {
+    const preload = '<link rel="modulepreload" crossorigin href="/contact/chat/assets/index-AbC_12-3.js">';
+    const inspection = inspectCloudiaChatDocument(parsePage('<div id="root"></div>', preload), chatUrl);
+    expect(inspection.entryScriptUrls).toEqual([]);
+    expect(inspection.preloadScriptUrls).toEqual([`${ORIGIN}/contact/chat/assets/index-AbC_12-3.js`]);
+    expect(isCloudiaChatHtmlServed(inspection)).toBe(false);
+  });
+
+  it('入口のスクリプトと modulepreload が両方あれば配信中とみなし、両方の URL を返す', () => {
+    const head = `${entryScript}<link rel="modulepreload" href="/contact/chat/assets/index-Vendor1.js">`;
+    const inspection = inspectCloudiaChatDocument(parsePage('<div id="root"></div>', head), chatUrl);
+    expect(inspection.preloadScriptUrls).toEqual([`${ORIGIN}/contact/chat/assets/index-Vendor1.js`]);
+    expect(isCloudiaChatHtmlServed(inspection)).toBe(true);
+  });
+
+  it('実行されない type（application/json など）の script は入口として数えない', () => {
+    const script = '<script type="application/json" src="/contact/chat/assets/index-AbC.js"></script>';
+    const inspection = inspectCloudiaChatDocument(parsePage('<div id="root"></div>', script), chatUrl);
+    expect(inspection.entryScriptUrls).toEqual([]);
+    expect(isCloudiaChatHtmlServed(inspection)).toBe(false);
+  });
+
+  it('nomodule の classic script は module 対応のブラウザで実行されないので入口として数えない', () => {
+    const script = '<script nomodule src="/contact/chat/assets/index-AbC.js"></script>';
+    const inspection = inspectCloudiaChatDocument(parsePage('<div id="root"></div>', script), chatUrl);
+    expect(inspection.entryScriptUrls).toEqual([]);
+    expect(isCloudiaChatHtmlServed(inspection)).toBe(false);
   });
 
   it('#root だけでエントリスクリプトが無ければ配信中とみなさない', () => {
