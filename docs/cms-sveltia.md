@@ -30,7 +30,7 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 **https://cor-jp-cms-admin.web.app/** だけを使います（`cor-jp-cms-admin.firebaseapp.com` や cor-jp.com の下では使えません。以前の `cor-jp-cms.web.app` は退役予定で使いません）。
 
-認証の仕組み（Worker と GitHub の OAuth App）が用意できるまでは、画面は開いても「GitHub にログイン」が失敗します（2-1 の表の 12〜15）。
+認証の仕組み（Worker と GitHub の OAuth App）が用意できるまでは、画面は開いても「GitHub にログイン」が失敗します（2-1 の表の 13〜16）。
 
 ### 1-3. ログイン
 
@@ -109,61 +109,83 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 
 ### 2-1. 外部の設定の一覧と状態（2026-09-28 時点）
 
-この CMS が頼るリポジトリの外の設定です。**サービスアカウントの JSON 鍵は作らず、使いません**（配信は Workload Identity 連携で行います）。
+この CMS が頼るリポジトリの外の設定です。**サービスアカウントの JSON 鍵は作らず、使いません**（配信は Workload Identity 連携で行います）。各項目の「確かめ方」はすべて読み取りだけのコマンドで、番号は下のコマンド一覧の番号です。
 
 | # | 項目 | 値 | 状態 |
 |---|---|---|---|
 | 1 | GCP / Firebase プロジェクト | `cor-jp-cms-admin`（プロジェクト番号 `60287323048`、組織 cor-jp.com `460639040363`） | 済 |
-| 2 | Hosting サイト | `cor-jp-cms-admin`（既定サイト）→ https://cor-jp-cms-admin.web.app/ | 済 |
+| 2 | Hosting サイト | `cor-jp-cms-admin`（既定サイト）→ https://cor-jp-cms-admin.web.app/ 。配信のたびにプレビューチャネル `candidate`（1 時間で失効）も使う | 済 |
 | 3 | 有効な API | firebasehosting、iam、iamcredentials、sts | 済 |
 | 4 | 配信用サービスアカウント | `cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com`（ロールは `roles/firebasehosting.admin` だけ。**JSON 鍵なし**） | 済 |
 | 5 | Workload Identity プール / プロバイダ | プール `github`、プロバイダ `corsweb2024`。完全な名前は `projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024`（ACTIVE） | 済 |
-| 6 | プロバイダの issuer | `https://token.actions.githubusercontent.com` | 済 |
-| 7 | プロバイダの条件（attribute-condition） | `assertion.repository=='Cor-Incorporated/corsweb2024' && assertion.ref=='refs/heads/main' && assertion.job_workflow_ref=='Cor-Incorporated/corsweb2024/.github/workflows/deploy-cms.yml@refs/heads/main'` | 済 |
-| 8 | サービスアカウントの利用許可 | `roles/iam.workloadIdentityUser` を `principalSet://iam.googleapis.com/projects/60287323048/locations/global/workloadIdentityPools/github/attribute.repository/Cor-Incorporated/corsweb2024` に付与 | 済 |
-| 9 | GitHub Environment | `cms-production`。deployment branch policy は custom で `main`（branch）だけ。secret は入れない | 済 |
-| 10 | リポジトリ変数 | `CMS_DEPLOY_ENABLED` = `true`（2026-09-27T17:14:23Z） | 済 |
-| 11 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 2 本・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 4 本・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |
-| 12 | 認証 Worker | `cor-sveltia-cms-auth`（Cloudflare、Company@cor-jp.com） | 未 |
-| 13 | GitHub OAuth App | Homepage `https://cor-jp-cms-admin.web.app/`、Callback `<WORKER_URL>/callback` | 未 |
-| 14 | Worker の secret | `GITHUB_CLIENT_ID`・`GITHUB_CLIENT_SECRET` | 未 |
-| 15 | `base_url` | `cms/public/config.yml` を Worker の URL に | 未 |
-| 16 | 旧サイト `cor-jp-cms`（プロジェクト cor-jp-web 内） | 使わない。**退役予定**（削除は CEO の確認後） | 退役予定 |
+| 6 | プロバイダの issuer / audience | issuer `https://token.actions.githubusercontent.com`。allowedAudiences は空（既定の audience = プロバイダの完全な名前） | 済 |
+| 7 | プロバイダの条件（attribute-condition） | `assertion.repository_id=='799991752' && assertion.repository_owner_id=='233881863' && assertion.ref=='refs/heads/main' && assertion.job_workflow_ref=='Cor-Incorporated/corsweb2024/.github/workflows/deploy-cms.yml@refs/heads/main' && assertion.environment=='cms-production' && assertion.event_name in ['push', 'workflow_dispatch']` | 済 |
+| 8 | サービスアカウントの利用許可 | `roles/iam.workloadIdentityUser` を `principal://iam.googleapis.com/projects/60287323048/locations/global/workloadIdentityPools/github/subject/repo:Cor-Incorporated/corsweb2024:environment:cms-production` の 1 つだけに付与（OIDC の sub は既定の形式: `use_default: true`） | 済 |
+| 9 | 公開サイトの SA に権限が無いこと | `cor-jp-cms-admin` の祖先（プロジェクトと組織 460639040363）の IAM のメンバー 39 件に、cor-jp-web の SA は 0 件（継承による権限も無い） | 済 |
+| 10 | GitHub Environment | `cms-production`。deployment branch policy は custom で `main`（branch）だけ。secret は入れない | 済 |
+| 11 | リポジトリ変数 | `CMS_DEPLOY_ENABLED` = `true`（2026-09-27T17:14:23Z） | 済 |
+| 12 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 2 本・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 4 本・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |
+| 13 | 認証 Worker | `cor-sveltia-cms-auth`（Cloudflare、Company@cor-jp.com） | 未 |
+| 14 | GitHub OAuth App | Homepage `https://cor-jp-cms-admin.web.app/`、Callback `<WORKER_URL>/callback` | 未 |
+| 15 | Worker の secret | `GITHUB_CLIENT_ID`・`GITHUB_CLIENT_SECRET` | 未 |
+| 16 | `base_url` | `cms/public/config.yml` を Worker の URL に | 未 |
+| 17 | 旧サイト `cor-jp-cms`（プロジェクト cor-jp-web 内） | 使わない。**退役予定**（削除は CEO 確認のうえ実施） | 退役予定 |
 
-`CMS_DEPLOY_ENABLED` は `true` なので、`deploy-cms.yml` が main に入った最初の push で CMS が配信されます。12〜15 が終わるまでは、管理画面は開いても **ログインだけが失敗** します。
+`CMS_DEPLOY_ENABLED` は `true` なので、`deploy-cms.yml` が main に入った最初の push で CMS が配信されます。13〜16 が終わるまでは、管理画面は開いても **ログインだけが失敗** します。
 
-現在値の確かめ方（読み取りのみ）:
+確かめ方（番号は上の表の番号。すべて読み取りのみ）:
 
 ```bash
-gcloud iam workload-identity-pools providers describe corsweb2024 --project cor-jp-cms-admin \
-  --location=global --workload-identity-pool=github --format='value(state,attributeCondition)'
+# 1・2
+gcloud projects describe cor-jp-cms-admin --format='value(projectNumber,parent.id)'
+firebase hosting:sites:list --project cor-jp-cms-admin
+# 3
+gcloud services list --enabled --project cor-jp-cms-admin --format='value(config.name)' \
+  | grep -E '^(firebasehosting|iam|iamcredentials|sts)\.googleapis\.com$'
+# 4（ロールが firebasehosting.admin だけ、ユーザー管理の鍵が 0 件）
 gcloud projects get-iam-policy cor-jp-cms-admin --flatten='bindings[].members' \
-  --filter='bindings.members:cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com' --format='value(bindings.role)'
+  --filter='bindings.members:serviceAccount:cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com' --format='value(bindings.role)'
 gcloud iam service-accounts keys list --iam-account=cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com --managed-by=user
-# ↑ 何も出ない（ユーザー管理の鍵が 0 件）ことを確かめる
+# 5・6・7（ACTIVE、条件、allowedAudiences が空。issuer）
+gcloud iam workload-identity-pools providers describe corsweb2024 --project cor-jp-cms-admin --location=global \
+  --workload-identity-pool=github --format='value(state,attributeCondition,oidc.allowedAudiences)'
+gcloud iam workload-identity-pools providers describe corsweb2024 --project cor-jp-cms-admin --location=global \
+  --workload-identity-pool=github --format='value(oidc.issuerUri)'
+# 8（workloadIdentityUser の members が上の principal:// の 1 つだけ。sub が既定の形式）
+gcloud iam service-accounts get-iam-policy cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com --project cor-jp-cms-admin
+gh api repos/Cor-Incorporated/corsweb2024/actions/oidc/customization/sub
+# 9（祖先の IAM に cor-jp-web の SA が無い: 何も出なければよい）
+gcloud projects get-ancestors-iam-policy cor-jp-cms-admin --format=json | grep -n 'cor-jp-web'
+# 10
 gh api repos/Cor-Incorporated/corsweb2024/environments/cms-production/deployment-branch-policies --jq '.branch_policies[] | .type + " " + .name'
+# 11
 gh variable list -R Cor-Incorporated/corsweb2024
-gh api repos/Cor-Incorporated/corsweb2024/branches/develop/protection \
-  --jq '{enforce_admins: .enforce_admins.enabled, reviews: .required_pull_request_reviews.required_approving_review_count, checks: [.required_status_checks.checks[].context], push: [.restrictions.users[].login]}'
+# 12（develop と main）
+for b in develop main; do gh api repos/Cor-Incorporated/corsweb2024/branches/$b/protection \
+  --jq "{branch: \"$b\", enforce_admins: .enforce_admins.enabled, reviews: .required_pull_request_reviews.required_approving_review_count, checks: [.required_status_checks.checks[].context], push: [.restrictions.users[].login]}"; done
+# 17（削除の後は cor-jp-cms が出ない）
+firebase hosting:sites:list --project cor-jp-web
 ```
 
 ### 2-2. CMS の配信（`.github/workflows/deploy-cms.yml`）
 
 | 項目 | 値 |
 |---|---|
-| 起動 | main への push（`cms/**`・`package.json`・`package-lock.json`・このワークフローの変更時）と、main での手動実行 |
+| 起動 | main への push（`cms/**`・`package.json`・`package-lock.json`・このワークフローの変更時）と、main での手動実行。`on:` はこの 2 つだけ（`pull_request_target` などは足さない） |
 | 条件 | `CMS_DEPLOY_ENABLED` が `true` かつ ref が main（build・deploy とも） |
-| build ジョブ | 権限は `contents: read` だけ（id-token なし）。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる |
-| deploy ジョブ | `needs: build`・`environment: cms-production`・権限は `contents: read` と `id-token: write`。artifact だけを受け取り、checkout も `npm ci` もしない。`firebase.json` に predeploy / postdeploy が無いことを確かめ、`google-github-actions/auth`（WIF、鍵なし）で `cms-deployer` になり、版を固定した `firebase-tools` で配信する |
-| 配信後の確認 | `curl -sI https://cor-jp-cms-admin.web.app/` の CSP と COOP が `cms/firebase.json` の値と違えば失敗する |
+| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる |
+| deploy ジョブ | `needs: build`・`environment: cms-production`・権限は `contents: read` と `id-token: write`。artifact だけを受け取り、checkout も npm もしない。使うコマンドは jq・curl・gh api（読み取り）・sha256sum・chmod・firebase（hosting:channel:deploy と hosting:clone）だけ（テストで照合） |
+| deploy の手順 | ① main の最新の SHA と、この run の SHA が違えば止める（古い run の再実行で巻き戻さない）→ ② artifact を受け取る → ③ `firebase.json` に predeploy / postdeploy が無いことを確かめる → ④ firebase-tools v15.31.0 のリリースの単体バイナリ（`firebase-tools-linux`）を、GitHub がリリースに記録した sha256 で照合する → ⑤ `google-github-actions/auth`（WIF、鍵なし）で `cms-deployer` になる → ⑥ プレビューチャネル `candidate` に配信（1 時間で失効）→ ⑦ candidate の CSP と COOP を `cms/firebase.json` と比べ、違えば止める（live は変わらない）→ ⑧ `hosting:clone` で candidate と同じ版を live に出す → ⑨ live の CSP と COOP を確かめる |
 | 止めているとき | `CMS_DEPLOY_ENABLED` が true でない（または main 以外）のときは配信せず、`cms/` の変更があれば `::warning::` を出す |
+
+firebase-tools を npm（`npx`）ではなくリリースの単体バイナリにしているのは、npm では依存の版が実行のたびに解決され、依存の install スクリプトも動くためです。単体バイナリは依存を含めて中身が sha256 で固定され、install スクリプトもありません。版を上げるときは、`gh api repos/firebase/firebase-tools/releases/tags/v<版> --jq '.assets[] | select(.name == "firebase-tools-linux") | .digest'` の値で URL と sha256 を同時に書き換えます。
 
 「main からだけ配信する」は、次の 2 か所で強制されています（どちらか一方でも拒否される）。
 
-- GCP: プロバイダの条件（2-1 の 7）。このリポジトリの、ref が main で、main 版の `deploy-cms.yml` から来たトークンしか `cms-deployer` に交換できない。
-- GitHub: Environment `cms-production` の branch policy（2-1 の 9）。main 以外では deploy ジョブが始まらない。
+- GCP: プロバイダの条件（2-1 の 7）と利用許可（2-1 の 8）。このリポジトリ（ID で照合）の、ref が main で、main 版の `deploy-cms.yml` の、Environment `cms-production` のジョブが、push か workflow_dispatch で起動したときのトークンしか `cms-deployer` に交換できない。
+- GitHub: Environment `cms-production` の branch policy（2-1 の 10）。main 以外では deploy ジョブが始まらない。
 
-公開サイトの配信用のサービスアカウント（プロジェクト cor-jp-web）には、`cor-jp-cms-admin` への権限がありません。
+公開サイトの配信用のサービスアカウント（プロジェクト cor-jp-web）には、`cor-jp-cms-admin` への権限がありません（継承も含めて。2-1 の 9）。
 
 ```bash
 # 手動で配信し直す（main のみ）
@@ -264,7 +286,7 @@ Write の編集者は記事を書いてレビューに送れますが、公開�
 
 | 確認 | 期待 |
 |---|---|
-| 最初の配信（deploy-cms.yml の run） | build・deploy とも成功し、「Check the served CSP and COOP」が OK |
+| 最初の配信（deploy-cms.yml の run） | build・deploy とも成功し、「Check the candidate …」と「Check live …」が OK |
 | 日本語のブラウザで https://cor-jp-cms-admin.web.app/ を開く | 画面が日本語。ブログの件数 = `ls src/content/blog/ja/*.md \| wc -l` の数 |
 | 初回ログインの直後に、ブラウザの開発者ツールの Console を見る | CSP 違反（`Refused to ... because it violates the following Content Security Policy directive`）が 0 件。ログイン後の通信（api.github.com など）は e2e では確かめていないので、ここで確かめる |
 | 記事を作って「レビューを依頼」 | base が develop の PR ができ、差分が `src/content/blog/ja/*.md` と `public/images/blog/*` だけ |
@@ -290,10 +312,13 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | 小窓に「OAuth アプリのクライアント ID またはシークレットが設定されていません」 | Worker の secret 未登録 | 2-5 |
 | GitHub の画面で「redirect_uri の不一致」などのエラー | OAuth App の Callback URL が `<WORKER_URL>/callback` と違う | 2-4 の Callback URL を直す |
 | `wrangler deploy` が `Binding name 'ALLOWED_DOMAINS' already in use` で失敗 | 同じ名前の secret が登録されている | `npx wrangler@4.135.0 secret delete ALLOWED_DOMAINS` の後に再デプロイ（値は `[vars]` から入る） |
-| deploy ジョブの認証（google-github-actions/auth）が `unauthorized_client` などで失敗 | プロバイダの条件（2-1 の 7）に合わない（main 以外・ワークフローの名前の変更・リポジトリ名の変更） | main の `deploy-cms.yml` から動かす。名前を変えたなら GCP の条件も同時に直す |
+| deploy ジョブの認証（google-github-actions/auth）が `unauthorized_client` や `Permission 'iam.serviceAccounts.getAccessToken' denied` で失敗 | プロバイダの条件（2-1 の 7）か利用許可（2-1 の 8）に合わない（main 以外・push と workflow_dispatch 以外・Environment の名前・ワークフローの名前・リポジトリの変更） | main の `deploy-cms.yml` から push か手動で動かす。名前を変えたなら GCP の条件と binding も同時に直す |
 | deploy ジョブが「Branch "…" is not allowed to deploy to cms-production」で始まらない | Environment の branch policy（main だけ） | main で動かす |
-| deploy ジョブの `firebase deploy` が権限エラー | `cms-deployer` のロール不足、または API が無効 | 2-1 の 3・4 を確かめる。ロールを足す前に CEO に確認する |
-| 「Check the served CSP and COOP」が失敗 | 配信されたヘッダーが `cms/firebase.json` と違う（反映の遅れを含む） | 数分おいて手動で配信し直す。続くなら Firebase コンソールで cor-jp-cms-admin の最新リリースを確かめる |
+| deploy ジョブが「main が進んでいます」で止まる | main に新しいコミットが入った後に、古い run を再実行した | 最新の main の run（またはその手動実行）を使う |
+| deploy ジョブの sha256 の照合（`sha256sum -c`）が失敗 | ダウンロードした firebase-tools のバイナリが、固定した値と違う | 迂回しない。リリースの digest を確かめ、版を上げるときは URL と sha256 を同時に書き換える PR を作る |
+| deploy ジョブの `firebase hosting:channel:deploy` / `hosting:clone` が権限エラー | `cms-deployer` のロール不足、または API が無効 | 2-1 の 3・4 を確かめる。ロールを足す前に CEO に確認する |
+| 「Check the candidate …」が失敗 | candidate が返すヘッダーが `cms/firebase.json` と違う。live は変わっていない | `cms/firebase.json` と Firebase の設定を確かめてから、手動で配信し直す |
+| 「Check live …」が失敗 | live への反映の遅れ、または live のヘッダーが違う | 数分おいて手動で配信し直す。続くなら Firebase コンソールで cor-jp-cms-admin の最新リリースを確かめる |
 | Actions に「CMS は配信していません」の警告 | `CMS_DEPLOY_ENABLED` が true でない、または main 以外で実行した | 意図どおりなら何もしない。配信するなら変数を true にして main で動かす |
 | ログインできるが、保存で権限エラー | Write 権限がない・招待を未承認・組織の OAuth app policy で未承認 | 2-7、2-4 の最後の段落 |
 | 「エントリーを公開」が失敗する | (1) 必須チェック（約 13 分）がまだ緑でない (2) terisuke・cloudia-Cor 以外のアカウント（develop の push 制限） | (1) PR の Checks が緑になってから押す (2) terisuke か cloudia-Cor に公開を頼む |
