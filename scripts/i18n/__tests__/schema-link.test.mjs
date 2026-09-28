@@ -44,10 +44,15 @@ function describeSchema(schema) {
   }
 }
 
+// コレクションのスキーマは、関数（({ image }) => z.object(...)）でも Zod スキーマそのものでもよい
+// （develop の #342 で blog は src/config/blog-schema.ts の blogFrontmatterSchema を直接渡す形になった）
+const resolveSchema = (schema) =>
+  typeof schema === 'function' ? schema({ image: () => z.string() }) : schema;
+
 const canonical = {
-  blog: collections.blog.schema({ image: () => z.string() }),
-  cases: collections.cases.schema,
-  news: collections.news.schema,
+  blog: resolveSchema(collections.blog.schema),
+  cases: resolveSchema(collections.cases.schema),
+  news: resolveSchema(collections.news.schema),
 };
 
 const contentRoot = path.resolve(import.meta.dirname, '../../../src/content');

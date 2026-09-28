@@ -25,6 +25,9 @@ function responseHeaders(response: Response, isHtml: boolean): Headers {
   headers.set('x-frame-options', 'SAMEORIGIN');
   if (isHtml) {
     headers.set('cache-control', 'no-store');
+    // Cloudia のチャット画面は検索結果に出すページではない（HP 側の /contact/chat/ も noindex）。
+    // 本番はこの Worker が Pages の SPA を返すため HP の meta robots が届かないので、ヘッダで付ける。
+    headers.set('x-robots-tag', 'noindex');
   } else if (response.ok) {
     headers.set('cache-control', 'public, max-age=31536000, immutable');
   }

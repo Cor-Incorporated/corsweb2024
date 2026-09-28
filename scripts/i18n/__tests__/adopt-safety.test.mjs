@@ -8,7 +8,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseDocument } from '../frontmatter.mjs';
-import { commitAll, createTempRepo, initGitRepo, JA_BLOG, runCli } from './helpers.mjs';
+import { commitAll, createTempRepo, git, initGitRepo, JA_BLOG, runCli } from './helpers.mjs';
 
 let repo;
 afterEach(async () => repo?.cleanup());
@@ -74,10 +74,10 @@ describe(
     const EDITED = JA_BLOG.replace('## はじめに', '## はじめに（改訂）');
 
     /** 旧翻訳あり → ja を編集してコミット。 */
-    async function jaEditedAfterTranslation() {
+    async function jaEditedAfterTranslation(translation = legacy('en')) {
       repo = await createTempRepo({
         'blog/ja/alpha.md': JA_BLOG,
-        'blog/en/alpha.md': legacy('en'),
+        'blog/en/alpha.md': translation,
       });
       initGitRepo(repo.root);
       await writeFile(file('blog/ja/alpha.md'), EDITED);
@@ -158,6 +158,53 @@ describe(
       expect(result.out.text()).toMatch(
         /\(dry-run\) refuse blog\/alpha \[en\]: .*ja が翻訳より後に変更されています/
       );
+    });
+
+    // #339 最終レビュー LOW-3: 「翻訳への最後の変更」と比べていたため、翻訳に触るだけのコミット
+    // （改名・社名の一括置換）の後では、古い訳を「ja より新しい訳」とみなして採用していた。
+    // 改名と、社名の表記・空白だけの変更は読み飛ばし、その前の作成・訳し直しと比べる。
+    const WITH_OLD_NAME = `${legacy('en')}\nWritten by Cor. Inc. in Fukuoka.\n`;
+    it.each([
+      [
+        'ja を編集した後に、ja と翻訳を同じコミットで改名した',
+        'blog/alpha-renamed',
+        () => {
+          for (const lang of ['ja', 'en']) {
+            const dir = `src/content/blog/${lang}`;
+            git(repo.root, 'mv', `${dir}/alpha.md`, `${dir}/alpha-renamed.md`);
+          }
+          commitAll(repo.root, 'rename ja and its translation');
+        },
+      ],
+      [
+        'ja を編集した後に、翻訳の社名の旧表記だけを一括置換した（Issue #350）',
+        'blog/alpha',
+        async () => {
+          const en = file('blog/en/alpha.md');
+          await writeFile(en, `${readFileSync(en, 'utf8').replace('Cor. Inc.', 'Cor.Inc.')}\n`);
+          commitAll(repo.root, 'replace the company name in translations');
+        },
+      ],
+    ])('翻訳に触るだけのコミットがあっても採用しない: %s', async (_name, item, touch) => {
+      await jaEditedAfterTranslation(WITH_OLD_NAME);
+      await touch();
+      const result = await runCli(repo.root, ['--adopt', '--langs', 'en']);
+      expect(result.code, result.out.text()).toBe(1);
+      expect(result.out.text()).toMatch(
+        new RegExp(`${item.replace('/', '\\/')} \\[en\\].*ja が翻訳より後に変更されています`)
+      );
+    });
+
+    // 実リポジトリの blog の en 7 件（2025-08-02 の ja 更新の後、2025-09-25 に訳し直した旧翻訳）と同じ形。
+    // 「翻訳を追加したコミット」とだけ比べると、これも拒否してしまう
+    it('ja を編集した後に、翻訳を訳し直した（中身が変わった）なら採用する', async () => {
+      await jaEditedAfterTranslation();
+      const en = file('blog/en/alpha.md');
+      await writeFile(en, readFileSync(en, 'utf8').replace('## はじめに', '## Introduction (revised)'));
+      commitAll(repo.root, 'retranslate after the ja edit');
+      const result = await runCli(repo.root, ['--adopt', '--langs', 'en']);
+      expect(result.code, result.out.text()).toBe(0);
+      expect(result.out.text()).toContain('結果: 成功 1 / 失敗 0 / 未処理 0');
     });
   }
 );

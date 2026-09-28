@@ -3,7 +3,9 @@
  *
  * - トークン検証: プレースホルダが全部・1 回ずつ・壊れず残っているか、ブロックは単独行か
  * - 構造パリティ: 見出し（レベル別）・コードブロック（内容一致）・リンク/画像の宛先・数式・HTML・
- *   リンクカード・表の行数・空行区切りのブロック（段落等）の数・リスト項目の数が ja と一致するか
+ *   リンクカード・表の行数と各行のセルの数・空行区切りのブロック（段落等）の数・リスト項目の数が ja と一致するか
+ * - 行き先の順序: リンク・画像などの行き先のプレースホルダの出現順が、見出し・表のセル・リスト項目・段落ごとに
+ *   ja と一致するか（行き先だけを入れ替えた訳を落とす。#339 Codex 最終レビュー P2-1）
  * - 未翻訳検出: 日本語（かな・漢字）が残りすぎていないか
  * - 社名: モデルが書いた表記ゆれを翻訳先言語の正式表記にそろえ、社名トークンを正式表記で戻す（glossary.mjs）
  */
@@ -13,6 +15,7 @@ import {
   isBlockTokenLine,
   restore,
   stripTokens,
+  textUnits,
   TOKEN_ANY_RE,
   tokenIds,
 } from './markdown.mjs';
@@ -85,6 +88,19 @@ function compareKind(kind, expected, actual) {
 }
 
 /**
+ * 表の各行（見出し行・区切り行・本文の行）のセルの数。行数（tableRows）だけでは、3 列の行からセルを
+ * 1 つ落とした訳を通してしまう（#339 Codex 最終レビュー P2-2）。行は文書内の表の行の通し番号。
+ */
+function compareTableCells(expected, actual) {
+  const errors = [];
+  expected.forEach((count, i) => {
+    if (count !== actual[i])
+      errors.push(`表の ${i + 1} 行目のセルの数が一致しません（ja ${count} / 翻訳 ${actual[i]}）`);
+  });
+  return errors.slice(0, 3);
+}
+
+/**
  * ja 本文と翻訳本文の構造パリティ。違反メッセージの配列（一致なら空）。
  */
 export function compareStructure(sourceMarkdown, translatedMarkdown) {
@@ -100,6 +116,7 @@ export function compareStructure(sourceMarkdown, translatedMarkdown) {
   }
   if (src.tableRows !== out.tableRows)
     errors.push(`表の行数が一致しません（ja ${src.tableRows} / 翻訳 ${out.tableRows}）`);
+  else errors.push(...compareTableCells(src.tableCells, out.tableCells));
   // 見出し・コード・リンクの数が変わらない「段落 1 つ」「リスト項目 1 つ」の欠落・結合も落とす。
   if (src.textBlocks !== out.textBlocks)
     errors.push(
@@ -174,7 +191,49 @@ export function checkBodyOutput({ output, finishReason, protectedText, store, so
   if (errors.length > 0) return { ok: false, errors };
   const restored = restore(normalizeOrganizationNames(text, lang), store, lang);
   const structural = compareStructure(sourceCore, restored);
-  return structural.length > 0 ? { ok: false, errors: structural } : { ok: true, text: restored };
+  if (structural.length > 0) return { ok: false, errors: structural };
+  const order = checkDestinationOrder(protectedText, text, store);
+  return order.length > 0 ? { ok: false, errors: order } : { ok: true, text: restored };
+}
+
+// 行き先を持つプレースホルダ。リンク・画像の宛先、URL、参照リンクのラベル、脚注、リンクカード行、
+// href / src を持つインライン HTML（<a href> の開始タグなど）。
+const DESTINATION_KINDS = new Set([
+  'link-dest',
+  'image-dest',
+  'autolink',
+  'bare-url',
+  'ref-label',
+  'footnote',
+  'link-card',
+]);
+const isDestination = (entry) =>
+  DESTINATION_KINDS.has(entry?.kind) ||
+  (entry?.kind === 'html-inline' && /\b(?:href|src)\s*=/i.test(entry.original));
+
+/**
+ * 行き先のプレースホルダの出現順を、単位（見出し・表のセル・リスト項目・段落）ごとに ja とそろえる。
+ * 各トークンが 1 回ずつ現れるかだけを見ると、[A](⟦P1⟧) [B](⟦P0⟧) のような行き先の取り違えを通してしまう
+ * （#339 Codex 最終レビュー P2-1）。訳では語順が変わるのでラベルとは照合できないため、並び順で見る。
+ * 構造パリティ（ブロック・リスト項目・表のセルの数）を通った後に呼ぶので、単位は 1 対 1 に対応する。
+ */
+function checkDestinationOrder(protectedText, output, store) {
+  const destinationsIn = (unit) => tokenIds(unit).filter((id) => isDestination(store.get(id)));
+  const expected = textUnits(protectedText).map(destinationsIn);
+  const actual = textUnits(output).map(destinationsIn);
+  if (expected.length !== actual.length)
+    return [
+      `リンク・画像などの行き先の配置を ja と照合できません（単位の数: ja ${expected.length} / 翻訳 ${actual.length}）`,
+    ];
+  const show = (ids) => (ids.length === 0 ? 'なし' : ids.map((id) => `⟦${id}⟧`).join(' '));
+  const errors = [];
+  expected.forEach((ids, i) => {
+    if (ids.join(' ') !== actual[i].join(' '))
+      errors.push(
+        `リンク・画像などの行き先の順序が ja と一致しません（ブロック #${i + 1}: ja ${show(ids)} / 翻訳 ${show(actual[i])}）`
+      );
+  });
+  return errors.slice(0, 3);
 }
 
 const URL_IN_TEXT_RE = /https?:\/\/[^\s"'<>()]+/g;

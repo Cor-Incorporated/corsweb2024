@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { findServerOutputRemnants, findUnreachableBundles } from './dist-bundle-reachability.mjs';
 
-const DIST_DIR = path.resolve('dist');
+// 監査する出力先（既定は ./dist）。CI はカレンダーありの 2 回目のビルド（$RUNNER_TEMP/dist-calendar）も
+// AUDIT_DIST_DIR で渡して監査する（.github/workflows/ci.yml）。
+const DIST_DIR = path.resolve(process.env.AUDIT_DIST_DIR || 'dist');
 const TEXT_EXTENSIONS = new Set([
   '.css',
   '.html',
@@ -36,6 +39,58 @@ const BLOCKED_HOST_PATTERNS = [
   /^cor-jp-main(?:--[a-z0-9-]+)?\.firebaseapp\.com$/i,
 ];
 
+// 実行時に第三者の CDN からコードを読み込まない。完全性を検証できず、版を範囲で指定すると中身も固定されない
+// （2026-09-28 まで全ページが unpkg の web-vitals@3 を動的 import していた。計測値の送り先も無かった）。
+// 必要なライブラリは npm から同梱する。
+// - HTML は、実行されるインラインの <script>（JSON-LD 以外）の本文だけを見る。記事のコード例
+//   （<code> の中の import("https://…") など）は実行されないので対象にしない。
+// - jsDelivr の Alpine.js は npm からの同梱に切り替えた（#333）ので、jsDelivr も対象にしている。
+// - 例外: 計測のベンダータグ（Cloudflare Web Analytics の beacon、Clarity の loader）は Analytics.astro が
+//   本番だけで出力するもので、公開 CDN からの script でも URL の import でもないので当たらない。
+const PUBLIC_CDN_HOSTS = String.raw`(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com|(?:[a-z0-9-]+\.)?jsdelivr\.net)`;
+const PUBLIC_CDN_URL = new RegExp(String.raw`^(?:https?:)?//${PUBLIC_CDN_HOSTS}/`, 'i');
+const NON_SCRIPT_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'ico', 'css', 'woff', 'woff2', 'ttf', 'otf', 'json', 'map']);
+// CDN の URL のうち、スクリプトとして読み込まれうるもの（画像・CSS・フォントなどの拡張子でないもの）。
+const isScriptLikeUrl = url => {
+  const lastSegment = url.split(/[?#]/)[0].split('/').pop() ?? '';
+  const extension = /\.([a-z0-9]+)$/i.exec(lastSegment)?.[1]?.toLowerCase();
+  return !extension || !NON_SCRIPT_EXTENSIONS.has(extension);
+};
+const CDN_SRC_ASSIGNMENT = new RegExp(String.raw`\bsrc["']?\s*[:=,]\s*["'\`]((?:https?:)?//${PUBLIC_CDN_HOSTS}/[^"'\`\s]*)`, 'gi');
+const REMOTE_MODULE_PATTERNS = [
+  { name: 'dynamic import of a remote module', test: code => /\bimport\s*\(\s*["'`](?:https?:)?\/\//i.test(code) },
+  {
+    name: 'static import of a remote module',
+    test: code => /\b(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?["'`](?:https?:)?\/\//i.test(code),
+  },
+  // script 要素を作って src に入れる読み込み（script.src = …、setAttribute('src', …)、{ src: … }）。
+  {
+    name: 'script source set to a public JS CDN',
+    test: code => [...code.matchAll(CDN_SRC_ASSIGNMENT)].some(match => isScriptLikeUrl(match[1])),
+  },
+];
+// 検出しない書き方（Astro の出力には現れないので、回帰を止める範囲として許容する）: 文字列の連結で組み立てた URL、
+// コメント入りの import()、importScripts、fetch().then(eval)、文字参照でエスケープした URL など。
+const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
+// 属性の値（data-src などは含めず、= の前後の空白と引用符なしの値も扱う）。
+const attributeValue = (attributes, name) => {
+  const match = attributes.match(new RegExp(String.raw`(?:^|\s)${name}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>\`]+))`, 'i'));
+  return match ? (match[1] ?? match[2] ?? match[3]).trim() : null;
+};
+// 実行される script の type（なし、JavaScript の MIME、module）。JSON などのデータは対象にしない。
+const EXECUTABLE_SCRIPT_TYPES = new Set(['', 'text/javascript', 'application/javascript', 'module']);
+const REMOTE_URL = /^(?:https?:)?\/\//i;
+// import map（<script type="importmap">）が、リモートの URL をモジュールとして割り当てていないか。
+const importMapRemoteUrls = body => {
+  try {
+    const map = JSON.parse(body);
+    const tables = [map.imports ?? {}, ...Object.values(map.scopes ?? {})];
+    return tables.flatMap(table => Object.values(table)).filter(value => typeof value === 'string' && REMOTE_URL.test(value));
+  } catch {
+    return [];
+  }
+};
 const SECRET_PATTERNS = [
   { name: 'private key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'github token', pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/ },
@@ -161,6 +216,41 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
+const scriptElements = html =>
+  [...html.replace(HTML_COMMENT_PATTERN, '').matchAll(SCRIPT_ELEMENT_PATTERN)].map(([, attributes, body]) => ({
+    body,
+    src: attributeValue(attributes, 'src'),
+    type: (attributeValue(attributes, 'type') ?? '').toLowerCase(),
+  }));
+
+const executableCode = file => {
+  const extension = path.extname(file.file);
+  if (extension === '.js' || extension === '.mjs') return [file.text];
+  if (extension !== '.html') return [];
+  return scriptElements(file.text)
+    .filter(script => script.src === null && EXECUTABLE_SCRIPT_TYPES.has(script.type))
+    .map(script => script.body);
+};
+
+const auditRemoteCode = (violations, file) => {
+  if (path.extname(file.file) === '.html') {
+    const scripts = scriptElements(file.text);
+    if (scripts.some(script => script.src && PUBLIC_CDN_URL.test(script.src))) {
+      violations.push(`[dist-security] ${file.relative} loads a script from a public JS CDN.`);
+    }
+    if (scripts.some(script => script.type === 'importmap' && importMapRemoteUrls(script.body).length > 0)) {
+      violations.push(`[dist-security] ${file.relative} has an import map that points to a remote module.`);
+    }
+  }
+  for (const code of executableCode(file)) {
+    for (const { name, test } of REMOTE_MODULE_PATTERNS) {
+      if (test(code)) {
+        violations.push(`[dist-security] ${file.relative} contains ${name}.`);
+      }
+    }
+  }
+};
+
 const auditHeavyRuntime = (violations, file) => {
   if (!file.relative.startsWith('_astro/') || !file.relative.endsWith('.js')) return;
   const heavyRuntimePatterns = [
@@ -175,10 +265,33 @@ const auditHeavyRuntime = (violations, file) => {
   }
 };
 
+// サーバー描画（SSR）チャンクが公開ディレクトリ _astro に残っていないこと（Epic #330 / #337）。
+// vite の rollupOptions.output で出力名を上書きすると SSR ビルドにも効き、記事本文を含むチャンクが
+// _astro/*.js として公開されていた。HTML から参照されないので表示は壊れず、目視では気づけない。
+// 目印（createComponent 等）の無いチャンクもあるため、主判定は下の到達可能性（auditBundleReachability）で行い、
+// これは補助の判定として残す。
+const SERVER_RENDER_MARKERS = /\bcreateComponent\b|\brenderTemplate\b/;
+const auditServerRenderChunks = (violations, file) => {
+  if (!file.relative.startsWith('_astro/') || !file.relative.endsWith('.js')) return;
+  if (SERVER_RENDER_MARKERS.test(file.text)) {
+    violations.push(`[dist-security] ${file.relative} is a server-render chunk (createComponent/renderTemplate) published under _astro/.`);
+  }
+};
+
+// 公開 _astro/*.js がどの HTML からも辿れない（取り残し）/ サーバービルドの残骸（.mjs・chunks/）が無いこと。
+const auditBundleReachability = async (violations, files) => {
+  for (const relative of await findUnreachableBundles(DIST_DIR, files)) {
+    violations.push(`[dist-security] ${relative} is published under _astro/ but no HTML page loads it (leftover build output).`);
+  }
+  for (const relative of findServerOutputRemnants(DIST_DIR, files)) {
+    violations.push(`[dist-security] ${relative} looks like server build output (.mjs / chunks/) left in dist.`);
+  }
+};
+
 const main = async () => {
   const distStat = await stat(DIST_DIR).catch(() => null);
   if (!distStat?.isDirectory()) {
-    throw new Error('[dist-security] dist/ not found. Run npm run build first.');
+    throw new Error(`[dist-security] ${DIST_DIR} not found. Run npm run build first (or set AUDIT_DIST_DIR).`);
   }
 
   const files = await walk(DIST_DIR);
@@ -194,8 +307,11 @@ const main = async () => {
     auditSecrets(violations, file);
     auditOrigins(violations, file);
     auditLocalStorage(violations, file);
+    auditRemoteCode(violations, file);
     auditHeavyRuntime(violations, file);
+    auditServerRenderChunks(violations, file);
   }
+  await auditBundleReachability(violations, files);
 
   if (violations.length > 0) {
     throw new Error(violations.join('\n'));

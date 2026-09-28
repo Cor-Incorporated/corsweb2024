@@ -5,7 +5,8 @@
  *   区切り（; && || | 改行 & ( { !）、コマンド置換 $( … ) / `…`、プロセス置換 <( … )、
  *   キーワード（if then elif else fi while until do done for case in esac）、
  *   case のパターン（pat1 | pat2) … ;;）、[[ … ]]（中の && || は区切りではない）、
- *   算術 $(( … ))・パラメータ展開 ${ … }・引用符（'…' "…"。"…" の中の $( … ) はコマンドとして数える）、
+ *   算術 $(( … ))・パラメータ展開 ${ … }（既定値などの中の $( … ) はコマンドとして数える）・
+ *   引用符（'…' "…"。"…" の中の $( … ) はコマンドとして数える）、for の単語の並び（中の $( … ) を数え、do の後がコマンド）、
  *   コメント（語頭の #）、代入の前置き（IFS= read …）、関数定義（name() { … }）。
  * 迷う構文に出会ったら例外を投げる（取りこぼして許可するより、テストを落として人が見る方が安全）。
  */
@@ -109,7 +110,10 @@ export function shellCommands(script) {
         collectNested(inner);
         i = end;
       } else if (peek('${')) {
-        i = readBalanced(i + 2, '{', '}').end;
+        // ${FOO:-$(cmd)} の既定値などに書いたコマンド置換も数える（中身は引数の位置として読む）
+        const { inner, end } = readBalanced(i + 2, '{', '}');
+        collectArguments(inner);
+        i = end;
       } else if (c === '`') {
         const end = skipTo('`', i + 1);
         collectNested(s.slice(i + 1, end - 1));
@@ -151,6 +155,11 @@ export function shellCommands(script) {
     const nested = shellCommands(inner);
     commands.push(...nested.commands);
     functions.push(...nested.functions);
+  };
+
+  // 引数の並び（配列の代入の中身・${…} の中身）: 語はコマンドではないが、中のコマンド置換は数える
+  const collectArguments = (inner) => {
+    commands.push(...shellCommands(`true ${inner}`).commands.slice(1));
   };
 
   while (i < s.length) {
@@ -238,7 +247,7 @@ export function shellCommands(script) {
       // 配列の代入 NAME=( … ): 中の語は引数。中のコマンド置換だけを数える
       if (word.endsWith('=') && s[i] === '(') {
         const { inner, end } = readBalanced(i + 1, '(', ')');
-        commands.push(...shellCommands(`true ${inner}`).commands.slice(1));
+        collectArguments(inner);
         i = end;
       }
       continue; // 代入（前置きを含む）: 次の語がコマンド
@@ -253,12 +262,8 @@ export function shellCommands(script) {
     }
     if (KEYWORDS.has(word)) {
       if (word === 'case') pendingCase = true;
-      if (word === 'for') {
-        // for NAME in WORDS; do → do までを飛ばす
-        const d = s.indexOf('do', i);
-        if (d === -1) throw new Error('for の do が見つかりません');
-        i = d;
-      }
+      // for NAME in WORDS; do …: for の後の語（変数名・in・単語の並び）は引数の位置として読む
+      // （単語の並びのコマンド置換は readWord が数える）。区切り（; か改行）の後の do で、再びコマンドの位置になる
       atCommand = LEADS_TO_COMMAND.has(word);
       continue;
     }

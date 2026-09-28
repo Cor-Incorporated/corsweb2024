@@ -1,7 +1,7 @@
 // @vitest-environment node
 /**
  * 社名の用語集（glossary.mjs）。値は src/config/organization.ts の ORGANIZATION_NAMES（PR #335）と同じにする。
- * #335 のマージ後に、両者を機械照合するリンクテストを追加する（それまではこのテストで値を固定する）。
+ * 両者の機械照合は organization-link.test.mjs（正本が無い間は skip）。ここでは値そのものを固定する。
  */
 import { describe, expect, it } from 'vitest';
 import {

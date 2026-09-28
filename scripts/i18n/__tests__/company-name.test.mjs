@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { parseDocument } from '../frontmatter.mjs';
 import { translateDocument } from '../translate.mjs';
 import { createMockClient, fakeTranslate, FIXED_NOW } from './helpers.mjs';
+import { normalizeOrganizationNames } from '../glossary.mjs';
 
 const JA_COMPANY = `---
 title: "AI導入はCor.株式会社へ"
@@ -108,5 +109,61 @@ describe('社名は各言語の正式表記に決定的にそろう', () => {
 
   it('fakeTranslate の前提: 社名が届けば「Cor.lorem」になる（事故の再現が効いていることの確認）', () => {
     expect(fakeTranslate(mistranslateName('Cor.株式会社へ'))).toBe('Cor. Inc.lorem');
+  });
+});
+
+// #339 最終レビュー LOW-2: en / es の正式表記「Cor.Inc.」は「.」で終わるので、文末の社名トークンに
+// モデルが「.」を付けると「Cor.Inc..」になっていた（本文も frontmatter も同じ）
+describe('文末の社名で「.」を重ねない（en / es の Cor.Inc.）', () => {
+  const JA_END = `---
+title: "相談窓口"
+description: "ご相談はCor.株式会社へ。"
+pubDate: 2026-06-12
+author: "Terisuke"
+category: "ai"
+tags: ["AI"]
+lang: "ja"
+---
+
+ご相談はCor.株式会社へ。
+`;
+  // 実際の訳と同じく、文末の社名トークンの後に「.」を付けて返すモデル
+  const sentenceEnd = (t) => t.replace(/lorem(⟦N\d+⟧)lorem/, 'Contact $1.');
+  const client = () =>
+    createMockClient({
+      mutateBody: sentenceEnd,
+      mutateFields: (o) => ({ ...o, description: sentenceEnd(o.description) }),
+    });
+  const run = (lang) =>
+    translateDocument({
+      collection: 'blog',
+      lang,
+      source: parseDocument(JA_END),
+      client: client(),
+      now: FIXED_NOW,
+      attempts: 1,
+    });
+
+  it.each(['en', 'es'])('%s: 本文と description は「Contact Cor.Inc.」（「Cor.Inc..」にしない）', async (lang) => {
+    const { text, data } = await run(lang);
+    expect(text).not.toContain('Cor.Inc..');
+    expect(parseDocument(text).body.trim()).toBe('Contact Cor.Inc.');
+    expect(data.description).toBe('Contact Cor.Inc.');
+  });
+
+  it.each([
+    ['zh', 'Cor.株式会社'],
+    ['ko', 'Cor.주식회사'],
+  ])('%s: 正式表記が「.」で終わらない言語では、文末の「.」をそのまま残す', async (lang, official) => {
+    const { text, data } = await run(lang);
+    expect(parseDocument(text).body.trim()).toBe(`Contact ${official}.`);
+    expect(data.description).toBe(`Contact ${official}.`);
+  });
+
+  it('モデルが自分で書いた社名（表記ゆれ）の後の「.」も重ねない。省略記号「...」は残す', () => {
+    expect(normalizeOrganizationNames('Contact Cor. Inc..', 'en')).toBe('Contact Cor.Inc.');
+    expect(normalizeOrganizationNames('Contact Cor.Inc..', 'es')).toBe('Contact Cor.Inc.');
+    expect(normalizeOrganizationNames('Cor.Inc., and more', 'en')).toBe('Cor.Inc., and more');
+    expect(normalizeOrganizationNames('Cor.Inc...', 'en')).toBe('Cor.Inc...');
   });
 });

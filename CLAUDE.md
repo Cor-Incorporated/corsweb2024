@@ -25,7 +25,7 @@ npm run preview  # Preview production build locally
 ### Tech Stack
 
 - **Framework**: Astro 4.8.7 with Islands Architecture (selective hydration)
-- **Interactivity**: Alpine.js 3.14.0 loaded from CDN
+- **Interactivity**: Alpine.js 3.14 bundled from npm (`src/components/layout/AlpineInit.astro`; no CDN)
 - **Styling**: Tailwind CSS with stone color palette as primary,
   @tailwindcss/typography for blog content
 - **TypeScript**: Custom Alpine.js type definitions in `/types/types.d.ts`
@@ -41,7 +41,6 @@ Components are organized by feature under `/src/components/`:
 - `layout/` - Shared Header and Footer components
 - `blog/` - Blog-specific components (CategoryBadge, PostCard, ShareButtons,
   TableOfContents, TagList, TipButton)
-- `performance/` - WebVitals monitoring component
 
 Pages use a consistent pattern:
 
@@ -56,18 +55,26 @@ Pages use a consistent pattern:
 - Aggressive compression via astro-compress and astro-compressor plugins
 - Firebase hosting with 1-year cache headers for assets
 - View Transitions API enabled for smooth navigation
-- Web Vitals monitoring and performance tracking
+- Core Web Vitals field data comes from Cloudflare Web Analytics (the beacon in
+  `src/components/analytics/Analytics.astro`, production only). Bundle libraries
+  from npm instead of loading them from a public CDN at runtime:
+  `npm run security:audit:dist` rejects `import()` / `import … from` of a URL in
+  executed scripts and `<script src>` from unpkg, esm.sh, Skypack, jspm, cdnjs and
+  jsDelivr (exception: the vendor analytics tags in Analytics.astro)
 - Critical CSS inlining for above-the-fold content
 - Font optimization with font-display: optional
 
 ### Alpine.js Integration
 
-Alpine.js is loaded from CDN with custom TypeScript support:
+Alpine.js is bundled from npm by `src/components/layout/AlpineInit.astro` (stores are
+registered in `src/utils/alpine-stores.ts` before `Alpine.start()`). The theme class is
+applied before first paint by `src/components/layout/ThemeInit.astro` (no `x-cloak` on
+`<html>`, so the page renders even if JavaScript fails):
 
 ```typescript
 // Global stores accessible via Alpine.store()
 Alpine.store('theme', { isDark: boolean, toggle: function })
-Alpine.store('lang', { current: string, toggle: function })
+// (language switching uses plain links in the Header dropdown; there is no lang store)
 // Components use x-data for local state
 // Dark mode and language toggle integrated in Header component
 ```
@@ -165,9 +172,11 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   orphan / invalid / source-error / ok
 - **Protection**: code blocks, inline code, URLs, link-card lines, math, HTML
   and image paths are replaced by placeholders and restored exactly
-- **Validation**: heading / code block / link / image / table parity,
-  untranslated-Japanese detection and a Zod mirror of `src/content/config.ts`
-  (linked by a test); a translation that fails any check is never written
+- **Validation**: heading / code block / link / image / table (rows and cells
+  per row) parity, the order of link and image destinations per heading, table
+  cell, list item and paragraph, untranslated-Japanese detection and a Zod
+  mirror of `src/content/config.ts` (linked by a test); a translation that
+  fails any check is never written
 - **Frontmatter**: only translatable fields are translated (blog keeps the ja
   tags; cases/news translate tags); everything else is copied from ja
 - **CI**: `.github/workflows/translate-content.yml` translates the articles
@@ -233,11 +242,16 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   - Enhanced SEO with structured data (Article, BreadcrumbList)
   - Auto-generated OGP images at `/og/[slug].svg`
   - Multilingual hreflang tags (5 languages)
-  - KaTeX CSS for math rendering
-  - Performance optimizations (critical CSS, Web Vitals)
+  - KaTeX CSS for math rendering: self-hosted (`katex` from npm, inlined by
+    `src/components/blog/KatexStyles.astro`) and emitted only on posts that contain
+    math (`remarkPluginFrontmatter.hasMath` from `src/utils/remark-has-math.ts`)
+  - Performance optimizations (critical CSS)
 
 ### Blog Components
 
+- **AuthorBox.astro**: Author photo, name, title, bio and profile link for every
+  locale. Author facts live in `src/config/author.ts` (also used for the Person
+  JSON-LD referenced by `Article.author`); add new authors there
 - **CategoryBadge.astro**: Color-coded category badges with responsive design
 - **PostCard.astro**: Responsive blog post preview cards for lists with hover
   effects
@@ -271,7 +285,8 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
 - **Multilingual SEO**: Proper hreflang tags and canonical URLs for 5 languages
 - **Meta Tags**: Comprehensive OpenGraph and Twitter Card support
 - **Sitemap**: Auto-generated with @astrojs/sitemap
-- **Performance**: Web Vitals tracking, critical CSS, font optimization
+- **Performance**: critical CSS, font optimization (Core Web Vitals field data:
+  Cloudflare Web Analytics)
 
 ### Writing New Blog Posts
 

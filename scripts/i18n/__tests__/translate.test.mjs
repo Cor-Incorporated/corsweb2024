@@ -84,6 +84,43 @@ describe('translateDocument with a mocked Gemini client', () => {
     expect(bodyCalls).toBe(2);
   });
 
+  // #339 Codex 最終レビュー P2-1: リンクの行き先を取り違えた訳も、ほかの検証違反と同じく再試行し、
+  // 最後まで取り違えたままなら何も書かない
+  describe('リンクの行き先を取り違えた訳（Codex P2-1）', () => {
+    const twoLinks = parseDocument(
+      JA_BLOG.replace(
+        '[公式サイト](https://cor-jp.com)',
+        '[公式サイト](https://cor-jp.com) と [GitHub](https://github.com/Cor-Incorporated)'
+      )
+    );
+    /** 最初の 2 つのリンクの行き先トークンを入れ替える。 */
+    const swapLinks = (t) => {
+      const [a, b] = [...t.matchAll(/\]\(⟦(P\d+)⟧\)/g)].map((m) => m[1]);
+      return t.replace(new RegExp(`⟦(${a}|${b})⟧`, 'g'), (_m, id) => `⟦${id === a ? b : a}⟧`);
+    };
+
+    it('1 回目だけ取り違えたなら、再試行した 2 回目を採用する', async () => {
+      let bodyCalls = 0;
+      const client = createMockClient({
+        mutateBody: (t) => {
+          bodyCalls += 1;
+          return bodyCalls === 1 ? swapLinks(t) : t;
+        },
+      });
+      const { text } = await run(client, { source: twoLinks });
+      expect(bodyCalls).toBe(2);
+      expect(text).toContain('[lorem](https://cor-jp.com) lorem [GitHub](https://github.com/Cor-Incorporated)');
+    });
+
+    it('取り違えが続くなら、検証に落ちたとして何も返さない', async () => {
+      const client = createMockClient({ mutateBody: swapLinks });
+      const error = await run(client, { source: twoLinks }).catch((e) => e);
+      expect(error).toBeInstanceOf(TranslationError);
+      expect(error.errors.join('\n')).toMatch(/#1 リンク・画像などの行き先の順序が ja と一致しません/);
+      expect(error.errors.join('\n')).toMatch(/#2 リンク・画像などの行き先の順序が ja と一致しません/);
+    });
+  });
+
   it('rejects field translations that change the tag count (news translates tags)', async () => {
     const client = createMockClient({ mutateFields: (o) => ({ ...o, tags: o.tags.slice(1) }) });
     const error = await run(client, { source: news, collection: 'news' }).catch((e) => e);

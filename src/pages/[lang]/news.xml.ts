@@ -3,6 +3,7 @@ import type { APIContext, GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
 import { getNewsCategoryLabel } from '../../config/news-categories';
 import { localizeEntries, NON_JA_LOCALES, toCleanSlug } from '../../utils/content-i18n';
+import { ORGANIZATION_NAMES } from '../../config/organization';
 import { getTranslations, type Locale } from '../../utils/i18n';
 
 // 非ja のニュース一覧から RSS を案内する以上、中身も同じ言語で配信する必要がある。
@@ -10,17 +11,10 @@ import { getTranslations, type Locale } from '../../utils/i18n';
 export const getStaticPaths: GetStaticPaths = () =>
   NON_JA_LOCALES.map((lang) => ({ params: { lang } }));
 
-// 社名のロケール別表記は #306 で確定済み（BlogLayout の BLOG_BRAND と同じ値）。
-// zh が ja と同じ「Cor.株式会社」なのは翻訳漏れではなく、登記上の商号をそのまま
-// 用いる判断（中国語圏でも日本法人の商号表記が通用するため）。
-// Record<Locale,...> で全ロケール網羅を型に強制する。
-const BRAND: Record<Locale, string> = {
-  ja: 'Cor.株式会社',
-  zh: 'Cor.株式会社',
-  ko: 'Cor.주식회사',
-  en: 'Cor.Inc.',
-  es: 'Cor.Inc.',
-};
+// 社名のロケール別表記は config/organization.ts の ORGANIZATION_NAMES が正本（#306 で確定。JSON-LD・
+// ブログの <title> と共有）。zh が ja と同じ「Cor.株式会社」なのは翻訳漏れではなく、登記上の商号を
+// そのまま用いる判断（中国語圏でも日本法人の商号表記が通用するため）。
+const BRAND = ORGANIZATION_NAMES;
 
 // customData は rss() のエスケープを通らない生の XML。i18n 由来の値をそのまま埋めると
 // 将来 `&` や `<` が入った時点でフィードが壊れるため、注入する値は必ずここを通す。

@@ -2,6 +2,7 @@
 // ブログ記事の Open Graph / Twitter Card メタタグ。
 // BlogLayout から抽出（出力は抽出前と同一）。
 import type { Locale } from '../../../utils/i18n';
+import { ORGANIZATION_NAMES } from '../../../config/organization';
 
 interface Props {
   title: string;
@@ -35,7 +36,8 @@ const {
 {ogImageHeight && <meta property="og:image:height" content={String(ogImageHeight)} />}
 <meta property="og:image:alt" content={ogImageAlt} />
 <meta property="og:locale" content={currentLocale === 'ja' ? 'ja_JP' : 'en_US'} />
-<meta property="og:site_name" content="Cor.inc Blog" />
+{/* サイト名は WebSite.name と同じ正本（config/organization.ts のロケール別社名） */}
+<meta property="og:site_name" content={ORGANIZATION_NAMES[currentLocale]} />
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />

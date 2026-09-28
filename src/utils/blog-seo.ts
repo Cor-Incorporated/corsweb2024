@@ -33,8 +33,3 @@ export function generateKeywords(
 
   return baseKeywords.flat().slice(0, 15).join(', ');
 }
-
-// description の語数からの簡易読了時間（分）。BlogLayout から抽出（挙動維持）。
-export function estimateReadingTime(description: string): number {
-  return Math.max(1, Math.ceil(description.split(/\s+/).length / 50));
-}

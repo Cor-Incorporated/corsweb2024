@@ -1,0 +1,65 @@
+---
+// 記事の著者ボックス（ADR-0017 / Epic #330）。frontmatter の author（例: "Terisuke"）を config/author.ts の
+// 著者プロフィールに引き当て、写真・名前・肩書・紹介・プロフィールへのリンクを表示する。
+// JSON-LD の Person（BlogStructuredData）と同じ正本を読むので、表示と構造化データがずれない。
+// 未登録の著者なら何も出さない。
+import { authorBio, findAuthor } from '../../config/author';
+import { ORGANIZATION_NAMES } from '../../config/organization';
+import { getCurrentLocale, getLocalizedUrl, type Locale } from '../../utils/i18n';
+
+interface Props {
+  author: string;
+}
+
+const LABELS: Record<Locale, { heading: string; link: string }> = {
+  ja: { heading: 'この記事を書いた人', link: 'プロフィールを見る' },
+  en: { heading: 'About the author', link: 'View profile' },
+  zh: { heading: '关于作者', link: '查看简介' },
+  ko: { heading: '글쓴이 소개', link: '프로필 보기' },
+  es: { heading: 'Sobre el autor', link: 'Ver perfil' },
+};
+
+const locale = getCurrentLocale(Astro.url);
+const profile = findAuthor(Astro.props.author);
+const labels = LABELS[locale];
+const name = profile?.names[locale];
+const bio = profile ? authorBio(profile, locale) : undefined;
+---
+
+{
+  profile && (
+    <aside
+      class="rounded-lg border border-stone-200 bg-stone-50 p-5 dark:border-stone-700 dark:bg-stone-900 sm:p-6"
+      aria-labelledby="author-box-heading"
+      data-testid="author-box"
+    >
+      <h2 id="author-box-heading" class="mb-4 text-sm font-medium text-stone-500 dark:text-stone-400">{labels.heading}</h2>
+      <div class="flex items-start gap-4">
+        {/* 隣に氏名を表示しているので代替テキストは空（読み上げの重複を避ける）。64px 表示に 128px の縮小版 */}
+        <img
+          src={profile.avatar}
+          alt=""
+          width="64"
+          height="64"
+          loading="lazy"
+          decoding="async"
+          class="h-16 w-16 shrink-0 rounded-full object-cover"
+        />
+        <div class="min-w-0">
+          <p class="font-semibold text-stone-900 dark:text-stone-100">{name}</p>
+          <p class="text-sm text-stone-500 dark:text-stone-400">
+            {profile.jobTitles[locale]} / {ORGANIZATION_NAMES[locale]}
+          </p>
+          {bio && <p class="mt-3 text-sm leading-7 text-stone-700 dark:text-stone-300">{bio}</p>}
+          <a
+            href={getLocalizedUrl(profile.profilePath, locale)}
+            class="mt-3 inline-flex text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {/* 矢印は装飾なので読み上げない。inline-flex では先頭の空白が詰まるため余白は ml-1 で付ける */}
+            {labels.link}<span aria-hidden="true" class="ml-1">→</span>
+          </a>
+        </div>
+      </div>
+    </aside>
+  )
+}

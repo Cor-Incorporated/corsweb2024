@@ -11,11 +11,12 @@
  * analyze() は同じ走査で構造メトリクス（見出し数・コードブロック・リンク・画像…）を数える。
  * 翻訳の前後を同じ関数で数えるので、保護と検証の判定がずれない。
  */
-import { organizationName, SOURCE_NAME_PATTERN } from './glossary.mjs';
+import { endsWithPeriod, organizationName, SOURCE_NAME_PATTERN } from './glossary.mjs';
 import { normalizeNewlines } from './util.mjs';
 
 export const TOKEN_RE = /⟦([PBN])(\d+)⟧/g;
 export const TOKEN_ANY_RE = /⟦[PBN]\d+⟧/g;
+const ORG_TOKEN_PERIOD_RE = /(⟦N(\d+)⟧)\.(?!\.)/g;
 const BLOCK_LINE_RE = /^((?:[ \t]*>)*[ \t]*)⟦B(\d+)⟧[ \t]*$/;
 const QUOTE_PREFIX_RE = /^((?:[ \t]*>)*[ \t]*)/;
 
@@ -253,7 +254,14 @@ export function expandTokens(text, store, lang) {
     if (!entry) return token;
     return entry.kind === 'org-name' && lang ? organizationName(lang) : entry.original;
   };
-  let current = text;
+  // 正式表記が「.」で終わる言語（en / es の Cor.Inc.）では、社名トークンの直後の文末の「.」を重ねない
+  // （「⟦N0⟧.」→「Cor.Inc.」。省略記号の「...」は残す）。#339 最終レビュー LOW-2
+  let current =
+    lang && endsWithPeriod(lang)
+      ? text.replace(ORG_TOKEN_PERIOD_RE, (match, token, n) =>
+          store.get(`N${n}`)?.kind === 'org-name' ? token : match
+        )
+      : text;
   for (let depth = 0; depth < 32 && /⟦[PBN]\d+⟧/.test(current); depth += 1) {
     current = current.replace(TOKEN_RE, valueOf);
   }
@@ -293,10 +301,60 @@ const SEPARATOR_RE = /^(?:[ \t]*>)*[ \t]*$/;
 const LIST_ITEM_RE = /^(?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]+|$)/;
 
 /**
+ * 表の行（保護後のテキスト）をセルに分ける。前後の | は外し、\| はセルの区切りに数えない
+ * （インラインコードの中の | はトークンになっているので現れない）。
+ */
+export function splitTableRow(line) {
+  let row = line.trim();
+  if (row.startsWith('|')) row = row.slice(1);
+  if (row.endsWith('|') && !row.endsWith('\\|')) row = row.slice(0, -1);
+  const cells = [''];
+  for (let i = 0; i < row.length; i += 1) {
+    if (row[i] === '\\' && i + 1 < row.length) {
+      cells[cells.length - 1] += row.slice(i, i + 2);
+      i += 1;
+    } else if (row[i] === '|') {
+      cells.push('');
+    } else {
+      cells[cells.length - 1] += row[i];
+    }
+  }
+  return cells;
+}
+
+/**
+ * 保護後のテキストを、訳の前後で 1 対 1 に対応する単位（見出しの行・表のセル・リスト項目・段落）に分ける。
+ * リスト項目と段落は、続きの行（空行まで）を含む。行き先の順序の照合（validate.mjs）に使う。
+ * @returns {string[]}
+ */
+export function textUnits(text) {
+  const units = [];
+  let open = false; // 続きの行を足せる単位（段落・リスト項目）の中か
+  for (const line of text.split('\n')) {
+    if (SEPARATOR_RE.test(line)) {
+      open = false;
+    } else if (HEADING_RE.test(line)) {
+      units.push(line);
+      open = false;
+    } else if (TABLE_ROW_RE.test(line)) {
+      units.push(...splitTableRow(line));
+      open = false;
+    } else if (LIST_ITEM_RE.test(line) || !open) {
+      units.push(line);
+      open = true;
+    } else {
+      units[units.length - 1] += `\n${line}`;
+    }
+  }
+  return units;
+}
+
+/**
  * 構造メトリクス。保護後のテキスト（コード等は 1 行のトークン）で数えるので、コードブロック内の
  * 空行や "- " は数に入らない。kinds は保護対象の種類ごとの元文字列（入れ子展開済み）。
- * @returns {{ headings: number[], tableRows: number, textBlocks: number, listItems: number,
- *            kinds: Record<string, string[]> }}
+ * tableCells は表の各行（見出し行・区切り行・本文の行）のセルの数を、文書の順に並べたもの。
+ * @returns {{ headings: number[], tableRows: number, tableCells: number[], textBlocks: number,
+ *            listItems: number, kinds: Record<string, string[]> }}
  */
 export function analyze(markdown) {
   const { text, store } = protect(markdown);
@@ -306,6 +364,7 @@ export function analyze(markdown) {
   }
   const headings = [0, 0, 0, 0, 0, 0];
   let tableRows = 0;
+  const tableCells = [];
   let textBlocks = 0;
   let listItems = 0;
   let inBlock = false;
@@ -318,8 +377,11 @@ export function analyze(markdown) {
     inBlock = true;
     const h = line.match(HEADING_RE);
     if (h) headings[h[1].length - 1] += 1;
-    if (TABLE_ROW_RE.test(line)) tableRows += 1;
+    if (TABLE_ROW_RE.test(line)) {
+      tableRows += 1;
+      tableCells.push(splitTableRow(line).length);
+    }
     if (LIST_ITEM_RE.test(line)) listItems += 1;
   }
-  return { headings, tableRows, textBlocks, listItems, kinds };
+  return { headings, tableRows, tableCells, textBlocks, listItems, kinds };
 }

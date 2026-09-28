@@ -1,5 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import { safeJsonLd } from '../../utils/json-ld';
+import { buildFaqPageJsonLd } from '../../utils/structured-data';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -12,7 +14,11 @@ type FaqQuestion = {
   linkLabel?: string;
 };
 const questions: FaqQuestion[] = t.faq.questions;
+// FAQPage は、この Q&A を本文に表示しているページにだけ、表示と同じデータから出す。
+const faqJsonLd = buildFaqPageJsonLd(questions);
 ---
+
+<script type="application/ld+json" is:inline set:html={safeJsonLd(faqJsonLd)} />
 
 <section class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
@@ -29,9 +35,9 @@ const questions: FaqQuestion[] = t.faq.questions;
                 x-data={`{ open: false }`}
                 x-bind:class="{ 'bg-primary-500/10 dark:bg-primary-400/10': open }"
               >
+                {/* 質問行は Alpine 起動前から表示する（x-cloak を付けない）。閉じた状態の枠線色を静的な既定値にする */}
                 <dt
-                  class="border-b text-base transition sm:text-lg"
-                  x-cloak
+                  class="border-b border-primary-900/10 text-base transition dark:border-primary-300/10 sm:text-lg"
                   x-bind:class="{ 'border-transparent': open, 'border-primary-900/10 dark:border-primary-300/10': !open }"
                 >
                   <button

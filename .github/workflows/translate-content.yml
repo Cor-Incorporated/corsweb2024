@@ -9,7 +9,7 @@ name: Translate content (i18n)
 #                    翻訳の削除と新 slug の翻訳の追加になる）。`npm ci --ignore-scripts`、npm キャッシュなし。
 #   push             contents: write。npm もリポジトリのコードも実行しない。パッチ（信頼しないデータ）の変更パス・
 #                    ファイル種別・大きさ・削除件数を検査してから適用し、stage された内容を行ごとに照合して
-#                    （追加・変更・削除だけ、mode 100644 だけ、許可パスだけ、.md の 1 行目が ---）から、
+#                    （追加・変更・削除だけ、mode 100644 だけ、許可パスだけ、.md は NUL なしで 1 行目が ---）から、
 #                    hooks を無効にして commit / push する。
 #   dispatch-check   actions: write だけ。GITHUB_TOKEN で push したとき i18n-check を workflow_dispatch で再実行する。
 #   i18n-check       contents: read。単体テストと --check（キー不要）。
@@ -239,8 +239,8 @@ jobs:
           name: ${{ env.PATCH_ARTIFACT }}
           path: ${{ runner.temp }}/i18n-patch
 
-      # パッチは信頼しないジョブの出力なので、「どこを・どういう種類で・何件変えるか」と、適用後の frontmatter の
-      # 1 行目（(5)）を検査して適用する。本文の妥当性はここでは見ない（i18n-check と PR のレビューで見る）。
+      # パッチは信頼しないジョブの出力なので、「どこを・どういう種類で・何件変えるか」と、適用後の中身の NUL と
+      # frontmatter の 1 行目（(5)）を検査して適用する。本文の妥当性はここでは見ない（i18n-check と PR のレビューで見る）。
       - name: Verify and apply the patch
         run: |
           set -euo pipefail
@@ -309,9 +309,14 @@ jobs:
               *) reject "許可されていない種類の変更が stage されました: ${line}" ;;
             esac
             [[ "$file" =~ $ALLOWED_CHANGE_RE ]] || reject "許可されていないパスが stage されました: ${file}"
-            # (5) 追加・変更した .md の 1 行目は厳密に "---"（Astro が使う gray-matter は "---js" の frontmatter を
-            #     JavaScript として評価するため。翻訳パイプラインの書き出しは常に "---" で始まる）
+            # (5) 追加・変更した .md は NUL を含まず、1 行目は厳密に "---"（Astro が使う gray-matter は "---js" の
+            #     frontmatter を JavaScript として評価するため。翻訳パイプラインの書き出しは常に "---" で始まる）。
+            #     NUL を先に見る: テキストのハンクに NUL を入れたパッチは numstat でテキスト扱いになり (1) を通り、
+            #     bash の read は NUL を捨てるので "---\0" の行も "---" に見える
             if [ "${status%%:*}" != "D" ]; then
+              bytes="$(git cat-file -s ":$file")"
+              nonul="$(git cat-file -p ":$file" | tr -d '\000' | wc -c | tr -d ' ')"
+              [ "$bytes" = "$nonul" ] || reject "NUL を含むファイルは適用しません: ${file}"
               first=""
               IFS= read -r first < <(git cat-file -p ":$file") || true
               [ "$first" = "---" ] || reject "frontmatter の 1 行目が --- ではありません: ${file}（${first:0:40}）"
