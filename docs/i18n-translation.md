@@ -216,6 +216,8 @@ git push
 
 ## 8. 初回移行（既存の翻訳 68 件 + 未翻訳 40 件）
 
+**2026-09-28 に実施済み**: 手順 2 は run 36385011470 → PR #353（68 ファイル）、手順 4 は run 36386199640 → PR #354（36 ファイル。未翻訳 40 件のうち 4 件は、先に PR #344 の実 API 検証で翻訳済み）。両方のマージ後の develop で `npm run i18n:check` は `ok=112`（それ以外の状態は 0）。以下は実施時の手順の記録です。
+
 PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言語）、`untracked=68`（blog 9 本・cases 6 本・news 2 本 × 4 言語）、`ok=4`（`blog/complete-multilingual-blog-expansion` は、リンクの修正と同時に PR #339 で採用済み）。
 
 1. このブランチを develop にマージする（手順 2・4 は `--ref develop` で dispatch するので、main に入る前でも起動できる。6 章の workflow_dispatch の実測を参照）
