@@ -44,13 +44,24 @@ const BLOCKED_HOST_PATTERNS = [
 // - 例外: jsDelivr の Alpine.js は同梱への切り替え（#333）が済むまで対象外。計測のベンダータグ
 //   （Cloudflare Web Analytics の beacon、Clarity の loader）は Analytics.astro が本番だけで出力するもので、
 //   URL の import ではないので当たらない。
+const PUBLIC_CDN_HOSTS = String.raw`(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com)`;
+const PUBLIC_CDN_URL = new RegExp(String.raw`^(?:https?:)?//${PUBLIC_CDN_HOSTS}/`, 'i');
 const REMOTE_MODULE_PATTERNS = [
   { name: 'dynamic import of a remote module', pattern: /\bimport\s*\(\s*["'`](?:https?:)?\/\//i },
   { name: 'static import of a remote module', pattern: /\b(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?["'`](?:https?:)?\/\//i },
+  // script 要素を作って src に入れる読み込み（script.src = …、setAttribute('src', …)、{ src: … }）。
+  {
+    name: 'script source set to a public JS CDN',
+    pattern: new RegExp(String.raw`\bsrc["']?\s*[:=,]\s*["'\`](?:https?:)?//${PUBLIC_CDN_HOSTS}/`, 'i'),
+  },
 ];
-const PUBLIC_CDN_SCRIPT_PATTERN =
-  /<script\b[^>]*\bsrc=["']?(?:https?:)?\/\/(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com)\//i;
-const INLINE_SCRIPT_PATTERN = /<script\b(?![^>]*\bsrc=)(?![^>]*application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/gi;
+const SCRIPT_ELEMENT_PATTERN = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+// src 属性（data-src などは含めず、= の前後の空白と引用符なしの値も扱う）。
+const SRC_ATTRIBUTE_PATTERN = /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i;
+const scriptSrc = attributes => {
+  const match = attributes.match(SRC_ATTRIBUTE_PATTERN);
+  return match ? (match[1] ?? match[2] ?? match[3]).trim() : null;
+};
 const SECRET_PATTERNS = [
   { name: 'private key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
   { name: 'github token', pattern: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b/ },
@@ -176,15 +187,20 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
+const scriptElements = html =>
+  [...html.matchAll(SCRIPT_ELEMENT_PATTERN)].map(([, attributes, body]) => ({ attributes, body, src: scriptSrc(attributes) }));
+
 const executableCode = file => {
   const extension = path.extname(file.file);
   if (extension === '.js' || extension === '.mjs') return [file.text];
-  if (extension === '.html') return [...file.text.matchAll(INLINE_SCRIPT_PATTERN)].map(match => match[1]);
-  return [];
+  if (extension !== '.html') return [];
+  return scriptElements(file.text)
+    .filter(script => script.src === null && !/application\/ld\+json/i.test(script.attributes))
+    .map(script => script.body);
 };
 
 const auditRemoteCode = (violations, file) => {
-  if (path.extname(file.file) === '.html' && PUBLIC_CDN_SCRIPT_PATTERN.test(file.text)) {
+  if (path.extname(file.file) === '.html' && scriptElements(file.text).some(script => script.src && PUBLIC_CDN_URL.test(script.src))) {
     violations.push(`[dist-security] ${file.relative} loads a script from a public JS CDN.`);
   }
   for (const code of executableCode(file)) {
