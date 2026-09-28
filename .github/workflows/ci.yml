@@ -1,0 +1,115 @@
+name: CI
+
+# PR ごとにユニットテスト・ビルド・dist の監査と回帰ガードを走らせる（Issue #323）。
+# 以前はルート（src/・tests/）の vitest も dist の監査（security:audit:dist）も、どのワークフローでも
+# 実行されていなかった（workers/yomimono の vitest だけは deploy-yomimono-worker.yml が実行していた）。
+# develop 宛 PR の build は visual-text.yml（2026-07-02〜）が表示監査の前段として走らせるだけだった。
+# テストを足すだけでは動かないため、アサーションとこの実行経路はセットで扱う。
+#
+# ジョブ名 `verify` は main のブランチ保護で required check に指定する想定の名前。
+# 変えると必須チェックが「待機中」のまま止まるので、変える場合は保護設定と同時に行うこと。
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # PR は番号単位にし、同じ PR の古い実行を取り消す。
+  # push / 手動実行は SHA 単位にする。cancel-in-progress: false でも、同じ group で待機中の実行は
+  # 後から来た実行に置き換えられて取り消されるため、ref 単位だと develop への連続マージで検証が抜ける。
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('sha-{0}', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # actions はタグではなくコミット SHA で固定する（タグの付け替えで中身が変わるのを防ぐ）。
+      # 上げるときは `gh api repos/actions/<name>/git/ref/tags/<tag>` で SHA を確かめてから書き換える。
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          # workers/contact-edge は独自の package-lock.json を持つので、キャッシュの鍵に含める。
+          cache-dependency-path: |
+            package-lock.json
+            workers/contact-edge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm run test:run
+
+      # workers/contact-edge（/contact/chat/ を配信する Worker）は独自の package.json を持ち、ルートの
+      # vitest には含まれない。テストの実行に依存パッケージのインストールスクリプトは不要なので
+      # --ignore-scripts で入れる（wrangler / workerd の postinstall を走らせない）。
+      - name: contact-edge worker tests
+        run: |
+          npm ci --prefix workers/contact-edge --ignore-scripts --no-audit --no-fund
+          npm test --prefix workers/contact-edge
+
+      - name: Type check and build
+        run: npm run build
+        env:
+          # まずカレンダー未設定の状態でビルドする。#323 背景 4（説明文だけが「打ち合わせ可能な時間」を
+          # 断言する）はこの状態でしか顕在化しない。カレンダー表示ありの状態は後段で別にビルドする。
+          # 秘密情報はこのジョブに渡さない。
+          PUBLIC_GCAL_ID: ''
+
+      # dist の SEO メタ・JSON-LD・秘密情報らしき文字列・非 HTTPS / 開発用オリジン・localStorage の
+      # キー・重い UI ランタイムの混入を検査する（scripts/audit-dist-security.mjs）。
+      - name: Dist security and SEO audit
+        run: npm run security:audit:dist
+
+      # CONTACT_GUARD_EXPECT_CALENDAR はこのビルドの条件（'0' = カレンダーなし）。テストは 5 言語の
+      # /contact でカレンダーの描画有無がこの値と一致することを確かめる（空振りの検知）。
+      - name: Contact regression guards on dist
+        run: npm run test:dist
+        env:
+          CONTACT_GUARD_EXPECT_CALENDAR: '0'
+
+      # 本番（deploy.yml）は PUBLIC_GCAL_ID を渡してビルドするため、カレンダー表示時だけ /contact に出る
+      # 文言（calendar.note・FALLBACK_WITH_CALENDAR）と、B-2 の逆向き（calendar-without-claim）は
+      # 上の未設定ビルドでは検査できない。ダミーの ID でもう一度ビルドし、同じ回帰ガードを当てる。
+      # ID はビルド時に埋め込み URL の文字列になるだけで、外部には出ない。型検査は上で済んでいるので
+      # astro build だけを実行し、出力は作業ツリーの外（RUNNER_TEMP）に置く。
+      - name: Build with the calendar enabled (dummy ID)
+        run: npm run astro -- build --outDir "$RUNNER_TEMP/dist-calendar"
+        env:
+          PUBLIC_GCAL_ID: contact-guard-dummy@example.invalid
+
+      # 本番と同じカレンダーありの HTML も、PR の段階で監査する。デプロイ直前の監査は deploy.yml 側の担当（#341）。
+      - name: Dist security and SEO audit (calendar enabled)
+        run: AUDIT_DIST_DIR="$RUNNER_TEMP/dist-calendar" npm run security:audit:dist
+
+      - name: Contact regression guards on dist (calendar enabled)
+        run: CONTACT_GUARD_DIST_DIR="$RUNNER_TEMP/dist-calendar" npm run test:dist
+        env:
+          CONTACT_GUARD_EXPECT_CALENDAR: '1'
+
+      # firebase.json のヘッダー（キャッシュ・セキュリティヘッダー）の基準監査。ビルド不要で 1 秒未満。
+      # 以前はどのワークフローでも実行されず、手動でしか確かめられていなかった。
+      - name: Firebase hosting header audit
+        run: npm run security:audit:firebase
+
+      - name: Worker security header audit
+        run: npm run security:audit:workers

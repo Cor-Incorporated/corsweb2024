@@ -25,7 +25,7 @@ npm run preview  # Preview production build locally
 ### Tech Stack
 
 - **Framework**: Astro 4.8.7 with Islands Architecture (selective hydration)
-- **Interactivity**: Alpine.js 3.14.0 loaded from CDN
+- **Interactivity**: Alpine.js 3.14 bundled from npm (`src/components/layout/AlpineInit.astro`; no CDN)
 - **Styling**: Tailwind CSS with stone color palette as primary,
   @tailwindcss/typography for blog content
 - **TypeScript**: Custom Alpine.js type definitions in `/types/types.d.ts`
@@ -62,12 +62,15 @@ Pages use a consistent pattern:
 
 ### Alpine.js Integration
 
-Alpine.js is loaded from CDN with custom TypeScript support:
+Alpine.js is bundled from npm by `src/components/layout/AlpineInit.astro` (stores are
+registered in `src/utils/alpine-stores.ts` before `Alpine.start()`). The theme class is
+applied before first paint by `src/components/layout/ThemeInit.astro` (no `x-cloak` on
+`<html>`, so the page renders even if JavaScript fails):
 
 ```typescript
 // Global stores accessible via Alpine.store()
 Alpine.store('theme', { isDark: boolean, toggle: function })
-Alpine.store('lang', { current: string, toggle: function })
+// (language switching uses plain links in the Header dropdown; there is no lang store)
 // Components use x-data for local state
 // Dark mode and language toggle integrated in Header component
 ```
@@ -235,7 +238,9 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   - Enhanced SEO with structured data (Article, BreadcrumbList)
   - Auto-generated OGP images at `/og/[slug].svg`
   - Multilingual hreflang tags (5 languages)
-  - KaTeX CSS for math rendering
+  - KaTeX CSS for math rendering: self-hosted (`katex` from npm, inlined by
+    `src/components/blog/KatexStyles.astro`) and emitted only on posts that contain
+    math (`remarkPluginFrontmatter.hasMath` from `src/utils/remark-has-math.ts`)
   - Performance optimizations (critical CSS, Web Vitals)
 
 ### Blog Components

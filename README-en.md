@@ -18,7 +18,7 @@ A corporate website with extreme loading speed optimization. Achieves loading sp
 ## 🏗️ Tech Stack
 
 - **Framework**: Astro 4.8.7 (Islands Architecture)
-- **Interactivity**: Alpine.js 3.14.0 (CDN delivery)
+- **Interactivity**: Alpine.js 3.14 (bundled from npm, no CDN dependency)
 - **Styling**: Tailwind CSS + @tailwindcss/typography
 - **Hosting**: Firebase Hosting
 - **Language**: TypeScript
@@ -68,18 +68,18 @@ Normally CI on the pull request (`.github/workflows/translate-content.yml`) tran
 - **Image Compression**: Additional compression with astro-compress (60% average reduction)
 
 ### 2. Asset Delivery Optimization
-- **CDN Delivery**: Alpine.js delivered from CDN (utilizing browser cache)
+- **Self-hosted**: Alpine.js is bundled from npm and served from the same origin (a blocked or slow CDN can no longer blank the page)
 - **DNS Prefetch**: Pre-resolve DNS for external resources
   ```html
-  <link rel="preconnect" href="https://esm.sh" crossorigin>
-  <link rel="dns-prefetch" href="https://ssgform.com">
+  <link rel="dns-prefetch" href="//fonts.gstatic.com">
+  <link rel="dns-prefetch" href="//ssgform.com">
   ```
 - **Long-term Cache**: Static assets cached for 1 year in Firebase configuration
 
 ### 3. JavaScript Optimization
 - **Islands Architecture**: Astro's partial hydration
-- **Deferred Execution**: Alpine.js loaded with defer attribute
-- **Inline Initialization**: Dark mode settings execute inline immediately (prevents flicker)
+- **Deferred Execution**: Alpine.js runs as a module script (deferred). `<html>` has no x-cloak, so content renders before Alpine starts
+- **Inline Initialization**: Dark mode settings execute inline in `<head>` (prevents flicker; re-applied after View Transitions)
 - **Minimal Bundle**: Lightweight implementation with only necessary features
 
 ### 4. CSS Optimization

@@ -1,5 +1,6 @@
 /**
  * src/content/config.ts の Zod スキーマのミラー（翻訳結果を書き込む前の検証用）。
+ * blog の定義本体は src/config/blog-schema.ts（config.ts がそれをそのまま使う。ADR-0018）。
  *
  * config.ts は `astro:content`（Vite の仮想モジュール）を import するため素の Node からは読めない。
  * そのためここに同じ制約を複製し、__tests__/schema-link.test.mjs が両者の構造（キー・任意/必須・
