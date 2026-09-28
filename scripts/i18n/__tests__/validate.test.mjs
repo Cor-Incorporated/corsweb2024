@@ -330,3 +330,60 @@ describe('checkFieldsOutput — 社名トークン ⟦N…⟧', () => {
     expect(result.errors.join('\n')).toMatch(pattern);
   });
 });
+
+// #339 Codex 最終レビュー P2-1: 行き先のプレースホルダだけを入れ替えた訳（[A](⟦P1⟧) [B](⟦P0⟧)）は、
+// 各トークンが 1 回ずつ現れるので多重集合の比較を通り、A が B の行き先を指したまま公開されうる。
+// 訳では語順が変わるのでラベルとは照合できない。ブロックごとに行き先のプレースホルダの出現順を ja とそろえる。
+describe('リンク・画像などの行き先の順序（ブロックごと。Codex P2-1）', () => {
+  const source =
+    '詳細は[公式サイト](https://cor-jp.com)と[GitHub](https://github.com/Cor-Incorporated)を参照。\n\n' +
+    '![構成図](/images/a.avif) と ![画面](/images/b.avif)\n\n' +
+    '- 手順は[ガイド](https://example.com/guide)を参照\n- 補足は[FAQ](https://example.com/faq)';
+  const { text, store: linkStore } = protect(source);
+  const run = (output) =>
+    checkBodyOutput({
+      output,
+      finishReason: 'STOP',
+      protectedText: text,
+      store: linkStore,
+      sourceCore: source,
+      lang: 'en',
+    });
+  const translated = fakeTranslate(text);
+  const idsOf = (kind) => [...linkStore].filter(([, e]) => e.kind === kind).map(([id]) => id);
+  /** 2 つのトークンを入れ替える（モデルが行き先だけを取り違えた事故）。 */
+  const swap = (output, a, b) =>
+    output.replace(new RegExp(`⟦(${a}|${b})⟧`, 'g'), (_m, id) => `⟦${id === a ? b : a}⟧`);
+
+  it('並びが同じなら通る', () => {
+    expect(run(translated).ok).toBe(true);
+  });
+
+  it.each([
+    ['同じ段落のリンク 2 つ', 'link-dest', 0, 1, 1],
+    ['同じ段落の画像 2 つ', 'image-dest', 0, 1, 2],
+    ['別のリスト項目どうしのリンク', 'link-dest', 2, 3, 3],
+  ])('%s の行き先を入れ替えた訳は落とす', (_name, kind, i, j, block) => {
+    const [a, b] = [idsOf(kind)[i], idsOf(kind)[j]];
+    const result = run(swap(translated, a, b));
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toContain(
+      `リンク・画像などの行き先の順序が ja と一致しません（ブロック #${block}`
+    );
+  });
+
+  it('全体の並び順は同じでも、リンクを別のリスト項目へ移した訳は落とす（リスト項目ごとに照合する）', () => {
+    const [, , guide, faq] = idsOf('link-dest');
+    const moved = translated
+      .replace(`[lorem](⟦${guide}⟧)lorem`, `[lorem](⟦${guide}⟧) [FAQ](⟦${faq}⟧)`)
+      .replace(`- lorem[FAQ](⟦${faq}⟧)`, '- lorem');
+    expect(moved).toContain(`[lorem](⟦${guide}⟧) [FAQ](⟦${faq}⟧)\n- lorem`);
+    const result = run(moved);
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual([
+      `リンク・画像などの行き先の順序が ja と一致しません（ブロック #3: ja ⟦${guide}⟧ / 翻訳 ⟦${guide}⟧ ⟦${faq}⟧）`,
+      `リンク・画像などの行き先の順序が ja と一致しません（ブロック #4: ja ⟦${faq}⟧ / 翻訳 なし）`,
+    ]);
+  });
+});
+

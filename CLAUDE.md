@@ -165,7 +165,8 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   orphan / invalid / source-error / ok
 - **Protection**: code blocks, inline code, URLs, link-card lines, math, HTML
   and image paths are replaced by placeholders and restored exactly
-- **Validation**: heading / code block / link / image / table parity,
+- **Validation**: heading / code block / link / image / table parity, the order of
+  link and image destinations per heading, table cell, list item and paragraph,
   untranslated-Japanese detection and a Zod mirror of `src/content/config.ts`
   (linked by a test); a translation that fails any check is never written
 - **Frontmatter**: only translatable fields are translated (blog keeps the ja

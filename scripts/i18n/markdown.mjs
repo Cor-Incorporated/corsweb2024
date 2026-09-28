@@ -301,6 +301,55 @@ const SEPARATOR_RE = /^(?:[ \t]*>)*[ \t]*$/;
 const LIST_ITEM_RE = /^(?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])(?:[ \t]+|$)/;
 
 /**
+ * 表の行（保護後のテキスト）をセルに分ける。前後の | は外し、\| はセルの区切りに数えない
+ * （インラインコードの中の | はトークンになっているので現れない）。
+ */
+export function splitTableRow(line) {
+  let row = line.trim();
+  if (row.startsWith('|')) row = row.slice(1);
+  if (row.endsWith('|') && !row.endsWith('\\|')) row = row.slice(0, -1);
+  const cells = [''];
+  for (let i = 0; i < row.length; i += 1) {
+    if (row[i] === '\\' && i + 1 < row.length) {
+      cells[cells.length - 1] += row.slice(i, i + 2);
+      i += 1;
+    } else if (row[i] === '|') {
+      cells.push('');
+    } else {
+      cells[cells.length - 1] += row[i];
+    }
+  }
+  return cells;
+}
+
+/**
+ * 保護後のテキストを、訳の前後で 1 対 1 に対応する単位（見出しの行・表のセル・リスト項目・段落）に分ける。
+ * リスト項目と段落は、続きの行（空行まで）を含む。行き先の順序の照合（validate.mjs）に使う。
+ * @returns {string[]}
+ */
+export function textUnits(text) {
+  const units = [];
+  let open = false; // 続きの行を足せる単位（段落・リスト項目）の中か
+  for (const line of text.split('\n')) {
+    if (SEPARATOR_RE.test(line)) {
+      open = false;
+    } else if (HEADING_RE.test(line)) {
+      units.push(line);
+      open = false;
+    } else if (TABLE_ROW_RE.test(line)) {
+      units.push(...splitTableRow(line));
+      open = false;
+    } else if (LIST_ITEM_RE.test(line) || !open) {
+      units.push(line);
+      open = true;
+    } else {
+      units[units.length - 1] += `\n${line}`;
+    }
+  }
+  return units;
+}
+
+/**
  * 構造メトリクス。保護後のテキスト（コード等は 1 行のトークン）で数えるので、コードブロック内の
  * 空行や "- " は数に入らない。kinds は保護対象の種類ごとの元文字列（入れ子展開済み）。
  * @returns {{ headings: number[], tableRows: number, textBlocks: number, listItems: number,
