@@ -26,6 +26,7 @@
 | [ADR-0017](./ADR-0017-static-astro-direction-2026q4.md) | HP の技術方針（2026Q4）: 静的 Astro を継続し、Next.js へは移行しない | Accepted (2026-09-27) |
 | [ADR-0018](./ADR-0018-cms-sveltia.md) | CMS を Sveltia CMS（Git ベース・静的管理画面・PR レビュー）にする | Proposed (2026-09-27) |
 | [ADR-0020](./ADR-0020-blog-cta-intent.md) | ブログ記事の CTA と相談の種類（intent）の既定値 | Proposed (2026-09-27) |
+| [ADR-0021](./ADR-0021-contact-guard-phone-detection.md) | /contact 回帰ガードの電話検出（判定の対象・電話番号・句） | Accepted (2026-09-28) |
 
 ## フェーズ対応
 
