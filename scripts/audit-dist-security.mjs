@@ -42,10 +42,10 @@ const BLOCKED_HOST_PATTERNS = [
 // 必要なライブラリは npm から同梱する。
 // - HTML は、実行されるインラインの <script>（JSON-LD 以外）の本文だけを見る。記事のコード例
 //   （<code> の中の import("https://…") など）は実行されないので対象にしない。
-// - 例外: jsDelivr の Alpine.js は同梱への切り替え（#333）が済むまで対象外。計測のベンダータグ
-//   （Cloudflare Web Analytics の beacon、Clarity の loader）は Analytics.astro が本番だけで出力するもので、
-//   URL の import ではないので当たらない。
-const PUBLIC_CDN_HOSTS = String.raw`(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com)`;
+// - jsDelivr の Alpine.js は npm からの同梱に切り替えた（#333）ので、jsDelivr も対象にしている。
+// - 例外: 計測のベンダータグ（Cloudflare Web Analytics の beacon、Clarity の loader）は Analytics.astro が
+//   本番だけで出力するもので、公開 CDN からの script でも URL の import でもないので当たらない。
+const PUBLIC_CDN_HOSTS = String.raw`(?:unpkg\.com|esm\.sh|cdn\.skypack\.dev|ga\.jspm\.io|cdnjs\.cloudflare\.com|(?:[a-z0-9-]+\.)?jsdelivr\.net)`;
 const PUBLIC_CDN_URL = new RegExp(String.raw`^(?:https?:)?//${PUBLIC_CDN_HOSTS}/`, 'i');
 const NON_SCRIPT_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'ico', 'css', 'woff', 'woff2', 'ttf', 'otf', 'json', 'map']);
 // CDN の URL のうち、スクリプトとして読み込まれうるもの（画像・CSS・フォントなどの拡張子でないもの）。

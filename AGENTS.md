@@ -59,8 +59,8 @@ Pages use a consistent pattern:
   `src/components/analytics/Analytics.astro`, production only). Bundle libraries
   from npm instead of loading them from a public CDN at runtime:
   `npm run security:audit:dist` rejects `import()` / `import … from` of a URL in
-  executed scripts and `<script src>` from unpkg, esm.sh, Skypack, jspm and cdnjs
-  (exceptions: the jsDelivr Alpine.js until #333, and the vendor analytics tags)
+  executed scripts and `<script src>` from unpkg, esm.sh, Skypack, jspm, cdnjs and
+  jsDelivr (exception: the vendor analytics tags in Analytics.astro)
 - Critical CSS inlining for above-the-fold content
 - Font optimization with font-display: optional
 
