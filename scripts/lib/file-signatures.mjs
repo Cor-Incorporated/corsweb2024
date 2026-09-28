@@ -32,6 +32,7 @@ export const hasKnownSignature = name => Object.hasOwn(SIGNATURES, name.slice(na
 
 // 拡張子が中身と一致すれば null、一致しなければ診断用のメッセージ（ファイル名・拡張子・先頭 16 バイト）を返す。
 // 判定表に無い拡張子も不一致として返す（追跡するファイルは既知の形式に限るため）。
+// 注: file-type は XML 宣言付きの SVG を xml と判定するので、プラグインは .xml で保存する（dist 側では警告）。
 export const signatureMismatch = (name, buffer) => {
   const extension = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
   if (SIGNATURES[extension]?.(buffer)) return null;
