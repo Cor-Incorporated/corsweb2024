@@ -48,11 +48,27 @@ export function organizationName(lang) {
 // URL と保護トークンの中は書き換えない。
 const UNTOUCHABLE_RE = /(https?:\/\/[^\s"'<>()]+|⟦[PBN]\d+⟧)/;
 
+/**
+ * 正式表記が「.」で終わる言語か（en / es の「Cor.Inc.」）。そうなら、社名の直後の文末の「.」は重ねない
+ * （「Cor.Inc..」→「Cor.Inc.」。省略記号「...」の一部の「.」は残す）。#339 最終レビュー LOW-2
+ */
+export function endsWithPeriod(lang) {
+  return organizationName(lang).endsWith('.');
+}
+
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /** モデルの出力にある社名の表記ゆれを、翻訳先言語の正式表記にそろえる（URL・トークンの中は触らない）。 */
 export function normalizeOrganizationNames(text, lang) {
   const name = organizationName(lang);
+  // そろえた結果（「Cor. Inc..」→「Cor.Inc..」）を含め、社名の後の「.」を重ねない
+  const doubled = endsWithPeriod(lang) ? new RegExp(`${escapeRegExp(name)}\\.(?!\\.)`, 'g') : null;
+  const normalize = (part) => {
+    const replaced = part.replace(OUTPUT_NAME_PATTERN, name);
+    return doubled ? replaced.replace(doubled, name) : replaced;
+  };
   return text
     .split(UNTOUCHABLE_RE)
-    .map((part, i) => (i % 2 === 1 ? part : part.replace(OUTPUT_NAME_PATTERN, name)))
+    .map((part, i) => (i % 2 === 1 ? part : normalize(part)))
     .join('');
 }

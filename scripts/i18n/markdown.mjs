@@ -11,11 +11,12 @@
  * analyze() は同じ走査で構造メトリクス（見出し数・コードブロック・リンク・画像…）を数える。
  * 翻訳の前後を同じ関数で数えるので、保護と検証の判定がずれない。
  */
-import { organizationName, SOURCE_NAME_PATTERN } from './glossary.mjs';
+import { endsWithPeriod, organizationName, SOURCE_NAME_PATTERN } from './glossary.mjs';
 import { normalizeNewlines } from './util.mjs';
 
 export const TOKEN_RE = /⟦([PBN])(\d+)⟧/g;
 export const TOKEN_ANY_RE = /⟦[PBN]\d+⟧/g;
+const ORG_TOKEN_PERIOD_RE = /(⟦N(\d+)⟧)\.(?!\.)/g;
 const BLOCK_LINE_RE = /^((?:[ \t]*>)*[ \t]*)⟦B(\d+)⟧[ \t]*$/;
 const QUOTE_PREFIX_RE = /^((?:[ \t]*>)*[ \t]*)/;
 
@@ -253,7 +254,14 @@ export function expandTokens(text, store, lang) {
     if (!entry) return token;
     return entry.kind === 'org-name' && lang ? organizationName(lang) : entry.original;
   };
-  let current = text;
+  // 正式表記が「.」で終わる言語（en / es の Cor.Inc.）では、社名トークンの直後の文末の「.」を重ねない
+  // （「⟦N0⟧.」→「Cor.Inc.」。省略記号の「...」は残す）。#339 最終レビュー LOW-2
+  let current =
+    lang && endsWithPeriod(lang)
+      ? text.replace(ORG_TOKEN_PERIOD_RE, (match, token, n) =>
+          store.get(`N${n}`)?.kind === 'org-name' ? token : match
+        )
+      : text;
   for (let depth = 0; depth < 32 && /⟦[PBN]\d+⟧/.test(current); depth += 1) {
     current = current.replace(TOKEN_RE, valueOf);
   }
