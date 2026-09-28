@@ -15,6 +15,7 @@ import {
   SITE_ORIGIN,
   WEBSITE_ID,
 } from '../config/organization';
+import { KOUSUKE_TERADA } from '../config/author';
 import { getLocalizedUrl, getTranslations, type Locale } from './i18n';
 
 export type JsonLd = Record<string, unknown>;
@@ -61,21 +62,12 @@ export function buildOrganizationJsonLd(locale: Locale): JsonLd {
       addressCountry: 'JP',
     },
     sameAs: [...ORGANIZATION_SAME_AS],
+    // 代表者の事実は config/author.ts が正本（記事ページの Person ノードと同じ @id）
     founder: {
       '@type': 'Person',
-      name: '寺田康佑',
-      alternateName: [
-        '寺田 康佑',
-        'Kosuke Terada',
-        'Terada Kosuke',
-        '寺田 康佑 CEO',
-        '寺田康佑 代表取締役',
-        'テラダコウスケ',
-        'terisuke',
-        'テリスケ',
-      ],
-      jobTitle: '代表取締役',
-      worksFor: { '@id': ORGANIZATION_ID },
+      '@id': KOUSUKE_TERADA.personId,
+      name: KOUSUKE_TERADA.names[locale],
+      jobTitle: KOUSUKE_TERADA.jobTitles[locale],
     },
   };
 }

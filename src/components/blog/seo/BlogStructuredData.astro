@@ -6,6 +6,7 @@ import type { Locale } from '../../../utils/i18n';
 import { safeJsonLd } from '../../../utils/json-ld';
 import { buildBlogArticleJsonLd, buildBlogBreadcrumbJsonLd } from '../../../utils/blog-structured-data';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../../../utils/structured-data';
+import { buildPersonJsonLd, findAuthor } from '../../../config/author';
 
 interface Props {
   title: string;
@@ -30,9 +31,13 @@ const articleJsonLd = buildBlogArticleJsonLd({ ...article, locale: currentLocale
 const breadcrumbJsonLd = buildBlogBreadcrumbJsonLd(currentLocale, article.title);
 const websiteJsonLd = buildWebSiteJsonLd(currentLocale);
 const organizationJsonLd = buildOrganizationJsonLd(currentLocale);
+// 著者の Person ノード。Article.author はこの @id を参照する（未登録の著者なら出さない）。
+const authorProfile = findAuthor(article.author);
+const personJsonLd = authorProfile ? buildPersonJsonLd(authorProfile, currentLocale) : undefined;
 ---
 
 <script type="application/ld+json" is:inline set:html={safeJsonLd(articleJsonLd)} />
 <script type="application/ld+json" is:inline set:html={safeJsonLd(breadcrumbJsonLd)} />
 <script type="application/ld+json" is:inline set:html={safeJsonLd(websiteJsonLd)} />
 <script type="application/ld+json" is:inline set:html={safeJsonLd(organizationJsonLd)} />
+{personJsonLd && <script type="application/ld+json" is:inline set:html={safeJsonLd(personJsonLd)} />}
