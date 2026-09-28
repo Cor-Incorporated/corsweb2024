@@ -14,7 +14,7 @@
 ## 決定
 1. **正本は ja**。`src/content/{blog,news,cases}/ja/*.md` だけを人（CMS）が編集し、`en / zh / ko / es` は翻訳 CI が生成・更新・削除する派生物とする。
 2. **鮮度はハッシュで判定する**。ja の翻訳対象部分（コレクション別の翻訳フィールド・訳すコレクションの tags・本文）の SHA-256 を翻訳先 frontmatter の `translationSourceHash` に記録し、`translatedAt` / `translationModel` を併記する。状態は `missing / stale / untracked / meta-drift / orphan / invalid / source-error / ok` の 8 つ。
-3. **検証に落ちた翻訳は書かない**。コード・URL・数式・HTML・画像パス等をプレースホルダで保護して完全復元し、見出し・コードブロック・リンク・画像・表・段落・リスト項目などの構造パリティ（リンク・画像などの行き先は、見出し・表のセル・リスト項目・段落ごとの出現順も）、未翻訳の検出、`src/content/config.ts` と機械照合した Zod ミラーでの frontmatter 検証、書き込み前の自己検査（読み戻して `ok`）をすべて通ったものだけを書き込む。
+3. **検証に落ちた翻訳は書かない**。コード・URL・数式・HTML・画像パス等をプレースホルダで保護して完全復元し、見出し・コードブロック・リンク・画像・表・段落・リスト項目などの構造パリティ（表は各行のセルの数も、リンク・画像などの行き先は、見出し・表のセル・リスト項目・段落ごとの出現順も）、未翻訳の検出、`src/content/config.ts` と機械照合した Zod ミラーでの frontmatter 検証、書き込み前の自己検査（読み戻して `ok`）をすべて通ったものだけを書き込む。
    ja で `title` と本文の最初の H1 が同じ文言なら、訳文の H1 を訳した `title` にそろえる（そろえると構造が崩れる場合は書かない）。
    削除と採用は、根拠が確認できたものだけにする: ja の無い翻訳（orphan）は、差分で ja の削除が確認でき（`--since` のとき）、来歴がある（無ければ `--prune-untracked` 明示）もので、件数が上限内のときだけ削除する。来歴の無い旧翻訳は、ja が翻訳より後に変わった記事（`--since` の差分で ja が変わった記事と、git の履歴で ja の最後のコミットが、翻訳を最後に作成・訳し直したコミットの祖先でない記事。翻訳の改名と社名の表記・空白だけの変更は訳し直しとみなさない。履歴で確かめられないときも含む）では採用（`--adopt`）を拒否し再翻訳を案内する。上書きは `--force-adopt` だけ。
 4. **実装は `scripts/i18n/`（ESM）**。`npm run i18n:check`（API 不要、問題があれば exit 1）/ `npm run i18n:translate`（`--dry-run` `--only` `--since` `--adopt` `--retranslate-untracked`）。旧スクリプト 6 本と `translate` / `translate:all` を削除する。

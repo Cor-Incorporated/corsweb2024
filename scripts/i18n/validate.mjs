@@ -3,7 +3,7 @@
  *
  * - トークン検証: プレースホルダが全部・1 回ずつ・壊れず残っているか、ブロックは単独行か
  * - 構造パリティ: 見出し（レベル別）・コードブロック（内容一致）・リンク/画像の宛先・数式・HTML・
- *   リンクカード・表の行数・空行区切りのブロック（段落等）の数・リスト項目の数が ja と一致するか
+ *   リンクカード・表の行数と各行のセルの数・空行区切りのブロック（段落等）の数・リスト項目の数が ja と一致するか
  * - 行き先の順序: リンク・画像などの行き先のプレースホルダの出現順が、見出し・表のセル・リスト項目・段落ごとに
  *   ja と一致するか（行き先だけを入れ替えた訳を落とす。#339 Codex 最終レビュー P2-1）
  * - 未翻訳検出: 日本語（かな・漢字）が残りすぎていないか
@@ -88,6 +88,19 @@ function compareKind(kind, expected, actual) {
 }
 
 /**
+ * 表の各行（見出し行・区切り行・本文の行）のセルの数。行数（tableRows）だけでは、3 列の行からセルを
+ * 1 つ落とした訳を通してしまう（#339 Codex 最終レビュー P2-2）。行は文書内の表の行の通し番号。
+ */
+function compareTableCells(expected, actual) {
+  const errors = [];
+  expected.forEach((count, i) => {
+    if (count !== actual[i])
+      errors.push(`表の ${i + 1} 行目のセルの数が一致しません（ja ${count} / 翻訳 ${actual[i]}）`);
+  });
+  return errors.slice(0, 3);
+}
+
+/**
  * ja 本文と翻訳本文の構造パリティ。違反メッセージの配列（一致なら空）。
  */
 export function compareStructure(sourceMarkdown, translatedMarkdown) {
@@ -103,6 +116,7 @@ export function compareStructure(sourceMarkdown, translatedMarkdown) {
   }
   if (src.tableRows !== out.tableRows)
     errors.push(`表の行数が一致しません（ja ${src.tableRows} / 翻訳 ${out.tableRows}）`);
+  else errors.push(...compareTableCells(src.tableCells, out.tableCells));
   // 見出し・コード・リンクの数が変わらない「段落 1 つ」「リスト項目 1 つ」の欠落・結合も落とす。
   if (src.textBlocks !== out.textBlocks)
     errors.push(

@@ -352,8 +352,9 @@ export function textUnits(text) {
 /**
  * 構造メトリクス。保護後のテキスト（コード等は 1 行のトークン）で数えるので、コードブロック内の
  * 空行や "- " は数に入らない。kinds は保護対象の種類ごとの元文字列（入れ子展開済み）。
- * @returns {{ headings: number[], tableRows: number, textBlocks: number, listItems: number,
- *            kinds: Record<string, string[]> }}
+ * tableCells は表の各行（見出し行・区切り行・本文の行）のセルの数を、文書の順に並べたもの。
+ * @returns {{ headings: number[], tableRows: number, tableCells: number[], textBlocks: number,
+ *            listItems: number, kinds: Record<string, string[]> }}
  */
 export function analyze(markdown) {
   const { text, store } = protect(markdown);
@@ -363,6 +364,7 @@ export function analyze(markdown) {
   }
   const headings = [0, 0, 0, 0, 0, 0];
   let tableRows = 0;
+  const tableCells = [];
   let textBlocks = 0;
   let listItems = 0;
   let inBlock = false;
@@ -375,8 +377,11 @@ export function analyze(markdown) {
     inBlock = true;
     const h = line.match(HEADING_RE);
     if (h) headings[h[1].length - 1] += 1;
-    if (TABLE_ROW_RE.test(line)) tableRows += 1;
+    if (TABLE_ROW_RE.test(line)) {
+      tableRows += 1;
+      tableCells.push(splitTableRow(line).length);
+    }
     if (LIST_ITEM_RE.test(line)) listItems += 1;
   }
-  return { headings, tableRows, textBlocks, listItems, kinds };
+  return { headings, tableRows, tableCells, textBlocks, listItems, kinds };
 }
