@@ -54,7 +54,7 @@ translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は 
 |---|---|---|---|
 | `missing` | ja はあるが翻訳ファイルが無い | 問題として列挙 | 翻訳して作成 |
 | `stale` | 翻訳の `translationSourceHash` が今の ja と一致しない | 問題 | 再翻訳して上書き |
-| `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳）。`--adopt` は、ja が翻訳より後に変わった記事を拒否し、`--write --retranslate-untracked --only <collection>/<slug>` を案内する（古い訳を最新として確定させない）。判定は `--since` の差分（あれば）と、git の履歴（ja の最後の変更が翻訳の最後の変更と同じコミットか祖先なら採用可）。履歴が無い・浅い clone・ja に未コミットの変更がある・どちらかが未コミット、のときも拒否。確かめたうえで採用するなら `--force-adopt` |
+| `untracked` | 翻訳はあるが `translationSourceHash` が無い（この仕組み以前の翻訳） | 問題 | **触らない**（`--adopt` で採用 / `--retranslate-untracked` で再翻訳）。`--adopt` は、ja が翻訳より後に変わった記事を拒否し、`--write --retranslate-untracked --only <collection>/<slug>` を案内する（古い訳を最新として確定させない）。判定は `--since` の差分（あれば）と、git の履歴（ja の最後のコミットが、翻訳を最後に作成・訳し直したコミットと同じか祖先なら採用可。翻訳の改名と、社名の表記・空白だけの変更は訳し直しとみなさない。ja の改名は ja の変更として拒否する）。履歴が無い・浅い clone・ja に未コミットの変更がある・どちらかが未コミット、のときも拒否。確かめたうえで採用するなら `--force-adopt` |
 | `meta-drift` | ハッシュは一致するが、コピー対象（`pubDate` `featured` 等）や `lang` がずれている | 問題 | API なしで ja から同期 |
 | `orphan` | ja が無い翻訳（ja を削除・改名した、または翻訳だけを追加した） | 問題 | 下の条件をすべて満たすものだけ削除。満たさないものは削除せず失敗として報告 |
 | `invalid` | 翻訳ファイルの frontmatter が壊れている、またはスキーマ違反（必須の `title` が無い・来歴の形が不正など。ハッシュが一致していても） | 問題 | 再翻訳して上書き |
@@ -224,7 +224,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
    → `chore/i18n-backfill-<日付>` が push されるので、PR を作成。PR 上で i18n-check が緑になることを確認してマージ
 5. 以後は ja を編集した PR ごとに自動で翻訳が積まれる
 
-手順 2 の採用（adopt）は、既存翻訳のある記事の ja を編集する PR より先に済ませてください。`--adopt` は `--since` の有無にかかわらず、git の履歴で ja が翻訳より後に変わった記事の採用を拒否し、再翻訳を案内します（mode=adopt でも同じ。拒否した記事は translate-result が赤で知らせ、採用できた分だけ push される）。2026-09-28 時点の履歴では、未追跡 68 件はすべて採用できます（`node scripts/i18n/translate-content.mjs --adopt --dry-run` で「採用 68 件 / 拒否 0 件」を確認）。
+手順 2 の採用（adopt）は、既存翻訳のある記事の ja を編集する PR より先に済ませてください。`--adopt` は `--since` の有無にかかわらず、git の履歴で ja が翻訳より後に変わった記事の採用を拒否し、再翻訳を案内します（mode=adopt でも同じ。拒否した記事は translate-result が赤で知らせ、採用できた分だけ push される）。2026-09-28 時点の履歴では、未追跡 68 件はすべて採用できます（shallow でない clone で `node scripts/i18n/translate-content.mjs --adopt --dry-run` を実行し「採用 68 件 / 拒否 0 件」を確認。うち blog の en 7 件は、2025-08-02 の ja 更新（f7c382e）の後に 2025-09-25（fd41f30）で訳し直されているので採用になる）。shallow な clone では全件を「判定できません」として拒否するので、手元の clone が shallow（`git rev-parse --is-shallow-repository` が `true`）なら `git fetch --unshallow` してから実行してください。
 
 費用の目安（推定・未検証）: 未翻訳 40 件は ja 約 2.8 万字 × 4 言語で、`gemini-3.8-flash`（2026-12-31 まで入力 $0.75 / 出力 $3.75 per 1M tokens）なら 1〜2 ドル程度、全 112 件を訳し直しても数ドル程度。料金の根拠: <https://ai.google.dev/gemini-api/docs/pricing>（2026-09-27 確認）。
 
@@ -244,7 +244,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | ログに `429` / `RESOURCE_EXHAUSTED` の再試行が続く | レート上限・日次上限 | 自動で指数バックオフ。日次上限なら翌日に再実行、`I18N_RPM` を下げる、または課金ティアを上げる |
 | `404` / `models/... is not found` | `GEMINI_MODEL` の ID 誤り・提供終了 | 5 章の根拠 URL で現行 ID を確認し、variable を直す |
 | `[untracked]` が出る | 来歴の無い既存翻訳 | 今の ja の訳なら `--adopt`（採用）、ja を変更した記事なら `--retranslate-untracked`（再翻訳） |
-| `ja が翻訳より後に変更されています（ja: … 、翻訳: …）` / `…新旧を判定できません` | 旧翻訳のある記事の ja を、翻訳より後に編集した（または git の履歴で確かめられない） | 表示された `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only <collection>/<slug>` で訳し直す。今の ja の訳だと人が確かめた場合だけ `--adopt --force-adopt`（mode=adopt の CI では上書きしない） |
+| `ja が翻訳より後に変更されています（ja の最後のコミット: …、翻訳を最後に作成・訳し直したコミット: …）` / `…新旧を判定できません` | 旧翻訳のある記事の ja を、翻訳の作成・訳し直しより後に編集・改名した（または git の履歴で確かめられない。shallow な clone を含む） | 表示された `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only <collection>/<slug>` で訳し直す。今の ja の訳だと人が確かめた場合だけ `--adopt --force-adopt`（mode=adopt の CI では上書きしない） |
 | `ja がこの差分で変更されているため、旧翻訳は採用できません` | 旧翻訳のある記事の ja を PR で変更した | 表示された `node scripts/i18n/translate-content.mjs --write --retranslate-untracked --only <collection>/<slug>` を手元で実行して PR に push する（`GEMINI_API_KEY` が必要） |
 | `[meta-drift]` | ja の `featured` 等を変えた | PR なら translate ジョブが自動同期。ローカルは `npm run i18n:translate` |
 | `[orphan]` | ja を削除・改名した | PR なら translate ジョブが翻訳を削除する（来歴つきの翻訳のみ） |
@@ -291,6 +291,6 @@ git pull --rebase
 - コードブロック内のコメントは訳しません（保護を優先）。HTML ブロック（`<details>` 等）の中身も訳しません。
 - 参照リンクの定義行（`[ref]: https://... "title"`）は行ごと保護するため、その title は訳しません（本文中のインラインのリンク・画像の title は訳します）。
 - 機械翻訳の品質は人のレビューで担保します（PR の差分で確認）。対外表現ガードレール（ADR-0007）の機械検査は日本語向けのため、訳文での「主張の強まり」はプロンプトで禁止したうえで、人が確認してください。
-- この仕組みより前の翻訳（`untracked`、`--adopt` で採用したもの）は、社名が「Cor. Inc.」などの旧表記のまま残っています（2026-09-28 時点で en 7 件・es 4 件など）。再翻訳（`--retranslate-untracked`）するか手で直すまで変わりません。
+- この仕組みより前の翻訳（`untracked`、`--adopt` で採用したもの）は、社名が「Cor. Inc.」などの旧表記のまま残っています（2026-09-28 時点で en 7 件・es 4 件など）。再翻訳（`--retranslate-untracked`）するか手で直すまで変わりません。手で直す場合は、8 章の手順 2（adopt）の後に行ってください（adopt は本文を直さず来歴だけを付けます。社名の表記だけの変更は adopt の判定では訳し直しとみなしませんが、先に adopt しておけば判定に関わりません。Issue #350）。
 - hreflang（翻訳の有無に応じた代替ページ指定）は別レーンで対応します。
 - Sveltia CMS を導入する際は、コレクションのフォルダを `src/content/<collection>/ja` に限定してください（他言語は CI 専有）。
