@@ -103,6 +103,17 @@ describe('B-1 5 言語の /contact に電話導線が無い（語レベル）', 
   });
 });
 
+// スクリプトが表示する文言は実行後の DOM で見る（ADR-0021 §1）。CloudiaLauncher は /contact 上で、チャットを
+// 開けないときの文言を data-fallback-same-page から差し込む。静的な照合では data-* は対象外なので、ここで見る。
+describe('B-1 5 言語の /contact: ランチャー実行後に表示される文言にも電話導線が無い', () => {
+  it.each(LOCALES)('%s', (locale) => {
+    const page = loadDistPage(CONTACT_PAGE_PATHS[locale]);
+    const run = runLauncher(page, page.pageUrl);
+    expect(run.errors).toEqual([]);
+    expect(findPhoneLeads(run.document)).toEqual([]);
+  });
+});
+
 // /privacy は収集項目として「電話番号」が正当に載るため、語ではなく句・番号・tel: で判定する（#323 背景 1 の事故現場）。
 describe('B-1 5 言語の /privacy に「電話で受け付ける」旨・電話番号・tel: が無い（#323 背景 1）', () => {
   it.each(LOCALES)('%s', (locale) => {
@@ -188,6 +199,18 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     const before = findPhoneInquiryPhrases(document).length;
     lastMain(document).insertAdjacentHTML('beforeend', `<p>${PHONE_INQUIRY_ACCIDENTS[locale].privacy}</p>`);
     expect(findPhoneInquiryPhrases(document).length).toBeGreaterThan(before);
+  });
+
+  // #331 再レビュー MEDIUM-1: 「チャットが落ちたら電話を案内する」は #323 の回帰として最も起きやすい形。
+  // 静的な照合では読めない（data-* は対象外）が、ランチャー実行後の DOM で検出する。
+  it('/contact のランチャーの data-fallback-same-page に電話の案内が入る（実行後に表示される）', () => {
+    const page = loadDistPage(CONTACT_PAGE_PATHS.ja);
+    page.document
+      .getElementById('cloudia-launcher')
+      ?.setAttribute('data-fallback-same-page', 'お急ぎの方はお電話（092-000-0000）でご連絡ください');
+    expect(findPhoneLeads(page.document)).toEqual([]);
+    const kinds = findPhoneLeads(runLauncher(page, page.pageUrl).document).map((finding) => finding.kind);
+    expect(kinds).toEqual(expect.arrayContaining(['text', 'number']));
   });
 
   it('ja の /privacy に語を伴わない番号（TEL 092-000-0000）が出る', () => {

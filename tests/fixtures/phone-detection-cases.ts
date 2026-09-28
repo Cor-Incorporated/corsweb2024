@@ -53,7 +53,9 @@ export const PHONE_NUMBER_IGNORE: readonly DetectionCase[] = [
   ['パスデータ風の本文', 'M1.05-12-345 0-1.5-2L10.0-120-3456'],
   ['base64 風の本文', 'AB+81Cd9+8100a/+81234=='],
   ['SVG のパスデータ（属性）', '<svg><path d="M1.05-12-345 0-1.5-2L10.0-120-3456"></path></svg>'],
-  ['data-* 属性の値', '<div data-tel="092-000-0000"></div>'],
+  // 静的な照合では data-* を対象にしない。スクリプトが実行時に表示する文言（CloudiaLauncher の
+  // data-fallback-same-page など）は、dist 検査でスクリプトを実行した後の DOM で見る（ADR-0021 §1）。
+  ['data-* 属性の値（静的な照合では対象外）', '<div data-tel="092-000-0000"></div>'],
   ['表のセルをまたぐ数字', '<table><tr><td>092</td><td>000-0000</td></tr></table>'],
 ];
 
