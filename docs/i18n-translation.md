@@ -196,7 +196,11 @@ git push
 ### ブランチ保護との関係
 
 - `i18n-check` は `paths` フィルタ付きなので **required check にしないでください**（コンテンツを変更しない PR では実行されず、永久に pending になります）。赤表示で気づけるようにしています。
-- 2026-09-27 時点の実測（`gh api .../branches/<b>/protection`）: develop は保護なし、main の required checks は `build_and_deploy` / `Chromium visual text audit` / `guard` / `h5-admission`。
+- 2026-09-28 時点の実測（`gh api repos/Cor-Incorporated/corsweb2024/branches/<b>/protection`）:
+  - develop: required checks は `h5-admission` / `Chromium visual text audit`、承認 0 件、管理者にも適用、merge できるのは terisuke と cloudia-Cor だけ
+  - main: required checks は `build_and_deploy` / `Chromium visual text audit` / `guard` / `h5-admission`、承認 1 件、管理者にも適用、merge できるのは terisuke と cloudia-Cor だけ
+  - 本ワークフローのジョブはどちらの required checks にも入っていない
+- develop にも required checks があるので、GITHUB_TOKEN 方式で翻訳コミットが積まれた PR は、承認（Approve workflows to run）か空コミットで required checks を動かすまで merge できません（6 章の push に使うトークン）。
 
 ## 7. CEO が行う設定
 
