@@ -1,8 +1,8 @@
 # workers/sveltia-cms-auth — Sveltia CMS Authenticator（上流コードの取り込み）
 
-CMS の管理画面（https://cor-jp-cms.web.app/ 、ADR-0018・#329）の「GitHub にログイン」を仲介する Cloudflare Worker。
+CMS の管理画面（https://cor-jp-cms-admin.web.app/ 、ADR-0018・#329）の「GitHub にログイン」を仲介する Cloudflare Worker。
 GitHub OAuth App の client secret をブラウザに出さずにアクセストークンを受け取り、
-`ALLOWED_DOMAINS`（`wrangler.toml` の `[vars]`、`cor-jp-cms.web.app` だけ）のホストで開かれた CMS にだけ渡す。
+`ALLOWED_DOMAINS`（`wrangler.toml` の `[vars]`、`cor-jp-cms-admin.web.app` だけ）のホストで開かれた CMS にだけ渡す。
 
 ## 上流
 

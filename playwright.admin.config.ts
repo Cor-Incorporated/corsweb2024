@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// CMS 管理画面（https://cor-jp-cms.web.app/ 、ADR-0018）の確認用。
+// CMS 管理画面（https://cor-jp-cms-admin.web.app/ 、ADR-0018）の確認用。
 // ビルド済みの cms/dist を、cms/firebase.json のヘッダー（CSP など）付きで配信して実行する。
 //   npm run build:cms && npm run test:e2e:admin
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4323';

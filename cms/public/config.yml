@@ -1,5 +1,5 @@
-# Sveltia CMS の設定（ADR-0018、#329）。管理画面: https://cor-jp-cms.web.app/
-# 配信は cms/（npm run build:cms → cms/dist）。main に入ると deploy-cms.yml が cor-jp-cms サイトへデプロイする。
+# Sveltia CMS の設定（ADR-0018、#329）。管理画面: https://cor-jp-cms-admin.web.app/
+# 配信は cms/（npm run build:cms → cms/dist）。main に入ると deploy-cms.yml が cor-jp-cms-admin サイトへデプロイする。
 # この設定の変更が編集画面に届くのは、develop → main のリリースと、そのデプロイの後。
 #
 # 二重管理に注意: ここのフィールド定義は src/config/blog-schema.ts（Zod スキーマ）と、
@@ -16,7 +16,7 @@ backend:
   branch: develop
   # 認証 Worker（workers/sveltia-cms-auth）の URL。デプロイ後に実際の URL へ置き換える。
   # 形式: https://cor-sveltia-cms-auth.<Cloudflare アカウントの workers.dev サブドメイン>.workers.dev
-  # Worker がトークンを渡す先は wrangler.toml の [vars] ALLOWED_DOMAINS（cor-jp-cms.web.app だけ）。
+  # Worker がトークンを渡す先は wrangler.toml の [vars] ALLOWED_DOMAINS（cor-jp-cms-admin.web.app だけ）。
   # 手順は docs/cms-sveltia.md の「管理者向けセットアップ」。
   base_url: https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev
   # ログイン画面には「GitHub にログイン」だけを出す（アクセストークンの入力欄は出さない）。

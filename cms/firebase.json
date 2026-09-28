@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "cor-jp-cms",
+    "site": "cor-jp-cms-admin",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "headers": [

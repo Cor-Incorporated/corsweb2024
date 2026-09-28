@@ -228,9 +228,38 @@ const readWrangler = (text: string): Wrangler => {
     allowedDomains: vars.match(/^ALLOWED_DOMAINS\s*=\s*"([^"]*)"/m)?.[1],
   };
 };
-const loadWrangler = () => readWrangler(readFileSync(WRANGLER_PATH, 'utf8'));
+const loadWranglerText = () => readFileSync(WRANGLER_PATH, 'utf8');
+const loadWrangler = () => readWrangler(loadWranglerText());
 const loadCmsHosting = (): CmsHosting =>
   (JSON.parse(readFileSync(CMS_FIREBASE_PATH, 'utf8')) as { hosting: CmsHosting }).hosting;
+
+/**
+ * (f') wrangler.toml の形: ALLOWED_DOMAINS は [vars] の 1 か所だけで、環境ごとの設定（[env.*]・env.x = …）は置かない。
+ * wrangler は `--env` を付けると [env.<名前>.vars] を使うので、そこに別の値があると (f) の照合をすり抜ける。
+ */
+function checkWranglerShape(text: string): string[] {
+  const lines = text
+    .split('\n')
+    .map((line, index) => ({ line: line.trim(), number: index + 1 }))
+    .filter(({ line }) => line !== '' && !line.startsWith('#'));
+  const envLines = lines.filter(({ line }) => /^(?:\[{1,2}\s*env\s*[.\]]|env\s*[.=])/.test(line));
+  const allowedLines = lines.filter(({ line }) => line.includes('ALLOWED_DOMAINS'));
+  const inVars = readWrangler(text).allowedDomains !== undefined;
+  const format = (found: typeof lines) =>
+    found.map(({ line, number }) => `${number}: ${line}`).join(' / ');
+  return [
+    ...(envLines.length > 0
+      ? [`wrangler.toml に環境ごとの設定がある（[env.*] は照合をすり抜ける）: ${format(envLines)}`]
+      : []),
+    ...(allowedLines.length !== 1 || !inVars
+      ? [
+          `ALLOWED_DOMAINS は [vars] に 1 か所だけ置く: 実際 ${allowedLines.length} か所（${format(
+            allowedLines
+          )}）`,
+        ]
+      : []),
+  ];
+}
 
 /** (f) 認証 Worker がトークンを渡す先 ↔ CMS を配信する Firebase Hosting サイト */
 function checkAllowedDomains(wrangler: Wrangler, hosting: CmsHosting): string[] {
@@ -463,6 +492,10 @@ describe('CMS の配信と認証 Worker（cms/firebase.json ↔ wrangler.toml �
     expect(loadWrangler().allowedDomains).toBe(`${loadCmsHosting().site}.web.app`);
   });
 
+  it("(f') wrangler.toml に [env.*] が無く、ALLOWED_DOMAINS は [vars] の 1 か所だけ", () => {
+    expect(checkWranglerShape(loadWranglerText())).toEqual([]);
+  });
+
   it('(g) base_url は認証 Worker（wrangler.toml の name）の workers.dev の URL', () => {
     expect(checkBaseUrl(loadConfig(), loadWrangler())).toEqual([]);
   });
@@ -480,21 +513,23 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
   it('ALLOWED_DOMAINS を空にする', () => {
     const message = withAllowed('');
     expect(message).toContain('ALLOWED_DOMAINS が空');
-    expect(message).toContain('hosting.site "cor-jp-cms"（期待 cor-jp-cms.web.app）');
+    expect(message).toContain('hosting.site "cor-jp-cms-admin"（期待 cor-jp-cms-admin.web.app）');
   });
 
   it('ALLOWED_DOMAINS にワイルドカードを使う', () => {
     const message = withAllowed('*.web.app');
     expect(message).toContain('ALLOWED_DOMAINS の *.web.app は不可（ワイルドカード * を含む）');
     expect(message).toContain(
-      'ALLOWED_DOMAINS "*.web.app" / cms/firebase.json hosting.site "cor-jp-cms"'
+      'ALLOWED_DOMAINS "*.web.app" / cms/firebase.json hosting.site "cor-jp-cms-admin"'
     );
   });
 
   it('ALLOWED_DOMAINS に PR のプレビューチャネルを足す', () => {
-    const message = withAllowed('cor-jp-cms.web.app, cor-jp-main--pr342-feat-cms-abc123.web.app');
+    const message = withAllowed(
+      'cor-jp-cms-admin.web.app, cor-jp-main--pr342-feat-cms-abc123.web.app'
+    );
     expect(message).toContain('プレビューチャネル（--）を含む');
-    expect(message).not.toContain('ALLOWED_DOMAINS の cor-jp-cms.web.app は不可');
+    expect(message).not.toContain('ALLOWED_DOMAINS の cor-jp-cms-admin.web.app は不可');
   });
 
   it('ALLOWED_DOMAINS に develop のホストを入れる', () => {
@@ -503,10 +538,24 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
     expect(message).toContain('CMS のホストと違う');
   });
 
+  it('wrangler.toml に [env.production.vars] で別の ALLOWED_DOMAINS を足す', () => {
+    const text = `${loadWranglerText()}\n[env.production.vars]\nALLOWED_DOMAINS = "*"\n`;
+    const message = checkWranglerShape(text).join('\n');
+    expect(message).toContain('wrangler.toml に環境ごとの設定がある');
+    expect(message).toContain('[env.production.vars]');
+    expect(message).toContain('ALLOWED_DOMAINS は [vars] に 1 か所だけ置く: 実際 2 か所');
+  });
+
+  it('wrangler.toml の先頭に env.production.vars.ALLOWED_DOMAINS を書く（ドット区切りのキー）', () => {
+    const text = `env.production.vars.ALLOWED_DOMAINS = "*"\n${loadWranglerText()}`;
+    const message = checkWranglerShape(text).join('\n');
+    expect(message).toContain('1: env.production.vars.ALLOWED_DOMAINS = "*"');
+  });
+
   it('cms/firebase.json の site だけを変える', () => {
-    const message = checkAllowedDomains(loadWrangler(), { ...hosting, site: 'cor-jp-cms-2' });
+    const message = checkAllowedDomains(loadWrangler(), { ...hosting, site: 'cor-jp-cms-admin-2' });
     expect(message.join('\n')).toContain(
-      'ALLOWED_DOMAINS "cor-jp-cms.web.app" / cms/firebase.json hosting.site "cor-jp-cms-2"（期待 cor-jp-cms-2.web.app）'
+      'ALLOWED_DOMAINS "cor-jp-cms-admin.web.app" / cms/firebase.json hosting.site "cor-jp-cms-admin-2"（期待 cor-jp-cms-admin-2.web.app）'
     );
   });
 

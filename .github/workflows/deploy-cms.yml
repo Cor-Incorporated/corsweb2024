@@ -1,11 +1,16 @@
-name: Deploy CMS admin (cor-jp-cms)
+name: Deploy CMS admin (cor-jp-cms-admin)
 
-# CMS の管理画面（Sveltia CMS、ADR-0018・#329）を、公開サイトとは別の Firebase Hosting サイト
-# cor-jp-cms（https://cor-jp-cms.web.app/）へ main からだけ配信する。
-# - 公開サイト（deploy.yml）とは別オリジンにして、CMS が localStorage に置く GitHub のトークンを、
-#   公開サイトの第三者スクリプトや XSS から切り離す。develop チャネルや PR プレビューには載せない。
-# - 止めるときはリポジトリ変数 CMS_DEPLOY_ENABLED を true 以外にする（ジョブがスキップされる）。
-# - ヘッダー（CSP など）は cms/firebase.json。デプロイ前に、そのヘッダーを付けて e2e を通す。
+# CMS の管理画面（Sveltia CMS、ADR-0018・#329）を、専用の Firebase プロジェクト cor-jp-cms-admin の
+# Hosting（https://cor-jp-cms-admin.web.app/）へ、main からだけ配信する。
+# - 公開サイトのプロジェクト（cor-jp-web）とは分ける。公開サイトの配信権限では CMS を差し替えられない。
+# - サービスアカウントの JSON 鍵は使わない。GitHub の OIDC トークンを Workload Identity 連携で
+#   cms-deployer に交換する。GCP 側の条件（このリポジトリ・ref が main・このワークフローの main 版）と、
+#   GitHub の Environment cms-production（main だけ）の両方で、main 以外からの配信を拒否する。
+# - build ジョブ（id-token なし）が作った cms/dist と cms/firebase.json を、deploy ジョブが artifact として
+#   受け取って配信する。deploy ジョブではリポジトリのコードを実行しない（checkout も npm ci もしない）。
+# - 止めるときはリポジトリ変数 CMS_DEPLOY_ENABLED を true 以外にする（build・deploy はスキップ、警告だけ出す）。
+# - 値の一覧と手順は docs/cms-sveltia.md。src/config/__tests__/cms-deploy.test.ts が、このワークフローと
+#   docs・cms/firebase.json の値を照合している。
 
 on:
   push:
@@ -26,12 +31,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build, test and deploy the CMS admin
-    # workflow_dispatch を main 以外で実行しても配信しない（main からだけ配信する）。
+  build:
+    name: Build and test the CMS admin
     if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -57,10 +63,97 @@ jobs:
       - name: CMS admin e2e (cms/firebase.json headers, CSP violations 0)
         run: npm run test:e2e:admin
 
-      - name: Deploy to Firebase Hosting (cor-jp-cms, live)
-        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
+      - name: Upload the CMS build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
-          projectId: cor-jp-web
-          channelId: live
-          entryPoint: cms
+          name: cms-site
+          path: |
+            cms/firebase.json
+            cms/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    name: Deploy to cor-jp-cms-admin (live)
+    needs: build
+    if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cms-production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download the CMS build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cms-site
+          path: cms
+
+      - name: Refuse deploy hooks in firebase.json
+        # firebase-tools は predeploy / postdeploy のコマンドを実行する。このジョブでは何も実行させない。
+        run: jq -e '.hosting | (has("predeploy") or has("postdeploy")) | not' cms/firebase.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation, no key)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024
+          service_account: cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com
+
+      - name: Deploy to Firebase Hosting (cor-jp-cms-admin, live)
+        working-directory: cms
+        run: npx --yes firebase-tools@15.31.0 deploy --only hosting --project cor-jp-cms-admin --non-interactive
+
+      - name: Check the served CSP and COOP match cms/firebase.json
+        run: |
+          set -euo pipefail
+          site=$(jq -r '.hosting.site' cms/firebase.json)
+          url="https://${site}.web.app/"
+          want() { jq -r --arg key "$1" '.hosting.headers[] | select(.source == "**") | .headers[] | select(.key == $key) | .value' cms/firebase.json; }
+          got() { printf '%s\n' "$headers" | awk -v name="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" -F': ' 'tolower($1) == name { sub(/^[^:]*: /, ""); print }'; }
+          want_csp=$(want Content-Security-Policy)
+          want_coop=$(want Cross-Origin-Opener-Policy)
+          got_csp='' got_coop=''
+          for attempt in 1 2 3 4 5 6; do
+            headers=$(curl -fsSI "$url" | tr -d '\r') || headers=''
+            got_csp=$(got Content-Security-Policy)
+            got_coop=$(got Cross-Origin-Opener-Policy)
+            if [ -n "$want_csp" ] && [ "$got_csp" = "$want_csp" ] && [ "$got_coop" = "$want_coop" ]; then
+              echo "OK: ${url} の CSP と COOP は cms/firebase.json と一致（${attempt} 回目）"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error title=配信されたヘッダーが cms/firebase.json と違う::${url} CSP: 配信 \"${got_csp}\" / cms/firebase.json \"${want_csp}\"; COOP: 配信 \"${got_coop}\" / cms/firebase.json \"${want_coop}\""
+          exit 1
+
+  disabled-notice:
+    name: Notice when the CMS admin is not deployed
+    if: vars.CMS_DEPLOY_ENABLED != 'true' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Warn that cms/ changes were not deployed
+        env:
+          ENABLED: ${{ vars.CMS_DEPLOY_ENABLED }}
+          REF: ${{ github.ref }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != 'refs/heads/main' ]; then
+            echo "::warning title=CMS は配信していません::main 以外（${REF}）からは配信しません。"
+            exit 0
+          fi
+          changed=$(printf '%s' "$COMMITS" | jq -r '[.[]? | (.added + .modified + .removed)[]] | map(select(startswith("cms/"))) | unique | length')
+          if [ "${changed:-0}" -gt 0 ]; then
+            echo "::warning title=CMS は配信していません::CMS_DEPLOY_ENABLED が true ではない（現在 \"${ENABLED}\"）ため、cms/ の変更 ${changed} 件を配信していません。"
+          else
+            echo "::warning title=CMS は配信していません::CMS_DEPLOY_ENABLED が true ではありません（現在 \"${ENABLED}\"）。"
+          fi

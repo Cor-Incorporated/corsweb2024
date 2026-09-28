@@ -1,4 +1,4 @@
-# Sveltia CMS Authenticator — CMS（https://cor-jp-cms.web.app/）の「GitHub にログイン」を仲介する Worker。
+# Sveltia CMS Authenticator — CMS（https://cor-jp-cms-admin.web.app/）の「GitHub にログイン」を仲介する Worker。
 # ADR-0018（#329）。src/index.js は上流 sveltia/sveltia-cms-auth のコードをそのまま置いている（README.md 参照）。
 # 上流の wrangler.toml から変えたのは name・account_id・workers_dev・[vars] とコメントだけ。
 name = "cor-sveltia-cms-auth"
@@ -17,7 +17,8 @@ workers_dev = true
 # - * を使わない・プレビューチャネル（--）や develop のホストを入れない: 誰でもコードを載せられる場所になる。
 # cms/firebase.json の hosting.site と src/config/__tests__/cms-config.test.ts で照合している（片方だけ変えると落ちる）。
 # デプロイのたびにこの値で上書きされるので、現在値は git で確認できる（secret にはしない）。
-ALLOWED_DOMAINS = "cor-jp-cms.web.app"
+# [env.*]（環境ごとの vars）は置かない。`--env` で別の値が使われると照合をすり抜けるため、テストが禁止している。
+ALLOWED_DOMAINS = "cor-jp-cms-admin.web.app"
 
 # secret（値はここに書かない）。`wrangler secret put <NAME>` で登録する。再デプロイしても消えない。
 #   GITHUB_CLIENT_ID      ... GitHub OAuth App の Client ID
