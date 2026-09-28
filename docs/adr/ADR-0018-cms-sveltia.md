@@ -24,15 +24,16 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 ## 決定
 
-1. CMS に Sveltia CMS（MIT）を採用する。管理画面は公開サイトとは別のオリジンに置く。専用の Firebase Hosting サイト `cor-jp-cms`（`https://cor-jp-cms.web.app/`、プロジェクト cor-jp-web）で配信し、cor-jp.com・develop チャネル・プレビューチャネルには置かない。
+1. CMS に Sveltia CMS（MIT）を採用する。管理画面は公開サイトとは別のオリジンに置く。CMS 専用の Firebase プロジェクト `cor-jp-cms-admin` のサイト（`https://cor-jp-cms-admin.web.app/`）で配信し、cor-jp.com・develop チャネル・プレビューチャネルには置かない。
    - 公開サイトと同じオリジンに置くと、公開サイトの第三者スクリプトの侵害や、どこか 1 ページの XSS で、編集者のトークンを読まれるため。
    - 管理画面は Astro から独立した Vite のビルド（`cms/`）で、npm 版の Sveltia CMS を同梱する。noindex の最小 HTML と `config.yml` だけを置き、フォント・翻訳などの付随ファイルも同じサイトから配信して、外部 CDN を読まない。
    - 厳しい CSP（許可リスト方式、`frame-ancestors 'none'`）を付ける。OAuth のポップアップと通信するため、Cross-Origin-Opener-Policy は `same-origin-allow-popups` にする。
    - 配信は main へのマージ後だけ（`.github/workflows/deploy-cms.yml`）。管理画面のコードの変更は、main の承認 1 件を経る。
+   - 「main からだけ」は技術的に強制する。公開サイトのプロジェクト（cor-jp-web）の配信用 SA 鍵はリポジトリ secret で、書き込み権限者なら任意のブランチのワークフローから使える。同じプロジェクトに CMS を置くと、その鍵で CMS を差し替え、ログインした編集者（CEO の管理者アカウントを含む）のトークンを盗めてしまう。そこで CMS は別プロジェクトに置き、配信には鍵を使わない。Workload Identity Federation のプロバイダ（`projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024`）は、リポジトリが `Cor-Incorporated/corsweb2024`、ref が `refs/heads/main`、ワークフローが `deploy-cms.yml@refs/heads/main` のときだけ、配信用の SA `cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com`（`roles/firebasehosting.admin` のみ）の一時的な認証情報を出す。配信ジョブは GitHub Environment `cms-production`（main だけ）でも縛る。
    - SSR・adapter・DB は導入しない。
 2. GitHub バックエンドを使う（対象ブランチは develop）。`publish_mode: editorial_workflow` とし、下書きは PR、レビューは PR のラベル、公開は merge commit で行う。
 3. 認証は GitHub OAuth App と Sveltia CMS Authenticator（Cloudflare Workers）で行う。編集者は各自の GitHub アカウント（リポジトリの Write 権限）でログインする。
-   - トークンを渡してよいオリジン（`ALLOWED_DOMAINS`）は、`workers/sveltia-cms-auth/wrangler.toml` の `[vars]` に完全一致で宣言する（`cor-jp-cms.web.app`。ワイルドカード・develop・プレビューは入れない）。
+   - トークンを渡してよいオリジン（`ALLOWED_DOMAINS`）は、`workers/sveltia-cms-auth/wrangler.toml` の `[vars]` に完全一致で宣言する（`cor-jp-cms-admin.web.app`。ワイルドカード・develop・プレビューは入れない）。
    - secret にはしない。secret だと値を後から確認できず、未設定や空のとき Authenticator はどのオリジンにもトークンを渡すため。
    - wrangler.toml の値と管理画面のサイト名が一致すること、空・`*`・プレビューを含まないことを、テストで強制する。
 4. CMS が編集するのは ja のフォルダだけとする（`src/content/{blog,news,cases}/ja`）。en / zh / ko / es は翻訳 CI の専有とする。この範囲と、カテゴリの定義・スキーマの必須項目が一致していることを、`config.yml` を読むテストで強制する。
@@ -45,7 +46,8 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 
 - 最初に、Sveltia CMS の editorial workflow（下書き・レビューを PR とラベルで管理する機能）が本構成で動作することを確認する。動作しない場合は Decap CMS に切り替える。
 - develop のブランチ保護（設定済み）により、CMS から develop へ直接 push できないことを確認する。
-- `https://cor-jp-cms.web.app/` でだけログインでき、他のオリジン（`cor-jp-cms.firebaseapp.com`・プレビュー）からはトークンが渡されないことを確認する。
+- `https://cor-jp-cms-admin.web.app/` でだけログインでき、他のオリジン（`cor-jp-cms-admin.firebaseapp.com`・プレビュー）からはトークンが渡されないことを確認する。
+- main 以外のブランチや、別のワークフローから配信しようとすると、Workload Identity Federation の条件で認証が拒否されることを確認する。
 - push 制限に含まれない編集者のアカウントでは「公開」が失敗することを確認する。
 - 初回のログインとひととおりの操作で、ブラウザのコンソールに CSP 違反が出ないことを確認する（ログイン後の通信は自動テストで観測できないため）。
 - ブラウザの言語が日本語のとき、管理画面が日本語で表示される。一覧の件数が `src/content/blog/ja` の記事数と一致する。
@@ -71,7 +73,12 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 - 編集者全員に GitHub アカウントと Write 権限が必要になる。
 - トークンのスコープ（`public_repo,user`）は、編集者が書き込める全ての公開リポジトリに及ぶ。OAuth App ではリポジトリ単位に絞れないので、編集者にはリポジトリの管理者でないアカウントを使うことを推奨する。
 - CMS の「公開」（PR の merge）ができるのは、develop の push 制限で許可された terisuke と cloudia-Cor だけである（2026-09-28 設定）。それ以外の編集者は「レビューに送る」までを行う。ただし cloudia-Cor も merge できるため、「公開は CEO が行う」は運用上の約束である。develop は承認 0 件なので、公開前のレビューも GitHub 上では強制されない（必要になったら CODEOWNERS とコードオーナーのレビューを設定する）。
-- 管理画面の URL は `https://cor-jp-cms.web.app/`（cor-jp.com/admin/ ではない）。Firebase サイト `cor-jp-cms` の作成と、配信を有効にするリポジトリ変数 `CMS_DEPLOY_ENABLED=true` の設定は、2026-09-28 に済ませた（手順と確認方法は、#342 で追加する `docs/cms-sveltia.md` に書く）。
+- 管理画面の URL は `https://cor-jp-cms-admin.web.app/`（cor-jp.com/admin/ ではない）。2026-09-28 に次を済ませた（CEO 承認。手順と確認方法は、#342 で追加する `docs/cms-sveltia.md` に書く）:
+  - Firebase プロジェクト `cor-jp-cms-admin` の作成
+  - 配信用 SA と Workload Identity Federation の設定
+  - GitHub Environment `cms-production`（main だけ）の作成
+  - 配信を有効にするリポジトリ変数 `CMS_DEPLOY_ENABLED=true` の設定
+- 最初に cor-jp-web に作ったサイト `cor-jp-cms` は使わない（退役予定）。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
 - 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019、別 PR で作成予定）。
