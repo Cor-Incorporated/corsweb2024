@@ -1,14 +1,17 @@
 ---
-title: '로컬 LLM／AI 기반 PoC — 판단할 수 있는 재료를 갖춥니다'
-description: '기밀 데이터를 외부 AI에 내보낼 수 없는 업무에 대해, 3개월 동안 본격 도입 여부를 판단할 수 있는 재료를 갖추는 PoC 서비스의 내용을 소개합니다.'
-category: 'local-llm'
-tags: ['로컬 LLM', 'PoC', '시큐어 AI', 'AI 기반']
+title: "로컬 LLM／AI 기반 PoC — 판단할 수 있는 재료를 갖춥니다"
+description: "기밀 데이터를 외부 AI에 내보낼 수 없는 업무에 대해, 3개월 동안 본격 도입 여부를 판단할 수 있는 재료를 갖추는 PoC 서비스의 내용을 소개합니다."
+category: "local-llm"
+tags: ["로컬 LLM", "PoC", "시큐어 AI", "AI 기반"]
 publishedAt: 2026-07-02
-summary: '기밀 데이터가 있어 클라우드 AI에 전부 내보낼 수는 없다. 그렇다고 로컬 LLM이 실제 업무에서 쓸 만한지 자사에서는 판단할 수 없다. 그 상태에서 본격 도입 여부를 판단할 재료를 갖추는 3개월간의 PoC입니다.'
-relatedSlugs: ['confidential-data-ai-assessment']
+summary: "기밀 데이터가 있어 클라우드 AI에 전부 내보낼 수는 없다. 그렇다고 로컬 LLM이 실제 업무에서 쓸 만한지 자사에서는 판단할 수 없다. 그 상태에서 본격 도입 여부를 판단할 재료를 갖추는 3개월간의 PoC입니다."
+relatedSlugs: ["confidential-data-ai-assessment"]
 isDraft: false
 featured: false
-lang: 'ko'
+lang: "ko"
+translationSourceHash: "33f83b15c265210a24ee60d462581cdc34b0e4631f22d4ae5397b9ee967f7307"
+translatedAt: "2026-09-28T06:09:16.039Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 과제

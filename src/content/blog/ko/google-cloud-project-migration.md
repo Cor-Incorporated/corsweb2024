@@ -10,6 +10,9 @@ image:
   alt: "Google Cloud Platform ロゴ"
 lang: "ko"
 featured: false
+translationSourceHash: "65d2d8e4ee3fb4c439d95c88fea7fca7e8286479aa45bbc964a3c502518304aa"
+translatedAt: "2026-09-28T06:09:16.017Z"
+translationModel: "adopted-legacy"
 ---
 
 # Google Cloud 프로젝트 전체를 조직 간 마이그레이션했더니, 하루 만에 끝난 이야기

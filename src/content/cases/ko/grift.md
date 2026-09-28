@@ -1,13 +1,16 @@
 ---
-title: 'Grift — 흩어진 고객의 목소리를 개발팀의 사양으로 바꿉니다'
-description: '정형화되지 않은 요구를 AI로 구조화하여 요건・견적・작업 패킷으로 옮기는 자사 제품 Grift의 실적 소개입니다.'
-category: 'grift'
-tags: ['Grift', 'AI', '요건 정의', '수탁 개발']
+title: "Grift — 흩어진 고객의 목소리를 개발팀의 사양으로 바꿉니다"
+description: "정형화되지 않은 요구를 AI로 구조화하여 요건・견적・작업 패킷으로 옮기는 자사 제품 Grift의 실적 소개입니다."
+category: "grift"
+tags: ["Grift", "AI", "요건 정의", "수탁 개발"]
 publishedAt: 2026-06-30
-summary: '견적의 근거가 속인화되기 쉬운 수탁 개발의 현장에서, 실적과 시장 시세를 바탕으로 「설명할 수 있는 참고 견적」을 구성하는 AI 제품 Grift. 흩어진 요구를 요건・견적・작업 패킷으로 구조화합니다.'
+summary: "견적의 근거가 속인화되기 쉬운 수탁 개발의 현장에서, 실적과 시장 시세를 바탕으로 「설명할 수 있는 참고 견적」을 구성하는 AI 제품 Grift. 흩어진 요구를 요건・견적・작업 패킷으로 구조화합니다."
 isDraft: false
 featured: true
-lang: 'ko'
+lang: "ko"
+translationSourceHash: "3520564b3040fbb4162ae1d2e5348686126a9493aef5807d32907bf016ad34ee"
+translatedAt: "2026-09-28T06:09:16.037Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 과제

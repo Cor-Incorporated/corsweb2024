@@ -10,6 +10,9 @@ image:
   alt: "Codex MCPの設定方法"
 lang: "ko"
 featured: true
+translationSourceHash: "1bcd5dea86c80ec5be559d88239bced030c915cf654507f76872a672295482fa"
+translatedAt: "2026-09-28T06:09:16.015Z"
+translationModel: "adopted-legacy"
 ---
 
 Claude Desktop에서 Claude Code MCP를 사용할 수 없게 되었다. AI 기반 개발의 든든한 동반자를 잃은 절망감. 하지만 탄식할 시간이 없다. 대체 방안으로 화제가 된 Codex CLI의 MCP를 도입하기로 했다.

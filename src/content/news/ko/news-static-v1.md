@@ -8,6 +8,9 @@ source: "Cor.주식회사"
 isDraft: false
 featured: true
 lang: "ko"
+translationSourceHash: "00558ce5b4904f71ed4516638e87c32ca98637910f2bab039f93a2dec6e6192e"
+translatedAt: "2026-09-28T06:09:16.048Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 공지를 한곳에 모았습니다

@@ -1,13 +1,16 @@
 ---
-title: 'Grift —— 把散落的客户声音，转化为开发团队的规格'
-description: '介绍自研产品 Grift 的实绩：用 AI 将不定形的需求结构化，落实为需求定义、报价与作业包。'
-category: 'grift'
-tags: ['Grift', 'AI', '需求定义', '受托开发']
+title: "Grift —— 把散落的客户声音，转化为开发团队的规格"
+description: "介绍自研产品 Grift 的实绩：用 AI 将不定形的需求结构化，落实为需求定义、报价与作业包。"
+category: "grift"
+tags: ["Grift", "AI", "需求定义", "受托开发"]
 publishedAt: 2026-06-30
-summary: '在报价依据容易属人化的受托开发现场，Grift 基于实绩与市场行情组建“可以解释的参考报价”。它把散落的需求结构化为需求定义、报价与作业包。'
+summary: "在报价依据容易属人化的受托开发现场，Grift 基于实绩与市场行情组建“可以解释的参考报价”。它把散落的需求结构化为需求定义、报价与作业包。"
 isDraft: false
 featured: true
-lang: 'zh'
+lang: "zh"
+translationSourceHash: "3520564b3040fbb4162ae1d2e5348686126a9493aef5807d32907bf016ad34ee"
+translatedAt: "2026-09-28T06:09:16.034Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 课题

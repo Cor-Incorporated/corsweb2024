@@ -1,14 +1,17 @@
 ---
-title: '遗留核心系统的上云迁移 —— 把 25 年的数据梳理清楚再交接'
-description: '介绍我们把某教育机构运行约 25 年的核心数据库，通过区分事实与假设的调研，分阶段迁移上云的实绩。'
-category: 'ai-contract'
-tags: ['上云迁移', '核心系统', 'PostgreSQL', '数据迁移']
+title: "遗留核心系统的上云迁移 —— 把 25 年的数据梳理清楚再交接"
+description: "介绍我们把某教育机构运行约 25 年的核心数据库，通过区分事实与假设的调研，分阶段迁移上云的实绩。"
+category: "ai-contract"
+tags: ["上云迁移", "核心系统", "PostgreSQL", "数据迁移"]
 publishedAt: 2026-07-02
-summary: '在某教育机构，我们从区分事实与假设的调研入手，以分阶段迁移的方式，把运行约 25 年的核心数据库交接上云。'
-securityNote: '本案件因 NDA，将客户名・系统名等可能导致识别的信息抽象化后刊载。'
+summary: "在某教育机构，我们从区分事实与假设的调研入手，以分阶段迁移的方式，把运行约 25 年的核心数据库交接上云。"
+securityNote: "本案件因 NDA，将客户名・系统名等可能导致识别的信息抽象化后刊载。"
 isDraft: false
 featured: false
-lang: 'zh'
+lang: "zh"
+translationSourceHash: "37960edd140adde429710164d510afa265da98478bd7fcb0f13018c5be949384"
+translatedAt: "2026-09-28T06:09:16.034Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 课题

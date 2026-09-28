@@ -6,6 +6,9 @@ author: "Terisuke"
 category: "lab"
 tags: ["Marp", "VOICEVOX", "VTubeStudio", "自動化", "創造的プロジェクト"]
 lang: "zh"
+translationSourceHash: "1415a08c523813b0effca65908d713100563119940d89a8ecb6f61be7869c763"
+translatedAt: "2026-09-28T06:09:16.013Z"
+translationModel: "adopted-legacy"
 ---
 
 # 【Marp×VOICEVOX×VTubeStudio】让ずんだもん做LT发表

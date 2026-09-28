@@ -7,6 +7,9 @@ category: "ai"
 tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "ko"
 featured: true
+translationSourceHash: "e44a175f9b52f956850c28731e793da30a7af7639f6841f41f631a9c03f67fbd"
+translatedAt: "2026-09-28T06:09:16.014Z"
+translationModel: "adopted-legacy"
 ---
 
 ## AI 기반 개발로 생산성 7배 향상: 저의 실경험

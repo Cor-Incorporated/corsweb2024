@@ -9,4 +9,7 @@ source: "Grift"
 isDraft: false
 featured: true
 lang: "en"
+translationSourceHash: "0c2cf36eb623caf6c8a2c919cf7513c4f625ce1cd96f33f4b49bc082fcab871b"
+translatedAt: "2026-09-28T06:09:16.045Z"
+translationModel: "adopted-legacy"
 ---

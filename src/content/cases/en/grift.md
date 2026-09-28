@@ -1,13 +1,16 @@
 ---
-title: 'Grift — Turning scattered customer requests into specifications a development team can build from'
-description: 'A look at Grift, our in-house product that structures unformed requests with AI and turns them into requirements, estimates, and actionable work packets.'
-category: 'grift'
-tags: ['Grift', 'AI', 'Requirements definition', 'Contract development']
+title: "Grift — Turning scattered customer requests into specifications a development team can build from"
+description: "A look at Grift, our in-house product that structures unformed requests with AI and turns them into requirements, estimates, and actionable work packets."
+category: "grift"
+tags: ["Grift", "AI", "Requirements definition", "Contract development"]
 publishedAt: 2026-06-30
-summary: 'In contract development, the rationale behind an estimate tends to live with one person. Grift is an AI product that assembles reference estimates you can explain, based on track records and market rates, structuring scattered requests into requirements, estimates, and work packets.'
+summary: "In contract development, the rationale behind an estimate tends to live with one person. Grift is an AI product that assembles reference estimates you can explain, based on track records and market rates, structuring scattered requests into requirements, estimates, and work packets."
 isDraft: false
 featured: true
-lang: 'en'
+lang: "en"
+translationSourceHash: "3520564b3040fbb4162ae1d2e5348686126a9493aef5807d32907bf016ad34ee"
+translatedAt: "2026-09-28T06:09:16.029Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Challenge

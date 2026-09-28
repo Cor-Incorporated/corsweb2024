@@ -7,6 +7,9 @@ category: "founder"
 tags: ["LT", "成長", "コミュニティ", "起業", "エンジニア"]
 lang: "es"
 featured: true
+translationSourceHash: "325f48c7497ecead1646e12ca98fef0b2c3f57c2c331dad99a9bf5ee42a9738c"
+translatedAt: "2026-09-28T06:09:16.026Z"
+translationModel: "adopted-legacy"
 ---
 
 # La historia de cómo mi vida cambió drásticamente después de presentar en LTs semanalmente durante un año

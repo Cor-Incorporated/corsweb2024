@@ -1,14 +1,17 @@
 ---
-title: '기밀 데이터 AI 활용 진단 — 내보내기 전에, 다루는 방법을 함께 정리합니다'
-description: '계약서나 고객 정보 같은 기밀 데이터를 AI에 활용하기 전에, 정보 설계부터 함께 고민하는 진단 서비스의 내용을 소개합니다.'
-category: 'confidential-ai'
-tags: ['기밀 데이터', 'AI 활용 진단', '로컬 LLM', '보안']
+title: "기밀 데이터 AI 활용 진단 — 내보내기 전에, 다루는 방법을 함께 정리합니다"
+description: "계약서나 고객 정보 같은 기밀 데이터를 AI에 활용하기 전에, 정보 설계부터 함께 고민하는 진단 서비스의 내용을 소개합니다."
+category: "confidential-ai"
+tags: ["기밀 데이터", "AI 활용 진단", "로컬 LLM", "보안"]
 publishedAt: 2026-07-02
-summary: '계약서・회의록・고객 정보를 AI에 활용하고 싶지만, 외부 AI에 그대로 내보낼 수는 없다. 그 고민에 대해 곧바로 만들지 않고 정보를 정리하는 것부터 마주하는 진단 서비스입니다.'
-relatedSlugs: ['local-llm-poc']
+summary: "계약서・회의록・고객 정보를 AI에 활용하고 싶지만, 외부 AI에 그대로 내보낼 수는 없다. 그 고민에 대해 곧바로 만들지 않고 정보를 정리하는 것부터 마주하는 진단 서비스입니다."
+relatedSlugs: ["local-llm-poc"]
 isDraft: false
 featured: true
-lang: 'ko'
+lang: "ko"
+translationSourceHash: "eaac26262096196ef50f76a62b92316ea31feaa5bf1239f905556a365edb685e"
+translatedAt: "2026-09-28T06:09:16.036Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 과제

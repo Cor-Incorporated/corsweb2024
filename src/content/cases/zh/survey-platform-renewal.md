@@ -1,14 +1,17 @@
 ---
-title: '大规模问卷收集・分析基础平台的革新 —— 先做到“改动不再可怕”'
-description: '介绍我们接手途中的问卷收集・分析平台后，从测试与 CI/CD 的完善入手重建并投产的实绩。'
-category: 'ai-contract'
-tags: ['基础平台革新', 'CI/CD', 'FastAPI', 'AI 智能体']
+title: "大规模问卷收集・分析基础平台的革新 —— 先做到“改动不再可怕”"
+description: "介绍我们接手途中的问卷收集・分析平台后，从测试与 CI/CD 的完善入手重建并投产的实绩。"
+category: "ai-contract"
+tags: ["基础平台革新", "CI/CD", "FastAPI", "AI 智能体"]
 publishedAt: 2026-07-02
-summary: '我们把中途接手的问卷平台，从测试・CI/CD・IaC 的完善入手重新立起，并革新为由 AI 对话深挖回答的体验。'
-securityNote: '本案件因 NDA，将客户名・产品名等可能导致识别的信息抽象化后刊载。'
+summary: "我们把中途接手的问卷平台，从测试・CI/CD・IaC 的完善入手重新立起，并革新为由 AI 对话深挖回答的体验。"
+securityNote: "本案件因 NDA，将客户名・产品名等可能导致识别的信息抽象化后刊载。"
 isDraft: false
 featured: false
-lang: 'zh'
+lang: "zh"
+translationSourceHash: "0c80714cd505e0d78e0c53dc042d0f5dcb00418815fbd3200f8209f3c185f703"
+translatedAt: "2026-09-28T06:09:16.036Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 课题

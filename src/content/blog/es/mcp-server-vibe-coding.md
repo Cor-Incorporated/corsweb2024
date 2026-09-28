@@ -10,6 +10,9 @@ image:
   alt: "YouTube LIVEの企画"
 lang: "es"
 featured: true
+translationSourceHash: "a97ec2074a35e85ec15b09d1bda3dc8ecd0ba3aad616a0b27e12e504e1a2fea7"
+translatedAt: "2026-09-28T06:09:16.025Z"
+translationModel: "adopted-legacy"
 ---
 
 # ¡Crea un servidor MCP en un servidor MCP en 15 minutos! La historia detrás de la aplicación "Hazlo bien y ya"

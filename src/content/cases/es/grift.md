@@ -1,13 +1,16 @@
 ---
-title: 'Grift — convertimos las voces dispersas del cliente en especificaciones para el equipo de desarrollo'
-description: 'Presentamos Grift, nuestro producto propio que estructura con IA las peticiones sin forma definida y las traduce en requisitos, presupuestos y paquetes de trabajo.'
-category: 'grift'
-tags: ['Grift', 'IA', 'definición de requisitos', 'desarrollo a medida']
+title: "Grift — convertimos las voces dispersas del cliente en especificaciones para el equipo de desarrollo"
+description: "Presentamos Grift, nuestro producto propio que estructura con IA las peticiones sin forma definida y las traduce en requisitos, presupuestos y paquetes de trabajo."
+category: "grift"
+tags: ["Grift", "IA", "definición de requisitos", "desarrollo a medida"]
 publishedAt: 2026-06-30
-summary: 'En el desarrollo a medida, el fundamento de un presupuesto tiende a depender de la persona que lo elabora. Grift es un producto de IA que construye presupuestos de referencia explicables a partir del historial de proyectos y las tarifas del mercado, y estructura las peticiones dispersas en requisitos, presupuestos y paquetes de trabajo.'
+summary: "En el desarrollo a medida, el fundamento de un presupuesto tiende a depender de la persona que lo elabora. Grift es un producto de IA que construye presupuestos de referencia explicables a partir del historial de proyectos y las tarifas del mercado, y estructura las peticiones dispersas en requisitos, presupuestos y paquetes de trabajo."
 isDraft: false
 featured: true
-lang: 'es'
+lang: "es"
+translationSourceHash: "3520564b3040fbb4162ae1d2e5348686126a9493aef5807d32907bf016ad34ee"
+translatedAt: "2026-09-28T06:09:16.042Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Desafío

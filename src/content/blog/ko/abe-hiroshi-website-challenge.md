@@ -10,6 +10,9 @@ image:
   alt: "高性能Webサイトのイメージ"
 lang: "ko"
 featured: true
+translationSourceHash: "85871aef8ac9f5e6f95e4d9a1ce2058781b6b9ae5ea5ff7d34f3ba23b7574b4e"
+translatedAt: "2026-09-28T06:09:16.013Z"
+translationModel: "adopted-legacy"
 ---
 
 # 아베 히로시 웹사이트에 계속 도전했더니 놀라운 웹사이트가 탄생한 이야기
