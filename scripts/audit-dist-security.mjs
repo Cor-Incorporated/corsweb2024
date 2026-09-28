@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { ACTIVE_SVG_CONTENT, SIGNATURES, hasKnownSignature, signatureMismatch } from './lib/file-signatures.mjs';
 import { findServerOutputRemnants, findUnreachableBundles } from './dist-bundle-reachability.mjs';
 
 // 監査する出力先（既定は ./dist）。CI はカレンダーありの 2 回目のビルド（$RUNNER_TEMP/dist-calendar）も
@@ -115,10 +116,17 @@ const walk = async dir => {
   return files;
 };
 
+// リンクカードの画像のキャッシュ（remark-link-card-plus/）は、外部サイトから取得したファイルなので
+// テキストとしての検査（origin・secret など）の対象から外し、auditLinkCardImages だけで扱う。
+// 例: XML 宣言付きの SVG は file-type が .xml と判定して保存し、中の名前空間の http:// URL で
+// origin の検査が失敗していた（外部サイトのファビコンの形式でデプロイが止まる）。
+const isLinkCardAsset = relative => relative.startsWith('remark-link-card-plus/');
+
 const readTextFiles = async files => {
   const result = [];
   for (const file of files) {
     if (!TEXT_EXTENSIONS.has(path.extname(file))) continue;
+    if (isLinkCardAsset(path.relative(DIST_DIR, file))) continue;
     const text = await readFile(file, 'utf8');
     result.push({ file, relative: path.relative(DIST_DIR, file), text });
   }
@@ -216,6 +224,38 @@ const auditLocalStorage = (violations, file) => {
   }
 };
 
+// remark-link-card-plus の画像（追跡しているものと、ビルド時に取得したもの）の拡張子と中身の形式を照合する
+// （#340。理由は scripts/lib/file-signatures.mjs）。圧縮版（.gz / .br）は対象外。
+// - 不一致は警告にとどめ、失敗にはしない。ビルド時の取得結果はリンク先のサイト次第で、失敗にすると外部サイトの
+//   ファビコンの形式だけで本番のデプロイが止まるため。追跡しているファイルは、ユニットテスト
+//   （src/utils/__tests__/link-card-cache.test.ts）が厳密に検査する。
+// - 判定表に無い拡張子（.xml など）も警告にする（中身を確かめられないので、表示されない可能性がある）。
+// - 中身が SVG のファイルの能動的な内容は失敗にする（配信側でも firebase.json の sandbox で無害化している）。
+const LINK_CARD_DIR = 'remark-link-card-plus';
+const COMPRESSED_VARIANT = /\.(?:gz|br)$/i;
+
+const auditLinkCardImages = async (violations, warnings, files) => {
+  for (const file of files) {
+    const relative = path.relative(DIST_DIR, file);
+    if (!relative.startsWith(`${LINK_CARD_DIR}/`) || COMPRESSED_VARIANT.test(relative)) continue;
+    const name = path.basename(file);
+    const buffer = await readFile(file);
+    const mismatch = hasKnownSignature(name)
+      ? signatureMismatch(name, buffer)
+      : `${name} has an unexpected format for a link-card image (${path.extname(name) || 'no extension'})`;
+    if (mismatch) {
+      warnings.push(
+        `[dist-security][warn] ${LINK_CARD_DIR}/${mismatch}: this link-card image may not render. ` +
+          'Build locally, then commit the file under public/remark-link-card-plus/ with the right extension (git add -f / git mv).'
+      );
+    }
+    // 中身が SVG なら拡張子（.svg・.xml など）に関係なく、能動的な内容を失敗にする。
+    if (SIGNATURES.svg(buffer) && ACTIVE_SVG_CONTENT.test(buffer.toString('utf8'))) {
+      violations.push(`[dist-security] ${relative} contains active SVG content.`);
+    }
+  }
+};
+
 const scriptElements = html =>
   [...html.replace(HTML_COMMENT_PATTERN, '').matchAll(SCRIPT_ELEMENT_PATTERN)].map(([, attributes, body]) => ({
     body,
@@ -297,10 +337,12 @@ const main = async () => {
   const files = await walk(DIST_DIR);
   const textFiles = await readTextFiles(files);
   const violations = [];
+  const warnings = [];
 
   for (const page of REQUIRED_SEO_PAGES) {
     await auditSeoPage(violations, page);
   }
+  await auditLinkCardImages(violations, warnings, files);
 
   for (const file of textFiles) {
     auditJsonLd(violations, file);
@@ -312,6 +354,8 @@ const main = async () => {
     auditServerRenderChunks(violations, file);
   }
   await auditBundleReachability(violations, files);
+
+  for (const warning of warnings) console.warn(warning);
 
   if (violations.length > 0) {
     throw new Error(violations.join('\n'));

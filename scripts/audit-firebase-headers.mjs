@@ -50,6 +50,7 @@ const routeMatches = (source, requestPath) => {
   if (source === '/') return requestPath === '/';
   if (source === '**/') return requestPath.endsWith('/');
   if (source === '/images/blog/uploads/**') return requestPath.startsWith('/images/blog/uploads/');
+  if (source === '/remark-link-card-plus/**') return requestPath.startsWith('/remark-link-card-plus/');
   if (source === '/images/blog/**/*.svg') {
     return requestPath.startsWith('/images/blog/') && /\.svg$/i.test(requestPath);
   }
@@ -124,6 +125,9 @@ const main = async () => {
     /immutable/
   );
   requireRouteHeader(violations, headers, '/images/blog/uploads/**', 'X-Content-Type-Options', 'nosniff');
+  // リンクカードのキャッシュの SVG は、直接開くと cor-jp.com のオリジンで文書として動くので、sandbox で無害化する（#340）。
+  requireRouteHeader(violations, headers, '/remark-link-card-plus/**', 'Content-Security-Policy', /\bsandbox\b/);
+  requireEffectiveHeader(violations, headers, '/remark-link-card-plus/x.svg', 'Content-Security-Policy', /\bsandbox\b/);
   // ブログ画像の SVG は、置かれても文書として動かないようにする（ADR-0018 の stored XSS 対策。
   // CMS の accept と src/config/__tests__/content-safety.test.ts で SVG 自体も止めている）。
   const svgPolicy = "sandbox; default-src 'none'";
