@@ -37,8 +37,10 @@ export function extractJsRefs(code) {
   return refs.map(stripQuery).filter((ref) => JS_FILE.test(ref));
 }
 
+// 属性値を読む。HTML では `=` の前後に空白を置けるので（src = "…"）それも許し、引用符なしの値も読む。
+// 読めないと本当に読み込まれている JS を取り残しと誤検知する。
 const attribute = (tag, name) => {
-  const match = tag.match(new RegExp(`\\s${name}=(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+  const match = tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\x60]+))`, 'i'));
   return match ? (match[1] ?? match[2] ?? match[3]) : null;
 };
 
@@ -54,7 +56,7 @@ export function extractHtmlScriptRefs(html) {
   for (const [tag] of html.matchAll(/<astro-island\b[^>]*>/gi)) {
     for (const name of ['component-url', 'renderer-url', 'before-hydration-url']) refs.push(attribute(tag, name));
   }
-  for (const match of html.matchAll(/<script\b(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi)) refs.push(...extractJsRefs(match[1]));
+  for (const match of html.matchAll(/<script\b(?![^>]*\ssrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi)) refs.push(...extractJsRefs(match[1]));
   return refs.filter(Boolean).map(stripQuery).filter((ref) => JS_FILE.test(ref));
 }
 

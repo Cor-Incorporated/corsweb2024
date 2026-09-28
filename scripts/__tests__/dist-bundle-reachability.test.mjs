@@ -29,9 +29,21 @@ describe('reference extraction', () => {
       // 読み込みではないもの: 普通のリンク・data 属性・preload 以外の link・インライン script 内の文字列
       '<a href="/_astro/linked.js">download</a><img data-src=/_astro/lazy-img.js><link rel=prefetch href=/_astro/prefetch.js>',
       '<script>const note = "/_astro/just-a-string.js";</script>',
+      // `=` の前後に空白がある属性（HTML として正しい）と、引用符なし・単引用符の値
+      '<script type="module" src = "/_astro/spaced.js"></script><link rel = "modulepreload" href = /_astro/pre-spaced.js>',
+      "<script src ='/_astro/single-quoted.js'></script>",
     ].join('');
     expect(extractHtmlScriptRefs(html).sort()).toEqual(
-      ['/_astro/hoisted.Dgzzfq7E.js', '/_astro/pre.js', '/_astro/Island.js', '/_astro/client.js', '/_astro/inline-dyn.js'].sort(),
+      [
+        '/_astro/hoisted.Dgzzfq7E.js',
+        '/_astro/pre.js',
+        '/_astro/Island.js',
+        '/_astro/client.js',
+        '/_astro/inline-dyn.js',
+        '/_astro/spaced.js',
+        '/_astro/pre-spaced.js',
+        '/_astro/single-quoted.js',
+      ].sort(),
     );
   });
 
@@ -59,7 +71,9 @@ describe('findUnreachableBundles / findServerOutputRemnants (temporary dist)', (
       'index.html',
       '<script type=module src=/_astro/entry.AAAAAAAA.js></script><script>import("/_astro/inline-dyn.js")</script>' +
         // 普通のリンクで指されているだけの JS は読み込まれない
-        '<a href="/_astro/linked-only.js">x</a>',
+        '<a href="/_astro/linked-only.js">x</a>' +
+        // `=` の前後に空白があっても読み込みとして数える（誤検知しない）
+        '<script type="module" src = "/_astro/spaced-src.js"></script>',
     );
     await put(
       '_astro/entry.AAAAAAAA.js',
@@ -68,7 +82,7 @@ describe('findUnreachableBundles / findServerOutputRemnants (temporary dist)', (
         // 文字列にファイル名が書かれているだけで、import はしていない
         'const manual="./string-only.js";',
     );
-    for (const name of ['a', 'b', 'lazy', 'mapped', 'inline-dyn', 'admin-chunk', 'linked-only', 'string-only']) {
+    for (const name of ['a', 'b', 'lazy', 'mapped', 'inline-dyn', 'admin-chunk', 'linked-only', 'string-only', 'spaced-src']) {
       await put(`_astro/${name}.js`, 'export{};');
     }
     // 管理画面（別の HTML 起点）から辿れる JS は取り残しではない
