@@ -146,7 +146,6 @@ src/
 │   ├── blog/        # ブログ専用コンポーネント
 │   ├── home/        # ホームページコンポーネント
 │   ├── layout/      # 共通レイアウト
-│   ├── performance/ # パフォーマンス監視
 │   ├── products/    # プロダクト紹介コンポーネント
 │   └── youtube/     # YouTube API統合コンポーネント
 ├── content/         # コンテンツコレクション
@@ -210,7 +209,7 @@ https://github.com
 - Service Workerによるオフライン対応
 - Resource Hintsの追加最適化
 - 画像のLazy Loading戦略の改善
-- Web Vitalsモニタリングの強化
+- Core Web Vitals の実測値（Cloudflare Web Analytics）を改善に使う仕組み
 - 翻訳精度のさらなる向上
 - ブログ管理UI/CMSの実装
 - 投げ銭履歴の管理機能

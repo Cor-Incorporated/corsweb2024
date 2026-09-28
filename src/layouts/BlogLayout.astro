@@ -2,7 +2,6 @@
 import { ViewTransitions } from 'astro:transitions';
 import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
-import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import AlpineInit from '../components/layout/AlpineInit.astro';
 import ThemeInit from '../components/layout/ThemeInit.astro';
@@ -471,7 +470,6 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       <slot />
     </main>
     <Footer />
-    <WebVitals />
     
     <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
     <AlpineInit />

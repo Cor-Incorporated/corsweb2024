@@ -41,7 +41,6 @@ Components are organized by feature under `/src/components/`:
 - `layout/` - Shared Header and Footer components
 - `blog/` - Blog-specific components (CategoryBadge, PostCard, ShareButtons,
   TableOfContents, TagList, TipButton)
-- `performance/` - WebVitals monitoring component
 
 Pages use a consistent pattern:
 
@@ -56,7 +55,12 @@ Pages use a consistent pattern:
 - Aggressive compression via astro-compress and astro-compressor plugins
 - Firebase hosting with 1-year cache headers for assets
 - View Transitions API enabled for smooth navigation
-- Web Vitals monitoring and performance tracking
+- Core Web Vitals field data comes from Cloudflare Web Analytics (the beacon in
+  `src/components/analytics/Analytics.astro`, production only). Bundle libraries
+  from npm instead of loading them from a public CDN at runtime:
+  `npm run security:audit:dist` rejects `import()` / `import … from` of a URL in
+  executed scripts and `<script src>` from unpkg, esm.sh, Skypack, jspm, cdnjs and
+  jsDelivr (exception: the vendor analytics tags in Analytics.astro)
 - Critical CSS inlining for above-the-fold content
 - Font optimization with font-display: optional
 
@@ -276,7 +280,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
   - KaTeX CSS for math rendering: self-hosted (`katex` from npm, inlined by
     `src/components/blog/KatexStyles.astro`) and emitted only on posts that contain
     math (`remarkPluginFrontmatter.hasMath` from `src/utils/remark-has-math.ts`)
-  - Performance optimizations (critical CSS, Web Vitals)
+  - Performance optimizations (critical CSS)
 
 ### Blog Components
 
@@ -313,7 +317,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 - **Multilingual SEO**: Proper hreflang tags and canonical URLs for 5 languages
 - **Meta Tags**: Comprehensive OpenGraph and Twitter Card support
 - **Sitemap**: Auto-generated with @astrojs/sitemap
-- **Performance**: Web Vitals tracking, critical CSS, font optimization
+- **Performance**: critical CSS, font optimization (Core Web Vitals field data:
+  Cloudflare Web Analytics)
 
 ### Writing New Blog Posts
 

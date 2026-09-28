@@ -5,7 +5,6 @@ import Header from '../components/layout/Header.astro';
 import CloudiaLauncher from '../components/contact/CloudiaLauncher.astro';
 import AlpineInit from '../components/layout/AlpineInit.astro';
 import ThemeInit from '../components/layout/ThemeInit.astro';
-import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import { getCurrentLocale, type Locale } from '../utils/i18n';
@@ -331,7 +330,6 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
     </main>
     <Footer />
     {CLOUDIA_LAUNCHER_ENABLED && cloudiaLauncher && <CloudiaLauncher />}
-    <WebVitals />
     <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
     <AlpineInit />
     <!-- no-JS fallback -->
