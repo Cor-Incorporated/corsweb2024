@@ -83,7 +83,7 @@ API に送る前に、訳してはいけない部分をプレースホルダ（`
 |---|---|---|---|
 | 正式表記（ADR-0007） | `Cor.株式会社` | `Cor.주식회사` | `Cor.Inc.` |
 
-用語集は [`scripts/i18n/glossary.mjs`](../scripts/i18n/glossary.mjs)。正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）で、同じ値にしてあります（#335 のマージ後に両者を照合するテストを追加予定）。
+用語集は [`scripts/i18n/glossary.mjs`](../scripts/i18n/glossary.mjs)。正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）で、同じ値にしてあります。両者は `scripts/i18n/__tests__/organization-link.test.mjs` が照合します（片方だけ変えると両側の値を出して落ちる。正本がまだ無い間は理由を出して skip し、#335 がマージされた時点から強制される）。
 
 title と本文の見出しの一致: ja で frontmatter の `title` と本文の最初の `# ` 見出し（H1）が同じ文言なら、訳文の H1 を訳した `title` に置き換えます（モデルは両者を別々に訳すため、同じ文言でも訳が割れることがあるため。PR #344 の実 API 検証で en / zh / ko に発生）。
 
