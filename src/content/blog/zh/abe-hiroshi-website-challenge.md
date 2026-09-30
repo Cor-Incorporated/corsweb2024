@@ -10,6 +10,9 @@ image:
   alt: "高性能Webサイトのイメージ"
 lang: "zh"
 featured: true
+translationSourceHash: "85871aef8ac9f5e6f95e4d9a1ce2058781b6b9ae5ea5ff7d34f3ba23b7574b4e"
+translatedAt: "2026-09-28T06:09:16.006Z"
+translationModel: "adopted-legacy"
 ---
 
 # 挑战阿部宽的官网后，我构建了一个超棒的网站

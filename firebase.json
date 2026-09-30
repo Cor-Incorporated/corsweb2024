@@ -111,7 +111,25 @@
         ]
       },
       {
-        "source": "**/*.@(js|css)",
+        "source": "/remark-link-card-plus/**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+          }
+        ]
+      },
+      {
+        "source": "/images/blog/**/*.svg",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "sandbox; default-src 'none'"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css|woff|woff2|ttf)",
         "headers": [
           {
             "key": "Cache-Control",

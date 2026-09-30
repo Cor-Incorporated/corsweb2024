@@ -7,6 +7,9 @@ category: "ai"
 tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "en"
 featured: true
+translationSourceHash: "e44a175f9b52f956850c28731e793da30a7af7639f6841f41f631a9c03f67fbd"
+translatedAt: "2026-09-28T06:09:15.999Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 7x Productivity Boost with AI-Driven Development: My Real-World Experience

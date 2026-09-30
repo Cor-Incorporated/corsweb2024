@@ -6,8 +6,11 @@ on:
       - main
       - develop
   pull_request:
+    # develop 宛 PR にもプレビューチャネル（pr<番号>-<ブランチ名先頭20字>、30 日で失効）を作る。
+    # CMS（ADR-0018）の「プレビューを見る」は、下の Preview ステップが作る "Deploy Preview" check run の URL を読む。
     branches:
       - main
+      - develop
   workflow_dispatch:
 
 permissions:
@@ -15,16 +18,25 @@ permissions:
   checks: write
   pull-requests: write
 
+# 同じ PR の実行は 1 本ずつにし、古い run は取り消す。CMS（ADR-0018）から続けて保存したとき、
+# 古い run が後から終わってプレビューチャネルを古い内容で上書きしないようにするため。
+# push（本番・develop チャネル）は取り消さず順に実行する（待機中の run は新しい run に置き換わる）。
+# 手動実行（workflow_dispatch）はビルドだけでデプロイしないので、push と別のグループにする。
+# 同じグループだと、待機中の本番デプロイが手動実行に置き換えられて消える。
+concurrency:
+  group: deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -50,9 +62,18 @@ jobs:
           PUBLIC_CLARITY_ID: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CLARITY_ID || '' }}
           PUBLIC_CF_BEACON_TOKEN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CF_BEACON_TOKEN || '' }}
 
+      - name: Audit build output before deploying
+        # デプロイする前にビルド結果を監査する（secret の混入、第三者 CDN からのコード、壊れた JSON-LD、
+        # SEO の必須タグなど）。PR の verify（ci.yml）でも同じ監査を実行するが、ここでは本番・プレビュー用の
+        # 環境変数でビルドし直した成果物を検査する。失敗したらデプロイしない。
+        run: npm run security:audit:dist
+
       - name: Debug Firebase service account secret
+        # secret はシェルのスクリプトに直接展開せず、環境変数で渡す。
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
         run: |
-          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}" ]; then
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "❌ Missing FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB secret"
             exit 1
           fi
@@ -60,7 +81,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting (Preview)
         if: github.event_name == 'pull_request'
-        uses: FirebaseExtended/action-hosting-deploy@v0.7.1
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
@@ -69,7 +90,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting (Develop preview)
         if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0.7.1
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
@@ -79,7 +100,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting (Production)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0.7.1
+        uses: FirebaseExtended/action-hosting-deploy@120e124148ab7016bec2374e5050f15051255ba2 # v0.7.1
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}

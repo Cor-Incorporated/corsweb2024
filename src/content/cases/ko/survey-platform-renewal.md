@@ -1,14 +1,17 @@
 ---
-title: '대규모 설문 수집・분석 기반의 쇄신 — 변경이 두렵지 않은 상태를 먼저 만듭니다'
-description: '도중에 인계받은 설문 수집・분석 플랫폼을, 테스트와 CI/CD 정비부터 재정비하여 본격 운영까지 이끈 실적입니다.'
-category: 'ai-contract'
-tags: ['기반 쇄신', 'CI/CD', 'FastAPI', 'AI 에이전트']
+title: "대규모 설문 수집・분석 기반의 쇄신 — 변경이 두렵지 않은 상태를 먼저 만듭니다"
+description: "도중에 인계받은 설문 수집・분석 플랫폼을, 테스트와 CI/CD 정비부터 재정비하여 본격 운영까지 이끈 실적입니다."
+category: "ai-contract"
+tags: ["기반 쇄신", "CI/CD", "FastAPI", "AI 에이전트"]
 publishedAt: 2026-07-02
-summary: '도중에 인계받은 설문 기반을 테스트・CI/CD・IaC의 정비부터 재정비하고, AI가 대화하면서 답변을 깊이 파고드는 경험으로 쇄신하고 있습니다.'
-securityNote: '본 안건은 NDA로 인해 고객사명・제품명 등 특정으로 이어질 수 있는 정보를 추상화하여 게재하고 있습니다.'
+summary: "도중에 인계받은 설문 기반을 테스트・CI/CD・IaC의 정비부터 재정비하고, AI가 대화하면서 답변을 깊이 파고드는 경험으로 쇄신하고 있습니다."
+securityNote: "본 안건은 NDA로 인해 고객사명・제품명 등 특정으로 이어질 수 있는 정보를 추상화하여 게재하고 있습니다."
 isDraft: false
 featured: false
-lang: 'ko'
+lang: "ko"
+translationSourceHash: "0c80714cd505e0d78e0c53dc042d0f5dcb00418815fbd3200f8209f3c185f703"
+translatedAt: "2026-09-28T06:09:16.039Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 과제

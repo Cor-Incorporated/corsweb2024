@@ -1,14 +1,17 @@
 ---
-title: '레거시 기간 시스템의 클라우드 이전 — 25년치 데이터를 정리해 물려줍니다'
-description: '약 25년간 운영되어 온 교육기관의 기간 데이터베이스를, 사실과 가설을 구분하면서 단계적으로 클라우드로 이전한 실적입니다.'
-category: 'ai-contract'
-tags: ['클라우드 이전', '기간 시스템', 'PostgreSQL', '데이터 이전']
+title: "레거시 기간 시스템의 클라우드 이전 — 25년치 데이터를 정리해 물려줍니다"
+description: "약 25년간 운영되어 온 교육기관의 기간 데이터베이스를, 사실과 가설을 구분하면서 단계적으로 클라우드로 이전한 실적입니다."
+category: "ai-contract"
+tags: ["클라우드 이전", "기간 시스템", "PostgreSQL", "데이터 이전"]
 publishedAt: 2026-07-02
-summary: '어느 교육기관에서 약 25년간 운영되어 온 기간 데이터베이스를, 사실과 가설을 구분하는 조사에서 시작해 단계적 이전으로 클라우드에 물려주고 있습니다.'
-securityNote: '본 안건은 NDA로 인해 고객사명・시스템명 등 특정으로 이어질 수 있는 정보를 추상화하여 게재하고 있습니다.'
+summary: "어느 교육기관에서 약 25년간 운영되어 온 기간 데이터베이스를, 사실과 가설을 구분하는 조사에서 시작해 단계적 이전으로 클라우드에 물려주고 있습니다."
+securityNote: "본 안건은 NDA로 인해 고객사명・시스템명 등 특정으로 이어질 수 있는 정보를 추상화하여 게재하고 있습니다."
 isDraft: false
 featured: false
-lang: 'ko'
+lang: "ko"
+translationSourceHash: "37960edd140adde429710164d510afa265da98478bd7fcb0f13018c5be949384"
+translatedAt: "2026-09-28T06:09:16.038Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 과제

@@ -10,6 +10,9 @@ image:
   alt: "YouTube LIVEの企画"
 lang: "zh"
 featured: true
+translationSourceHash: "a97ec2074a35e85ec15b09d1bda3dc8ecd0ba3aad616a0b27e12e504e1a2fea7"
+translatedAt: "2026-09-28T06:09:16.011Z"
+translationModel: "adopted-legacy"
 ---
 
 # 【闪电15分钟】用MCP服务器构建MCP服务器！“随心所欲处理应用”开发秘辛

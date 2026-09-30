@@ -10,6 +10,9 @@ image:
   alt: "Google Cloud Platform ロゴ"
 lang: "zh"
 featured: false
+translationSourceHash: "65d2d8e4ee3fb4c439d95c88fea7fca7e8286479aa45bbc964a3c502518304aa"
+translatedAt: "2026-09-28T06:09:16.010Z"
+translationModel: "adopted-legacy"
 ---
 
 # 整个 Google Cloud 项目一天之内完成组织间迁移，我的经验总结

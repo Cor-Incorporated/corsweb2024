@@ -1,0 +1,208 @@
+name: Deploy CMS admin (cor-jp-cms-admin)
+
+# CMS の管理画面（Sveltia CMS、ADR-0018・#329）を、専用の Firebase プロジェクト cor-jp-cms-admin の
+# Hosting（https://cor-jp-cms-admin.web.app/）へ、main からだけ配信する。
+# - 公開サイトのプロジェクト（cor-jp-web）とは分ける。公開サイトの配信権限では CMS を差し替えられない。
+# - サービスアカウントの JSON 鍵は使わない。GitHub の OIDC トークンを Workload Identity 連携で
+#   cms-deployer に交換する。GCP 側の条件（リポジトリと所有者の ID・ref が main・このワークフローの main 版・
+#   Environment cms-production・イベントが push か workflow_dispatch）と、GitHub の Environment
+#   cms-production（main だけ）の両方で、main 以外からの配信を拒否する。
+# - build ジョブ（id-token なし）が作った cms/dist と cms/firebase.json を、deploy ジョブが artifact として
+#   受け取って配信する。deploy ジョブではリポジトリのコードを実行しない（checkout も npm もしない）。
+#   deploy ジョブのコマンドは許可リスト（jq・curl・gh api・sha256sum・chmod・firebase）で照合している。
+# - 配信はプレビューチャネル candidate に出してヘッダーを確かめてから、同じ版を live に複製する。
+# - 止めるときはリポジトリ変数 CMS_DEPLOY_ENABLED を true 以外にする（build・deploy はスキップ、警告だけ出す）。
+# - 値の一覧と手順は docs/cms-sveltia.md。src/config/__tests__/cms-deploy.test.ts が、このワークフローと
+#   docs・cms/firebase.json の値を照合している。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cms/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-cms.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cms
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and test the CMS admin
+    if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CMS admin
+        run: npm run build:cms
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: CMS admin e2e (cms/firebase.json headers, CSP violations 0)
+        run: npm run test:e2e:admin
+
+      - name: Upload the CMS build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cms-site
+          path: |
+            cms/firebase.json
+            cms/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    name: Deploy to cor-jp-cms-admin (candidate → live)
+    needs: build
+    if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: cms-production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # 古い run の再実行で、main より前の版に巻き戻さない。
+      - name: Stop if main has moved on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error title=main が進んでいます::この run（${GITHUB_SHA}）は main の最新（${latest}）ではないため配信しません。"
+            exit 1
+          fi
+
+      - name: Download the CMS build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cms-site
+          path: cms
+
+      # firebase-tools は predeploy / postdeploy のコマンドを実行する。このジョブでは何も実行させない。
+      - name: Refuse deploy hooks in firebase.json
+        run: jq -e '.hosting | (has("predeploy") or has("postdeploy")) | not' cms/firebase.json
+
+      # npm で入れると依存の版が実行のたびに解決され、install スクリプトも動く。リリースの単体バイナリを
+      # sha256（GitHub がリリースに記録した値）で照合して使い、依存も含めて中身を固定する。
+      - name: Download firebase-tools (standalone v15.31.0, sha256 pinned)
+        env:
+          FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.31.0/firebase-tools-linux
+          FIREBASE_TOOLS_SHA256: c2c931e22a281d1bff934352d29fda09886a4fafdd7762cc95786ce2f2cc8586
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/bin/firebase" "$FIREBASE_TOOLS_URL"
+          echo "${FIREBASE_TOOLS_SHA256}  $RUNNER_TEMP/bin/firebase" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/bin/firebase"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation, no key)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024
+          service_account: cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com
+
+      - name: Deploy to the candidate preview channel
+        working-directory: cms
+        run: |
+          set -euo pipefail
+          firebase hosting:channel:deploy candidate --expires 1h --no-authorized-domains --project cor-jp-cms-admin --json --non-interactive > "$RUNNER_TEMP/channel.json"
+          url=$(jq -r '.result[].url' "$RUNNER_TEMP/channel.json")
+          echo "CHECK_URL=${url%/}/" >> "$GITHUB_ENV"
+
+      - name: Check the candidate serves the CSP and COOP of cms/firebase.json
+        run: |
+          set -euo pipefail
+          want_csp=$(jq -r '.hosting.headers[] | select(.source == "**") | .headers[] | select(.key == "Content-Security-Policy") | .value' cms/firebase.json)
+          want_coop=$(jq -r '.hosting.headers[] | select(.source == "**") | .headers[] | select(.key == "Cross-Origin-Opener-Policy") | .value' cms/firebase.json)
+          got_csp='' got_coop=''
+          for attempt in 1 2 3 4 5 6; do
+            got_csp=$(curl -fsS -o /dev/null -w '%header{content-security-policy}' "$CHECK_URL" || true)
+            got_coop=$(curl -fsS -o /dev/null -w '%header{cross-origin-opener-policy}' "$CHECK_URL" || true)
+            if [ -n "$want_csp" ] && [ "$got_csp" = "$want_csp" ] && [ "$got_coop" = "$want_coop" ]; then
+              echo "OK: ${CHECK_URL} の CSP と COOP は cms/firebase.json と一致（${attempt} 回目）"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error title=配信されたヘッダーが cms/firebase.json と違う::${CHECK_URL} CSP: 配信 \"${got_csp}\" / cms/firebase.json \"${want_csp}\"; COOP: 配信 \"${got_coop}\" / cms/firebase.json \"${want_coop}\""
+          exit 1
+
+      - name: Promote the candidate to live (same version)
+        working-directory: cms
+        run: |
+          set -euo pipefail
+          firebase hosting:clone cor-jp-cms-admin:candidate cor-jp-cms-admin:live --project cor-jp-cms-admin --non-interactive
+          site=$(jq -r '.hosting.site' firebase.json)
+          echo "CHECK_URL=https://${site}.web.app/" >> "$GITHUB_ENV"
+
+      - name: Check live serves the CSP and COOP of cms/firebase.json
+        run: |
+          set -euo pipefail
+          want_csp=$(jq -r '.hosting.headers[] | select(.source == "**") | .headers[] | select(.key == "Content-Security-Policy") | .value' cms/firebase.json)
+          want_coop=$(jq -r '.hosting.headers[] | select(.source == "**") | .headers[] | select(.key == "Cross-Origin-Opener-Policy") | .value' cms/firebase.json)
+          got_csp='' got_coop=''
+          for attempt in 1 2 3 4 5 6; do
+            got_csp=$(curl -fsS -o /dev/null -w '%header{content-security-policy}' "$CHECK_URL" || true)
+            got_coop=$(curl -fsS -o /dev/null -w '%header{cross-origin-opener-policy}' "$CHECK_URL" || true)
+            if [ -n "$want_csp" ] && [ "$got_csp" = "$want_csp" ] && [ "$got_coop" = "$want_coop" ]; then
+              echo "OK: ${CHECK_URL} の CSP と COOP は cms/firebase.json と一致（${attempt} 回目）"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error title=配信されたヘッダーが cms/firebase.json と違う::${CHECK_URL} CSP: 配信 \"${got_csp}\" / cms/firebase.json \"${want_csp}\"; COOP: 配信 \"${got_coop}\" / cms/firebase.json \"${want_coop}\""
+          exit 1
+
+  disabled-notice:
+    name: Notice when the CMS admin is not deployed
+    if: vars.CMS_DEPLOY_ENABLED != 'true' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Warn that cms/ changes were not deployed
+        env:
+          ENABLED: ${{ vars.CMS_DEPLOY_ENABLED }}
+          REF: ${{ github.ref }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != 'refs/heads/main' ]; then
+            echo "::warning title=CMS は配信していません::main 以外（${REF}）からは配信しません。"
+            exit 0
+          fi
+          changed=$(printf '%s' "$COMMITS" | jq -r '[.[]? | (.added + .modified + .removed)[]] | map(select(startswith("cms/"))) | unique | length')
+          if [ "${changed:-0}" -gt 0 ]; then
+            echo "::warning title=CMS は配信していません::CMS_DEPLOY_ENABLED が true ではない（現在 \"${ENABLED}\"）ため、cms/ の変更 ${changed} 件を配信していません。"
+          else
+            echo "::warning title=CMS は配信していません::CMS_DEPLOY_ENABLED が true ではありません（現在 \"${ENABLED}\"）。"
+          fi

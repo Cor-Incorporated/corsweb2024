@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // CMS 管理画面はビルド済みの出力でだけ確かめる（playwright.admin.config.ts）。
+  testIgnore: /admin-cms\.spec\.ts/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

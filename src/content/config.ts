@@ -1,27 +1,12 @@
 import { z, defineCollection } from 'astro:content';
-import { getCategoryIds } from '../config/categories';
+import { blogFrontmatterSchema } from '../config/blog-schema';
 import { getNewsCategoryIds } from '../config/news-categories';
 
+// スキーマ本体は src/config/blog-schema.ts。CMS の cms/public/config.yml と照合するテストが
+// astro:content を経由せずに同じ定義を読めるよう、別ファイルに置いている（ADR-0018）。
 const blogCollection = defineCollection({
   type: 'content',
-  schema: ({ image }) => z.object({
-    title: z.string(),
-    description: z.string(),
-    pubDate: z.coerce.date(),
-    updatedDate: z.coerce.date().optional(),
-    author: z.string().default('Terisuke'),
-    category: z.enum(getCategoryIds() as [string, ...string[]]),
-    tags: z.array(z.string()).default([]),
-    image: z.object({
-      url: z.string(),
-      alt: z.string()
-    }).optional(),
-    ogImage: z.string().optional(),
-    isDraft: z.boolean().default(false),
-    featured: z.boolean().default(false),
-    lang: z.enum(['ja', 'en', 'zh', 'ko', 'es']).default('ja'),
-    readingTime: z.number().optional(),
-  }),
+  schema: blogFrontmatterSchema,
 });
 
 // 実績記事（ケーススタディ）コレクション。/works のカードから個別記事へリンクするための構造化記事。

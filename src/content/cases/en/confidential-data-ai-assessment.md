@@ -1,14 +1,17 @@
 ---
-title: 'Confidential Data AI Assessment — Organizing how your data is handled, before you hand it over'
-description: 'A look inside the assessment service that starts by designing your information architecture with you, before putting contracts, customer records, and other confidential material to work with AI.'
-category: 'confidential-ai'
-tags: ['Confidential data', 'AI assessment', 'Local LLM', 'Security']
+title: "Confidential Data AI Assessment — Organizing how your data is handled, before you hand it over"
+description: "A look inside the assessment service that starts by designing your information architecture with you, before putting contracts, customer records, and other confidential material to work with AI."
+category: "confidential-ai"
+tags: ["Confidential data", "AI assessment", "Local LLM", "Security"]
 publishedAt: 2026-07-02
-summary: 'You want to use contracts, meeting minutes, and customer records with AI, but you cannot hand them to an external AI as they are. This assessment meets that concern by organizing the information first, rather than building something straight away.'
-relatedSlugs: ['local-llm-poc']
+summary: "You want to use contracts, meeting minutes, and customer records with AI, but you cannot hand them to an external AI as they are. This assessment meets that concern by organizing the information first, rather than building something straight away."
+relatedSlugs: ["local-llm-poc"]
 isDraft: false
 featured: true
-lang: 'en'
+lang: "en"
+translationSourceHash: "eaac26262096196ef50f76a62b92316ea31feaa5bf1239f905556a365edb685e"
+translatedAt: "2026-09-28T06:09:16.028Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Challenge

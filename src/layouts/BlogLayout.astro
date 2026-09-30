@@ -2,13 +2,17 @@
 import { ViewTransitions } from 'astro:transitions';
 import Footer from '../components/layout/Footer.astro';
 import Header from '../components/layout/Header.astro';
-import WebVitals from '../components/performance/WebVitals.astro';
 import Analytics from '../components/analytics/Analytics.astro';
-import { getCurrentLocale, type Locale } from '../utils/i18n';
-import { generateKeywords, estimateReadingTime } from '../utils/blog-seo';
+import AlpineInit from '../components/layout/AlpineInit.astro';
+import ThemeInit from '../components/layout/ThemeInit.astro';
+import { getCurrentLocale } from '../utils/i18n';
+import { generateKeywords } from '../utils/blog-seo';
+import { buildBlogHreflang, countContentWords } from '../utils/blog-structured-data';
+import { ORGANIZATION_NAMES } from '../config/organization';
 import BlogSeoMeta from '../components/blog/seo/BlogSeoMeta.astro';
 import BlogOgp from '../components/blog/seo/BlogOgp.astro';
 import BlogStructuredData from '../components/blog/seo/BlogStructuredData.astro';
+import KatexStyles from '../components/blog/KatexStyles.astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 type BlogPostData = {
@@ -35,9 +39,11 @@ interface Props {
   relatedPosts?: BlogPost[];
   nextPost?: BlogPost;
   prevPost?: BlogPost;
+  // 本文に数式がある記事だけ KaTeX の CSS を読む（remarkPluginFrontmatter.hasMath）
+  hasMath?: boolean;
 }
 
-const { post } = Astro.props;
+const { post, hasMath = false } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
 const { title, description, pubDate, updatedDate, author, category, tags, image, ogImage } = post.data;
 
@@ -45,8 +51,10 @@ const { title, description, pubDate, updatedDate, author, category, tags, image,
 const finalOgImage = ogImage || new URL(`/og/${post.slug}.png`, Astro.site).toString();
 const usesGeneratedOgImage = !ogImage;
 
-const estimatedReadingTime = estimateReadingTime(description);
 const keywords = generateKeywords(tags, category, currentLocale);
+// JSON-LD の wordCount は本文から数える（以前は description 由来の推定値 × 200 で全記事 200 固定だった）。
+const body = 'body' in post ? post.body : undefined;
+const wordCount = body ? countContentWords(body, currentLocale) : undefined;
 
 // この記事が翻訳されている言語を算出する（言語切替の飛び先判定用・#307）。記事の slug は
 // "{lang}/{cleanSlug}" 形式。同じ cleanSlug を持つ記事が存在する言語だけを対象にすることで、
@@ -57,27 +65,22 @@ const allBlogPosts = await getCollection('blog', ({ data }) => !data.isDraft);
 const articleLocales = ALL_LOCALES.filter((loc) =>
   allBlogPosts.some((p) => p.data.lang === loc && p.slug.replace(/^[a-z]{2}\//, '') === cleanSlug)
 );
+// hreflang も同じ articleLocales から出す（実在しない言語版を指して 404 にしない。ADR-0017）。
+const hreflangLinks = buildBlogHreflang(cleanSlug, articleLocales);
 
 // 検索結果に出るタイトル。会社名表記をロケール別の正式表記に統一（#306）。ブログは全5言語で
 // 出力されるため、日本語ブランドを全言語に固定してはいけない（英語記事に全角日本語が混入する）。
 // i18n の meta タイトルと同じ規約: CJK は全角｜、ラテンは半角パイプ。
 // なお全角｜を <title> のテンプレートに直書きすると astro-compress が誤動作しサフィックスが
 // </head> の外へ漏れるため、必ず1つの文字列変数として組み立ててから {pageTitle} で描画する。
-// Record<Locale,...> にして全ロケール網羅を型で強制する（6言語目を足したら型エラーで気づける）。
-const BLOG_BRAND: Record<Locale, string> = {
-  ja: 'Cor.株式会社',
-  zh: 'Cor.株式会社',
-  ko: 'Cor.주식회사',
-  en: 'Cor.Inc.',
-  es: 'Cor.Inc.',
-};
+// 表記の正本は config/organization.ts の ORGANIZATION_NAMES（JSON-LD の Organization.name と共有）。
 const brandSep = currentLocale === 'en' || currentLocale === 'es' ? ' | ' : '｜';
-const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
+const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
 
 ---
 
 <!doctype html>
-<html lang={currentLocale} x-cloak x-data :class="{ 'dark': $store.theme?.isDark || false }">
+<html lang={currentLocale} x-data :class="{ 'dark': $store.theme?.isDark || false }">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -99,7 +102,7 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       updatedDate={updatedDate}
       category={category}
       tags={tags}
-      currentLocale={currentLocale}
+      hreflangLinks={hreflangLinks}
     />
 
     <BlogOgp
@@ -123,16 +126,18 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       category={category}
       tags={tags}
       image={image}
-      estimatedReadingTime={estimatedReadingTime}
+      wordCount={wordCount}
       currentLocale={currentLocale}
     />
     
-    <!-- KaTeX CSS for math rendering -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <!-- KaTeX CSS: 数式を含む記事だけ。自前ホスト（CDN・SRI・preload 不一致 #293 を解消） -->
+    {hasMath && <KatexStyles />}
     
     {/* pageTitle は frontmatter で組み立て済み（全角｜直書きは圧縮ツールで壊れるため）。 */}
     <title>{pageTitle}</title>
     <ViewTransitions />
+    <!-- テーマ（dark クラス）を初回描画前に適用（FOUC 防止。Alpine 非依存） -->
+    <ThemeInit />
     
     <!-- Include critical CSS from parent layout -->
     <style is:inline>
@@ -229,6 +234,15 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
 
       .prose :where(a) {
         overflow-wrap: anywhere;
+      }
+
+      /* 中国語・韓国語では word-break: auto-phrase が効かない（Chromium は日本語だけ）。
+         リンクの文字列の最後の 1〜2 文字だけが次の行に取り残されないよう、リンクの中では
+         空白と句読点でだけ折る（中国語は漢字と漢字の間、韓国語は語の途中で折らない）。
+         1 行に収まらない長さのときは、上の overflow-wrap: anywhere で折る。
+         詳細度はほかの .prose の要素のルールと同じ (0,1,0) にそろえる。 */
+      .prose :where(a:lang(zh), a:lang(ko)) {
+        word-break: keep-all;
       }
 
       .prose :where(h2) {
@@ -465,55 +479,9 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
       <slot />
     </main>
     <Footer />
-    <WebVitals />
     
-    <!-- Alpine.js Stores Plugin -->
-    <script data-cfasync="false">
-      document.addEventListener('alpine:init', () => {
-        Alpine.plugin((Alpine) => {
-          // Theme store
-          Alpine.store('theme', {
-            isDark: document.documentElement.classList.contains('dark'),
-            toggle() {
-              this.isDark = !this.isDark;
-              document.documentElement.classList.toggle('dark', this.isDark);
-              localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
-            },
-          });
-          
-          // Language store
-          Alpine.store('lang', {
-            current: document.documentElement.lang,
-            toggle() {
-              const localeOrder = ['ja', 'en', 'zh', 'ko', 'es'];
-              const currentIndex = localeOrder.indexOf(this.current);
-              const nextIndex = (currentIndex + 1) % localeOrder.length;
-              const newLang = localeOrder[nextIndex];
-              
-              const currentPath = window.location.pathname;
-              let newPath;
-              
-              if (newLang === 'ja') {
-                newPath = currentPath.replace(/^\/(en|zh|ko|es)/, '') || '/';
-              } else {
-                newPath = currentPath.replace(/^\/(en|zh|ko|es)/, '') || '/';
-                newPath = newPath === '/' ? `/${newLang}` : `/${newLang}${newPath}`;
-              }
-              
-              window.location.href = newPath;
-            }
-          });
-        });
-      });
-    </script>
-    
-    <script 
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"
-      integrity="sha384-O8NPfezTLQ/sgLfQYBJEnezJLlum9L6KOqHsfIWauzaFfD1TQSuvA4iUpgWGHeuZ"
-      crossorigin="anonymous"
-      data-cfasync="false"
-      defer
-    ></script>
+    <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
+    <AlpineInit />
     
     <noscript>
       <style>[x-cloak]{ display: block !important; }</style>
@@ -521,16 +489,6 @@ const pageTitle = `${title}${brandSep}${BLOG_BRAND[currentLocale]}`;
         JavaScriptが無効なため、一部機能がご利用いただけません。
       </div>
     </noscript>
-    
-    <script data-cfasync="false">
-      (() => {
-        const theme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (!theme && prefersDark)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
     
     <script data-cfasync="false">
       if ('fonts' in document) {

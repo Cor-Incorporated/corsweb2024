@@ -1,8 +1,13 @@
 ---
+import { KOUSUKE_TERADA } from '../../config/author';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import RandomPlayer from '../youtube/RandomPlayer.astro';
 
-const t = getTranslations(getCurrentLocale(Astro.url));
+const locale = getCurrentLocale(Astro.url);
+const t = getTranslations(locale);
+// ブログの著者ボックスと Person.url がこの節（#founder-story）を指すため、代表の肩書と氏名を表示する。
+// 値は著者の正本（config/author.ts）から読む（i18n に同じ値を重ねない）。
+const founderByline = `${KOUSUKE_TERADA.jobTitles[locale]} ${KOUSUKE_TERADA.names[locale]}`;
 ---
 
 <section id="founder-story" class="py-16 sm:py-20">
@@ -11,6 +16,9 @@ const t = getTranslations(getCurrentLocale(Astro.url));
       <h2 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl">
         {t.aboutPage.founderTitle}
       </h2>
+      <p class="text-base font-medium text-primary-950 dark:text-primary-200" data-testid="founder-byline">
+        {founderByline}
+      </p>
       <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
         {t.aboutPage.founderLead}
       </p>

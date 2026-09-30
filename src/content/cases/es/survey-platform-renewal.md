@@ -1,14 +1,17 @@
 ---
-title: 'Renovación de una plataforma de encuestas a gran escala — primero, lograr que cambiar no dé miedo'
-description: 'Proyecto en el que reconstruimos y llevamos a producción una plataforma de recogida y análisis de encuestas recibida a mitad de camino, empezando por preparar las pruebas y el CI/CD.'
-category: 'ai-contract'
-tags: ['renovación de plataforma', 'CI/CD', 'FastAPI', 'agentes de IA']
+title: "Renovación de una plataforma de encuestas a gran escala — primero, lograr que cambiar no dé miedo"
+description: "Proyecto en el que reconstruimos y llevamos a producción una plataforma de recogida y análisis de encuestas recibida a mitad de camino, empezando por preparar las pruebas y el CI/CD."
+category: "ai-contract"
+tags: ["renovación de plataforma", "CI/CD", "FastAPI", "agentes de IA"]
 publishedAt: 2026-07-02
-summary: 'Reconstruimos una plataforma de encuestas heredada a mitad de camino empezando por las pruebas, el CI/CD y la infraestructura como código, y la renovamos hacia una experiencia en la que la IA dialoga y profundiza en las respuestas.'
-securityNote: 'Este proyecto está sujeto a un NDA, por lo que publicamos de forma abstracta la información que podría identificar al cliente o al producto.'
+summary: "Reconstruimos una plataforma de encuestas heredada a mitad de camino empezando por las pruebas, el CI/CD y la infraestructura como código, y la renovamos hacia una experiencia en la que la IA dialoga y profundiza en las respuestas."
+securityNote: "Este proyecto está sujeto a un NDA, por lo que publicamos de forma abstracta la información que podría identificar al cliente o al producto."
 isDraft: false
 featured: false
-lang: 'es'
+lang: "es"
+translationSourceHash: "0c80714cd505e0d78e0c53dc042d0f5dcb00418815fbd3200f8209f3c185f703"
+translatedAt: "2026-09-28T06:09:16.044Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Desafío

@@ -1,14 +1,17 @@
 ---
-title: 'Renewing a large-scale survey collection and analysis platform — First, make change safe'
-description: 'How we took over a survey collection and analysis platform mid-project, rebuilt it starting from testing and CI/CD, and took it to production.'
-category: 'ai-contract'
-tags: ['Platform renewal', 'CI/CD', 'FastAPI', 'AI agents']
+title: "Renewing a large-scale survey collection and analysis platform — First, make change safe"
+description: "How we took over a survey collection and analysis platform mid-project, rebuilt it starting from testing and CI/CD, and took it to production."
+category: "ai-contract"
+tags: ["Platform renewal", "CI/CD", "FastAPI", "AI agents"]
 publishedAt: 2026-07-02
-summary: 'We took over a survey platform mid-project and rebuilt it starting from testing, CI/CD, and infrastructure as code, renewing it into an experience where AI probes deeper through conversation.'
-securityNote: 'This project is under NDA, so the client name, the product name, and other identifying information are presented in abstracted form.'
+summary: "We took over a survey platform mid-project and rebuilt it starting from testing, CI/CD, and infrastructure as code, renewing it into an experience where AI probes deeper through conversation."
+securityNote: "This project is under NDA, so the client name, the product name, and other identifying information are presented in abstracted form."
 isDraft: false
 featured: false
-lang: 'en'
+lang: "en"
+translationSourceHash: "0c80714cd505e0d78e0c53dc042d0f5dcb00418815fbd3200f8209f3c185f703"
+translatedAt: "2026-09-28T06:09:16.031Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Challenge

@@ -10,6 +10,9 @@ image:
   alt: "高性能Webサイトのイメージ"
 lang: "en"
 featured: true
+translationSourceHash: "85871aef8ac9f5e6f95e4d9a1ce2058781b6b9ae5ea5ff7d34f3ba23b7574b4e"
+translatedAt: "2026-09-28T06:09:15.997Z"
+translationModel: "adopted-legacy"
 ---
 
 # The Story of How I Built an Amazing Website by Continuously Challenging Hiroshi Abe's Homepage

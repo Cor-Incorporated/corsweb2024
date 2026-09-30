@@ -35,6 +35,11 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # 照合テスト（CMS の config.yml ↔ スキーマ・wrangler.toml ↔ cms/firebase.json）と記事の安全性（stored XSS）。
+      # このジョブは develop の必須チェックなので、CMS から作られる PR もここを通る（ADR-0018・#329）。
+      - name: Unit and link tests (vitest)
+        run: npm run test:run
+
       - name: Run responsive visual text audit
         run: npm run verify:visual-text
         env:
@@ -43,6 +48,10 @@ jobs:
           PUBLIC_GCAL_PARAMS: ''
           PUBLIC_STRIPE_PAYMENT_LINK: ''
           PUBLIC_YOUTUBE_API_KEY: ''
+
+      # CMS の管理画面を cms/firebase.json のヘッダー（CSP）付きで配信し、CSP 違反 0 件を確かめる。
+      - name: CMS admin e2e (cms/firebase.json headers, CSP violations 0)
+        run: npm run build:cms && npm run test:e2e:admin
 
       - name: Upload visual text artifacts
         if: always()

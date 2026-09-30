@@ -7,6 +7,9 @@ category: "ai"
 tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "es"
 featured: true
+translationSourceHash: "e44a175f9b52f956850c28731e793da30a7af7639f6841f41f631a9c03f67fbd"
+translatedAt: "2026-09-28T06:09:16.021Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Productividad multiplicada por 7 con el desarrollo impulsado por IA: Mi experiencia real

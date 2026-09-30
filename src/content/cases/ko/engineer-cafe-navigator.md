@@ -1,13 +1,16 @@
 ---
-title: 'Engineer Cafe Navigator — 다국어 음성 AI로 접수를 지원하는 OSS 실적'
-description: '후쿠오카시 엔지니어 카페를 위한 다국어 음성 AI 접수 에이전트를 멀티 에이전트 구성으로 개발하고 OSS로 공개한 실적을 소개합니다.'
-category: 'ai-contract'
-tags: ['음성 AI', '멀티 에이전트', 'RAG', 'OSS', '다국어 대응']
+title: "Engineer Cafe Navigator — 다국어 음성 AI로 접수를 지원하는 OSS 실적"
+description: "후쿠오카시 엔지니어 카페를 위한 다국어 음성 AI 접수 에이전트를 멀티 에이전트 구성으로 개발하고 OSS로 공개한 실적을 소개합니다."
+category: "ai-contract"
+tags: ["음성 AI", "멀티 에이전트", "RAG", "OSS", "다국어 대응"]
 publishedAt: 2026-07-02
-summary: '후쿠오카시 엔지니어 카페의 접수를 지원하는 다국어 음성 AI 에이전트를 멀티 에이전트 구성으로 개발・실운영하고 있으며, ISC 라이선스의 OSS로 공개하고 있습니다.'
+summary: "후쿠오카시 엔지니어 카페의 접수를 지원하는 다국어 음성 AI 에이전트를 멀티 에이전트 구성으로 개발・실운영하고 있으며, ISC 라이선스의 OSS로 공개하고 있습니다."
 isDraft: false
 featured: true
-lang: 'ko'
+lang: "ko"
+translationSourceHash: "f1d9811033cd2eeb1dce387db8407c3fd02863f9cae4c4cff8084d191ca6fdd3"
+translatedAt: "2026-09-28T06:09:16.037Z"
+translationModel: "adopted-legacy"
 ---
 
 ## 과제

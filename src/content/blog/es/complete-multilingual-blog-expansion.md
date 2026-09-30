@@ -11,6 +11,9 @@ image:
 lang: "es"
 featured: true
 isDraft: false
+translationSourceHash: "7586bfc2c8375645439c90fb49b1669b1cc49c8f3ac391a4d605e79a6bc1ecb6"
+translatedAt: "2026-09-27T15:04:04.313Z"
+translationModel: "adopted-legacy"
 ---
 
 # [Soporte completo para 5 idiomas] Crónica de una batalla furiosa de 3 horas para expandir un blog de inglés-japonés a chino, coreano y español
@@ -111,7 +114,7 @@ async function translateToLanguage(inputFile, targetLang, body, frontmatter) {
 }
 ```
 
-https://github.com/Cor-Incorporated/corsweb2024/blob/develop/scripts/translate-blog-all-languages.js
+https://github.com/Cor-Incorporated/corsweb2024/blob/52f7f174d7f2b32cd655b5d3c0e786cf137ab9fa/scripts/translate-blog-all-languages.js
 
 ### Paso 3: Batalla mortal contra los errores
 

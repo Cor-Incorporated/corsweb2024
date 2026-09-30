@@ -1,14 +1,17 @@
 ---
-title: 'Diagnóstico de IA con datos confidenciales — ordenamos juntos cómo tratarlos antes de exponerlos'
-description: 'Presentamos en qué consiste el servicio de diagnóstico con el que pensamos contigo el diseño de la información antes de aprovechar con IA datos confidenciales como contratos o información de clientes.'
-category: 'confidential-ai'
-tags: ['datos confidenciales', 'diagnóstico de uso de IA', 'LLM local', 'seguridad']
+title: "Diagnóstico de IA con datos confidenciales — ordenamos juntos cómo tratarlos antes de exponerlos"
+description: "Presentamos en qué consiste el servicio de diagnóstico con el que pensamos contigo el diseño de la información antes de aprovechar con IA datos confidenciales como contratos o información de clientes."
+category: "confidential-ai"
+tags: ["datos confidenciales", "diagnóstico de uso de IA", "LLM local", "seguridad"]
 publishedAt: 2026-07-02
-summary: 'Quieres usar contratos, actas de reunión e información de clientes con IA, pero no puedes enviarlos tal cual a una IA externa. Es un servicio de diagnóstico que atiende esa preocupación ordenando la información antes de construir nada.'
-relatedSlugs: ['local-llm-poc']
+summary: "Quieres usar contratos, actas de reunión e información de clientes con IA, pero no puedes enviarlos tal cual a una IA externa. Es un servicio de diagnóstico que atiende esa preocupación ordenando la información antes de construir nada."
+relatedSlugs: ["local-llm-poc"]
 isDraft: false
 featured: true
-lang: 'es'
+lang: "es"
+translationSourceHash: "eaac26262096196ef50f76a62b92316ea31feaa5bf1239f905556a365edb685e"
+translatedAt: "2026-09-28T06:09:16.040Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Desafío

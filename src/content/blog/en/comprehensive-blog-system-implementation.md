@@ -7,6 +7,9 @@ tags: ["Astro", "ブログシステム", "AI翻訳", "E2Eテスト", "TypeScript
 author: "Terisuke"
 lang: "en"
 featured: true
+translationSourceHash: "1b3935bc380f58ac78655e28b05d56636ec781d7d6341005c1e2506ead4416bd"
+translatedAt: "2026-09-28T06:09:16.002Z"
+translationModel: "adopted-legacy"
 ---
 
 ## Overview

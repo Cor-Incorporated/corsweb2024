@@ -5,6 +5,7 @@ import PostCard from '../../components/blog/PostCard.astro';
 import ShareButtons from '../../components/blog/ShareButtons.astro';
 import TableOfContents from '../../components/blog/TableOfContents.astro';
 import TagList from '../../components/blog/TagList.astro';
+import AuthorBox from '../../components/blog/AuthorBox.astro';
 import TipButton from '../../components/blog/TipButton.astro';
 import BlogLayout from '../../layouts/BlogLayout.astro';
 import { getCurrentLocale } from '../../utils/i18n';
@@ -26,7 +27,9 @@ export async function getStaticPaths() {
 interface Props { post: CollectionEntry<'blog'>; }
 
 const { post } = Astro.props;
-const { Content, headings } = await post.render();
+const { Content, headings, remarkPluginFrontmatter } = await post.render();
+// 数式の有無（src/utils/remark-has-math.ts）。KaTeX の CSS を数式記事だけで読む。
+const hasMath = remarkPluginFrontmatter.hasMath === true;
 const currentLocale = getCurrentLocale(Astro.url);
 
 // Get related posts and navigation posts
@@ -64,7 +67,7 @@ const fullUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
 ---
 
-<BlogLayout post={post} relatedPosts={relatedPosts} nextPost={nextPost} prevPost={prevPost}>
+<BlogLayout post={post} relatedPosts={relatedPosts} nextPost={nextPost} prevPost={prevPost} hasMath={hasMath}>
   <article class="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
     <!-- Breadcrumb -->
     <nav class="mb-8" aria-label="Breadcrumb">
@@ -146,6 +149,11 @@ const fullUrl = new URL(Astro.url.pathname, Astro.site).toString();
     <!-- Article Content -->
     <div class="prose prose-lg prose-stone mx-auto dark:prose-invert prose-headings:font-bold prose-h1:text-3xl prose-h1:font-bold prose-h1:mt-8 prose-h1:mb-6 prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-4 prose-h3:text-xl prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-3 prose-h4:text-lg prose-h4:font-semibold prose-h4:mt-4 prose-h4:mb-2 prose-p:mb-4 prose-a:text-blue-600 prose-a:no-underline prose-a:hover:underline dark:prose-a:text-blue-400 prose-code:rounded prose-code:bg-stone-200 prose-code:px-1 prose-code:py-0.5 prose-code:text-stone-800 prose-code:before:content-[''] prose-code:after:content-[''] dark:prose-code:bg-stone-700 dark:prose-code:text-stone-200 prose-pre:bg-stone-900 prose-pre:text-stone-100 prose-pre:border prose-pre:border-stone-300 dark:prose-pre:bg-stone-800 dark:prose-pre:text-stone-200 dark:prose-pre:border-stone-600">
       <Content />
+    </div>
+
+    <!-- 著者（写真・名前・肩書・紹介・プロフィール。JSON-LD の Person と同じ正本） -->
+    <div class="mx-auto mt-12 max-w-3xl">
+      <AuthorBox author={post.data.author} />
     </div>
 
     <!-- Support/Tip Section -->
