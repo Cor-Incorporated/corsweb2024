@@ -94,9 +94,26 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 |---|---|---|
 | レビューに送る | 保存後に出る確認で「**レビューを依頼**」（あとからでも、記事のステータスを「レビュー中」に変更） | PR にラベル `sveltia-cms/pending_review` が付く |
 | プレビューを見る | 保存から数分後、「プレビューを確認中」が「**プレビューを見る**」に変わったら押す（#341 のマージ後） | PR ごとのプレビューサイト（Firebase、30 日で失効）で記事が開く |
-| 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する |
-| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない |
+| 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する。このコミットのあとはチェックが自動では始まらないので、**terisuke か cloudia-Cor** が PR の画面の「Approve workflows to run」で承認する（PR のコメントとメールで知らせる） |
+| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない。チェックと翻訳の検査がすべて終わると、PR のコメントとメールで結果（「公開できます」か「チェックが失敗しました」）を知らせる |
 | 公開 | **terisuke か cloudia-Cor** がステータスを「**公開可**」にして「**エントリーを公開**」 | PR が develop に merge commit で取り込まれ、作業ブランチ（`cms/blog/<スラッグ>`）は削除される |
+
+**通知（PR のコメントとメール）**: CMS の画面には、翻訳が付いたか・チェックが通ったかが出ません（2026-10-01 の通しの確認で分かった）。そのため `.github/workflows/cms-pr-status.yml` が、CMS の PR のワークフロー（CI・Responsive visual text・H5 Admission・Deploy to Firebase Hosting・Translate content (i18n)）が終わるたびに状態を見直し、次の場面でコメントします。GitHub はそれを PR の作成者（CMS で書いた人）と @メンションした人にメールで知らせます（各自の GitHub の通知設定で、Participating と @mentions の Email が有効な場合）。最後に書いた状態・コミットと同じなら書きません。
+
+- **チェックの実行に承認が必要です**: 翻訳 CI のコミットのあと、チェックが承認待ちで止まったとき（承認を待つワークフローへのリンク。terisuke と cloudia-Cor に @メンション）
+- **公開できます**: ワークフローがすべて終わり、必須チェックと翻訳の検査（`i18n-check`）が通ったとき（翻訳がそろっていることと、プレビューの URL を書く。プレビューの配信だけが失敗したときも、そのことを書いて知らせる）
+- **チェックが失敗しました**: ワークフローがすべて終わり、必須チェックか `i18n-check` が失敗したとき（失敗したチェックへのリンクをまとめて書く。下書きなら、空にできない欄を案内する）
+
+ワークフローが動いている間は書きません（失敗をまとめて 1 回で知らせ、翻訳の途中で「公開できます」と書かないため）。翻訳がそろったかは、PR の差分ではなく `i18n-check` の結果で決めます（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）。使うのは PR のイベントで動いた `i18n-check` だけです（手で動かす `mode=check` は言語や記事を絞れるため）。ワークフローがすべて終わっても `i18n-check` の結果が無いとき（翻訳 CI を止めたときなど）は、待たずに「翻訳: 確かめられていません」と書いて知らせます。
+
+このワークフローは main に入ってから動きます（`workflow_run` は既定ブランチのワークフローでだけ動く）。通知が来ないときは、Actions タブ → **CMS PR status** → **Run workflow**（ブランチは main のまま）で PR の番号を入れると、今の状態を判定し直します（main から起動したときだけ動く）。コメントするのは、状態が「承認が必要」「失敗」「公開できます」のどれかで、最後のコメントと違うときだけです（それ以外は、実行のログに `state=… notify=false` と出ます）。CLI では次の 2 つ（1 つ目で CMS の PR の番号とブランチが出る）:
+
+```bash
+gh pr list --repo Cor-Incorporated/corsweb2024 --json number,headRefName --jq '.[] | select(.headRefName | startswith("cms/")) | "\(.number) \(.headRefName)"'
+gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main -f pr=<1 つ目で出た番号>
+```
+
+手元で確かめるときは `GH_REPO=Cor-Incorporated/corsweb2024 node scripts/cms/pr-status.mjs --pr <1 つ目で出た番号> --dry-run`（コメントせずに判定と文面を表示する。`GH_REPO` が無いと、gh は `upstream` の remote〔旧名のリポジトリ〕を選ぶ）。
 
 - 公開（develop への取り込み）ができるのは **terisuke と cloudia-Cor の 2 アカウントだけ** です。develop のブランチ保護の push 制限で強制されていて、enforce_admins=true のため admin にも適用されます。ほかのアカウントで「エントリーを公開」を押すと失敗します。
 - 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）付きです。
@@ -298,6 +315,7 @@ Write の編集者は記事を書いてレビューに送れますが、公開�
 | 記事を作って「レビューを依頼」 | base が develop の PR ができ、差分が `src/content/blog/ja/*.md` と `public/images/blog/*` だけ |
 | その PR | 必須チェックとプレビューが成功し、「プレビューを見る」で記事が開く |
 | 翻訳 CI が他言語を追加した後に ja を再保存 | 他言語のファイルが変わらない（#339 のマージ後） |
+| 翻訳 CI が他言語を追加した後の PR（cms-pr-status.yml が main に入った後） | PR に github-actions[bot] の「チェックの実行に承認が必要です」が付き、メールが届く。承認してチェックがすべて終わると「公開できます」が付き、メールが届く（来なければ 1-7 の Run workflow で知らせ直し、3 の「通知が来ない」を見る） |
 | terisuke か cloudia-Cor で「エントリーを公開」 | develop に merge commit で入り、`cms/blog/<スラッグ>` ブランチが消える |
 | それ以外の Write のアカウントで「エントリーを公開」 | 失敗する（develop の push 制限） |
 | 既存記事を開いて何も変えずに保存 | frontmatter の値が変わらない（キーの順序・引用符は変わりうる） |
@@ -331,6 +349,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | 「エントリーを公開」が失敗する | (1) 必須チェック（約 13 分）がまだ緑でない (2) terisuke・cloudia-Cor 以外のアカウント（develop の push 制限） | (1) PR の Checks が緑になってから押す (2) terisuke か cloudia-Cor に公開を頼む |
 | 「アセット」画面からのアップロードが失敗する | develop は PR 必須で、直接の書き込みは拒否される | 記事の画像欄からアップロードする（記事の PR に入る） |
 | 「プレビューを確認中」のまま | PR のビルドが失敗（必須項目の漏れなど）、または #341 が未マージ | GitHub の PR の Checks で `build_and_deploy` を確認 |
+| PR のコメント（github-actions[bot]）やメールが来ない | (1) cms-pr-status.yml が main に未反映 (2) ワークフローがまだ動いている（すべて終わるまで書かない） (3) 承認のあとのチェックの終わりで、通知のワークフローが動かなかった（GitHub の仕様の確認待ち） (4) 各自の GitHub の通知設定でメールが無効 | (1) リリースを待つ (2) PR の Checks がすべて終わるのを待つ (3) 1-7 の Run workflow で PR の番号を入れて知らせ直す (4) GitHub の Settings → Notifications で Participating と @mentions の Email を有効にする |
 | PR のチェックで `content-safety.test.ts` が落ちる | 本文に 1-5 の書けないもの、または SVG 画像 | メッセージの `ファイル: <要素・属性>` を直す。埋め込みが必要ならエンジニアに相談する |
 | ブラウザの Console に CSP 違反が出る | CMS が使う送信元が `cms/firebase.json` の CSP に無い | 2-8 の最後の段落 |
 | 保存時に「保存中に他のユーザーがリポジトリを更新しました」 | 翻訳 CI が同じ PR に書き込んだ直後 | 画面を再読み込みしてもう一度保存 |
@@ -338,6 +357,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | スラッグで「英小文字・数字・ハイフンだけで入力してください」 | 大文字・日本語・空白・記号が入っている | `ai-adoption-roadmap` の形にする |
 | `config.yml` を直したのに管理画面が古いまま | main への反映と `deploy-cms.yml` がまだ、またはブラウザのキャッシュ | Actions の `Deploy CMS admin (cor-jp-cms-admin)` の完了を確認し、強制再読み込み（Windows: Ctrl+Shift+R、Mac: Cmd+Shift+R） |
 | `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
+| `npm run test:run` の `cms-pr-status.test.ts` が落ちる | `cms-pr-status.yml`・`scripts/cms/pr-status-core.mjs`・ほかのワークフローの `name` やジョブ名・`translate-content.yml` の paths・`firebase.json` のサイト名の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 
 ## 4. 関係するファイル
 

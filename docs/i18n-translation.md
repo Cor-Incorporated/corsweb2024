@@ -281,7 +281,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 
 | 止めたいもの | コマンド | 影響 | 再開 |
 |---|---|---|---|
-| ワークフロー全体（翻訳・push・i18n-check） | `gh workflow disable translate-content.yml -R Cor-Incorporated/corsweb2024` | PR で翻訳も検査も走らなくなる | `gh workflow enable translate-content.yml -R Cor-Incorporated/corsweb2024` |
+| ワークフロー全体（翻訳・push・i18n-check） | `gh workflow disable translate-content.yml -R Cor-Incorporated/corsweb2024` | PR で翻訳も検査も走らなくなる（CMS の PR の通知〔`cms-pr-status.yml`〕は「翻訳: 確かめられていません」と書く） | `gh workflow enable translate-content.yml -R Cor-Incorporated/corsweb2024` |
 | 翻訳（Gemini API の呼び出し）だけ | `gh secret delete GEMINI_API_KEY -R Cor-Incorporated/corsweb2024` | translate ジョブは「未設定のためスキップ」になり、i18n-check は動き続ける（翻訳の欠けは赤で見える） | 7 章の手順でキーを登録し直す |
 | bot トークンでの push だけ | `gh secret delete TRANSLATION_BOT_TOKEN -R Cor-Incorporated/corsweb2024` | GITHUB_TOKEN での push に戻る（6 章の承認操作が必要になる） | 7 章の手順で登録し直す |
 | 実行中の 1 回 | `gh run list --workflow translate-content.yml -R Cor-Incorporated/corsweb2024` で ID を確認し `gh run cancel <ID> -R Cor-Incorporated/corsweb2024` | その実行だけ止まる（push 前なら何も書かれない） | PR に push し直すと再実行される |
