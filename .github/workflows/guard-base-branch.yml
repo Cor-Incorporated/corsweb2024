@@ -4,11 +4,16 @@ name: Guard base branch
 # それ以外のブランチから main 宛に PR が開かれたら、自動で fail させ、
 # develop 経由にするよう PR にコメントで誘導する（誤 base=main の再発防止）。
 #
-# 注1: pull_request ワークフローは base ブランチ側のファイルで実行されるため、
-#      このガードを効かせるには main にこのファイルが存在している必要がある。
-# 注2: ワークフロー単体ではマージを物理的にブロックできない（チェックが赤くなるだけ）。
-#      確実に止めるには main のブランチ保護で status check "guard" を
-#      required に設定すること（develop からの PR のみが緑になる）。
+# 注1: pull_request ワークフローは、PR のマージコミット（refs/pull/<番号>/merge。PR の変更を main に重ねたもの）の
+#      ファイルで実行される。base ブランチ（main）のファイルではない（GitHub Docs「Events that trigger workflows」:
+#      GITHUB_SHA はマージブランチの最後のマージコミット。base 側で動くのは pull_request_target）。
+#      そのため、main 宛の PR がこのファイルを書き換えると、書き換えたガードが動く。このガードだけでは迂回を防げない。
+# 注2: main を守っているのは main のブランチ保護。2026-10-01 に実測した値は次のとおり。このガード（status check "guard"）は
+#      その必須チェックの 1 つで、誤 base=main を早く知らせる役（ガードを書き換える PR は、承認のときに差分で止める）。
+#      - push（マージ）できるのは terisuke と cloudia-Cor だけ。enforce_admins も有効
+#      - 承認 1 件（push があると取り消し）
+#      - 必須チェック: build_and_deploy・Chromium visual text audit・guard・h5-admission・verify
+#      確かめるコマンド: gh api repos/Cor-Incorporated/corsweb2024/branches/main/protection
 
 on:
   pull_request:
