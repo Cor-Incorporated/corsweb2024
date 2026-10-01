@@ -11,6 +11,7 @@
  *   - WIF のプロバイダとサービスアカウント ↔ docs に書いた値
  *   - 配信先のプロジェクト ↔ cms/firebase.json の hosting.site（既定サイト）
  *   - 鍵を使わない（secrets. なし・id-token は deploy だけ）、deploy ジョブのコマンドは許可リストだけ
+ *   - deploy ジョブは、資格情報を作る前に firebase hosting:channel:deploy --help で読み込めるか確かめる
  *   - deploy ジョブの firebase-tools（単体バイナリの URL と sha256）↔ ci.yml の verify の同じ値
  *     （deploy は main でしか動かないので、PR の段階では verify が同じバイナリで deploy の処理を読み込めるか
  *     確かめる。2026-09-30 の初回配信は v15.31.0 の単体バイナリが exit 2 で止まった。firebase-tools #11168）
@@ -276,6 +277,17 @@ function checkDeploySteps(workflow: Workflow, { site }: Inputs): string[] {
       `firebase-tools を、版を固定したリリースの単体バイナリにして sha256 で照合していない: URL ${url} / sha256 ${sha}`
     );
   }
+  const help = steps.findIndex((step) =>
+    /firebase hosting:channel:deploy --help/.test(step.run ?? '')
+  );
+  const auth = steps.findIndex((step) =>
+    (step.uses ?? '').startsWith('google-github-actions/auth@')
+  );
+  if (help < 0 || auth < 0 || help > auth) {
+    violations.push(
+      'deploy ジョブが、資格情報を作る前（google-github-actions/auth の前）に firebase hosting:channel:deploy --help で読み込めるか確かめていない'
+    );
+  }
   const order = ['hosting:channel:deploy candidate', 'CHECK_URL', 'hosting:clone', 'CHECK_URL'];
   let cursor = -1;
   for (const marker of order) {
@@ -376,6 +388,15 @@ describe('F3 変異: 片側だけを変えると両側の値を出して落ち�
     expect(ci).not.toBe(inputs.ci);
     return { ...inputs, ci };
   };
+
+  it('deploy ジョブから、資格情報を作る前の --help の確認を外す', () => {
+    const message = mutate(
+      inWorkflow('run: firebase hosting:channel:deploy --help\n', 'run: echo skipped\n')
+    );
+    expect(message).toContain(
+      '資格情報を作る前（google-github-actions/auth の前）に firebase hosting:channel:deploy --help で読み込めるか確かめていない'
+    );
+  });
 
   it('ci.yml の verify の firebase-tools だけを別の sha256 にし、--help の確認を外す', () => {
     const deploy = pinOf((yaml.load(loadInputs().workflow) as Workflow).jobs.deploy?.steps);

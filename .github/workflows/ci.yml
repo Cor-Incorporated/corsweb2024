@@ -121,11 +121,11 @@ jobs:
       # Node 20.18.2 では、ESM 専用になった依存（stream-chain）を require() できない（firebase-tools #11168）。
       - name: Pinned firebase-tools binary (same as deploy-cms.yml) can load the deploy command
         env:
-          FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.31.0/firebase-tools-linux
-          FIREBASE_TOOLS_SHA256: c2c931e22a281d1bff934352d29fda09886a4fafdd7762cc95786ce2f2cc8586
+          FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.32.1/firebase-tools-linux
+          FIREBASE_TOOLS_SHA256: 790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118
         run: |
           set -euo pipefail
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/firebase" "$FIREBASE_TOOLS_URL"
           echo "${FIREBASE_TOOLS_SHA256}  $RUNNER_TEMP/firebase" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/firebase"
-          "$RUNNER_TEMP/firebase" hosting:channel:deploy --help > /dev/null
+          "$RUNNER_TEMP/firebase" hosting:channel:deploy --help
