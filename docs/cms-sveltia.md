@@ -194,7 +194,7 @@ firebase hosting:sites:list --project cor-jp-web
 |---|---|
 | 起動 | main への push（`cms/**`・`package.json`・`package-lock.json`・このワークフローの変更時）と、main での手動実行。`on:` はこの 2 つだけ（`pull_request_target` などは足さない） |
 | 条件 | `CMS_DEPLOY_ENABLED` が `true` かつ ref が main（build・deploy とも） |
-| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる |
+| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる。e2e が落ちたら、失敗の記録（`test-results/admin-cms/`）を成果物 `cms-admin-e2e` に 14 日残す（deploy ジョブは動かない。開き方は 3-1） |
 | deploy ジョブ | `needs: build`・`environment: cms-production`・権限は `contents: read` と `id-token: write`。artifact だけを受け取り、checkout も npm もしない。使うコマンドは jq・curl・gh api（読み取り）・sha256sum・chmod・firebase（hosting:channel:deploy と hosting:clone）だけ（テストで照合） |
 | deploy の手順 | ① main の最新の SHA と、この run の SHA が違えば止める（古い run の再実行で巻き戻さない）→ ② artifact を受け取る → ③ `firebase.json` に predeploy / postdeploy が無いことを確かめる → ④ firebase-tools v15.32.1 のリリースの単体バイナリ（`firebase-tools-linux`）を、GitHub がリリースに記録した sha256 で照合する → ④' 資格情報を作る前に `firebase hosting:channel:deploy --help` で deploy の処理を読み込めるか確かめる → ⑤ `google-github-actions/auth`（WIF、鍵なし）で `cms-deployer` になる → ⑥ プレビューチャネル `candidate` に配信（1 時間で失効。失敗したら `--json` の出力をログに出す）→ ⑦ candidate の CSP と COOP を `cms/firebase.json` と比べ、違えば止める（live は変わらない）→ ⑧ `hosting:clone` で candidate と同じ版を live に出す → ⑨ live の CSP と COOP を確かめる |
 | 止めているとき | `CMS_DEPLOY_ENABLED` が true でない（または main 以外）のときは配信せず、`cms/` の変更があれば `::warning::` を出す |
@@ -337,6 +337,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | ログインの小窓が真っ白・404・別のサイトのエラーになる（GitHub で許可した後） | OAuth App の Callback URL が `https://cor-sveltia-cms-auth.company-997.workers.dev/callback` と違う（この Worker は GitHub に redirect_uri を送らないので、GitHub は登録した Callback URL に戻す） | 2-4 の Callback URL を直す |
 | `wrangler deploy` が `Binding name 'ALLOWED_DOMAINS' already in use` で失敗 | 同じ名前の secret が登録されている | `mise exec node@22 -- npx --yes wrangler@4.135.0 secret delete ALLOWED_DOMAINS` の後に再デプロイ（値は `[vars]` から入る） |
 | `wrangler` が `Wrangler requires at least Node.js v22.0.0` で止まる | wrangler 4 は Node.js 22 以上が必要 | コマンドの前に `mise exec node@22 --` を付ける（2-3） |
+| build ジョブの「CMS admin e2e …」が失敗（配信されない。live は変わらない） | CMS の版・`cms/public/config.yml`・`cms/firebase.json` の CSP の変更、または CI での描き遅れ | 3-1 で失敗の記録（trace）を開く。CI の遅さは `CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin` で手元に再現できる。直すときは develop 宛の PR で `npm run build:cms && npm run test:e2e:admin` を通す |
 | deploy ジョブの認証（google-github-actions/auth）が `unauthorized_client` や `Permission 'iam.serviceAccounts.getAccessToken' denied` で失敗 | プロバイダの条件（2-1 の 7）か利用許可（2-1 の 8）に合わない（main 以外・push と workflow_dispatch 以外・Environment の名前・ワークフローの名前・リポジトリの変更） | main の `deploy-cms.yml` から push か手動で動かす。名前を変えたなら GCP の条件と binding も同時に直す |
 | deploy ジョブが「Branch "…" is not allowed to deploy to cms-production」で始まらない | Environment の branch policy（main だけ） | main で動かす |
 | deploy ジョブが「main が進んでいます」で止まる | main に新しいコミットが入った後に、古い run を再実行した | 最新の main の run（またはその手動実行）を使う |
@@ -359,6 +360,18 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 | `npm run test:run` の `cms-pr-status.test.ts` が落ちる | `cms-pr-status.yml`・`scripts/cms/pr-status-core.mjs`・ほかのワークフローの `name` やジョブ名・`translate-content.yml` の paths・`firebase.json` のサイト名の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 
+### 3-1. 配信の e2e の失敗の記録を開く
+
+成果物 `cms-admin-e2e` は、build ジョブの e2e で落ちた run にだけあります（14 日で消えます）。リポジトリの直下で実行します（`test-results/` は git の対象外）。
+
+```bash
+RUN=$(gh run list --repo Cor-Incorporated/corsweb2024 --workflow deploy-cms.yml --status failure --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run download "$RUN" --repo Cor-Incorporated/corsweb2024 --name cms-admin-e2e --dir test-results/cms-admin-e2e
+npx playwright show-trace "$(find test-results/cms-admin-e2e -name trace.zip | head -1)"
+```
+
+`gh run download` が `no valid artifacts found to download` で止まるときは、その run は e2e では落ちていません（e2e より前のステップか deploy ジョブで落ちた。記録はありません）。Actions のその run のログを見てください。
+
 ## 4. 関係するファイル
 
 | ファイル | 役割 |
@@ -375,7 +388,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | `src/config/__tests__/cms-config.test.ts` | `config.yml` ↔ スキーマ・カテゴリ定義・ADR-0018、`wrangler.toml` ↔ `cms/firebase.json` の照合 |
 | `src/config/__tests__/cms-deploy.test.ts` | `deploy-cms.yml` ↔ この文書（WIF・サービスアカウント）・`cms/firebase.json` の照合 |
 | `src/config/__tests__/content-safety.test.ts` | 記事をサイトと同じパイプラインで描画し、スクリプトが動く要素・属性・URL と SVG を検査する |
-| `e2e/admin-cms.spec.ts` | 本番と同じヘッダーで、ログイン画面と編集画面の CSP 違反 0 件を確認（`npm run build:cms && npm run test:e2e:admin`）。CI の遅さは `CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin` で手元に再現できる（Chromium のみ）。失敗の記録（trace・`error-context.md`）は `test-results/admin-cms/` に出て、CI では visual-text.yml の成果物 `visual-text-audit` に載る |
+| `e2e/admin-cms.spec.ts` | 本番と同じヘッダーで、ログイン画面と編集画面の CSP 違反 0 件を確認（`npm run build:cms && npm run test:e2e:admin`）。CI の遅さは `CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin` で手元に再現できる（Chromium のみ）。失敗の記録（trace・`error-context.md`）は `test-results/admin-cms/` に出て、CI では visual-text.yml の成果物 `visual-text-audit` と、main からの配信（deploy-cms.yml）で落ちたときの成果物 `cms-admin-e2e` に載る（どちらも 14 日。照合: `src/config/__tests__/admin-e2e-artifacts.test.ts`） |
 | `workers/sveltia-cms-auth/` | 認証 Worker（上流の取り込み）。`ALLOWED_DOMAINS` は `wrangler.toml` の `[vars]` |
 | `firebase.json`（公開サイト） | `/images/blog/**/*.svg` に `Content-Security-Policy: sandbox; default-src 'none'` |
 

@@ -10,7 +10,8 @@ export default defineConfig({
   testMatch: /admin-cms\.spec\.ts/,
   // CMS 本体（約 2 MB）の読み込みと画像の変換を含むので、既定の 30 秒より長くする。
   timeout: 60_000,
-  // 失敗の記録（trace・error-context.md）は CI の成果物に載せる（visual-text.yml の Upload の path と同じ）。
+  // 失敗の記録（trace・error-context.md）は CI の成果物に載せる（visual-text.yml と deploy-cms.yml の Upload の path と同じ。
+  // 照合: src/config/__tests__/admin-e2e-artifacts.test.ts）。
   outputDir: 'test-results/admin-cms',
   forbidOnly: !!process.env.CI,
   workers: 1,
