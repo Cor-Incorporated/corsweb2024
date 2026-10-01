@@ -87,9 +87,20 @@ missing=()
 
 # Prefer explicit machine markers (H5-NEGATIVE: / H5-LEDGER: / H5-RETIRE:)
 # Fall back to Japanese/English section content of sufficient length.
+# A marker needs at least 20 characters of content, the same minimum as a section (has_section_content).
+# Counted in Python so that the length is in characters in every locale (grep counts bytes in the C locale,
+# where one Japanese character is three bytes).
 has_marker() {
   local key="$1"
-  printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE "(^|[[:space:]])H5-${key}:[[:space:]]*\\S.{8,}"
+  H5_MARKER_BODY="$PR_BODY_EVIDENCE" python3 -c "
+import re, os, sys
+key = sys.argv[1]
+body = os.environ.get('H5_MARKER_BODY', '')
+for m in re.finditer(rf'(?im)(?:^|\\s)H5-{key}:[ \\t]*(\\S.*)\$', body):
+    if len(m.group(1).rstrip()) >= 20:
+        sys.exit(0)
+sys.exit(1)
+" "$key" 2>/dev/null
 }
 
 has_section_content() {
@@ -123,11 +134,12 @@ if [[ "$neg_ok" -eq 0 ]]; then
 fi
 [[ "$neg_ok" -eq 0 ]] && missing+=("negative-test-evidence")
 
-# (2) H6 ledger wiring — body marker/section or changed hook sources
+# (2) H6 ledger wiring — an H5-LEDGER: marker or a ledger section in the body, or changed hook / H5 sources
+# that actually write to the ledger. A bare mention of guard-ledger.jsonl or aidd_ledger_append in the body
+# does not count: "guard-ledger.jsonl への配線は無い" used to pass (PR #371 review, 2026-10-01).
 has_ledger_body=0
 has_marker "LEDGER" && has_ledger_body=1
 has_section_content '台帳|ledger|防御台帳' && has_ledger_body=1
-printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE 'aidd_ledger_append|guard-ledger\.jsonl' && has_ledger_body=1
 has_ledger_code=0
 while IFS= read -r f; do
   [[ -z "$f" || ! -f "$f" ]] && continue
@@ -136,11 +148,6 @@ while IFS= read -r f; do
     break
   fi
 done <<<"$(printf '%s\n' "$DIFF_FILES" | grep -E '^hooks/|^scripts/h5' || true)"
-if [[ "$has_ledger_body" -eq 0 && "$has_ledger_code" -eq 0 ]]; then
-  if printf '%s\n' "$DIFF_FILES" | grep -q 'h5-admission' && printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE '台帳|ledger'; then
-    has_ledger_body=1
-  fi
-fi
 if [[ "$has_ledger_body" -eq 0 && "$has_ledger_code" -eq 0 ]]; then
   missing+=("ledger-wiring")
 fi
