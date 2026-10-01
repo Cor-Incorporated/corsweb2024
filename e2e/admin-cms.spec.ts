@@ -19,6 +19,15 @@ const CSP = declared('**', 'Content-Security-Policy') ?? '';
 
 test.use({ locale: 'ja-JP' });
 
+// CI のランナーの遅さを手元で再現する（例: CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin）。CI では使わない。
+const cpuThrottle = Number(process.env.CMS_E2E_CPU_THROTTLE ?? '0');
+test.beforeEach(async ({ page }) => {
+  if (cpuThrottle > 1) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuThrottle });
+  }
+});
+
 // CSP 違反を集める。文書の securitypolicyviolation イベントと、コンソールの CSP エラーの両方を見る。
 const watchCsp = async (page: Page) => {
   const fromConsole: string[] = [];
@@ -58,7 +67,13 @@ const openEditorWithTestBackend = async (page: Page) => {
 
 // 画像欄に PNG をアップロードする。config.yml の設定で WebP に変換される（WebAssembly のエンコーダーを使う）。
 const uploadPng = async (page: Page) => {
-  await page.getByRole('checkbox', { name: /アイキャッチ画像/ }).check();
+  const toggle = page.getByRole('checkbox', { name: /アイキャッチ画像/ });
+  await toggle.check();
+  // Sveltia CMS は、オブジェクトの中の欄を画面に入ってから描く（@sveltia/ui の VisibilityObserver）。Playwright は
+  // チェックボックスを見える所までしかスクロールしないので、画面の下端で押すと、中の欄（画像・代替テキスト）が
+  // 画面の外で待ち続け、「参照」が出ない（2026-10-01 の CI で 2 回: run 36837085826・36839110638。手元でも
+  // CMS_E2E_CPU_THROTTLE=6 で 12 回中 6 回）。人はスクロールして見るので、テストでもチェックボックスを画面の上に寄せる。
+  await toggle.evaluate((element) => element.scrollIntoView({ block: 'start' }));
   // 画像欄（「参照」ボタン）が出てから、その隠れた file input にファイルを渡す。
   await expect(page.getByRole('button', { name: '参照', exact: true })).toBeVisible();
   const png = await sharp({

@@ -58,7 +58,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-text-audit
+          # test-results/admin-cms/ は CMS 管理画面の e2e の失敗の記録（trace・error-context.md。playwright.admin.config.ts の outputDir）
           path: |
             test-results/visual-text/
             playwright-report/visual-text/
+            test-results/admin-cms/
           if-no-files-found: ignore
