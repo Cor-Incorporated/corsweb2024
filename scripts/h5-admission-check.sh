@@ -18,6 +18,15 @@ LEDGER_PATH="${H5_LEDGER_PATH:-$HOME/.claude/hooks/ledger/guard-ledger.jsonl}"
 log() { printf '%s\n' "$*"; }
 warn() { printf 'H5-WARN: %s\n' "$*" >&2; }
 fail() { printf 'H5-FAIL: %s\n' "$*" >&2; }
+# One block row in the guard ledger (H6 wiring). Nothing is written when LEDGER_PATH is empty.
+append_h5_block() {
+  local rule="$1" detail="$2" ts
+  [[ -z "$LEDGER_PATH" ]] && return 0
+  mkdir -p "$(dirname "$LEDGER_PATH")" 2>/dev/null || true
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+  printf '{"ts":"%s","component":"H5","event":"block","rule":"%s","detail":"%s","agent":"ci"}\n' \
+    "$ts" "$rule" "$detail" >>"$LEDGER_PATH" 2>/dev/null || true
+}
 
 # --- Collect PR body (CI or local override) ---
 if [[ -z "$PR_BODY" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
@@ -61,11 +70,17 @@ else
       if ! DIFF_FILES="$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null)"; then
         # Fail closed: an empty diff would pass any PR as "not a guard PR" (e.g. a mistyped H5_HEAD_REF).
         fail "cannot diff $BASE_REF against $HEAD_REF: check H5_BASE_REF and H5_HEAD_REF"
+        append_h5_block "diff-unavailable" "base=$BASE_REF head=$HEAD_REF"
         exit 1
       fi
     fi
   else
-    DIFF_FILES="$(git diff --name-only HEAD~1...HEAD 2>/dev/null || true)"
+    # Fail closed: without the base the PR's own diff is unknown, and HEAD~1...HEAD (the last commit only) would miss a
+    # structural path changed in an earlier commit (e.g. a mistyped H5_BASE_REF). CI always has the base: h5-admission.yml
+    # runs on pull_request only, so github.base_ref is set, and the fetch above creates origin/<base>.
+    fail "cannot resolve $BASE_REF: check H5_BASE_REF, or pass H5_DIFF_FILES"
+    append_h5_block "diff-unavailable" "base=$BASE_REF unresolved"
+    exit 1
   fi
 fi
 
@@ -247,13 +262,7 @@ if ((${#missing[@]} > 0)); then
   fail "ledger from code: a changed hooks/** or scripts/h5* file that runs the ledger append helper as a command, or appends (>>) to a *LEDGER* path"
   fail "Required: (1) 陰性テスト red 実測記録 (2) H6 台帳配線 (3) 廃止条件宣言 — in PR body and/or code"
   fail "See design/ops/harness/h5-negative-test-gate.md"
-  # Optional local ledger (does not affect CI if path missing)
-  if [[ -n "$LEDGER_PATH" ]]; then
-    mkdir -p "$(dirname "$LEDGER_PATH")" 2>/dev/null || true
-    ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-    printf '{"ts":"%s","component":"H5","event":"block","rule":"negative-test-missing","detail":"%s","agent":"ci"}\n' \
-      "$ts" "${missing[*]}" >>"$LEDGER_PATH" 2>/dev/null || true
-  fi
+  append_h5_block "negative-test-missing" "${missing[*]}"
   exit 1
 fi
 

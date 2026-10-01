@@ -13,7 +13,7 @@
  * マーカーの最低の長さは 3 つ（NEGATIVE・LEDGER・RETIRE）とも、節と同じ 20 文字。文字数で数える（ロケールによらない）。
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import yaml from 'js-yaml';
@@ -267,6 +267,11 @@ function runWithoutDiffFiles(script, extra = {}) {
   });
   return { status: result.status, out: `${result.stdout}${result.stderr}` };
 }
+/** 台帳の行の rule の一覧（ファイルが無ければ空） */
+function ledgerRules(file) {
+  if (!existsSync(file)) return [];
+  return readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line).rule);
+}
 /** スクリプトを動かし、クローンが浅くなったか・origin/develop・結果をまとめて返す（赤のときに全部が出るように） */
 function observe(clone, script, extra = {}) {
   const { status, out } = runWithoutDiffFiles(script, extra);
@@ -343,10 +348,25 @@ describe('H5: 完全なクローンでは、base を浅く取らない（H5_DIFF
   it('差分をどちらの形でも取れないときは、ガードの PR でないとして通さず止める（fail closed）', () => {
     // 空の差分は「構造パスを触らない PR」と同じに見え、どの PR も通ってしまう（例: H5_HEAD_REF の打ち間違い）
     const { clone, script } = cloneWithMovedBase('bad-head-ref', '.github/workflows/pr.yml');
-    expect(observe(clone, script, { H5_HEAD_REF: 'no-such-ref' })).toMatchObject({
+    const ledger = path.join(dir, 'bad-head-ref.jsonl');
+    expect(observe(clone, script, { H5_HEAD_REF: 'no-such-ref', H5_LEDGER_PATH: ledger })).toMatchObject({
       status: 1,
       out: expect.stringContaining('cannot diff origin/develop against no-such-ref'),
     });
+    // 止めたことは台帳にも残す（ほかの止め方と同じ）
+    expect(ledgerRules(ledger)).toEqual(['diff-unavailable']);
+  });
+
+  it('base を解決できないときも止める（H5_BASE_REF の打ち間違い。HEAD~1...HEAD は最後のコミットしか見ない）', () => {
+    // PR の前のコミットでワークフローを変え、あとのコミットで docs を足す。最後のコミットだけを見ると、ガードの PR と気づかない
+    const { clone, script } = cloneWithMovedBase('bad-base-ref', '.github/workflows/pr.yml');
+    commitFile(clone, 'docs/note.md', 'more\n', 'docs');
+    const ledger = path.join(dir, 'bad-base-ref.jsonl');
+    expect(observe(clone, script, { H5_BASE_REF: 'origin/no-such-base', H5_LEDGER_PATH: ledger })).toMatchObject({
+      status: 1,
+      out: expect.stringContaining('cannot resolve origin/no-such-base'),
+    });
+    expect(ledgerRules(ledger)).toEqual(['diff-unavailable']);
   });
 
   it('H5_DIFF_FILES はグロブとして展開しない（hooks/[x].sh を hooks/x.sh と読まない）', () => {
