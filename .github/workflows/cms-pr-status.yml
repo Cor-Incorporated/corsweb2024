@@ -1,0 +1,58 @@
+name: CMS PR status
+
+# CMS（Sveltia CMS、ADR-0018）が作った PR（ブランチが cms/ で始まる）に、状態をコメントで知らせる。
+# CMS の画面には、翻訳が付いたか・チェックが通ったかが出ないため（2026-10-01 の CEO の指摘）。
+# GitHub は PR へのコメントを、PR の作成者（CMS で書いた人）と @メンションした人にメールで知らせる。
+# - 公開できる: 必須チェック（develop のブランチ保護）がすべて成功し、プレビューができた
+# - 承認が要る: 翻訳 CI が GITHUB_TOKEN で積んだコミットのワークフローが action_required で止まっている
+# - 失敗した:   必須チェックのどれかが失敗した（下書きの間は * の欄が空だと失敗する）
+# 同じコミット・同じ状態では書かない。判定と文面は scripts/cms/pr-status-core.mjs。
+#
+# workflow_run は、既定ブランチ（main）にあるこのファイルでだけ動く（main に入るまでは動かない）。
+# PR のコードは checkout も実行もしない: checkout は既定ブランチ（main）だけで、動かすのは main の
+# scripts/cms/pr-status.mjs（Node の組み込みと gh だけを使う。npm は使わない）。PR から来る値（ブランチ名）は環境変数で渡す。
+# 照合: src/config/__tests__/cms-pr-status.test.ts（workflows の名前・必須チェックのジョブ名・権限・checkout）
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Responsive visual text
+      - H5 Admission
+      - Deploy to Firebase Hosting
+      - Translate content (i18n)
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  # 同じ PR の通知は 1 本ずつ（同時に走ると同じ状態を 2 回書きうる）
+  group: cms-pr-status-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  status:
+    name: Notify the CMS editor on the pull request
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'cms/') &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout the default branch (no pull request code)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Comment the status on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: node scripts/cms/pr-status.mjs --branch "$HEAD_BRANCH"

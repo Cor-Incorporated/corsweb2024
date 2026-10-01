@@ -92,9 +92,17 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 |---|---|---|
 | レビューに送る | 保存後に出る確認で「**レビューを依頼**」（あとからでも、記事のステータスを「レビュー中」に変更） | PR にラベル `sveltia-cms/pending_review` が付く |
 | プレビューを見る | 保存から数分後、「プレビューを確認中」が「**プレビューを見る**」に変わったら押す（#341 のマージ後） | PR ごとのプレビューサイト（Firebase、30 日で失効）で記事が開く |
-| 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する |
-| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない |
+| 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する。このコミットのあとはチェックが自動では始まらないので、**terisuke か cloudia-Cor** が PR の画面の「Approve workflows to run」で承認する（PR のコメントとメールで知らせる） |
+| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない。緑になってプレビューができると、PR のコメントとメールで「公開できます」と知らせる |
 | 公開 | **terisuke か cloudia-Cor** がステータスを「**公開可**」にして「**エントリーを公開**」 | PR が develop に merge commit で取り込まれ、作業ブランチ（`cms/blog/<スラッグ>`）は削除される |
+
+**通知（PR のコメントとメール）**: CMS の画面には、翻訳が付いたか・チェックが通ったかが出ません（2026-10-01 の通しの確認で分かった）。そのため `.github/workflows/cms-pr-status.yml` が CMS の PR に次の場面でコメントし、GitHub がそれを PR の作成者（CMS で書いた人）と @メンションした人にメールで知らせます（各自の GitHub の通知設定で、Participating と @mentions の Email が有効な場合）。同じコミット・同じ状態では 2 回書きません。
+
+- **公開できます**: 必須チェックがすべて通り、プレビューができた（プレビューの URL と翻訳の言語の数を書く）
+- **チェックの実行に承認が必要です**: 翻訳 CI のコミットのあと（terisuke と cloudia-Cor に @メンション）
+- **チェックが失敗しました**: 失敗したチェックへのリンク。下書きなら、空の `*` の欄を埋めるよう案内する
+
+このワークフローは main に入ってから動きます（`workflow_run` は既定ブランチのワークフローでだけ動く）。手元で確かめるときは `node scripts/cms/pr-status.mjs --pr <番号> --dry-run`（コメントせずに判定と文面を表示する）。
 
 - 公開（develop への取り込み）ができるのは **terisuke と cloudia-Cor の 2 アカウントだけ** です。develop のブランチ保護の push 制限で強制されていて、enforce_admins=true のため admin にも適用されます。ほかのアカウントで「エントリーを公開」を押すと失敗します。
 - 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）付きです。
