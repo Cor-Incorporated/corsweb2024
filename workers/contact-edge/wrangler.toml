@@ -9,6 +9,12 @@ routes = [
   { pattern = "cor-jp.com/contact/chat", zone_name = "cor-jp.com" },
   { pattern = "cor-jp.com/contact/chat/*", zone_name = "cor-jp.com" },
 ]
+# workers.dev（<name>.<アカウントのサブドメイン>.workers.dev）と、版ごとのプレビュー URL
+# （<版の先頭 8 桁>-<name>.<サブドメイン>.workers.dev）では公開しない。本番は上の routes（cor-jp.com）だけで受ける。
+# どちらも書かないと wrangler が環境や版で既定を決める（3.114 は preview_urls の既定が true）ので、明示する（#362）。
+# workers-dev-exposure.test.ts が、すべての環境に workers_dev と preview_urls の明示を求める。
+workers_dev = false
+preview_urls = false
 
 [vars]
 CONTACT_ORIGIN = "pages"
@@ -18,6 +24,11 @@ FIREBASE_ORIGIN = "https://cor-jp-main.web.app"
 [env.preview]
 name = "cor-contact-edge-preview"
 routes = []
+# workers.dev とプレビュー URL では公開しない。routes が空のとき wrangler は workers.dev を既定で有効にする
+# （このプレビューは 2026-10-01 時点で未デプロイ。contact-chat のプレビューが外から届いていた件 #362 を受けて明示する）。
+# workers-dev-exposure.test.ts が、すべての環境に workers_dev と preview_urls の明示を求める。
+workers_dev = false
+preview_urls = false
 
 [env.preview.vars]
 CONTACT_ORIGIN = "pages"

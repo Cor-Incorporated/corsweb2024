@@ -1,6 +1,6 @@
 # Sveltia CMS Authenticator — CMS（https://cor-jp-cms-admin.web.app/）の「GitHub にログイン」を仲介する Worker。
 # ADR-0018（#329）。src/index.js は上流 sveltia/sveltia-cms-auth のコードをそのまま置いている（README.md 参照）。
-# 上流の wrangler.toml から変えたのは name・account_id・workers_dev・[vars] とコメントだけ。
+# 上流の wrangler.toml から変えたのは name・account_id・workers_dev・preview_urls・[vars] とコメントだけ。
 name = "cor-sveltia-cms-auth"
 main = "src/index.js"
 compatibility_date = "2023-03-24"
@@ -10,6 +10,9 @@ account_id = "9973f2d2304b58a1f90d4d9409e9f8cc"
 # route は置かない。https://cor-sveltia-cms-auth.<アカウントの workers.dev サブドメイン>.workers.dev で動かし、
 # その URL を cms/public/config.yml の backend.base_url に書く。
 workers_dev = true
+# 版ごとのプレビュー URL（<版の先頭 8 桁>-<name>.<サブドメイン>.workers.dev）は使わない。2026-10-01 のデプロイ
+# （wrangler 4.135、未指定）では有効になっていた。workers-dev-exposure.test.ts が明示を求める（#362）。
+preview_urls = false
 
 [vars]
 # トークンを渡してよい CMS のホスト名（完全一致）。CMS 専用の Firebase Hosting サイトだけにする。

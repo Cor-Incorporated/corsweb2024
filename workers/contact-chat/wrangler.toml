@@ -8,6 +8,12 @@ account_id = "9973f2d2304b58a1f90d4d9409e9f8cc"
 # cor-jp.com の /api/contact* だけをこの Worker に流す（HP本体は Firebase のまま）。
 # 問い合わせウィジェットは cor-jp.com 上に置かれ、同一オリジンで叩く（CORSなし）。
 routes = [{ pattern = "cor-jp.com/api/contact/*", zone_name = "cor-jp.com" }]
+# workers.dev（<name>.<アカウントのサブドメイン>.workers.dev）と、版ごとのプレビュー URL
+# （<版の先頭 8 桁>-<name>.<サブドメイン>.workers.dev）では公開しない。本番は上の routes（cor-jp.com）だけで受ける。
+# どちらも書かないと wrangler が環境や版で既定を決める（3.114 は preview_urls の既定が true）ので、明示する（#362）。
+# workers-dev-exposure.test.ts が、すべての環境に workers_dev と preview_urls の明示を求める。
+workers_dev = false
+preview_urls = false
 
 [triggers]
 crons = ["*/15 * * * *"]
@@ -46,6 +52,11 @@ dead_letter_queue = "cor-contact-notifications-dlq"
 [env.preview]
 name = "cor-contact-chat-preview"
 routes = []
+# workers.dev とプレビュー URL では公開しない。routes が空のとき wrangler は workers.dev を既定で有効にする。
+# 2026-10-01、このプレビュー（cor-contact-chat-preview）は workers.dev で外から届き、Origin の無い POST を通していた（#362）。
+# workers-dev-exposure.test.ts が、すべての環境に workers_dev と preview_urls の明示を求める。
+workers_dev = false
+preview_urls = false
 
 [env.preview.triggers]
 crons = ["*/15 * * * *"]
