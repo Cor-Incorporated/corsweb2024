@@ -115,7 +115,7 @@ has_marker() {
 describe_marker() {
   local n
   n="$(marker_length "$1")"
-  if [[ "$n" -lt 0 ]]; then printf 'H5-%s: none' "$1"; else printf 'H5-%s: longest %s chars' "$1" "$n"; fi
+  if [[ "$n" -lt 0 ]]; then printf 'H5-%s: none counted' "$1"; else printf 'H5-%s: longest %s chars' "$1" "$n"; fi
 }
 
 # shellcheck disable=SC2016
@@ -138,7 +138,8 @@ has_section_content() {
 # (1) Negative test evidence (known-bad → red measured)
 neg_ok=0
 has_marker "NEGATIVE" && neg_ok=1
-has_section_content '陰性テスト|negative[[:space:]-]?test' && neg_ok=1
+# The section title is a Python regex (\s, not the POSIX [[:space:]] that Python reads as a nested set)
+has_section_content '陰性テスト|negative[\s-]?test' && neg_ok=1
 if [[ "$neg_ok" -eq 0 ]]; then
   if printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE '(陰性テスト|negative[[:space:]-]?test)' \
     && printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE '(red 実測|exit[[:space:]]*[12]|FAILED|known-bad|inject)'; then
@@ -148,10 +149,13 @@ fi
 [[ "$neg_ok" -eq 0 ]] && missing+=("negative-test-evidence")
 
 # (2) H6 ledger wiring — an H5-LEDGER: marker or a ledger section in the body, or a changed hooks/** or scripts/h5*
-# file that really writes to the ledger: aidd_ledger_append run as a command (at the start of a line, or after
-# && || ; then do), or an append (>>) to a *LEDGER* path. Comment lines are ignored, and a mention inside a string
-# (for example this script's own messages) does not count. A bare mention of guard-ledger.jsonl or aidd_ledger_append, in the body or in a file,
-# does not count: "guard-ledger.jsonl への配線は無い" used to pass (PR #371 and #375 reviews, 2026-10-01).
+# file that writes to the ledger: aidd_ledger_append run as a command (at the start of a line, or after && || ; then do),
+# or an append (>>) to a *LEDGER* path, on a line that is not a comment. This is a heuristic, not a shell parser: it misses
+# some real calls (after if ! { else, a pipe or $(...)) and can count some mentions inside strings or heredocs, so the
+# H5-LEDGER: marker or a ledger section is the reliable evidence. A bare mention of guard-ledger.jsonl or
+# aidd_ledger_append, in the body or in a comment, does not count: "guard-ledger.jsonl への配線は無い" used to pass
+# (PR #371 and #375 reviews, 2026-10-01). The last grep writes to /dev/null instead of -q: with pipefail, -q closes the
+# pipe early and the first grep dies with SIGPIPE (exit 141) on a large file.
 has_ledger_body=0
 has_marker "LEDGER" && has_ledger_body=1
 has_section_content '台帳|ledger|防御台帳' && has_ledger_body=1
@@ -159,7 +163,7 @@ has_ledger_code=0
 while IFS= read -r f; do
   [[ -z "$f" || ! -f "$f" ]] && continue
   if grep -vE '^[[:space:]]*#' "$f" 2>/dev/null \
-    | grep -qE '(^|&&|\|\||;|[[:space:]]then|[[:space:]]do)[[:space:]]*aidd_ledger_append[[:space:]]|>>[[:space:]]*"?\$\{?[A-Z_]*LEDGER'; then
+    | grep -E '(^|&&|\|\||;|[[:space:]]then|[[:space:]]do)[[:space:]]*aidd_ledger_append[[:space:]]|>>[[:space:]]*"?\$\{?[A-Z_]*LEDGER' >/dev/null; then
     has_ledger_code=1
     break
   fi
@@ -215,6 +219,7 @@ done <<<"$(printf '%s\n' "$DIFF_FILES")"
 if ((${#missing[@]} > 0)); then
   fail "admission fee incomplete: ${missing[*]}"
   fail "found: $(describe_marker NEGATIVE) / $(describe_marker LEDGER) / $(describe_marker RETIRE) (each needs >= ${H5_MARKER_MIN} chars on the same line)"
+  fail "not counted: <...> placeholders, and lines containing intentionally missing / expect red / do not merge / falsification only / 未記入 / TODO 陰性 / TODO 台帳 / TODO 廃止"
   fail "sections accepted (heading text exactly): 陰性テスト|negative test / 台帳|ledger|防御台帳 / 廃止条件|retirement (>= ${H5_MARKER_MIN} chars of content)"
   fail "ledger from code: a changed hooks/** or scripts/h5* file that runs the ledger append helper as a command, or appends (>>) to a *LEDGER* path"
   fail "Required: (1) 陰性テスト red 実測記録 (2) H6 台帳配線 (3) 廃止条件宣言 — in PR body and/or code"

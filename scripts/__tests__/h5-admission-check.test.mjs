@@ -83,6 +83,17 @@ describe('H5: レジャー（台帳の配線）の証拠は、本文の言及だ
     expect(out).toContain('ledger-wiring');
   });
 
+  it('台帳の節の中身が 19 文字なら通らない（節も 20 文字以上）', () => {
+    const { status, out } = run(body('## 台帳', jaText(19)));
+    expect(status).toBe(1);
+    expect(out).toContain('ledger-wiring');
+  });
+
+  it('陰性テストの節（Negative test）でも通る（節の名前は Python の正規表現で照合する）', () => {
+    const noMarker = ['## Negative test', '直す前の入力では赤になり、直したあとは緑になることを、手元で 3 回くり返して確かめた', LEDGER, RETIRE, SUBTRACTION].join('\n');
+    expect(run(noMarker).status).toBe(0);
+  });
+
   it('H5-LEDGER: の行（20 文字以上）か、台帳の節（20 文字以上）があれば通る', () => {
     expect(run(body(LEDGER))).toMatchObject({ status: 0 });
     expect(run(body('## 台帳', '発火すると hooks/ledger/guard-ledger.jsonl に 1 行追記する（aidd_ledger_append）'))).toMatchObject({
@@ -93,10 +104,24 @@ describe('H5: レジャー（台帳の配線）の証拠は、本文の言及だ
 
 describe('H5: コードの証拠は、本当に台帳へ書き込むときだけ', SLOW, () => {
   it('コメントにしか書いていないフックは通らない（本文と同じ否定の文）', () => {
-    const script = fakeRepo('comment-only', { 'hooks/comment-only.sh': '#!/usr/bin/env bash\n# この hook は guard-ledger.jsonl への配線は無い（aidd_ledger_append も使わない）\necho ok\n' });
+    const hook = [
+      '#!/usr/bin/env bash',
+      '# この hook は guard-ledger.jsonl への配線は無い（aidd_ledger_append も使わない）',
+      '# check && aidd_ledger_append "g" "block"',
+      '# echo x >>"$LEDGER_PATH"',
+      'echo ok',
+      '',
+    ].join('\n');
+    const script = fakeRepo('comment-only', { 'hooks/comment-only.sh': hook });
     const { status, out } = run(body(), 'hooks/comment-only.sh', { script });
     expect(status).toBe(1);
     expect(out).toContain('ledger-wiring');
+  });
+
+  it('大きなフック（パイプが途中で閉じても）でも、先頭の本当の呼び出しを数える', () => {
+    const big = ['#!/usr/bin/env bash', 'aidd_ledger_append "guard" "block"', ...Array.from({ length: 4000 }, (_, i) => `echo line-${i} padding-padding-padding`)].join('\n');
+    const script = fakeRepo('big-hook', { 'hooks/big.sh': `${big}\n` });
+    expect(run(body(), 'hooks/big.sh', { script })).toMatchObject({ status: 0 });
   });
 
   it('aidd_ledger_append を呼ぶフックは通る', () => {
