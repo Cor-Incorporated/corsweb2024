@@ -35,6 +35,12 @@ const PUBLIC: Readonly<Record<string, string>> = {
 const HEADER = /^\[\[?([^\]]*)\]\]?\s*(?:#.*)?$/;
 /** [env.<名前>] と [env.<名前>.vars] などだけを読める形とする（[env . x]・[env."x"]・[env] は読めない） */
 const ENV_HEADER = /^env\.([A-Za-z0-9_-]+)(\..+)?$/;
+/** 見出しが env で始まるか（引用符付きも）: [env]・[env.x]・[env . x]・["env".x]。[env-x] などは別のテーブル */
+const ENV_LIKE_HEADER = /^["']?env["']?\s*(?:\.|$)/;
+/** 最上位で env を見出し以外で書いた行: env.x.workers_dev = …・env.x = { … }・"env" = { … }・'env'.x.… （wrangler は環境として読む） */
+const TOP_LEVEL_ENV_KEY = /^["']?env["']?\s*[.=]/;
+/** route ごとのプレビュー URL（wrangler 4 の routes の previews_enabled）。preview_urls = false で止めるので使わない */
+const ROUTE_PREVIEWS = /\bpreviews_enabled\b/;
 const KEY_LINE = /^["']?(workers_dev|preview_urls)["']?\s*=/;
 const KEY_VALUE = /^(workers_dev|preview_urls)\s*=\s*(true|false)\s*(?:#.*)?$/;
 
@@ -48,14 +54,17 @@ function readLine(state: Parsed, raw: string): Parsed {
   if (line.startsWith('[')) {
     const header = HEADER.exec(line)?.[1].trim();
     if (header === undefined) return { ...state, current: null, problems: [...state.problems, `読めない見出し: ${line}`] };
-    if (!/^env\b/.test(header)) return { ...state, current: null };
+    if (!ENV_LIKE_HEADER.test(header)) return { ...state, current: null };
     const env = ENV_HEADER.exec(header);
     if (!env) return { ...state, current: null, problems: [...state.problems, `読めない [env] の見出し: ${line}`] };
     // [env.x.vars] などの下のキーは、その環境の設定として数えない（環境だけは照合の対象にする）
     return { ...state, envs: withEnv(state.envs, env[1]), current: env[2] ? null : env[1] };
   }
-  if (state.current === 'top' && /^env\s*=/.test(line)) {
-    return { ...state, problems: [...state.problems, `env をインラインテーブルで書いている（読めない）: ${line}`] };
+  if (state.current === 'top' && TOP_LEVEL_ENV_KEY.test(line)) {
+    return { ...state, problems: [...state.problems, `env を [env.<名前>] の見出し以外で書いている（読めない）: ${line}`] };
+  }
+  if (ROUTE_PREVIEWS.test(line)) {
+    return { ...state, problems: [...state.problems, `previews_enabled（route ごとのプレビュー URL）は使わない: ${line}`] };
   }
   if (state.current === null || !KEY_LINE.test(line)) return state;
   const kv = KEY_VALUE.exec(line);
@@ -89,10 +98,13 @@ function checkWorker(worker: string, files: readonly string[], text: string | nu
   return [...configProblems, ...parsed.problems.map((p) => `${worker}: ${p}`), ...settingProblems];
 }
 
+/** git から消えたあとも残る、無視されたファイルだけのディレクトリ（例: 手元の workers/yomimono/node_modules）は Worker として数えない */
+const LEFTOVERS = new Set(['node_modules', '.wrangler', '.claude', '.DS_Store']);
 const workerDirs = () =>
   readdirSync(WORKERS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
+    .filter((name) => readdirSync(path.join(WORKERS_DIR, name)).some((file) => !LEFTOVERS.has(file)))
     .sort();
 const filesOf = (worker: string) => readdirSync(path.join(WORKERS_DIR, worker));
 const readWrangler = (worker: string) =>
@@ -177,11 +189,33 @@ describe('F2 変異: 公開を暗黙にしたり、許可なく公開したり�
     ]);
   });
 
-  it('最上位で env をインラインテーブルで書く', () => {
-    const changed = `env = { staging = { workers_dev = false } }\n${text('contact-edge')}`;
-    expect(check('contact-edge', changed)).toContain(
-      'contact-edge: env をインラインテーブルで書いている（読めない）: env = { staging = { workers_dev = false } }'
+  it.each([
+    ['インラインテーブル', 'env = { staging = { workers_dev = false } }'],
+    ['ドット付きのキー', 'env.staging.workers_dev = true'],
+    ['ドット付きのキーとインラインテーブル', 'env.staging = { workers_dev = true }'],
+    ['引用符付きのキーとインラインテーブル', '"env" = { staging = { workers_dev = true } }'],
+    ['引用符付きのドット付きのキー', "'env'.staging.workers_dev = true"],
+  ])('最上位で env を%sで書く（wrangler は環境として読む）', (_, line) => {
+    expect(check('contact-edge', `${line}\n${text('contact-edge')}`)).toContain(
+      `contact-edge: env を [env.<名前>] の見出し以外で書いている（読めない）: ${line}`
     );
+  });
+
+  it('引用符付きの env の見出しで環境を書く', () => {
+    const changed = `${text('contact-chat')}\n["env".staging]\nworkers_dev = true\n`;
+    expect(check('contact-chat', changed)).toContain('contact-chat: 読めない [env] の見出し: ["env".staging]');
+  });
+
+  it('route ごとのプレビュー URL（previews_enabled）を書く', () => {
+    const route = 'routes = [{ pattern = "chat.example.com", custom_domain = true, previews_enabled = true }]';
+    expect(check('contact-edge', `${text('contact-edge')}\n[env.preview]\n${route}\n`)).toContain(
+      `contact-edge: previews_enabled（route ごとのプレビュー URL）は使わない: ${route}`
+    );
+  });
+
+  it('[env-x] のような env 以外のテーブルや、[ env.preview ] の前後の空白は、今までどおり読む', () => {
+    expect(check('contact-chat', `${text('contact-chat')}\n[env-notes]\nworkers_dev = true\n`)).toEqual([]);
+    expect(check('contact-chat', text('contact-chat').replace('[env.preview]', '[ env.preview ]'))).toEqual([]);
   });
 
   it('コメントの中の workers_dev は数えない', () => {
