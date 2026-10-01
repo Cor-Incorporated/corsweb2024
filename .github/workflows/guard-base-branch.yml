@@ -5,15 +5,20 @@ name: Guard base branch
 # develop 経由にするよう PR にコメントで誘導する（誤 base=main の再発防止）。
 #
 # 注1: pull_request ワークフローは、PR のマージコミット（refs/pull/<番号>/merge。PR の変更を main に重ねたもの）の
-#      ファイルで実行される。base ブランチ（main）のファイルではない（GitHub Docs「Events that trigger workflows」:
-#      GITHUB_SHA はマージブランチの最後のマージコミット。base 側で動くのは pull_request_target）。
+#      ファイルで実行される。main のファイルではない（GitHub Docs「Events that trigger workflows」の pull_request の
+#      GITHUB_SHA と、「Workflows > Workflow triggers」の、そのコミットのワークフローのファイルが動くという説明）。
+#      既定ブランチ（このリポジトリでは main。PR の base ではない）の版で動くのは pull_request_target。
 #      そのため、main 宛の PR がこのファイルを書き換えると、書き換えたガードが動く。このガードだけでは迂回を防げない。
-# 注2: main を守っているのは main のブランチ保護。2026-10-01 に実測した値は次のとおり。このガード（status check "guard"）は
-#      その必須チェックの 1 つで、誤 base=main を早く知らせる役（ガードを書き換える PR は、承認のときに差分で止める）。
-#      - push（マージ）できるのは terisuke と cloudia-Cor だけ。enforce_admins も有効
-#      - 承認 1 件（push があると取り消し）
-#      - 必須チェック: build_and_deploy・Chromium visual text audit・guard・h5-admission・verify
-#      確かめるコマンド: gh api repos/Cor-Incorporated/corsweb2024/branches/main/protection
+# 注2: main を守っているのは、main のブランチ保護と組織のルールセット。2026-10-01 に実測した値は次のとおり。
+#      このガード（status check "guard"）はブランチ保護の必須チェックの 1 つで、誤 base=main を早く知らせる役。
+#      ガードを書き換える PR は、承認する人とマージする人（terisuke / cloudia-Cor）が差分を見て止める運用（CODEOWNERS は無い）。
+#      - ブランチ保護: push（マージ）できるのは terisuke と cloudia-Cor だけ。enforce_admins も有効。承認 1 件（push で取り消し）。
+#        必須チェック: build_and_deploy・Chromium visual text audit・guard・h5-admission・verify
+#      - 組織のルールセット「シークレット検査の必須化」（id 20776787。既定ブランチが対象で、除外なし）: PR が必須（承認 0 件）で、
+#        Cor-Incorporated/.github の .github/workflows/gitleaks.yml が通ること。既定ブランチを変えると main から外れる
+#      確かめるコマンド（上と同じ項目を出す）:
+#        gh api repos/Cor-Incorporated/corsweb2024/branches/main/protection --jq '{push: [.restrictions.users[].login], enforce_admins: .enforce_admins.enabled, approvals: .required_pull_request_reviews.required_approving_review_count, dismiss_stale: .required_pull_request_reviews.dismiss_stale_reviews, checks: .required_status_checks.contexts}'
+#        gh api repos/Cor-Incorporated/corsweb2024/rules/branches/main --jq '[.[] | {type, ruleset_id, approvals: .parameters.required_approving_review_count, workflows: [.parameters.workflows[]?.path]}]'
 
 on:
   pull_request:
