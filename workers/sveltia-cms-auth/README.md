@@ -35,11 +35,15 @@ git diff -- workers/sveltia-cms-auth   # 差分を読んでから、上の表の
 
 手順は `docs/cms-sveltia.md` の「管理者向けセットアップ」。要点だけ:
 
+wrangler 4 は Node.js 22 以上でしか動かない。既定の Node が 22 未満なら `mise exec node@22 --` を前に付ける（Node 22 以上の環境なら外してよい）。
+
 ```bash
 cd workers/sveltia-cms-auth
-npx wrangler@4.135.0 deploy                           # 上流が固定している wrangler の版。ALLOWED_DOMAINS もここで入る
-npx wrangler@4.135.0 secret put GITHUB_CLIENT_ID
-npx wrangler@4.135.0 secret put GITHUB_CLIENT_SECRET
+mise exec node@22 -- npx --yes wrangler@4.135.0 deploy                           # 上流が固定している wrangler の版。ALLOWED_DOMAINS もここで入る
+mise exec node@22 -- npx --yes wrangler@4.135.0 secret put GITHUB_CLIENT_ID
+mise exec node@22 -- npx --yes wrangler@4.135.0 secret put GITHUB_CLIENT_SECRET
 ```
+
+2026-10-01 にデプロイした URL は `docs/cms-sveltia.md` の 2-3 と `cms/public/config.yml` の `backend.base_url`（`cms-config.test.ts` が照合する）。
 
 `ALLOWED_DOMAINS` を空・`*` 入り・プレビューチャネルのホストにしない。上流の Worker は空だと、どのサイトで開かれた CMS にもトークンを渡す。

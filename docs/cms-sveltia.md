@@ -128,8 +128,8 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 | 11 | リポジトリ変数 | `CMS_DEPLOY_ENABLED` = `true`（2026-09-27T17:14:23Z） | 済 |
 | 12 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 3 本（`h5-admission`・`Chromium visual text audit`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |
 | 13 | 認証 Worker | `cor-sveltia-cms-auth`（Cloudflare、Company@cor-jp.com）→ `https://cor-sveltia-cms-auth.company-997.workers.dev`（2026-10-01 にデプロイ、version `29e5673a-9a52-4455-89eb-8c7cc2828159`） | 済 |
-| 14 | GitHub OAuth App | Homepage `https://cor-jp-cms-admin.web.app/`、Callback `https://cor-sveltia-cms-auth.company-997.workers.dev/callback` | 未 |
-| 15 | Worker の secret | `GITHUB_CLIENT_ID`・`GITHUB_CLIENT_SECRET` | 未 |
+| 14 | GitHub OAuth App | 名前 `Cor.inc コンテンツ管理（Sveltia CMS）`（Cor-Incorporated 所有）、Homepage `https://cor-jp-cms-admin.web.app/`、Callback `https://cor-sveltia-cms-auth.company-997.workers.dev/callback`（2026-10-01 に作成） | 済 |
+| 15 | Worker の secret | `GITHUB_CLIENT_ID`・`GITHUB_CLIENT_SECRET`（2026-10-01 に登録。`wrangler secret list` で名前を確かめた） | 済 |
 | 16 | `base_url` | `cms/public/config.yml` を `https://cor-sveltia-cms-auth.company-997.workers.dev` に（develop へは PR で反映。管理画面に出るのは main へのリリース後） | 済 |
 | 17 | 旧サイト `cor-jp-cms`（プロジェクト cor-jp-web 内） | 2026-09-28 に削除（CEO 確認済み）。cor-jp-web に残るサイトは `cor-jp-main` と `cor-jp-web` | 済 |
 
@@ -208,7 +208,7 @@ Cloudflare のアカウントは Company@cor-jp.com（account_id `9973f2d2304b58
 
 トークンを渡す先 `ALLOWED_DOMAINS` は、`wrangler.toml` の `[vars]` に **`cor-jp-cms-admin.web.app`（完全一致）** として置いてあり、デプロイで一緒に入ります。secret としては登録しません（値を git で確かめられるようにするため）。`[env.*]` の設定は置きません。`cms/firebase.json` のサイト名との一致は `cms-config.test.ts` が検査しています。
 
-wrangler 4 は **Node.js 22 以上**でしか動きません（Node 20 では `Wrangler requires at least Node.js v22.0.0` で止まる）。既定の Node が 22 未満なら、コマンドの前に `mise exec node@22 --` を付けます（2026-10-01 はこの形でデプロイした）。
+wrangler 4 は **Node.js 22 以上**でしか動きません（Node 20 では `Wrangler requires at least Node.js v22.0.0` で止まる）。既定の Node が 22 未満なら、コマンドの前に `mise exec node@22 --` を付けます（2026-10-01 はこの形でデプロイした）。mise を使っていない場合は、Node.js 22 以上を入れた環境で `mise exec node@22 --` を外して実行します。
 
 ```bash
 cd workers/sveltia-cms-auth
@@ -216,7 +216,7 @@ mise exec node@22 -- npx --yes wrangler@4.135.0 login     # Company@cor-jp.com �
 mise exec node@22 -- npx --yes wrangler@4.135.0 deploy
 ```
 
-出力の `https://cor-sveltia-cms-auth.<サブドメイン>.workers.dev` が **Worker の URL** です（以下 `<WORKER_URL>`）。2026-10-01 のデプロイでは **`https://cor-sveltia-cms-auth.company-997.workers.dev`**（version `29e5673a-9a52-4455-89eb-8c7cc2828159`）。
+出力の `https://cor-sveltia-cms-auth.<サブドメイン>.workers.dev` が **Worker の URL** です。2026-10-01 のデプロイでは **`https://cor-sveltia-cms-auth.company-997.workers.dev`**（version `29e5673a-9a52-4455-89eb-8c7cc2828159`）。
 
 デプロイ直後（secret の登録前）の確認:
 
@@ -249,9 +249,9 @@ GitHub で **Organization「Cor-Incorporated」→ Settings → Developer settin
 
 | 名前 | 種類 | 現在値 → 設定する値 |
 |---|---|---|
-| `GITHUB_CLIENT_ID` | secret | 未設定 → 2-4 の Client ID |
-| `GITHUB_CLIENT_SECRET` | secret | 未設定 → 2-4 の Client secret |
-| `ALLOWED_DOMAINS` | `[vars]`（wrangler.toml） | 未デプロイ → `cor-jp-cms-admin.web.app`（2-3 のデプロイで入る。登録作業は不要） |
+| `GITHUB_CLIENT_ID` | secret | 2-4 の Client ID（2026-10-01 に登録済み） |
+| `GITHUB_CLIENT_SECRET` | secret | 2-4 の Client secret（2026-10-01 に登録済み） |
+| `ALLOWED_DOMAINS` | `[vars]`（wrangler.toml） | `cor-jp-cms-admin.web.app`（2026-10-01 のデプロイで設定済み。登録作業は不要） |
 
 ```bash
 cd workers/sveltia-cms-auth
@@ -314,7 +314,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | ログインの小窓が「サーバーが見つからない」 | `base_url` が Worker の URL（`https://cor-sveltia-cms-auth.company-997.workers.dev`）と違う、または main に未反映 | 2-6 を行い、main への反映と `deploy-cms.yml` の完了を待つ |
 | 小窓に「この認証アプリではお使いのドメインの使用は許可されていません」 | https://cor-jp-cms-admin.web.app/ 以外（`firebaseapp.com`・旧 `cor-jp-cms.web.app` など）で開いた | https://cor-jp-cms-admin.web.app/ で開き直す |
 | 小窓に「OAuth アプリのクライアント ID またはシークレットが設定されていません」 | Worker の secret 未登録 | 2-5 |
-| GitHub の画面で「redirect_uri の不一致」などのエラー | OAuth App の Callback URL が `https://cor-sveltia-cms-auth.company-997.workers.dev/callback` と違う | 2-4 の Callback URL を直す |
+| ログインの小窓が真っ白・404・別のサイトのエラーになる（GitHub で許可した後） | OAuth App の Callback URL が `https://cor-sveltia-cms-auth.company-997.workers.dev/callback` と違う（この Worker は GitHub に redirect_uri を送らないので、GitHub は登録した Callback URL に戻す） | 2-4 の Callback URL を直す |
 | `wrangler deploy` が `Binding name 'ALLOWED_DOMAINS' already in use` で失敗 | 同じ名前の secret が登録されている | `mise exec node@22 -- npx --yes wrangler@4.135.0 secret delete ALLOWED_DOMAINS` の後に再デプロイ（値は `[vars]` から入る） |
 | `wrangler` が `Wrangler requires at least Node.js v22.0.0` で止まる | wrangler 4 は Node.js 22 以上が必要 | コマンドの前に `mise exec node@22 --` を付ける（2-3） |
 | deploy ジョブの認証（google-github-actions/auth）が `unauthorized_client` や `Permission 'iam.serviceAccounts.getAccessToken' denied` で失敗 | プロバイダの条件（2-1 の 7）か利用許可（2-1 の 8）に合わない（main 以外・push と workflow_dispatch 以外・Environment の名前・ワークフローの名前・リポジトリの変更） | main の `deploy-cms.yml` から push か手動で動かす。名前を変えたなら GCP の条件と binding も同時に直す |

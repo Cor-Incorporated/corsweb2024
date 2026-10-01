@@ -14,11 +14,11 @@ backend:
   repo: Cor-Incorporated/corsweb2024
   # 編集の行き先。本番（main）へは develop → main のリリース PR でだけ反映される。
   branch: develop
-  # 認証 Worker（workers/sveltia-cms-auth）の URL。デプロイ後に実際の URL へ置き換える。
-  # 形式: https://cor-sveltia-cms-auth.<Cloudflare アカウントの workers.dev サブドメイン>.workers.dev
+  # 認証 Worker（workers/sveltia-cms-auth）の URL: https://cor-sveltia-cms-auth.<アカウントの workers.dev サブドメイン>.workers.dev
+  # 2026-10-01 にデプロイした（Company@cor-jp.com のアカウント）。cms-config.test.ts が、wrangler.toml の name と
+  # アカウントのサブドメインとの完全一致を照合する（別のアカウントの Worker にトークンを渡さないため）。
   # Worker がトークンを渡す先は wrangler.toml の [vars] ALLOWED_DOMAINS（cor-jp-cms-admin.web.app だけ）。
   # 手順は docs/cms-sveltia.md の「管理者向けセットアップ」。
-  # 2026-10-01 にデプロイした認証 Worker（cor-sveltia-cms-auth、Company@cor-jp.com のアカウントの workers.dev）。
   base_url: https://cor-sveltia-cms-auth.company-997.workers.dev
   # ログイン画面には「GitHub にログイン」だけを出す（アクセストークンの入力欄は出さない）。
   auth_methods: [oauth]

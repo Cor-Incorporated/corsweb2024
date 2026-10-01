@@ -58,6 +58,7 @@ const ROOT = process.cwd();
 const CONFIG_PATH = path.join(ROOT, 'cms/public/config.yml');
 const WRANGLER_PATH = path.join(ROOT, 'workers/sveltia-cms-auth/wrangler.toml');
 const CMS_FIREBASE_PATH = path.join(ROOT, 'cms/firebase.json');
+const DOCS_PATH = path.join(ROOT, 'docs/cms-sveltia.md');
 const BLOG_JA_DIR = path.join(ROOT, 'src/content/blog/ja');
 const JA_FOLDER = /^src\/content\/(?:blog|news|cases)\/ja$/;
 
@@ -288,14 +289,36 @@ function checkAllowedDomains(wrangler: Wrangler, hosting: CmsHosting): string[] 
   );
 }
 
-/** (g) config.yml の base_url ↔ 認証 Worker の名前（workers.dev の URL） */
+/**
+ * 認証 Worker を置いた Cloudflare アカウント（wrangler.toml の account_id、Company@cor-jp.com）の workers.dev の
+ * サブドメイン。2026-10-01 の `wrangler deploy` の出力で確かめた。
+ * URL の形（https://<name>.<任意>.workers.dev）だけを見ると、タイプミスや第三者のアカウントにある同名の Worker でも
+ * 通り、編集者の GitHub トークン（public_repo,user）をそこへ渡してしまう。だから完全一致で照合する。
+ */
+const WORKERS_DEV_SUBDOMAIN = 'company-997';
+const workerUrlOf = (wrangler: Wrangler) =>
+  `https://${wrangler.name}.${WORKERS_DEV_SUBDOMAIN}.workers.dev`;
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** (g) config.yml の base_url ↔ 認証 Worker の URL（wrangler.toml の name と、アカウントのサブドメイン） */
 function checkBaseUrl(config: CmsConfig, wrangler: Wrangler): string[] {
   const baseUrl = config.backend.base_url ?? '（未定義）';
-  // 2026-10-01 に Worker をデプロイして URL が決まったので、仮の値（REPLACE-WITH-CF-SUBDOMAIN）はもう通さない
-  const pattern = new RegExp(`^https://${wrangler.name}\\.[a-z0-9-]+\\.workers\\.dev$`);
-  if (pattern.test(baseUrl)) return [];
+  const expected = workerUrlOf(wrangler);
+  if (wrangler.name && baseUrl === expected) return [];
   return [
-    `base_url が認証 Worker の URL の形ではない: config.yml base_url "${baseUrl}" / wrangler.toml name "${wrangler.name}"（期待 https://${wrangler.name}.<サブドメイン>.workers.dev）`,
+    `base_url が認証 Worker の URL と違う: config.yml base_url "${baseUrl}" / 期待 "${expected}"（wrangler.toml name "${wrangler.name}"・アカウントの workers.dev サブドメイン ${WORKERS_DEV_SUBDOMAIN}）`,
+  ];
+}
+
+/** (g') 手順書に書いた Worker の URL は、すべて base_url と同じ（仮の値の履歴と <サブドメイン> の説明は対象外） */
+function checkDocsWorkerUrls(docs: string, wrangler: Wrangler): string[] {
+  const expected = workerUrlOf(wrangler);
+  const pattern = new RegExp(`https://${escapeRegExp(wrangler.name)}\\.[a-z0-9-]+\\.workers\\.dev`, 'g');
+  const found = [...docs.matchAll(pattern)].map((match) => match[0]);
+  const wrong = [...new Set(found.filter((url) => url !== expected))];
+  if (found.length > 0 && wrong.length === 0) return [];
+  return [
+    `docs/cms-sveltia.md の Worker の URL: 期待と違うもの [${wrong.join(', ')}]（${found.length} 件中）/ 期待 "${expected}"`,
   ];
 }
 
@@ -495,8 +518,12 @@ describe('CMS の配信と認証 Worker（cms/firebase.json ↔ wrangler.toml �
     expect(checkWranglerShape(loadWranglerText())).toEqual([]);
   });
 
-  it('(g) base_url は認証 Worker（wrangler.toml の name）の workers.dev の URL', () => {
+  it('(g) base_url は認証 Worker（wrangler.toml の name・アカウントのサブドメイン）の URL と完全一致', () => {
     expect(checkBaseUrl(loadConfig(), loadWrangler())).toEqual([]);
+  });
+
+  it("(g') 手順書に書いた Worker の URL は、すべて base_url と同じ", () => {
+    expect(checkDocsWorkerUrls(readFileSync(DOCS_PATH, 'utf8'), loadWrangler())).toEqual([]);
   });
 
   it('(h) CSP と保護ヘッダー: frame-ancestors none、CDN なし、キャッシュの区別', () => {
@@ -558,23 +585,27 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
     );
   });
 
-  it('base_url を、Worker の URL が決まる前の仮の値に戻す', () => {
+  it.each([
+    ['Worker の URL が決まる前の仮の値に戻す', 'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev'],
+    ['別のホストにする', 'https://auth.example.com'],
+    ['アカウントのサブドメインを打ち間違える', 'https://cor-sveltia-cms-auth.company-979.workers.dev'],
+    ['第三者のアカウントにある同名の Worker にする', 'https://cor-sveltia-cms-auth.attacker.workers.dev'],
+  ])('base_url を%s', (_, baseUrl) => {
     const config = loadConfig();
-    const placeholder = 'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev';
-    const mutated = { ...config, backend: { ...config.backend, base_url: placeholder } };
+    const mutated = { ...config, backend: { ...config.backend, base_url: baseUrl } };
     expect(checkBaseUrl(mutated, loadWrangler())).toEqual([
-      `base_url が認証 Worker の URL の形ではない: config.yml base_url "${placeholder}" / wrangler.toml name "cor-sveltia-cms-auth"（期待 https://cor-sveltia-cms-auth.<サブドメイン>.workers.dev）`,
+      `base_url が認証 Worker の URL と違う: config.yml base_url "${baseUrl}" / 期待 "https://cor-sveltia-cms-auth.company-997.workers.dev"（wrangler.toml name "cor-sveltia-cms-auth"・アカウントの workers.dev サブドメイン company-997）`,
     ]);
   });
 
-  it('base_url を別のホストにする', () => {
-    const config = loadConfig();
-    const mutated = {
-      ...config,
-      backend: { ...config.backend, base_url: 'https://auth.example.com' },
-    };
-    expect(checkBaseUrl(mutated, loadWrangler())).toEqual([
-      'base_url が認証 Worker の URL の形ではない: config.yml base_url "https://auth.example.com" / wrangler.toml name "cor-sveltia-cms-auth"（期待 https://cor-sveltia-cms-auth.<サブドメイン>.workers.dev）',
+  it('手順書の Worker の URL を 1 か所だけ打ち間違える', () => {
+    const docs = readFileSync(DOCS_PATH, 'utf8');
+    const typo = 'https://cor-sveltia-cms-auth.company-979.workers.dev';
+    const mutated = docs.replace('https://cor-sveltia-cms-auth.company-997.workers.dev/callback', `${typo}/callback`);
+    expect(mutated).not.toBe(docs);
+    const total = [...mutated.matchAll(/https:\/\/cor-sveltia-cms-auth\.[a-z0-9-]+\.workers\.dev/g)].length;
+    expect(checkDocsWorkerUrls(mutated, loadWrangler())).toEqual([
+      `docs/cms-sveltia.md の Worker の URL: 期待と違うもの [${typo}]（${total} 件中）/ 期待 "https://cor-sveltia-cms-auth.company-997.workers.dev"`,
     ]);
   });
 
