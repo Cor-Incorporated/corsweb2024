@@ -43,6 +43,32 @@ jobs:
         with:
           persist-credentials: false
 
+      # ワークフロー（.github/workflows/）を actionlint で検査する。shellcheck も版を固定して渡す（runner に入っている
+      # shellcheck の版で結果が変わらないように）。pyflakes は使わない（runner にあるかどうかで結果が変わるため）。
+      # 2026-10-01 まで CI では動かしておらず、手元の版でだけ SC2016 が見つかっていた（#371）。
+      # 版を上げるときは URL と sha256 を同時に書き換え、sha256 はリリースの digest で確かめる:
+      #   gh api repos/rhysd/actionlint/releases/tags/<tag> --jq '.assets[] | "\(.name) \(.digest)"'
+      # 照合: src/config/__tests__/actionlint-gate.test.ts（版の一致・sha256 の照合・shellcheck の受け渡し）
+      - name: Lint workflows (actionlint + shellcheck, pinned)
+        env:
+          ACTIONLINT_URL: https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+          SHELLCHECK_URL: https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz
+          SHELLCHECK_SHA256: 'b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6'
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/lint-tools"
+          mkdir -p "$tools"
+          curl -fsSL --retry 3 -o "$tools/actionlint.tar.gz" "$ACTIONLINT_URL"
+          echo "${ACTIONLINT_SHA256}  $tools/actionlint.tar.gz" | sha256sum -c -
+          curl -fsSL --retry 3 -o "$tools/shellcheck.tar.gz" "$SHELLCHECK_URL"
+          echo "${SHELLCHECK_SHA256}  $tools/shellcheck.tar.gz" | sha256sum -c -
+          tar -xzf "$tools/actionlint.tar.gz" -C "$tools" actionlint
+          tar -xzf "$tools/shellcheck.tar.gz" -C "$tools" --strip-components=1 --wildcards '*/shellcheck'
+          "$tools/shellcheck" --version
+          "$tools/actionlint" -version
+          "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= -color
+
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
