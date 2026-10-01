@@ -27,26 +27,36 @@ const step = () => {
   return steps[0];
 };
 
-/** 偽物の gh: pr view（既出のコメントの数）には 0 を返し、pr comment は引数を記録するだけ */
-function fakeGh(): { binDir: string; log: string } {
+/**
+ * 偽物の gh: pr view（既出のコメントの数）には 0 を返し、pr comment は引数を記録する。
+ * commentFails なら、フォークの PR の読み取り専用のトークンと同じく、コメントは失敗する
+ */
+function fakeGh(commentFails: boolean): { binDir: string; log: string } {
   const binDir = mkdtempSync(path.join(dir, 'bin-'));
   const log = path.join(binDir, 'gh.log');
+  const fail = commentFails
+    ? `if [ "$1 $2" = "pr comment" ]; then echo 'Resource not accessible by integration' >&2; exit 1; fi\n`
+    : '';
   writeFileSync(
     path.join(binDir, 'gh'),
-    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${log}"\nif [ "$1 $2" = "pr view" ]; then echo 0; fi\nexit 0\n`
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${log}"\nif [ "$1 $2" = "pr view" ]; then echo 0; fi\n${fail}exit 0\n`
   );
   chmodSync(path.join(binDir, 'gh'), 0o755);
   return { binDir, log };
 }
 
-/** run を GitHub と同じく bash -eo pipefail で動かす */
-function runGuard({ head, headRepo, repo = 'Cor-Incorporated/corsweb2024' }: { head: string; headRepo: string; repo?: string }) {
+type Case = { head: string; headRepo: string; repo?: string; commentFails?: boolean };
+
+/** run を GitHub と同じく bash -e で動かす（shell を書かないステップは bash -e {0}。pipefail はスクリプトの set が入れる） */
+function runGuard({ head, headRepo, repo = 'Cor-Incorporated/corsweb2024', commentFails = false }: Case) {
   const { run } = step();
   const script = path.join(dir, `guard-${Math.random().toString(36).slice(2)}.sh`);
   writeFileSync(script, run ?? '');
-  const { binDir, log } = fakeGh();
-  const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', script], {
+  const { binDir, log } = fakeGh(commentFails);
+  const result = spawnSync('bash', ['-e', script], {
     encoding: 'utf8',
+    // 同期の子プロセスは vitest の timeout では止まらないので、ここで止める
+    timeout: 10_000,
     env: { PATH: `${binDir}:${process.env.PATH}`, GH_TOKEN: 'dummy', REPO: repo, HEAD: head, HEAD_REPO: headRepo, PR: '42' },
   });
   const calls = existsSync(log) ? readFileSync(log, 'utf8') : '';
@@ -58,6 +68,8 @@ describe('main へのガード（guard-base-branch.yml）', () => {
     const { env, run } = step();
     expect(env?.HEAD_REPO).toBe('${{ github.event.pull_request.head.repo.full_name }}');
     expect(run).not.toMatch(/\$\{\{/);
+    // GitHub は bash -e {0} で動かすので、pipefail はスクリプトの 1 行目が入れる（消しても今の判定は変わらないため、形で照合する）
+    expect(run?.split('\n')[0]).toBe('set -eo pipefail');
   });
 
   it('このリポジトリの develop からの PR は通す（コメントしない）', () => {
@@ -76,6 +88,15 @@ describe('main へのガード（guard-base-branch.yml）', () => {
     const { status, out } = runGuard({ head: 'develop', headRepo: '' });
     expect(status).toBe(1);
     expect(out).toContain('head は （不明）:develop');
+  });
+
+  it.each([
+    ['フォークの develop 以外のブランチ', 'someone/corsweb2024'],
+    ['head のリポジトリが分からない、develop 以外のブランチ', ''],
+  ])('%s からの PR も止める（読み取り専用のトークンでコメントが失敗しても）', (_, headRepo) => {
+    const { status, out } = runGuard({ head: 'feature/x', headRepo, commentFails: true });
+    expect(status).toBe(1);
+    expect(out).toContain('::error title=base が main です::');
   });
 
   it('このリポジトリの develop 以外のブランチからの PR は、今までどおり誘導のコメントを書いて止める', () => {
