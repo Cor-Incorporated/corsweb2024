@@ -73,9 +73,10 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
   });
 
   it('outputDir を既定（test-results）に戻す（表示監査の結果を消していた 2026-10-01 までの形）', () => {
-    const violations = check(undefined, workflowText()).join('\n');
-    expect(violations).toContain('outputDir=test-results は開始時に空にされるが、その中に別の成果物 [');
-    expect(violations).toContain('test-results/visual-text');
+    // ほかのメッセージにも path の一覧が出るので、「空にされる」の行だけを照合する
+    const wipe = check(undefined, workflowText()).find((line) => line.includes('開始時に空にされる')) ?? '';
+    expect(wipe).toContain('outputDir=test-results は開始時に空にされるが、その中に別の成果物 [');
+    expect(wipe).toContain('test-results/visual-text');
   });
 
   it('アップロードを成功のときだけにする', () => {
