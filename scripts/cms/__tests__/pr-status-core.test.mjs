@@ -148,7 +148,10 @@ describe('computeState: 失敗と公開できる', () => {
   it('ワークフローがすべて終わっても PR の実行の i18n-check が無ければ（翻訳 CI を止めたなど）、待たずに知らせる', () => {
     const result = stateOf({ checkRuns: without(greenChecks, 'i18n-check'), workflowRuns: without(greenRuns, 'Translate content (i18n)') });
     expect(result).toMatchObject({ state: 'ready', translation: 'unchecked' });
-    expect(renderComment({ result, sha: SHA, isDraft: false })).toContain('- 翻訳: 確かめられていません');
+    const body = renderComment({ result, sha: SHA, isDraft: false });
+    expect(body).toContain('- 翻訳: 確かめられていません');
+    expect(body).toContain('**公開できます**（必須チェックは通りました。翻訳は確かめられていません）');
+    expect(body).not.toContain('チェックがすべて通りました');
   });
 
   it('src/content/ を変えない PR は、i18n-check を待たない', () => {
@@ -266,6 +269,13 @@ describe('renderComment', () => {
     const body = renderComment({ result, sha: SHA, isDraft: true });
     expect(body).toContain('すべて通過（失敗したのは翻訳の検査だけです）');
     expect(body).not.toContain('下書き');
+  });
+
+  it('必須チェックが cancelled・無いときは、翻訳の検査が失敗しても「すべて通過」と書かない', () => {
+    const checkRuns = [...without(without(greenChecks, 'verify'), 'i18n-check'), check(80, 'verify', 'cancelled'), i18nCheck(81, 'failure')];
+    const result = stateOf({ checkRuns });
+    expect(result).toMatchObject({ state: 'failed', requiredPassed: false });
+    expect(renderComment({ result, sha: SHA, isDraft: false })).not.toContain('すべて通過');
   });
 
   it('プレビューが作れなかったときは、そのことと、失敗したチェックへのリンクを書く', () => {

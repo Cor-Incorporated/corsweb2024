@@ -125,8 +125,9 @@ export function computeState({ checkRuns, workflowRuns, files, prNumber }) {
   const translationRun = translationRunOf(checkRuns, workflowRuns);
   const translation = translationOf(translationRun, files);
   const failed = [...REQUIRED_CHECKS.map((name) => latest.get(name)), ...(translation === 'none' ? [] : [translationRun])].filter(isFailed);
-  if (failed.length > 0) return { state: 'failed', failed: failed.map(linkOf), translation };
-  if (!REQUIRED_CHECKS.every((name) => isPassed(latest.get(name)))) return { state: 'pending' };
+  const requiredPassed = REQUIRED_CHECKS.every((name) => isPassed(latest.get(name)));
+  if (failed.length > 0) return { state: 'failed', failed: failed.map(linkOf), translation, requiredPassed };
+  if (!requiredPassed) return { state: 'pending' };
   return { state: 'ready', translation, preview: previewOf(latest.get(PREVIEW_CHECK), prNumber) };
 }
 
@@ -172,7 +173,9 @@ export function renderComment({ result, sha, isDraft }) {
   if (result.state === 'ready') {
     return [
       marker,
-      '**公開できます**（CMS の記事のチェックがすべて通りました）',
+      result.translation === 'unchecked'
+        ? '**公開できます**（必須チェックは通りました。翻訳は確かめられていません）'
+        : '**公開できます**（CMS の記事のチェックがすべて通りました）',
       '',
       `- 必須チェック（${REQUIRED_CHECKS.join('・')}）: すべて通過`,
       TRANSLATION_LINES[result.translation],
@@ -192,14 +195,15 @@ export function renderComment({ result, sha, isDraft }) {
       `${publishers} PR の画面の「Approve workflows to run」で承認してください。チェックがすべて終わると、ここに結果を書きます（承認のボタンが出ないときは docs/i18n-translation.md の 6 章）。`,
     ].join('\n');
   }
-  // 必須チェックが通り、翻訳の検査だけが失敗したときは、そう書く（公開はできる。下書きの空の欄のせいでもない）
+  // 必須チェックが実際にすべて通り、翻訳の検査だけが失敗したときは、そう書く（公開はできる）。
+  // 下書きの空の欄の案内は、必須チェックが失敗したときだけ（翻訳の検査だけの失敗は、空の欄のせいとは限らない）
   const requiredFailed = result.failed.some(({ name }) => REQUIRED_CHECKS.includes(name));
   return [
     marker,
     '**チェックが失敗しました**',
     '',
     ...result.failed.map(linkLine),
-    ...(requiredFailed ? [] : [`- 必須チェック（${REQUIRED_CHECKS.join('・')}）: すべて通過（失敗したのは翻訳の検査だけです）`]),
+    ...(result.requiredPassed ? [`- 必須チェック（${REQUIRED_CHECKS.join('・')}）: すべて通過（失敗したのは翻訳の検査だけです）`] : []),
     ...(result.translation === 'none' ? [] : [TRANSLATION_LINES[result.translation]]),
     ...(isDraft && requiredFailed ? ['', DRAFT_HINT] : []),
   ].join('\n');

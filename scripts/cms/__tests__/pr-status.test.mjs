@@ -3,6 +3,10 @@
  * CMS の PR の状態通知（scripts/cms/pr-status.mjs）の、GitHub とのやり取り。gh api は偽物に差し替える。
  * 判定と文面は pr-status-core.test.mjs。ここでは、どの PR を選ぶか・いつコメントしないかを照合する。
  */
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseOptions, run } from '../pr-status.mjs';
 
@@ -136,6 +140,21 @@ describe('pr-status.mjs: 対象の PR を選ぶ', () => {
       '#42: 開いている CMS の PR（このリポジトリの cms/ ブランチ）ではないので、何もしません',
     ]);
     expect(fake.posts()).toEqual([]);
+  });
+});
+
+describe('node で直接動かす', () => {
+  it('シンボリックリンクを通したパス（macOS の /tmp など）で動かしても、黙って終わらない', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'cms-pr-status-'));
+    try {
+      const link = path.join(dir, 'pr-status.mjs');
+      symlinkSync(path.join(process.cwd(), 'scripts/cms/pr-status.mjs'), link);
+      const result = spawnSync(process.execPath, [link, '--pr', 'oops'], { encoding: 'utf8' });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('--pr には PR の番号を渡してください（oops）');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
