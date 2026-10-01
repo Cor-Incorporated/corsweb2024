@@ -262,8 +262,8 @@ const bypassOf = (step: Step | undefined) =>
   step ? (['if', 'continue-on-error'] as const).filter((key) => key in step) : [];
 const showBypass = (keys: readonly string[]) => keys.join('・') || 'if・continue-on-error なし';
 
-/** deploy ジョブは許可したものだけを使う（L1）・main の最新だけを配信（L2）・バイナリを sha256 で照合（L3）・candidate → live（L4） */
-function checkDeploySteps(workflow: Workflow, { site }: Inputs): string[] {
+/** deploy ジョブは許可したものだけを使い（L1）、main の最新だけを配信する（L2） */
+function checkDeploySteps(workflow: Workflow): string[] {
   const violations: string[] = [];
   const steps = workflow.jobs.deploy?.steps ?? [];
   for (const step of steps) {
@@ -283,25 +283,47 @@ function checkDeploySteps(workflow: Workflow, { site }: Inputs): string[] {
         violations.push(`deploy ジョブの「${step.name}」: ${command.join(' ')} — ${problem}`);
     }
   }
-  const runs = steps.map((step) => step.run ?? '');
   if (
-    !/gh api "repos\/\$\{GITHUB_REPOSITORY\}\/commits\/main"[\s\S]*\$GITHUB_SHA/.test(runs[0] ?? '')
+    !/gh api "repos\/\$\{GITHUB_REPOSITORY\}\/commits\/main"[\s\S]*\$GITHUB_SHA/.test(
+      steps[0]?.run ?? ''
+    )
   ) {
     violations.push(
       'deploy ジョブの最初の手順で、main の最新の SHA と GITHUB_SHA を比べていない（古い run の再実行で巻き戻せる）'
     );
   }
+  return violations;
+}
+
+/**
+ * deploy ジョブの取得手順: 取得 → sha256 の照合 → PATH に出す、の行と順番。照合を `|| true` や
+ * continue-on-error で無効にしたり、curl に env 以外の URL を書いたりすると、照合していないバイナリが
+ * 資格情報（WIF）を持ったまま動く。問題があれば観測した行の位置を返す
+ */
+const DEPLOY_BIN = '$RUNNER_TEMP/bin/firebase';
+function deployDownloadProblem(step: Step): string | null {
+  const lines = (step.run ?? '').split('\n').map((line) => line.trim());
+  const fetched = lines.indexOf(`curl -fsSL --retry 3 -o "${DEPLOY_BIN}" "$FIREBASE_TOOLS_URL"`);
+  const checked = lines.indexOf(`echo "\${FIREBASE_TOOLS_SHA256}  ${DEPLOY_BIN}" | sha256sum -c -`);
+  const exposed = lines.indexOf('echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"');
+  const bypass = bypassOf(step);
+  return fetched < 0 || checked <= fetched || exposed <= checked || bypass.length
+    ? `取得の行 ${fetched} / 照合の行 ${checked} / PATH の行 ${exposed} / ${showBypass(bypass)}`
+    : null;
+}
+
+/** firebase-tools は版を固定したリリースの単体バイナリを sha256 で照合し（L3）、資格情報を作る前に --help で読み込みを確かめる */
+function checkFirebaseToolsSteps(steps: Step[]): string[] {
+  const violations: string[] = [];
   const pin = pinOf(steps);
   const release =
     /^https:\/\/github\.com\/firebase\/firebase-tools\/releases\/download\/v\d+\.\d+\.\d+\/firebase-tools-linux$/;
-  if (
-    !pin ||
-    !/sha256sum -c/.test(pin.step.run ?? '') ||
-    !release.test(pin.url) ||
-    !/^[0-9a-f]{64}$/.test(pin.sha)
-  ) {
+  const download = pin ? deployDownloadProblem(pin.step) : null;
+  if (!pin || download || !release.test(pin.url) || !/^[0-9a-f]{64}$/.test(pin.sha)) {
     violations.push(
-      `firebase-tools を、版を固定したリリースの単体バイナリにして sha256 で照合していない: ${showPin(pin)}`
+      `firebase-tools を、版を固定したリリースの単体バイナリにして sha256 で照合していない: ${showPin(pin)}${
+        download ? `（${download}）` : ''
+      }`
     );
   }
   // 確認の手順は、この 1 行だけ（|| true や continue-on-error で失敗を握りつぶさない）。順番は 取得 → --help → auth
@@ -319,6 +341,13 @@ function checkDeploySteps(workflow: Workflow, { site }: Inputs): string[] {
       } / --help ${help} / auth ${auth} / ${showBypass(helpBypass)}）`
     );
   }
+  return violations;
+}
+
+/** candidate への配信 → ヘッダー照合 → live への複製 → ヘッダー照合（L4）。配信先は cms/firebase.json の既定サイトだけ */
+function checkPromotion(steps: Step[], site: string): string[] {
+  const violations: string[] = [];
+  const runs = steps.map((step) => step.run ?? '');
   const order = ['hosting:channel:deploy candidate', 'CHECK_URL', 'hosting:clone', 'CHECK_URL'];
   let cursor = -1;
   for (const marker of order) {
@@ -382,10 +411,13 @@ function checkFirebaseToolsPin(workflow: Workflow, { ci }: Inputs): string[] {
 
 const checkAll = (inputs: Inputs): string[] => {
   const workflow = yaml.load(inputs.workflow) as Workflow;
+  const deploySteps = workflow.jobs.deploy?.steps ?? [];
   return [
     ...checkKeyless(workflow, inputs.workflow),
     ...checkGcpDocs(workflow, inputs),
-    ...checkDeploySteps(workflow, inputs),
+    ...checkDeploySteps(workflow),
+    ...checkFirebaseToolsSteps(deploySteps),
+    ...checkPromotion(deploySteps, inputs.site),
     ...checkFirebaseToolsPin(workflow, inputs),
   ];
 };
@@ -482,6 +514,25 @@ describe('F3 変異: 片側だけを変えると両側の値を出して落ち�
     ],
   ])('deploy ジョブ: %s', (_, from, to) => {
     expect(mutate(inWorkflow(from, to))).toContain(DEPLOY_GATE);
+  });
+
+  // 再レビュー（PR #359）: 資格情報を持つ deploy ジョブ側の照合も、行と順番で照合する
+  const DEPLOY_CHECK = 'echo "${FIREBASE_TOOLS_SHA256}  $RUNNER_TEMP/bin/firebase" | sha256sum -c -';
+  const DEPLOY_FETCH = 'curl -fsSL --retry 3 -o "$RUNNER_TEMP/bin/firebase" "$FIREBASE_TOOLS_URL"';
+  it.each([
+    ['sha256 の照合を || true で握りつぶす', DEPLOY_CHECK, `${DEPLOY_CHECK} || true`],
+    [
+      'curl の URL を直書きにする（env の URL を使わない）',
+      DEPLOY_FETCH,
+      `curl -fsSL --retry 3 -o "$RUNNER_TEMP/bin/firebase" ${deployPin()?.url.replace(/\/v\d+\.\d+\.\d+\//, '/v15.31.0/')}`,
+    ],
+    [
+      'PATH に出してから照合する',
+      `${DEPLOY_CHECK}\n          chmod +x "$RUNNER_TEMP/bin/firebase"\n          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"`,
+      `echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"\n          chmod +x "$RUNNER_TEMP/bin/firebase"\n          ${DEPLOY_CHECK}`,
+    ],
+  ])('deploy ジョブの取得: %s', (_, from, to) => {
+    expect(mutate(inWorkflow(from, to))).toContain('sha256 で照合していない');
   });
 
   it('deploy ジョブ: 同じ env を持つおとりの手順を、本物の取得の前に置く', () => {

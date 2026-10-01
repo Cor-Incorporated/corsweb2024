@@ -154,10 +154,11 @@ jobs:
             jq . "$RUNNER_TEMP/channel.json" 2>/dev/null || jq -R . "$RUNNER_TEMP/channel.json" || true
             exit "$rc"
           fi
-          # 成功でも URL が取れなければ止める（空のまま進むと次の手順で "/" を照合してしまう）
-          url=$(jq -er '.result[].url' "$RUNNER_TEMP/channel.json")
-          if [ -z "$url" ]; then
+          # 成功でも URL が取れなければ止める（空のまま進むと次の手順で "/" を照合してしまう）。
+          # 代入を if の条件に置く: そうしないと set -e で代入の時点で止まり、理由も出力も残らない
+          if ! url=$(jq -er '.result[].url' "$RUNNER_TEMP/channel.json") || [ -z "$url" ]; then
             echo "::error title=candidate の URL が取れない::firebase-tools の --json の出力に .result[].url が無い"
+            jq . "$RUNNER_TEMP/channel.json" 2>/dev/null || jq -R . "$RUNNER_TEMP/channel.json" || true
             exit 1
           fi
           echo "CHECK_URL=${url%/}/" >> "$GITHUB_ENV"
