@@ -203,8 +203,19 @@ const GIT_ENV = {
   GIT_COMMITTER_NAME: 'h5-test',
   GIT_COMMITTER_EMAIL: 'h5-test@example.com',
 };
+/**
+ * 呼び出し元の GIT_*（git rebase -x やフックは GIT_DIR・GIT_WORK_TREE・GIT_INDEX_FILE を渡す）と H5_DIFF_FILES を
+ * 引き継がない。引き継ぐと、cwd ではなく呼び出し元の repo にコミットや fetch をしてしまう（#378 のレビュー）
+ */
+const isolatedEnv = (extra = {}) => ({
+  ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_') && key !== 'H5_DIFF_FILES')),
+  ...GIT_ENV,
+  ...extra,
+});
+/** 同期の子プロセスは vitest のタイムアウトで止められないので、自分で時間を切る */
+const CHILD_TIMEOUT = 20_000;
 function git(cwd, ...args) {
-  const result = spawnSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, ...GIT_ENV } });
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8', env: isolatedEnv(), timeout: CHILD_TIMEOUT });
   if (result.status !== 0) throw new Error(`git ${args.join(' ')} (${cwd}): ${result.stderr}`);
   return result.stdout.trim();
 }
@@ -241,43 +252,123 @@ function cloneWithMovedBase(name, prFile) {
 
 /** H5_DIFF_FILES を渡さずに動かす（スクリプトが origin から base を取り、git diff で差分を出す） */
 function runWithoutDiffFiles(script) {
-  const { H5_DIFF_FILES: _unused, ...env } = process.env;
   const result = spawnSync('bash', [script], {
     encoding: 'utf8',
-    env: {
-      ...env,
-      ...GIT_ENV,
+    timeout: CHILD_TIMEOUT,
+    env: isolatedEnv({
       H5_PR_BODY: '',
       H5_BASE_REF: 'origin/develop',
       H5_HEAD_REF: 'HEAD',
       H5_LEDGER_PATH: path.join(dir, 'ledger.jsonl'),
       GITHUB_EVENT_PATH: '',
       H5_PR_NUMBER: '',
-    },
+    }),
   });
   return { status: result.status, out: `${result.stdout}${result.stderr}` };
+}
+/** スクリプトを動かし、クローンが浅くなったか・origin/develop・結果をまとめて返す（赤のときに全部が出るように） */
+function observe(clone, script) {
+  const { status, out } = runWithoutDiffFiles(script);
+  let originDevelop = '(none)';
+  try {
+    originDevelop = git(clone, 'rev-parse', 'origin/develop');
+  } catch {
+    // --single-branch のクローンで base を取れなかったとき
+  }
+  return {
+    shallow: git(clone, 'rev-parse', '--is-shallow-repository'),
+    originDevelop,
+    status,
+    out,
+  };
 }
 
 /**
  * 2026-10-01 まで、スクリプトは base をいつも git fetch --depth=1 で取っていた。完全なクローンでもその先端が
- * .git/shallow に入り、(1) 手元では、同じ .git を使う全 worktree の履歴が途中で切れて見えた (2) develop が進んだ後は
- * merge base が見つからず、2 点の diff に落ちて、develop 側のワークフローの変更を PR の変更と取り違えていた。
+ * .git/shallow に入り、(1) 手元では、同じ .git を使う全 worktree の履歴が途中で切れて見えた (2) base の先端が、HEAD の
+ * 元になったコミット（CI ではテスト用のマージコミットの 1 つ目の親。手元では PR を分けた点）と違うと merge base が
+ * 見つからず、2 点の diff に落ちて、develop 側のワークフローの変更を PR の変更と取り違えていた。
  */
 describe('H5: 完全なクローンでは、base を浅く取らない（H5_DIFF_FILES を渡さないとき）', SLOW, () => {
   it('develop が進んでも、クローンは浅くならず、PR の変更だけを見る（develop 側のワークフローの変更で落ちない）', () => {
     const { clone, work, script } = cloneWithMovedBase('moved-base-docs', 'docs/note.md');
-    const { status, out } = runWithoutDiffFiles(script);
-    expect(git(clone, 'rev-parse', '--is-shallow-repository')).toBe('false');
-    expect(git(clone, 'rev-parse', 'origin/develop')).toBe(git(work, 'rev-parse', 'HEAD'));
-    expect({ status, out }).toMatchObject({ status: 0, out: expect.stringContaining('not a guard/verifier PR') });
+    expect(observe(clone, script)).toMatchObject({
+      shallow: 'false',
+      originDevelop: git(work, 'rev-parse', 'HEAD'),
+      status: 0,
+      out: expect.stringContaining('not a guard/verifier PR'),
+    });
+  });
+
+  it('develop を取り込んだ PR（update-branch のあと）でも、develop 側の変更を数えない', () => {
+    // PR のコミットが 1 つだけだと、3 点の diff と HEAD~1...HEAD の代わりの diff が同じになり、見分けられない
+    const { clone, script } = cloneWithMovedBase('moved-base-updated', 'docs/note.md');
+    git(clone, 'fetch', '-q', 'origin');
+    git(clone, 'merge', '-q', '--no-edit', 'origin/develop');
+    expect(observe(clone, script)).toMatchObject({ shallow: 'false', status: 0, out: expect.stringContaining('not a guard/verifier PR') });
+  });
+
+  it('CI の形（develop に PR を重ねたテスト用のマージコミットに detached。その後に develop が進んだ）でも、PR の変更だけを見る', () => {
+    // クローンの origin/develop は、PR を分けたときの先端のまま（スクリプトが進んだ先端を fetch する）
+    const { clone, script } = cloneWithMovedBase('moved-base-merge-ref', 'docs/note.md');
+    git(clone, 'switch', '-q', '--detach', 'origin/develop');
+    git(clone, 'merge', '-q', '--no-ff', '--no-edit', 'feature');
+    expect(observe(clone, script)).toMatchObject({ shallow: 'false', status: 0, out: expect.stringContaining('not a guard/verifier PR') });
+  });
+
+  it('--single-branch のクローンでも base を取り、PR の前のコミットのワークフローの変更を見落とさない', () => {
+    // ブランチ名だけの fetch は --single-branch では FETCH_HEAD しか動かさず、origin/develop が無いまま
+    // HEAD~1...HEAD（最後のコミットだけ）を見て、前のコミットのワークフローの変更を見落としていた
+    const { clone: full } = cloneWithMovedBase('single-branch', '.github/workflows/pr.yml');
+    commitFile(full, 'docs/note.md', 'more\n', 'docs');
+    git(full, 'push', '-q', 'origin', 'feature');
+    const single = path.join(dir, 'single-branch', 'single');
+    git(dir, 'clone', '-q', '--single-branch', '-b', 'feature', `file://${path.join(dir, 'single-branch', 'origin.git')}`, single);
+    mkdirSync(path.join(single, 'scripts'), { recursive: true });
+    writeFileSync(path.join(single, 'scripts/h5-admission-check.sh'), readFileSync(SCRIPT, 'utf8'));
+    expect(observe(single, path.join(single, 'scripts/h5-admission-check.sh'))).toMatchObject({
+      status: 1,
+      out: expect.stringContaining('H5: structural paths in the diff: .github/workflows/pr.yml'),
+    });
+  });
+
+  it('merge base が無く 2 点の diff に落ちるときは、そのことを警告する（誤検知とログで見分けるため）', () => {
+    const { clone, script } = cloneWithMovedBase('no-merge-base', 'docs/note.md');
+    git(clone, 'switch', '-q', '--orphan', 'unrelated');
+    commitFile(clone, 'docs/other.md', 'other\n', 'unrelated history');
+    expect(observe(clone, script).out).toContain('no merge base between origin/develop and HEAD: falling back to a two-dot diff');
+  });
+
+  it('H5_DIFF_FILES はグロブとして展開しない（hooks/[x].sh を hooks/x.sh と読まない）', () => {
+    const script = fakeRepo('glob-literal', { 'hooks/x.sh': '#!/usr/bin/env bash\naidd_ledger_append "guard" "block"\n' });
+    // 展開すると、存在しない hooks/[x].sh の代わりに hooks/x.sh を台帳の証拠として読んでしまう
+    expect(run(body(), 'hooks/[x].sh', { script })).toMatchObject({ status: 1, out: expect.stringContaining('ledger-wiring') });
+  });
+
+  it('呼び出し元の GIT_DIR を引き継がない（git rebase -x などで渡されても、その repo を書き換えない）', () => {
+    const sentinel = path.join(dir, 'sentinel');
+    git(dir, 'init', '-q', '-b', 'main', sentinel);
+    commitFile(sentinel, 'keep.txt', 'keep\n', 'sentinel');
+    const before = git(sentinel, 'log', '--format=%H %s');
+    const saved = process.env.GIT_DIR;
+    process.env.GIT_DIR = path.join(sentinel, '.git');
+    try {
+      const { script } = cloneWithMovedBase('git-dir-inherited', 'docs/note.md');
+      runWithoutDiffFiles(script);
+    } finally {
+      if (saved === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = saved;
+    }
+    expect(git(sentinel, 'log', '--format=%H %s')).toBe(before);
   });
 
   it('PR 自身がワークフローを変えたときは、ガードの PR として照合する（差分が空にならない）', () => {
     const { clone, script } = cloneWithMovedBase('moved-base-workflow', '.github/workflows/pr.yml');
-    const { status, out } = runWithoutDiffFiles(script);
-    expect(git(clone, 'rev-parse', '--is-shallow-repository')).toBe('false');
-    expect(status).toBe(1);
-    expect(out).toContain('guard/verifier PR detected');
+    expect(observe(clone, script)).toMatchObject({
+      shallow: 'false',
+      status: 1,
+      out: expect.stringContaining('H5: structural paths in the diff: .github/workflows/pr.yml'),
+    });
   });
 
   it('CI の checkout は完全なクローン（h5-admission.yml の fetch-depth: 0）。浅いと merge base が無く、2 点の diff に落ちる', () => {

@@ -37,22 +37,29 @@ fi
 
 # --- Diff paths ---
 if [[ -n "${H5_DIFF_FILES:-}" ]]; then
-  # newline or space separated override (tests); split on purpose
-  # shellcheck disable=SC2086
-  DIFF_FILES="$(printf '%s\n' $H5_DIFF_FILES)"
+  # Newline or space separated override (tests). Split on whitespace without glob expansion: an unquoted
+  # $H5_DIFF_FILES would also turn hooks/[x].sh into hooks/x.sh when that file exists.
+  DIFF_FILES="$(printf '%s' "$H5_DIFF_FILES" | tr -s '[:space:]' '\n')"
 else
   # --depth=1 only for a checkout that is already shallow. On a complete clone (CI checks out with fetch-depth: 0, and
   # local clones are complete) it writes the base tip into .git/shallow: every worktree sharing that .git then sees cut
-  # history, and once the base moves past the PR's fork point the three-dot diff below finds no merge base and falls back
-  # to two dots, counting the base's own changes (e.g. a workflow merged into develop meanwhile) as the PR's (2026-10-01).
+  # history, and the base tip has no parents. Once that tip differs from the commit HEAD was built on (in CI the first
+  # parent of the test merge commit, e.g. on a re-run after the base moved; locally the PR's fork point), the three-dot
+  # diff below finds no merge base and falls back to two dots, counting the base's own changes (e.g. a workflow merged
+  # into develop meanwhile) as the PR's (2026-10-01).
+  # The explicit refspec also updates origin/<base> in a --single-branch clone, where a bare branch name only moves FETCH_HEAD.
   base_branch="${BASE_REF#origin/}"
+  base_refspec="+refs/heads/${base_branch}:refs/remotes/origin/${base_branch}"
   if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" == "true" ]]; then
-    git fetch --no-tags --depth=1 origin "$base_branch" 2>/dev/null || true
+    git fetch --no-tags --depth=1 origin "$base_refspec" 2>/dev/null || true
   else
-    git fetch --no-tags origin "$base_branch" 2>/dev/null || true
+    git fetch --no-tags origin "$base_refspec" 2>/dev/null || true
   fi
   if git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
-    DIFF_FILES="$(git diff --name-only "$BASE_REF"..."$HEAD_REF" 2>/dev/null || git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || true)"
+    if ! DIFF_FILES="$(git diff --name-only "$BASE_REF"..."$HEAD_REF" 2>/dev/null)"; then
+      warn "no merge base between $BASE_REF and $HEAD_REF: falling back to a two-dot diff, which also lists the base's own changes"
+      DIFF_FILES="$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || true)"
+    fi
   else
     DIFF_FILES="$(git diff --name-only HEAD~1...HEAD 2>/dev/null || true)"
   fi
@@ -66,6 +73,9 @@ is_guard_pr=0
 _H5_STRUCT_RE='^(hooks/.+\.sh|scripts/.+\.sh|settings\.json|\.github/workflows/)'
 if printf '%s\n' "$DIFF_FILES" | grep -qE "$_H5_STRUCT_RE"; then
   is_guard_pr=1
+  # Name the paths that made this a guard PR, so a false positive (e.g. the two-dot fallback above) can be told apart
+  # from a real workflow change in the log. awk reads all of its input, so it cannot close the pipe early.
+  log "H5: structural paths in the diff: $(printf '%s\n' "$DIFF_FILES" | grep -E "$_H5_STRUCT_RE" | awk 'NR <= 5' | tr '\n' ' ')"
 fi
 # Self-declaration (PR template)
 if printf '%s' "$PR_BODY" | grep -qiE 'H5-guard:\s*yes|ブロック権限|完了判定検証器|block-capable guard'; then
