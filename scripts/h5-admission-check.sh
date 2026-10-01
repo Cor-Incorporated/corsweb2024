@@ -57,8 +57,12 @@ else
   fi
   if git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
     if ! DIFF_FILES="$(git diff --name-only "$BASE_REF"..."$HEAD_REF" 2>/dev/null)"; then
-      warn "no merge base between $BASE_REF and $HEAD_REF: falling back to a two-dot diff, which also lists the base's own changes"
-      DIFF_FILES="$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || true)"
+      warn "three-dot diff $BASE_REF...$HEAD_REF failed (no merge base?): falling back to a two-dot diff, which also lists the base's own changes"
+      if ! DIFF_FILES="$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null)"; then
+        # Fail closed: an empty diff would pass any PR as "not a guard PR" (e.g. a mistyped H5_HEAD_REF).
+        fail "cannot diff $BASE_REF against $HEAD_REF: check H5_BASE_REF and H5_HEAD_REF"
+        exit 1
+      fi
     fi
   else
     DIFF_FILES="$(git diff --name-only HEAD~1...HEAD 2>/dev/null || true)"
