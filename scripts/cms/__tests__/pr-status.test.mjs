@@ -24,8 +24,15 @@ const completed = (id, name, extra = {}) => ({
   html_url: `https://github.com/o/r/actions/runs/${id}`,
   ...extra,
 });
-const CHECKS = ['h5-admission', 'verify', 'Chromium visual text audit', 'i18n-check'].map((name, i) => completed(i + 1, name));
-const RUNS = [completed(10, 'CI', { event: 'pull_request', workflow_id: 1 })];
+const TRANSLATE_SUITE = 77;
+const CHECKS = [
+  ...['h5-admission', 'verify', 'Chromium visual text audit'].map((name, i) => completed(i + 1, name)),
+  completed(4, 'i18n-check', { check_suite: { id: TRANSLATE_SUITE } }),
+];
+const RUNS = [
+  completed(10, 'CI', { event: 'pull_request', workflow_id: 1, check_suite_id: 70 }),
+  completed(11, 'Translate content (i18n)', { event: 'pull_request', workflow_id: 2, check_suite_id: TRANSLATE_SUITE }),
+];
 const PREFIX = 'repos/{owner}/{repo}/';
 
 /** gh api の偽物。エンドポイントで答えを選び、呼ばれた引数を残す。PR の取得（pulls/<番号>）には reads を順に返す */

@@ -106,9 +106,10 @@ function checkJob(workflow: Workflow): string[] {
     ...(JSON.stringify(job?.permissions) === JSON.stringify(PERMISSIONS)
       ? []
       : [`status ジョブの permissions: ${JSON.stringify(job?.permissions)} / 期待 ${JSON.stringify(PERMISSIONS)}`]),
-    ...(group.includes('github.event.workflow_run.head_branch') && job?.concurrency?.['cancel-in-progress'] === false
+    ...(['github.event.workflow_run.pull_requests[0].number', 'inputs.pr'].every((key) => group.includes(key)) &&
+    job?.concurrency?.['cancel-in-progress'] === false
       ? []
-      : [`status ジョブの concurrency が PR のブランチごと・cancel-in-progress: false ではない: ${JSON.stringify(job?.concurrency)}`]),
+      : [`status ジョブの concurrency が、自動と手動で同じ PR の番号ごと・cancel-in-progress: false ではない: ${JSON.stringify(job?.concurrency)}`]),
   ];
 }
 
@@ -238,6 +239,12 @@ describe('F3 変異: 片側だけ変える・守りを外すと落ちる', () =>
     expect(check(loadText(FILE), { ...given, firebase: { hosting: { site: 'cor-jp-next' } } }).join('\n')).toContain(
       'プレビューのサイト "cor-jp-main"（pr-status-core.mjs）が firebase.json の hosting.site に無い（あるもの: cor-jp-next）'
     );
+  });
+
+  it('自動の通知のグループをブランチ名にする（手動の知らせ直しと同じ PR でも並んで走り、同じコメントを 2 回書く）', () => {
+    expect(
+      mutate('github.event.workflow_run.pull_requests[0].number || inputs.pr || github.event.workflow_run.head_branch', 'github.event.workflow_run.head_branch || inputs.pr')
+    ).toContain('status ジョブの concurrency が、自動と手動で同じ PR の番号ごと');
   });
 
   it('concurrency をワークフロー全体に置く', () => {

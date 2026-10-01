@@ -31,17 +31,21 @@ const run = (id, name, conclusion, extra = {}) => ({
   id,
   name,
   workflow_id: WATCHED.includes(name) ? 1000 + WATCHED.indexOf(name) : 1999,
+  check_suite_id: 5000 + id,
   event: 'pull_request',
   status: status(conclusion),
   conclusion,
   html_url: `https://github.com/o/r/actions/runs/${id}`,
   ...extra,
 });
+/** 翻訳 CI の pull_request の実行（下の greenRuns の Translate content (i18n)。id 104）の check suite */
+const TRANSLATE_SUITE = 5104;
+const i18nCheck = (id, conclusion, suite = TRANSLATE_SUITE) => check(id, 'i18n-check', conclusion, { check_suite: { id: suite } });
 const greenChecks = [
   check(1, 'h5-admission', 'success'),
   check(2, 'verify', 'success'),
   check(3, 'Chromium visual text audit', 'success'),
-  check(4, 'i18n-check', 'success'),
+  i18nCheck(4, 'success'),
   check(5, 'Deploy Preview', 'success', { output: { summary: `[${PREVIEW}](${PREVIEW})` } }),
 ];
 const greenRuns = WATCHED.map((name, i) => run(100 + i, name, 'success'));
@@ -88,7 +92,7 @@ describe('computeState: 失敗と公開できる', () => {
   const failing = [
     check(11, 'verify', 'failure'),
     check(12, 'Chromium visual text audit', 'failure'),
-    check(13, 'i18n-check', 'failure'),
+    i18nCheck(13, 'failure'),
     check(14, 'h5-admission', 'success'),
   ];
 
@@ -116,6 +120,20 @@ describe('computeState: 失敗と公開できる', () => {
     const result = stateOf({ files: [{ filename: 'src/content/blog/ja/existing-post.md' }] });
     expect(result.translation).toBe('ok');
     expect(renderComment({ result, sha: SHA, isDraft: false })).toContain('英・中・韓・西の 4 言語がそろっていて');
+  });
+
+  it('手で動かした mode=check（言語や記事を絞れる）の i18n-check は使わない。PR の実行の失敗を上書きしない', () => {
+    const manual = run(300, 'Translate content (i18n)', 'success', { event: 'workflow_dispatch' });
+    const checkRuns = [...without(greenChecks, 'i18n-check'), i18nCheck(4, 'failure'), i18nCheck(60, 'success', manual.check_suite_id)];
+    const result = stateOf({ checkRuns, workflowRuns: [...greenRuns, manual] });
+    expect(result.state).toBe('failed');
+    expect(result.failed).toEqual([{ name: 'i18n-check', conclusion: 'failure', url: 'https://github.com/o/r/actions/runs/1/job/4' }]);
+  });
+
+  it('i18n-check が、翻訳 CI が起こす再検査（workflow_dispatch）の実行にしか無いうちは pending', () => {
+    const dispatched = run(300, 'Translate content (i18n)', 'success', { event: 'workflow_dispatch' });
+    const checkRuns = [...without(greenChecks, 'i18n-check'), i18nCheck(60, 'success', dispatched.check_suite_id)];
+    expect(stateOf({ checkRuns, workflowRuns: [...greenRuns, dispatched] })).toEqual({ state: 'pending' });
   });
 
   it('src/content/ を変える PR で、i18n-check がまだ無いうちは pending', () => {

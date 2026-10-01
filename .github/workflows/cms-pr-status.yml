@@ -46,9 +46,10 @@ jobs:
       startsWith(github.event.workflow_run.head_branch, 'cms/') &&
       github.event.workflow_run.head_repository.full_name == github.repository)
     # 同じ PR の通知は 1 本ずつ（同時に走ると同じ状態を 2 回書きうる）。待っている run は新しい run に置き換わるが、
-    # どの run も最新の状態を読み直すので抜けない。job に置くのは、if で飛ばした run を待ちの列に入れないため
+    # どの run も最新の状態を読み直すので抜けない。job に置くのは、if で飛ばした run を待ちの列に入れないため。
+    # キーは PR の番号（自動と手動で同じにする）。workflow_run に PR が載っていないときだけブランチ名にする
     concurrency:
-      group: cms-pr-status-${{ github.event.workflow_run.head_branch || inputs.pr }}
+      group: cms-pr-status-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr || github.event.workflow_run.head_branch }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5

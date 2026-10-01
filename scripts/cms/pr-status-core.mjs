@@ -23,7 +23,8 @@ export const WATCHED_WORKFLOWS = Object.freeze([
 export const REQUIRED_CHECKS = Object.freeze(['h5-admission', 'verify', 'Chromium visual text audit']);
 /**
  * 翻訳の検査（translate-content.yml の i18n-check ジョブ。PR で変えた記事の翻訳がそろい、ja の今の内容に合っているか）。
- * 翻訳の有無は PR の差分ではなくこの結果で決める（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）
+ * 翻訳の有無は PR の差分ではなくこの結果で決める（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）。
+ * 使うのは PR のイベントで動いた実行の結果だけ（translationRunOf）
  */
 export const TRANSLATION_CHECK = 'i18n-check';
 /** この下を変えた PR では翻訳 CI が動く（translate-content.yml の pull_request.paths。cms-pr-status.test.ts が照合する） */
@@ -81,10 +82,20 @@ export function previewUrlOf(checkRun, prNumber) {
   return pattern.exec(checkRun?.output?.summary ?? '')?.[0] ?? null;
 }
 
+/**
+ * i18n-check のうち、PR のイベント（pull_request）で動いた実行の最新のもの。check run の check_suite と workflow run の
+ * check_suite_id で、どのイベントの実行かを決める。手で動かす mode=check は言語や記事を絞れるので、PR 全体・全言語の検査とは
+ * 限らない（Codex のレビュー）。翻訳 CI が起こす再検査（dispatch-check）も使わない（承認したあとの pull_request の実行が同じ検査をする）
+ */
+function translationRunOf(checkRuns, workflowRuns) {
+  const suites = new Set(workflowRuns.filter((run) => run.event === 'pull_request').map((run) => run.check_suite_id));
+  const fromPullRequests = checkRuns.filter((run) => run.name === TRANSLATION_CHECK && suites.has(run.check_suite?.id));
+  return latestByName(fromPullRequests).get(TRANSLATION_CHECK);
+}
+
 /** 翻訳の検査の状態: none（PR が src/content/ を変えていない）・ok・failed・pending */
-function translationOf(latest, files) {
+function translationOf(run, files) {
   if (!files.some((file) => file.filename.startsWith(CONTENT_PREFIX))) return 'none';
-  const run = latest.get(TRANSLATION_CHECK);
   if (isSucceeded(run)) return 'ok';
   return isFailed(run) ? 'failed' : 'pending';
 }
@@ -106,9 +117,9 @@ export function computeState({ checkRuns, workflowRuns, files, prNumber }) {
   if (waiting.length > 0) return { state: 'needs-approval', waiting: waiting.map(linkOf) };
   if (runs.some((run) => run.event === 'pull_request' && run.status !== 'completed')) return { state: 'pending' };
   const latest = latestByName(checkRuns);
-  const translation = translationOf(latest, files);
-  const checks = translation === 'none' ? REQUIRED_CHECKS : [...REQUIRED_CHECKS, TRANSLATION_CHECK];
-  const failed = checks.map((name) => latest.get(name)).filter(isFailed);
+  const translationRun = translationRunOf(checkRuns, workflowRuns);
+  const translation = translationOf(translationRun, files);
+  const failed = [...REQUIRED_CHECKS.map((name) => latest.get(name)), ...(translation === 'none' ? [] : [translationRun])].filter(isFailed);
   if (failed.length > 0) return { state: 'failed', failed: failed.map(linkOf), translation };
   if (!REQUIRED_CHECKS.every((name) => isPassed(latest.get(name))) || translation === 'pending') return { state: 'pending' };
   return { state: 'ready', translation, preview: previewOf(latest.get(PREVIEW_CHECK), prNumber) };
