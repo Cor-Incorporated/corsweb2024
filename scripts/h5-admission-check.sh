@@ -87,34 +87,59 @@ missing=()
 
 # Prefer explicit machine markers (H5-NEGATIVE: / H5-LEDGER: / H5-RETIRE:)
 # Fall back to Japanese/English section content of sufficient length.
+# A marker needs at least H5_MARKER_MIN characters of content on the same line, the same minimum as a section.
+# Counted in Python so that the length is in characters in every locale (grep counts bytes in the C locale, where one
+# Japanese character is three bytes). Any horizontal space may follow the colon (including U+3000 and no-break space).
+# A content that is only a placeholder such as <...> does not count. The body goes through stdin, not the
+# environment (an environment string is limited to 128 KiB on Linux).
+H5_MARKER_MIN=20
+# The Python programs below are single-quoted on purpose: their $ and \ belong to Python regexes, not the shell.
+# shellcheck disable=SC2016
+H5_MARKER_PY='
+import re, sys
+key = sys.argv[1]
+body = sys.stdin.read()
+pattern = r"(?im)(?:^|\s)H5-" + re.escape(key) + r":[^\S\n]*(\S.*)$"
+contents = [m.group(1).rstrip() for m in re.finditer(pattern, body)]
+real = [c for c in contents if not re.fullmatch(r"<[^>]*>", c)]
+print(max((len(c) for c in real), default=-1))
+'
+# Longest content length of the H5-<key>: markers (-1 when there is none)
+marker_length() {
+  printf '%s' "$PR_BODY_EVIDENCE" | python3 -c "$H5_MARKER_PY" "$1" 2>/dev/null || echo -1
+}
 has_marker() {
-  local key="$1"
-  printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE "(^|[[:space:]])H5-${key}:[[:space:]]*\\S.{8,}"
+  [[ "$(marker_length "$1")" -ge "$H5_MARKER_MIN" ]]
+}
+# What was found, for the failure message (rule: show observed values, not only the expectation)
+describe_marker() {
+  local n
+  n="$(marker_length "$1")"
+  if [[ "$n" -lt 0 ]]; then printf 'H5-%s: none counted' "$1"; else printf 'H5-%s: longest %s chars' "$1" "$n"; fi
 }
 
-has_section_content() {
-  local title_re="$1"
-  H5_SECTION_BODY="$PR_BODY_EVIDENCE" python3 -c "
-import re, os, sys
+# shellcheck disable=SC2016
+H5_SECTION_PY='
+import re, sys
 title = sys.argv[1]
-body = os.environ.get('H5_SECTION_BODY', '')
-pat = re.compile(rf'(?im)^#{{1,3}}\\s*(?:{title})\\s*\$([\\s\\S]*?)(?=^#{{1,3}}\\s|\\Z)')
-m = pat.search(body)
+minimum = int(sys.argv[2])
+body = sys.stdin.read()
+m = re.search(r"(?im)^#{1,3}\s*(?:" + title + r")\s*$([\s\S]*?)(?=^#{1,3}\s|\Z)", body)
 if not m:
     sys.exit(1)
 content = m.group(1).strip()
-if len(content) < 20:
+if len(content) < minimum or re.fullmatch(r"[-*\[\] xX\s]*", content):
     sys.exit(1)
-if re.fullmatch(r'[-*\\[\\] xX\\s]*', content):
-    sys.exit(1)
-sys.exit(0)
-" "$title_re" 2>/dev/null
+'
+has_section_content() {
+  printf '%s' "$PR_BODY_EVIDENCE" | python3 -c "$H5_SECTION_PY" "$1" "$H5_MARKER_MIN" 2>/dev/null
 }
 
 # (1) Negative test evidence (known-bad → red measured)
 neg_ok=0
 has_marker "NEGATIVE" && neg_ok=1
-has_section_content '陰性テスト|negative[[:space:]-]?test' && neg_ok=1
+# The section title is a Python regex (\s, not the POSIX [[:space:]] that Python reads as a nested set)
+has_section_content '陰性テスト|negative[\s-]?test' && neg_ok=1
 if [[ "$neg_ok" -eq 0 ]]; then
   if printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE '(陰性テスト|negative[[:space:]-]?test)' \
     && printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE '(red 実測|exit[[:space:]]*[12]|FAILED|known-bad|inject)'; then
@@ -123,24 +148,26 @@ if [[ "$neg_ok" -eq 0 ]]; then
 fi
 [[ "$neg_ok" -eq 0 ]] && missing+=("negative-test-evidence")
 
-# (2) H6 ledger wiring — body marker/section or changed hook sources
+# (2) H6 ledger wiring — an H5-LEDGER: marker or a ledger section in the body, or a changed hooks/** or scripts/h5*
+# file that writes to the ledger: aidd_ledger_append run as a command (at the start of a line, or after && || ; then do),
+# or an append (>>) to a *LEDGER* path, on a line that is not a comment. This is a heuristic, not a shell parser: it misses
+# some real calls (after if ! { else, a pipe or $(...)) and can count some mentions inside strings or heredocs, so the
+# H5-LEDGER: marker or a ledger section is the reliable evidence. A bare mention of guard-ledger.jsonl or
+# aidd_ledger_append, in the body or in a comment, does not count: "guard-ledger.jsonl への配線は無い" used to pass
+# (PR #371 and #375 reviews, 2026-10-01). The last grep writes to /dev/null instead of -q: with pipefail, -q closes the
+# pipe early and the first grep dies with SIGPIPE (exit 141) on a large file.
 has_ledger_body=0
 has_marker "LEDGER" && has_ledger_body=1
 has_section_content '台帳|ledger|防御台帳' && has_ledger_body=1
-printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE 'aidd_ledger_append|guard-ledger\.jsonl' && has_ledger_body=1
 has_ledger_code=0
 while IFS= read -r f; do
   [[ -z "$f" || ! -f "$f" ]] && continue
-  if grep -qE 'aidd_ledger_append|guard-ledger\.jsonl|aidd-ledger' "$f" 2>/dev/null; then
+  if grep -vE '^[[:space:]]*#' "$f" 2>/dev/null \
+    | grep -E '(^|&&|\|\||;|[[:space:]]then|[[:space:]]do)[[:space:]]*aidd_ledger_append[[:space:]]|>>[[:space:]]*"?\$\{?[A-Z_]*LEDGER' >/dev/null; then
     has_ledger_code=1
     break
   fi
 done <<<"$(printf '%s\n' "$DIFF_FILES" | grep -E '^hooks/|^scripts/h5' || true)"
-if [[ "$has_ledger_body" -eq 0 && "$has_ledger_code" -eq 0 ]]; then
-  if printf '%s\n' "$DIFF_FILES" | grep -q 'h5-admission' && printf '%s' "$PR_BODY_EVIDENCE" | grep -qiE '台帳|ledger'; then
-    has_ledger_body=1
-  fi
-fi
 if [[ "$has_ledger_body" -eq 0 && "$has_ledger_code" -eq 0 ]]; then
   missing+=("ledger-wiring")
 fi
@@ -191,6 +218,10 @@ done <<<"$(printf '%s\n' "$DIFF_FILES")"
 
 if ((${#missing[@]} > 0)); then
   fail "admission fee incomplete: ${missing[*]}"
+  fail "found: $(describe_marker NEGATIVE) / $(describe_marker LEDGER) / $(describe_marker RETIRE) (each needs >= ${H5_MARKER_MIN} chars on the same line)"
+  fail "not counted: <...> placeholders, and lines containing intentionally missing / expect red / do not merge / falsification only / 未記入 / TODO 陰性 / TODO 台帳 / TODO 廃止"
+  fail "sections accepted (heading text exactly): 陰性テスト|negative test / 台帳|ledger|防御台帳 / 廃止条件|retirement (>= ${H5_MARKER_MIN} chars of content)"
+  fail "ledger from code: a changed hooks/** or scripts/h5* file that runs the ledger append helper as a command, or appends (>>) to a *LEDGER* path"
   fail "Required: (1) 陰性テスト red 実測記録 (2) H6 台帳配線 (3) 廃止条件宣言 — in PR body and/or code"
   fail "See design/ops/harness/h5-negative-test-gate.md"
   # Optional local ledger (does not affect CI if path missing)
