@@ -15,6 +15,7 @@ GitHub OAuth App の client secret をブラウザに出さずにアクセスト
 - `src/index.js` と `LICENSE.txt` は上流のファイルそのまま。git の blob SHA が上流と一致する
   （`src/index.js` = `8c4c3beb721245c30b43e8b5e8444be7038f1789`、`LICENSE.txt` = `0d1f75bec76122bd15bcdf7a895119b2fe5a7f71`）。
 - 変えたのは `wrangler.toml`（`name`・`account_id`・`workers_dev`・`[vars]`・コメント）と、この README だけ。
+  上流に無いファイルとして `.gitignore`（wrangler の一時ファイル `.wrangler/` などを git に入れない）を足した。
 - `ALLOWED_DOMAINS` は secret ではなく `[vars]` に置く。値を git で確認でき、デプロイのたびにこの値で上書きされる。
   `cms/firebase.json` の `hosting.site` との一致は `src/config/__tests__/cms-config.test.ts` が検査する。
 - 上流の `package.json`・`pnpm-lock.yaml`・lint 設定は取り込まない。Worker は外部パッケージを使わず、デプロイは wrangler だけで足りる。
@@ -35,11 +36,15 @@ git diff -- workers/sveltia-cms-auth   # 差分を読んでから、上の表の
 
 手順は `docs/cms-sveltia.md` の「管理者向けセットアップ」。要点だけ:
 
+wrangler 4 は Node.js 22 以上でしか動かない。既定の Node が 22 未満なら `mise exec node@22 --` を前に付ける（Node 22 以上の環境なら外してよい）。
+
 ```bash
 cd workers/sveltia-cms-auth
-npx wrangler@4.135.0 deploy                           # 上流が固定している wrangler の版。ALLOWED_DOMAINS もここで入る
-npx wrangler@4.135.0 secret put GITHUB_CLIENT_ID
-npx wrangler@4.135.0 secret put GITHUB_CLIENT_SECRET
+mise exec node@22 -- npx --yes wrangler@4.135.0 deploy                           # 上流が固定している wrangler の版。ALLOWED_DOMAINS もここで入る
+mise exec node@22 -- npx --yes wrangler@4.135.0 secret put GITHUB_CLIENT_ID
+mise exec node@22 -- npx --yes wrangler@4.135.0 secret put GITHUB_CLIENT_SECRET
 ```
+
+2026-10-01 にデプロイした URL は `docs/cms-sveltia.md` の 2-3 と `cms/public/config.yml` の `backend.base_url`（`cms-config.test.ts` が照合する）。
 
 `ALLOWED_DOMAINS` を空・`*` 入り・プレビューチャネルのホストにしない。上流の Worker は空だと、どのサイトで開かれた CMS にもトークンを渡す。

@@ -112,10 +112,14 @@ jobs:
 
       # npm で入れると依存の版が実行のたびに解決され、install スクリプトも動く。リリースの単体バイナリを
       # sha256（GitHub がリリースに記録した値）で照合して使い、依存も含めて中身を固定する。
-      - name: Download firebase-tools (standalone v15.31.0, sha256 pinned)
+      # 版を上げるときは ci.yml の verify にある同じ URL と sha256 も変える（cms-deploy.test.ts が両方を照合する）。
+      # v15.31.0 は使わない: 単体バイナリが同梱する Node 20.18.2 では、ESM 専用になった依存（stream-chain）を
+      # require() できず、hosting の deploy を読み込んだ時点で exit 2（An unexpected error has occurred.）に
+      # なる（firebase-tools #11168。2026-09-30 の初回配信 run 36678478928 がこれで止まった。v15.32.0 で修正）。
+      - name: Download firebase-tools (standalone v15.32.1, sha256 pinned)
         env:
-          FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.31.0/firebase-tools-linux
-          FIREBASE_TOOLS_SHA256: c2c931e22a281d1bff934352d29fda09886a4fafdd7762cc95786ce2f2cc8586
+          FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.32.1/firebase-tools-linux
+          FIREBASE_TOOLS_SHA256: '790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin"
@@ -124,18 +128,39 @@ jobs:
           chmod +x "$RUNNER_TEMP/bin/firebase"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
+      # 資格情報を作る前に、バイナリが deploy の処理を読み込めることを確かめる（#11168 の壊れ方は
+      # --help でも exit 2 になる）。PR の段階では ci.yml の verify が同じ確認をしている。
+      # 出力（使い方）は捨てない: 壊れていたときのエラーの文面をログに残すため。
+      - name: Check the firebase-tools binary can load the deploy command
+        run: firebase hosting:channel:deploy --help
+
       - name: Authenticate to Google Cloud (Workload Identity Federation, no key)
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: projects/60287323048/locations/global/workloadIdentityPools/github/providers/corsweb2024
           service_account: cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com
 
+      # --json の出力（失敗時の理由も含む）はファイルに書くので、失敗したらその中身をログに出す。
+      # 以前は出していなかったため、run 36678478928 は exit 2 しか残らなかった。
       - name: Deploy to the candidate preview channel
         working-directory: cms
         run: |
           set -euo pipefail
-          firebase hosting:channel:deploy candidate --expires 1h --no-authorized-domains --project cor-jp-cms-admin --json --non-interactive > "$RUNNER_TEMP/channel.json"
-          url=$(jq -r '.result[].url' "$RUNNER_TEMP/channel.json")
+          rc=0
+          firebase hosting:channel:deploy candidate --expires 1h --no-authorized-domains --project cor-jp-cms-admin --json --non-interactive > "$RUNNER_TEMP/channel.json" || rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=candidate への配信に失敗（exit ${rc}）::firebase-tools の --json の出力を次に示す。exit 2 は firebase-tools の想定外の例外（FirebaseError 以外）"
+            # JSON でなければ 1 行ずつ文字列として出す（cat で生のまま出すと ::warning:: などのワークフローコマンドとして解釈される）
+            jq . "$RUNNER_TEMP/channel.json" 2>/dev/null || jq -R . "$RUNNER_TEMP/channel.json" || true
+            exit "$rc"
+          fi
+          # 成功でも URL が取れなければ止める（空のまま進むと次の手順で "/" を照合してしまう）。
+          # 代入を if の条件に置く: そうしないと set -e で代入の時点で止まり、理由も出力も残らない
+          if ! url=$(jq -er '.result[].url' "$RUNNER_TEMP/channel.json") || [ -z "$url" ]; then
+            echo "::error title=candidate の URL が取れない::firebase-tools の --json の出力に .result[].url が無い"
+            jq . "$RUNNER_TEMP/channel.json" 2>/dev/null || jq -R . "$RUNNER_TEMP/channel.json" || true
+            exit 1
+          fi
           echo "CHECK_URL=${url%/}/" >> "$GITHUB_ENV"
 
       - name: Check the candidate serves the CSP and COOP of cms/firebase.json
