@@ -68,12 +68,12 @@ jobs:
         run: npm run test:e2e:admin
 
       # 落ちたら（時間切れで取り消されたときも）、e2e の失敗の記録（trace・error-context.md。playwright.admin.config.ts
-      # の outputDir）を成果物 cms-admin-e2e として 14 日残す。failure() は取り消し（時間切れ）では偽なので always() にする。
-      # 成功したときは隠しファイルの .last-run.json だけが残り、upload-artifact は隠しファイルを上げない（include-hidden-files
-      # の既定は false）ので、成果物はできない。落ちた配信は deploy ジョブまで進まないので、cms-site とは別にする。
-      # 照合: src/config/__tests__/admin-e2e-artifacts.test.ts
+      # の outputDir）を成果物 cms-admin-e2e として 14 日残す。failure() は取り消し（時間切れ）では偽なので cancelled() も足す。
+      # always() にしない: 成功した配信でも動くと、trace の設定（retain-on-failure）や隠しファイルの扱いを変えたときに、
+      # 通った配信の記録も上がり、手順書 3-1（いちばん新しい記録を開く）が落ちていない run を開く（#377 のレビュー）。
+      # 落ちた配信は deploy ジョブまで進まないので、cms-site とは別にする。照合: src/config/__tests__/admin-e2e-artifacts.test.ts
       - name: Upload the CMS admin e2e failure records
-        if: always()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cms-admin-e2e

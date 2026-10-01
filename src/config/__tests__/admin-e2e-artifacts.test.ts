@@ -29,8 +29,9 @@ const ADMIN_E2E = /npm run test:e2e:admin\b|playwright\.admin\.config/;
 const UPLOAD = /^actions\/upload-artifact@/;
 // 前のステップが落ちても動く条件（${{ }} と空白を除いて、どれかと一致すること）。部分一致にすると、!failure()・
 // always() && success() のように、落ちたときに動かない条件も通ってしまう（#377 のレビュー）。ほかの形は、ここに足す
-const ON_FAILURE_FORMS = ['always()', 'failure()', '!cancelled()'];
+const ON_FAILURE_FORMS = ['always()', 'failure()', '!cancelled()', 'failure()||cancelled()'];
 const normalize = (dir: string) => path.relative(ROOT, path.resolve(ROOT, dir)).replace(/\/+$/, '');
+const NPM_SCRIPTS: Record<string, string> = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts ?? {};
 const OUTPUT_DIR = normalize(adminConfig.outputDir ?? 'test-results');
 
 const conditionOf = (value: unknown) =>
@@ -51,7 +52,10 @@ const patternsOf = (step: Step) =>
     .map((line) => ({ exclude: line.startsWith('!'), dir: normalize(line.replace(/^!/, '').replace(/\/\*\*$/, '')) }));
 const shownPaths = (step: Step) => patternsOf(step).map((p) => `${p.exclude ? '!' : ''}${p.dir}`);
 
-/** outputDir 全体を載せるアップロードか（含める行があり、outputDir 全体を外す行が無い） */
+/**
+ * outputDir 全体を載せるアップロードか（含める行があり、outputDir 全体を外す行が無い）。
+ * outputDir の中の一部だけを外す行（例: 動画のファイルだけを外す行）は、意図した除外として通す
+ */
 const carries = (step: Step, outputDir: string) => {
   const patterns = patternsOf(step);
   return (
@@ -60,11 +64,15 @@ const carries = (step: Step, outputDir: string) => {
   );
 };
 
+/** run の行と、そこから npm run で呼ぶ package.json のスクリプト（--output はどちらにも書ける） */
+const expandNpmRun = (run: string, scripts: Record<string, string>) =>
+  [run, ...[...run.matchAll(/npm run ([\w:.-]+)/g)].map(([, name]) => `${name}: ${scripts[name] ?? ''}`)].join('\n');
+
 /** 管理画面の e2e を動かすジョブで、outputDir が、e2e より後の、失敗のときにも動くアップロードに載るか */
-function checkJob(outputDir: string, where: string, steps: Step[]): string[] {
+function checkJob(outputDir: string, where: string, steps: Step[], scripts: Record<string, string>): string[] {
   const e2eIndex = steps.findIndex(isAdminE2e);
   if (e2eIndex < 0) return [];
-  const e2eRun = (steps[e2eIndex].run ?? '').trim();
+  const e2eRun = expandNpmRun((steps[e2eIndex].run ?? '').trim(), scripts);
   const uploads = steps.slice(e2eIndex + 1).filter((s) => UPLOAD.test(s.uses ?? ''));
   const carriers = uploads.filter((s) => carries(s, outputDir));
   // 成功のときだけのアップロードが先にあっても、失敗のときにも動くものがあればよい
@@ -75,7 +83,7 @@ function checkJob(outputDir: string, where: string, steps: Step[]): string[] {
     .map((p) => p.dir);
   return [
     ...(/--output\b/.test(e2eRun)
-      ? [`${where}: e2e のコマンドが --output で出力先を変えている（記録が outputDir=${outputDir} に出ない）: ${e2eRun}`]
+      ? [`${where}: e2e のコマンド（package.json のスクリプトを含む）が --output で出力先を変えている（記録が outputDir=${outputDir} に出ない）: ${e2eRun}`]
       : []),
     ...(carrier
       ? []
@@ -90,10 +98,17 @@ function checkJob(outputDir: string, where: string, steps: Step[]): string[] {
 }
 
 /** 1 つのワークフローの、管理画面の e2e を動かす各ジョブで、outputDir（Playwright の設定）と成果物のアップロードが噛み合っているか */
-function check(outputDirOption: string | undefined, file: string, workflowText: string): string[] {
+function check(
+  outputDirOption: string | undefined,
+  file: string,
+  workflowText: string,
+  scripts: Record<string, string> = NPM_SCRIPTS
+): string[] {
   const outputDir = normalize(outputDirOption ?? 'test-results');
   const { jobs = {} } = yaml.load(workflowText) as Workflow;
-  return Object.entries(jobs).flatMap(([jobName, job]) => checkJob(outputDir, `${file} の ${jobName} ジョブ`, job.steps ?? []));
+  return Object.entries(jobs).flatMap(([jobName, job]) =>
+    checkJob(outputDir, `${file} の ${jobName} ジョブ`, job.steps ?? [], scripts)
+  );
 }
 
 const textOf = (file: string) => readFileSync(path.join(ROOT, file), 'utf8');
@@ -141,6 +156,12 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
     });
   });
 
+  it('deploy-cms.yml の記録のアップロードは、成功した配信では動かない（手順書 3-1 はいちばん新しい記録を開く）', () => {
+    // always() にすると、trace の設定や隠しファイルの扱いを変えたときに、通った配信の記録も上がる（#377 のレビュー）
+    const steps = (yaml.load(textOf(DEPLOY)) as Workflow).jobs?.build?.steps ?? [];
+    expect(steps.filter(isRecordUpload).map((s) => conditionOf(s.if))).toEqual(['failure()||cancelled()']);
+  });
+
   it('受け入れる形: if は always()・failure()・!cancelled()（${{ }} 付きでも）、path は /** でもよく、置き場所は e2e より後ならどこでもよい', () => {
     const last = deployWithBuildSteps((steps) => [...withoutRecordUpload(steps), ...steps.filter(isRecordUpload)]);
     // 成功のときだけ test-results/ 全体を上げるステップが、記録のアップロードより前にあってもよい
@@ -149,7 +170,15 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
       const all: Step = { name: 'Upload all test results', uses: steps[index].uses, with: { name: 'all', path: 'test-results/' } };
       return [...steps.slice(0, index), all, ...steps.slice(index)];
     });
-    const variants = [withIf('${{ always() }}'), withIf('failure()'), withIf('${{ !cancelled() }}'), withPath(`${OUTPUT_DIR}/**`), last, successFirst];
+    const variants = [
+      withIf('${{ always() }}'),
+      withIf('failure()'),
+      withIf('${{ !cancelled() }}'),
+      withIf('${{ failure() || cancelled() }}'),
+      withPath(`${OUTPUT_DIR}/**`),
+      last,
+      successFirst,
+    ];
     for (const text of variants) {
       expect(checkDeploy(text)).toEqual([]);
     }
@@ -198,7 +227,7 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
   it('deploy-cms.yml: 記録のアップロードを成功のときだけにする（if を外す・success() にする）', () => {
     const dropIf = editRecordUpload(({ if: _if, ...rest }) => rest);
     expect(checkDeploy(dropIf)).toEqual([
-      `${DEPLOY} の build ジョブ: outputDir を載せるアップロード「Upload the CMS admin e2e failure records」が失敗のときに動かない（if: undefined。受け入れる形: always()・failure()・!cancelled()）`,
+      `${DEPLOY} の build ジョブ: outputDir を載せるアップロード「Upload the CMS admin e2e failure records」が失敗のときに動かない（if: undefined。受け入れる形: always()・failure()・!cancelled()・failure()||cancelled()）`,
     ]);
     expect(checkDeploy(withIf('success()')).join('\n')).toContain('が失敗のときに動かない（if: success()。');
   });
@@ -222,8 +251,16 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
       steps.map((s) => (isAdminE2e(s) ? { ...s, run: `${s.run} -- --output=test-results/elsewhere` } : s))
     );
     expect(checkDeploy(moved).join('\n')).toContain(
-      `${DEPLOY} の build ジョブ: e2e のコマンドが --output で出力先を変えている（記録が outputDir=test-results/admin-cms に出ない）`
+      `${DEPLOY} の build ジョブ: e2e のコマンド（package.json のスクリプトを含む）が --output で出力先を変えている（記録が outputDir=test-results/admin-cms に出ない）`
     );
+  });
+
+  it('package.json: npm run で呼ぶスクリプトに --output を足して、出力先を変える（両方のワークフローで落ちる）', () => {
+    const scripts = { ...NPM_SCRIPTS, 'test:e2e:admin': `${NPM_SCRIPTS['test:e2e:admin']} --output=test-results/elsewhere` };
+    const violations = workflowFiles().flatMap((file) => check(adminConfig.outputDir, file, textOf(file), scripts)).join('\n');
+    for (const where of [`${DEPLOY} の build ジョブ`, `${VISUAL} の visual_text ジョブ`]) {
+      expect(violations).toContain(`${where}: e2e のコマンド（package.json のスクリプトを含む）が --output で出力先を変えている`);
+    }
   });
 
   it('deploy-cms.yml: 記録のアップロードを e2e の前に移す', () => {
