@@ -16,6 +16,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import yaml from 'js-yaml';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const SCRIPT = path.join(process.cwd(), 'scripts/h5-admission-check.sh');
@@ -190,5 +191,102 @@ describe('H5: 失敗のメッセージと、変えていない判定', SLOW, () 
     const { status, out } = run('ふつうの PR', 'src/pages/index.astro');
     expect(status).toBe(0);
     expect(out).toContain('not a guard/verifier PR');
+  });
+});
+
+/** 一時ディレクトリの git（利用者の ~/.gitconfig・フック・署名の設定を読まない） */
+const GIT_ENV = {
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_AUTHOR_NAME: 'h5-test',
+  GIT_AUTHOR_EMAIL: 'h5-test@example.com',
+  GIT_COMMITTER_NAME: 'h5-test',
+  GIT_COMMITTER_EMAIL: 'h5-test@example.com',
+};
+function git(cwd, ...args) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, ...GIT_ENV } });
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')} (${cwd}): ${result.stderr}`);
+  return result.stdout.trim();
+}
+function commitFile(repo, file, text, message) {
+  mkdirSync(path.dirname(path.join(repo, file)), { recursive: true });
+  writeFileSync(path.join(repo, file), text);
+  git(repo, 'add', file);
+  git(repo, 'commit', '-q', '-m', message);
+}
+
+/**
+ * 完全なクローン（CI の checkout は fetch-depth: 0。手元のクローンも完全）で、PR を分けたあとに origin の develop が
+ * ワークフローを変えて進んだ形を作る。PR は prFile だけを変える。スクリプトのコピーをクローンに置いて返す。
+ */
+function cloneWithMovedBase(name, prFile) {
+  const root = path.join(dir, name);
+  const origin = path.join(root, 'origin.git');
+  const work = path.join(root, 'work');
+  const clone = path.join(root, 'clone');
+  mkdirSync(root, { recursive: true });
+  git(root, 'init', '-q', '--bare', '-b', 'develop', origin);
+  git(root, 'init', '-q', '-b', 'develop', work);
+  commitFile(work, 'README.md', 'base\n', 'base');
+  git(work, 'push', '-q', `file://${origin}`, 'develop');
+  git(root, 'clone', '-q', `file://${origin}`, clone);
+  git(clone, 'switch', '-q', '-c', 'feature');
+  commitFile(clone, prFile, 'change\n', 'pr');
+  commitFile(work, '.github/workflows/moved-base.yml', 'name: moved\n', 'develop moved on');
+  git(work, 'push', '-q', `file://${origin}`, 'develop');
+  mkdirSync(path.join(clone, 'scripts'), { recursive: true });
+  writeFileSync(path.join(clone, 'scripts/h5-admission-check.sh'), readFileSync(SCRIPT, 'utf8'));
+  return { clone, work, script: path.join(clone, 'scripts/h5-admission-check.sh') };
+}
+
+/** H5_DIFF_FILES を渡さずに動かす（スクリプトが origin から base を取り、git diff で差分を出す） */
+function runWithoutDiffFiles(script) {
+  const { H5_DIFF_FILES: _unused, ...env } = process.env;
+  const result = spawnSync('bash', [script], {
+    encoding: 'utf8',
+    env: {
+      ...env,
+      ...GIT_ENV,
+      H5_PR_BODY: '',
+      H5_BASE_REF: 'origin/develop',
+      H5_HEAD_REF: 'HEAD',
+      H5_LEDGER_PATH: path.join(dir, 'ledger.jsonl'),
+      GITHUB_EVENT_PATH: '',
+      H5_PR_NUMBER: '',
+    },
+  });
+  return { status: result.status, out: `${result.stdout}${result.stderr}` };
+}
+
+/**
+ * 2026-10-01 まで、スクリプトは base をいつも git fetch --depth=1 で取っていた。完全なクローンでもその先端が
+ * .git/shallow に入り、(1) 手元では、同じ .git を使う全 worktree の履歴が途中で切れて見えた (2) develop が進んだ後は
+ * merge base が見つからず、2 点の diff に落ちて、develop 側のワークフローの変更を PR の変更と取り違えていた。
+ */
+describe('H5: 完全なクローンでは、base を浅く取らない（H5_DIFF_FILES を渡さないとき）', SLOW, () => {
+  it('develop が進んでも、クローンは浅くならず、PR の変更だけを見る（develop 側のワークフローの変更で落ちない）', () => {
+    const { clone, work, script } = cloneWithMovedBase('moved-base-docs', 'docs/note.md');
+    const { status, out } = runWithoutDiffFiles(script);
+    expect(git(clone, 'rev-parse', '--is-shallow-repository')).toBe('false');
+    expect(git(clone, 'rev-parse', 'origin/develop')).toBe(git(work, 'rev-parse', 'HEAD'));
+    expect({ status, out }).toMatchObject({ status: 0, out: expect.stringContaining('not a guard/verifier PR') });
+  });
+
+  it('PR 自身がワークフローを変えたときは、ガードの PR として照合する（差分が空にならない）', () => {
+    const { clone, script } = cloneWithMovedBase('moved-base-workflow', '.github/workflows/pr.yml');
+    const { status, out } = runWithoutDiffFiles(script);
+    expect(git(clone, 'rev-parse', '--is-shallow-repository')).toBe('false');
+    expect(status).toBe(1);
+    expect(out).toContain('guard/verifier PR detected');
+  });
+
+  it('CI の checkout は完全なクローン（h5-admission.yml の fetch-depth: 0）。浅いと merge base が無く、2 点の diff に落ちる', () => {
+    const workflow = yaml.load(readFileSync(path.join(process.cwd(), '.github/workflows/h5-admission.yml'), 'utf8'));
+    const steps = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []);
+    const checkout = steps.find((step) => /^actions\/checkout@/.test(step.uses ?? ''));
+    expect(
+      checkout?.with?.['fetch-depth'],
+      '.github/workflows/h5-admission.yml の checkout の fetch-depth（scripts/h5-admission-check.sh は完全な履歴の merge base で差分を取る）'
+    ).toBe(0);
   });
 });

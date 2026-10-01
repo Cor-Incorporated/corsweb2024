@@ -13,7 +13,6 @@ cd "$ROOT"
 BASE_REF="${H5_BASE_REF:-origin/develop}"
 HEAD_REF="${H5_HEAD_REF:-HEAD}"
 PR_BODY="${H5_PR_BODY:-}"
-EVENT_NAME="${GITHUB_EVENT_NAME:-}"
 LEDGER_PATH="${H5_LEDGER_PATH:-$HOME/.claude/hooks/ledger/guard-ledger.jsonl}"
 
 log() { printf '%s\n' "$*"; }
@@ -38,12 +37,22 @@ fi
 
 # --- Diff paths ---
 if [[ -n "${H5_DIFF_FILES:-}" ]]; then
-  # newline or space separated override (tests)
+  # newline or space separated override (tests); split on purpose
+  # shellcheck disable=SC2086
   DIFF_FILES="$(printf '%s\n' $H5_DIFF_FILES)"
 else
-  git fetch --no-tags --depth=1 origin "$(echo "$BASE_REF" | sed 's#^origin/##')" 2>/dev/null || true
+  # --depth=1 only for a checkout that is already shallow. On a complete clone (CI checks out with fetch-depth: 0, and
+  # local clones are complete) it writes the base tip into .git/shallow: every worktree sharing that .git then sees cut
+  # history, and once the base moves past the PR's fork point the three-dot diff below finds no merge base and falls back
+  # to two dots, counting the base's own changes (e.g. a workflow merged into develop meanwhile) as the PR's (2026-10-01).
+  base_branch="${BASE_REF#origin/}"
+  if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" == "true" ]]; then
+    git fetch --no-tags --depth=1 origin "$base_branch" 2>/dev/null || true
+  else
+    git fetch --no-tags origin "$base_branch" 2>/dev/null || true
+  fi
   if git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
-    DIFF_FILES="$(git diff --name-only "$BASE_REF"...$HEAD_REF 2>/dev/null || git diff --name-only "$BASE_REF" $HEAD_REF 2>/dev/null || true)"
+    DIFF_FILES="$(git diff --name-only "$BASE_REF"..."$HEAD_REF" 2>/dev/null || git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || true)"
   else
     DIFF_FILES="$(git diff --name-only HEAD~1...HEAD 2>/dev/null || true)"
   fi
