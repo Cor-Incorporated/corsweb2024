@@ -72,8 +72,13 @@ jobs:
           "$tools/shellcheck" --version
           "$tools/actionlint" -version
           printf '%s\n' 'on: push' 'jobs:' '  canary:' '    runs-on: ubuntu-latest' '    steps:' "      - run: echo '\$HOME'" > "$tools/canary.yml"
-          if "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= "$tools/canary.yml" > /dev/null; then
+          if "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= "$tools/canary.yml" > "$tools/canary.out"; then
             echo "::error title=actionlint::shellcheck の検査が効いていない（SC2016 を含むカナリアが通った）"
+            exit 1
+          fi
+          if ! grep -q 'SC2016' "$tools/canary.out"; then
+            echo "::error title=actionlint::カナリアが SC2016 以外の理由で落ちた（shellcheck が効いているか分からない）"
+            cat "$tools/canary.out"
             exit 1
           fi
           "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= -color

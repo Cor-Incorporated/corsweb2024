@@ -8,7 +8,10 @@
  * - actionlint は -shellcheck のパスが無いと、何も言わずに shellcheck の検査を外す（exit 0 のまま）。そのため
  *   shellcheck を取り出せたことを確かめ、SC2016 を含むカナリアが落ちることも毎回確かめる
  * - run は部分一致ではなく、各行をそのまま照合する（|| echo・-ignore・1 ファイルだけの検査・URL の書き換えなど、
- *   関門を弱める書き方はどれも行が変わるので落ちる。#373 のレビューで、部分一致では 14 通りを見逃した）
+ *   関門を弱める書き方は行が変わるので落ちる。#373 のレビューで部分一致が見逃した 14 通りのうち 12 通り。残る 2 通りは
+ *   sha256 の値で、下のとおり実行時に照合される）
+ * - ステップのキーは name・env・run だけ（shell: true {0} のようにステップを何もしなくする書き方を入れない）。
+ *   checkout のすぐ後に置く（前のステップが $GITHUB_ENV に SHELLCHECK_OPTS を書いて検査を弱められないように）
  * - 握りつぶし（continue-on-error・if）、SHELLCHECK_OPTS（actionlint が shellcheck に渡す）、actionlint の設定ファイル
  *   （.github/actionlint.yaml の ignore）を入れない
  * sha256 の値そのものは、実行時に sha256sum -c が照合する（違えば verify が落ちる）。ここでは形と順序を照合する。
@@ -45,8 +48,14 @@ const EXPECTED_RUN = [
   '"$tools/shellcheck" --version',
   '"$tools/actionlint" -version',
   `printf '%s\\n' 'on: push' 'jobs:' '  canary:' '    runs-on: ubuntu-latest' '    steps:' "      - run: echo '\\$HOME'" > "$tools/canary.yml"`,
-  'if "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= "$tools/canary.yml" > /dev/null; then',
+  'if "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= "$tools/canary.yml" > "$tools/canary.out"; then',
   'echo "::error title=actionlint::shellcheck の検査が効いていない（SC2016 を含むカナリアが通った）"',
+  'exit 1',
+  'fi',
+  // 落ちた理由が SC2016 であること（将来の actionlint がほかの規則でカナリアを落としても、shellcheck の確かめにならない）
+  `if ! grep -q 'SC2016' "$tools/canary.out"; then`,
+  'echo "::error title=actionlint::カナリアが SC2016 以外の理由で落ちた（shellcheck が効いているか分からない）"',
+  'cat "$tools/canary.out"',
   'exit 1',
   'fi',
   '"$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= -color',
@@ -88,11 +97,15 @@ function check(text: string, configFiles: readonly string[] = []): string[] {
   if (verify?.name !== 'verify') return [`必須チェックのジョブ verify が無い（name: ${String(verify?.name)}）`];
   if (steps.length !== 1) return [`verify に「${STEP_NAME}」のステップがちょうど 1 つ無い（${steps.length} 個）`];
   const [step] = steps;
+  const index = (verify.steps ?? []).indexOf(step);
+  const keys = Object.keys(step).sort();
   const silencers = [
     ...('SHELLCHECK_OPTS' in (workflow.env ?? {}) ? ['ワークフローの env'] : []),
     ...('SHELLCHECK_OPTS' in (verify.env ?? {}) ? ['verify の env'] : []),
   ];
   return [
+    ...(index === 1 ? [] : [`checkout のすぐ後（2 つ目）に置いていない（実際: ${index + 1} つ目。前のステップが $GITHUB_ENV で検査を弱められる）`]),
+    ...(JSON.stringify(keys) === JSON.stringify(['env', 'name', 'run']) ? [] : [`ステップのキーが env・name・run ではない（実際: ${keys.join(', ')}）`]),
     ...checkEnv(step.env ?? {}),
     ...(step['continue-on-error'] === undefined ? [] : ['continue-on-error で失敗を握りつぶしている']),
     ...(step.if === undefined ? [] : [`if で飛ばせるようになっている: ${String(step.if)}`]),
@@ -171,6 +184,21 @@ describe('F3 変異: 固定を外す・弱める・握りつぶすと落ちる',
 
   it('actionlint の設定ファイル（ignore を書ける）を置く', () => {
     expect(check(loadText(), ['.github/actionlint.yaml']).join('\n')).toContain('.github/actionlint.yaml がある');
+  });
+
+  it('shell を替えてステップを何もしなくする（shell: true {0}）', () => {
+    const header = `      - name: ${STEP_NAME}\n`;
+    expect(mutate(header, `${header}        shell: true {0}\n`)).toContain('ステップのキーが env・name・run ではない（実際: env, name, run, shell）');
+  });
+
+  it('前にステップを足す（$GITHUB_ENV に SHELLCHECK_OPTS を書けてしまう）', () => {
+    const header = `      - name: ${STEP_NAME}\n`;
+    const before = `      - name: Weaken shellcheck\n        run: echo "SHELLCHECK_OPTS=-e SC2086" >> "$GITHUB_ENV"\n\n`;
+    expect(mutate(header, `${before}${header}`)).toContain('checkout のすぐ後（2 つ目）に置いていない（実際: 3 つ目');
+  });
+
+  it('カナリアが落ちた理由（SC2016）を確かめない', () => {
+    expect(mutate(/\n\s*if ! grep -q 'SC2016'[\s\S]*?\n\s*fi/, '')).toMatch(/run の \d+ 行目が違う/);
   });
 
   it('握りつぶす（continue-on-error・if）・ステップの名前を変える', () => {
