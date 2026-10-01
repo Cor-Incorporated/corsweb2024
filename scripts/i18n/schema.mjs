@@ -34,8 +34,9 @@ export const CASE_CATEGORY_IDS = Object.freeze([
 const LANG = z.enum(['ja', 'en', 'zh', 'ko', 'es']);
 
 const blogSchema = z.object({
-  title: z.string(),
-  description: z.string(),
+  // 正本（src/config/blog-schema.ts）と同じ: 空・空白だけは不可
+  title: z.string().trim().min(1),
+  description: z.string().trim().min(1),
   pubDate: z.coerce.date(),
   updatedDate: z.coerce.date().optional(),
   author: z.string().default('Terisuke'),
