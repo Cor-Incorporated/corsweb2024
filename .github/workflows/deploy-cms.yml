@@ -119,7 +119,7 @@ jobs:
       - name: Download firebase-tools (standalone v15.32.1, sha256 pinned)
         env:
           FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.32.1/firebase-tools-linux
-          FIREBASE_TOOLS_SHA256: 790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118
+          FIREBASE_TOOLS_SHA256: '790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin"
@@ -146,14 +146,20 @@ jobs:
         working-directory: cms
         run: |
           set -euo pipefail
-          status=0
-          firebase hosting:channel:deploy candidate --expires 1h --no-authorized-domains --project cor-jp-cms-admin --json --non-interactive > "$RUNNER_TEMP/channel.json" || status=$?
-          if [ "$status" -ne 0 ]; then
-            echo "::error title=candidate への配信に失敗（exit ${status}）::firebase-tools の --json の出力を次に示す。exit 2 は firebase-tools の想定外の例外（FirebaseError 以外）"
-            jq . "$RUNNER_TEMP/channel.json" || true
-            exit "$status"
+          rc=0
+          firebase hosting:channel:deploy candidate --expires 1h --no-authorized-domains --project cor-jp-cms-admin --json --non-interactive > "$RUNNER_TEMP/channel.json" || rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=candidate への配信に失敗（exit ${rc}）::firebase-tools の --json の出力を次に示す。exit 2 は firebase-tools の想定外の例外（FirebaseError 以外）"
+            # JSON でなければ 1 行ずつ文字列として出す（cat で生のまま出すと ::warning:: などのワークフローコマンドとして解釈される）
+            jq . "$RUNNER_TEMP/channel.json" 2>/dev/null || jq -R . "$RUNNER_TEMP/channel.json" || true
+            exit "$rc"
           fi
-          url=$(jq -r '.result[].url' "$RUNNER_TEMP/channel.json")
+          # 成功でも URL が取れなければ止める（空のまま進むと次の手順で "/" を照合してしまう）
+          url=$(jq -er '.result[].url' "$RUNNER_TEMP/channel.json")
+          if [ -z "$url" ]; then
+            echo "::error title=candidate の URL が取れない::firebase-tools の --json の出力に .result[].url が無い"
+            exit 1
+          fi
           echo "CHECK_URL=${url%/}/" >> "$GITHUB_ENV"
 
       - name: Check the candidate serves the CSP and COOP of cms/firebase.json

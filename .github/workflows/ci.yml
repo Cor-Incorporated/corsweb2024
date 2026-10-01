@@ -122,7 +122,7 @@ jobs:
       - name: Pinned firebase-tools binary (same as deploy-cms.yml) can load the deploy command
         env:
           FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.32.1/firebase-tools-linux
-          FIREBASE_TOOLS_SHA256: 790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118
+          FIREBASE_TOOLS_SHA256: '790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118'
         run: |
           set -euo pipefail
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/firebase" "$FIREBASE_TOOLS_URL"
