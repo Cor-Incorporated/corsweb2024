@@ -194,7 +194,7 @@ firebase hosting:sites:list --project cor-jp-web
 |---|---|
 | 起動 | main への push（`cms/**`・`package.json`・`package-lock.json`・このワークフローの変更時）と、main での手動実行。`on:` はこの 2 つだけ（`pull_request_target` などは足さない） |
 | 条件 | `CMS_DEPLOY_ENABLED` が `true` かつ ref が main（build・deploy とも） |
-| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる。e2e が落ちたら、失敗の記録（`test-results/admin-cms/`）を成果物 `cms-admin-e2e` に 14 日残す（deploy ジョブは動かない。開き方は 3-1） |
+| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる。e2e が落ちたら（時間切れを含む）、失敗の記録（`test-results/admin-cms/`）を成果物 `cms-admin-e2e` に 14 日残す（`if: always()`。成功したときは記録が無いのでできない。deploy ジョブは動かない。開き方は 3-1） |
 | deploy ジョブ | `needs: build`・`environment: cms-production`・権限は `contents: read` と `id-token: write`。artifact だけを受け取り、checkout も npm もしない。使うコマンドは jq・curl・gh api（読み取り）・sha256sum・chmod・firebase（hosting:channel:deploy と hosting:clone）だけ（テストで照合） |
 | deploy の手順 | ① main の最新の SHA と、この run の SHA が違えば止める（古い run の再実行で巻き戻さない）→ ② artifact を受け取る → ③ `firebase.json` に predeploy / postdeploy が無いことを確かめる → ④ firebase-tools v15.32.1 のリリースの単体バイナリ（`firebase-tools-linux`）を、GitHub がリリースに記録した sha256 で照合する → ④' 資格情報を作る前に `firebase hosting:channel:deploy --help` で deploy の処理を読み込めるか確かめる → ⑤ `google-github-actions/auth`（WIF、鍵なし）で `cms-deployer` になる → ⑥ プレビューチャネル `candidate` に配信（1 時間で失効。失敗したら `--json` の出力をログに出す）→ ⑦ candidate の CSP と COOP を `cms/firebase.json` と比べ、違えば止める（live は変わらない）→ ⑧ `hosting:clone` で candidate と同じ版を live に出す → ⑨ live の CSP と COOP を確かめる |
 | 止めているとき | `CMS_DEPLOY_ENABLED` が true でない（または main 以外）のときは配信せず、`cms/` の変更があれば `::warning::` を出す |
@@ -362,15 +362,30 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 
 ### 3-1. 配信の e2e の失敗の記録を開く
 
-成果物 `cms-admin-e2e` は、build ジョブの e2e で落ちた run にだけあります（14 日で消えます）。リポジトリの直下で実行します（`test-results/` は git の対象外）。
+成果物 `cms-admin-e2e` は、build ジョブの e2e のテストが落ちた run（時間切れで止まった run を含む）にだけでき、14 日で消えます。リポジトリの直下で実行します。いちばん新しい記録を、run ごとのフォルダ（`test-results/` の下。git の対象外）に落として開きます。
 
 ```bash
-RUN=$(gh run list --repo Cor-Incorporated/corsweb2024 --workflow deploy-cms.yml --status failure --limit 1 --json databaseId --jq '.[0].databaseId')
-gh run download "$RUN" --repo Cor-Incorporated/corsweb2024 --name cms-admin-e2e --dir test-results/cms-admin-e2e
-npx playwright show-trace "$(find test-results/cms-admin-e2e -name trace.zip | head -1)"
+RUN=$(gh api 'repos/Cor-Incorporated/corsweb2024/actions/artifacts?name=cms-admin-e2e&per_page=100' --jq '[.artifacts[] | select(.expired | not)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+if [ -z "$RUN" ]; then echo '14 日以内の記録はありません（下の段落を見てください）'; else
+  echo "run: $RUN"
+  gh run download "$RUN" --repo Cor-Incorporated/corsweb2024 --name cms-admin-e2e --dir "test-results/cms-admin-e2e/$RUN"
+  find "test-results/cms-admin-e2e/$RUN" -name trace.zip
+  npx playwright show-trace "$(find "test-results/cms-admin-e2e/$RUN" -name trace.zip | head -1)"
+fi
 ```
 
-`gh run download` が `no valid artifacts found to download` で止まるときは、その run は e2e では落ちていません（e2e より前のステップか deploy ジョブで落ちた。記録はありません）。Actions のその run のログを見てください。
+落ちたテストが 2 件以上なら、`find` が出した trace.zip のパスごとに `npx playwright show-trace` で開きます。記録が無いとき、または `run:` の番号が落ちた配信の run と違うときは、その配信の e2e は記録を残していません。主な理由は次のとおりです。
+
+- e2e より前のステップ（`npm ci`・`npm run build:cms` など）か、deploy ジョブで落ちた
+- テストが始まる前に落ちた（ローカルサーバーが起動しないなど）。出力先には隠しファイルの `.last-run.json` しか残らず、upload-artifact は隠しファイルを上げない
+- 14 日を過ぎた
+
+そのときは、落ちた配信（いちばん新しい失敗の run）のログを見ます。
+
+```bash
+FAILED=$(gh run list --repo Cor-Incorporated/corsweb2024 --workflow deploy-cms.yml --status failure --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run view "$FAILED" --repo Cor-Incorporated/corsweb2024 --log-failed
+```
 
 ## 4. 関係するファイル
 

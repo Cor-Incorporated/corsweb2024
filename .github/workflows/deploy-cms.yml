@@ -10,7 +10,7 @@ name: Deploy CMS admin (cor-jp-cms-admin)
 # - build ジョブ（id-token なし）が作った cms/dist と cms/firebase.json を、deploy ジョブが artifact として
 #   受け取って配信する。deploy ジョブではリポジトリのコードを実行しない（checkout も npm もしない）。
 #   deploy ジョブのコマンドは許可リスト（jq・curl・gh api・sha256sum・chmod・firebase）で照合している。
-# - build ジョブの e2e が落ちたら、失敗の記録を成果物 cms-admin-e2e に残す（deploy ジョブは動かない）。
+# - build ジョブの e2e が落ちたら（時間切れを含む）、失敗の記録を成果物 cms-admin-e2e に残す（deploy ジョブは動かない）。
 # - 配信はプレビューチャネル candidate に出してヘッダーを確かめてから、同じ版を live に複製する。
 # - 止めるときはリポジトリ変数 CMS_DEPLOY_ENABLED を true 以外にする（build・deploy はスキップ、警告だけ出す）。
 # - 値の一覧と手順は docs/cms-sveltia.md。src/config/__tests__/cms-deploy.test.ts が、このワークフローと
@@ -67,11 +67,13 @@ jobs:
       - name: CMS admin e2e (cms/firebase.json headers, CSP violations 0)
         run: npm run test:e2e:admin
 
-      # 落ちたら、e2e の失敗の記録（trace・error-context.md。playwright.admin.config.ts の outputDir）を
-      # 成果物 cms-admin-e2e として 14 日残す（落ちた配信は deploy ジョブまで進まないので、cms-site とは別にする）。
+      # 落ちたら（時間切れで取り消されたときも）、e2e の失敗の記録（trace・error-context.md。playwright.admin.config.ts
+      # の outputDir）を成果物 cms-admin-e2e として 14 日残す。failure() は取り消し（時間切れ）では偽なので always() にする。
+      # 成功したときは隠しファイルの .last-run.json だけが残り、upload-artifact は隠しファイルを上げない（include-hidden-files
+      # の既定は false）ので、成果物はできない。落ちた配信は deploy ジョブまで進まないので、cms-site とは別にする。
       # 照合: src/config/__tests__/admin-e2e-artifacts.test.ts
-      - name: Upload the CMS admin e2e records (on failure)
-        if: failure()
+      - name: Upload the CMS admin e2e failure records
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cms-admin-e2e

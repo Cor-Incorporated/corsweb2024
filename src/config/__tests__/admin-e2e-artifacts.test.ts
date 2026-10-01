@@ -4,7 +4,7 @@
  * playwright.admin.config.ts の outputDir ↔ 管理画面の e2e を動かす全ワークフロー（.github/workflows/）の
  * 成果物のアップロードの path。今は次の 2 つ。
  * - visual-text.yml（develop・main 宛の PR と develop への push）: 成果物 visual-text-audit（いつも上げる）
- * - deploy-cms.yml（main からの CMS の配信）: 成果物 cms-admin-e2e（落ちたときだけ上げる）
+ * - deploy-cms.yml（main からの CMS の配信）: 成果物 cms-admin-e2e（記録が残るのは落ちたときだけ）
  *
  * 片方だけ変えると、if-no-files-found: ignore のため何も言わずに記録が載らなくなる（必要なのは落ちたときなのに）。
  * また Playwright は実行の開始時に outputDir を空にするので、そこに別の成果物（表示監査の結果）を置くと消える。
@@ -27,42 +27,73 @@ const DEPLOY = `${WORKFLOWS}/deploy-cms.yml`;
 // npm のスクリプトを通さず、設定ファイルを指定して Playwright を直接動かす形も拾う
 const ADMIN_E2E = /npm run test:e2e:admin\b|playwright\.admin\.config/;
 const UPLOAD = /^actions\/upload-artifact@/;
-// 前のステップが落ちても動く条件
-const ON_FAILURE = /\balways\(\)|\bfailure\(\)|!\s*cancelled\(\)/;
+// 前のステップが落ちても動く条件（${{ }} と空白を除いて、どれかと一致すること）。部分一致にすると、!failure()・
+// always() && success() のように、落ちたときに動かない条件も通ってしまう（#377 のレビュー）。ほかの形は、ここに足す
+const ON_FAILURE_FORMS = ['always()', 'failure()', '!cancelled()'];
 const normalize = (dir: string) => path.relative(ROOT, path.resolve(ROOT, dir)).replace(/\/+$/, '');
-const pathsOf = (step: Step) =>
+const OUTPUT_DIR = normalize(adminConfig.outputDir ?? 'test-results');
+
+const conditionOf = (value: unknown) =>
+  String(value ?? '')
+    .trim()
+    .replace(/^\$\{\{([\s\S]*)\}\}$/, '$1')
+    .replace(/\s+/g, '');
+const runsOnFailure = (step: Step) => ON_FAILURE_FORMS.includes(conditionOf(step.if));
+const isAdminE2e = (step: Step) => ADMIN_E2E.test(step.run ?? '');
+const within = (dir: string, parent: string) => dir === parent || dir.startsWith(`${parent}/`);
+
+/** with.path の各行（! で始まる行は除外。末尾の /** は、そのディレクトリ全体として扱う） */
+const patternsOf = (step: Step) =>
   String(step.with?.path ?? '')
     .split('\n')
-    .map((p) => p.trim())
+    .map((line) => line.trim())
     .filter(Boolean)
-    .map(normalize);
-const isAdminE2e = (step: Step) => ADMIN_E2E.test(step.run ?? '');
+    .map((line) => ({ exclude: line.startsWith('!'), dir: normalize(line.replace(/^!/, '').replace(/\/\*\*$/, '')) }));
+const shownPaths = (step: Step) => patternsOf(step).map((p) => `${p.exclude ? '!' : ''}${p.dir}`);
+
+/** outputDir 全体を載せるアップロードか（含める行があり、outputDir 全体を外す行が無い） */
+const carries = (step: Step, outputDir: string) => {
+  const patterns = patternsOf(step);
+  return (
+    patterns.some((p) => !p.exclude && within(outputDir, p.dir)) &&
+    !patterns.some((p) => p.exclude && within(outputDir, p.dir))
+  );
+};
+
+/** 管理画面の e2e を動かすジョブで、outputDir が、e2e より後の、失敗のときにも動くアップロードに載るか */
+function checkJob(outputDir: string, where: string, steps: Step[]): string[] {
+  const e2eIndex = steps.findIndex(isAdminE2e);
+  if (e2eIndex < 0) return [];
+  const e2eRun = (steps[e2eIndex].run ?? '').trim();
+  const uploads = steps.slice(e2eIndex + 1).filter((s) => UPLOAD.test(s.uses ?? ''));
+  const carriers = uploads.filter((s) => carries(s, outputDir));
+  // 成功のときだけのアップロードが先にあっても、失敗のときにも動くものがあればよい
+  const carrier = carriers.find(runsOnFailure) ?? carriers[0];
+  const wiped = uploads
+    .flatMap(patternsOf)
+    .filter((p) => !p.exclude && p.dir !== outputDir && within(p.dir, outputDir))
+    .map((p) => p.dir);
+  return [
+    ...(/--output\b/.test(e2eRun)
+      ? [`${where}: e2e のコマンドが --output で出力先を変えている（記録が outputDir=${outputDir} に出ない）: ${e2eRun}`]
+      : []),
+    ...(carrier
+      ? []
+      : [`playwright.admin.config.ts の outputDir=${outputDir} が、${where}の e2e より後のアップロードの path [${uploads.flatMap(shownPaths).join(', ')}] に無い`]),
+    ...(!carrier || runsOnFailure(carrier)
+      ? []
+      : [`${where}: outputDir を載せるアップロード「${carrier.name ?? carrier.uses}」が失敗のときに動かない（if: ${String(carrier.if)}。受け入れる形: ${ON_FAILURE_FORMS.join('・')}）`]),
+    ...(wiped.length === 0
+      ? []
+      : [`playwright.admin.config.ts の outputDir=${outputDir} は開始時に空にされるが、${where}はその中の別の成果物 [${wiped.join(', ')}] を上げている`]),
+  ];
+}
 
 /** 1 つのワークフローの、管理画面の e2e を動かす各ジョブで、outputDir（Playwright の設定）と成果物のアップロードが噛み合っているか */
 function check(outputDirOption: string | undefined, file: string, workflowText: string): string[] {
   const outputDir = normalize(outputDirOption ?? 'test-results');
   const { jobs = {} } = yaml.load(workflowText) as Workflow;
-  return Object.entries(jobs).flatMap(([jobName, job]) => {
-    const steps = job.steps ?? [];
-    const e2eIndex = steps.findIndex(isAdminE2e);
-    if (e2eIndex < 0) return [];
-    const where = `${file} の ${jobName} ジョブ`;
-    const uploads = steps.slice(e2eIndex + 1).filter((s) => UPLOAD.test(s.uses ?? ''));
-    const uploaded = uploads.flatMap(pathsOf);
-    const carrier = uploads.find((s) => pathsOf(s).some((p) => outputDir === p || outputDir.startsWith(`${p}/`)));
-    const wiped = uploaded.filter((p) => p !== outputDir && `${p}/`.startsWith(`${outputDir}/`));
-    return [
-      ...(carrier
-        ? []
-        : [`playwright.admin.config.ts の outputDir=${outputDir} が、${where}の e2e より後のアップロードの path [${uploaded.join(', ')}] に無い`]),
-      ...(!carrier || ON_FAILURE.test(String(carrier.if ?? ''))
-        ? []
-        : [`${where}: outputDir を載せるアップロード「${carrier.name ?? carrier.uses}」が失敗のときに動かない（if: ${String(carrier.if)}）`]),
-      ...(wiped.length === 0
-        ? []
-        : [`playwright.admin.config.ts の outputDir=${outputDir} は開始時に空にされるが、${where}はその中の別の成果物 [${wiped.join(', ')}] を上げている`]),
-    ];
-  });
+  return Object.entries(jobs).flatMap(([jobName, job]) => checkJob(outputDir, `${file} の ${jobName} ジョブ`, job.steps ?? []));
 }
 
 const textOf = (file: string) => readFileSync(path.join(ROOT, file), 'utf8');
@@ -92,21 +123,35 @@ function deployWithBuildSteps(edit: (steps: Step[]) => Step[]): string {
   const build = workflow.jobs.build;
   return yaml.dump({ ...workflow, jobs: { ...workflow.jobs, build: { ...build, steps: edit(build.steps ?? []) } } });
 }
-const isRecordUpload = (step: Step) => UPLOAD.test(step.uses ?? '') && pathsOf(step).includes('test-results/admin-cms');
+const isRecordUpload = (step: Step) => UPLOAD.test(step.uses ?? '') && carries(step, OUTPUT_DIR);
 const withoutRecordUpload = (steps: Step[]) => steps.filter((s) => !isRecordUpload(s));
+const editRecordUpload = (edit: (step: Step) => Step) =>
+  deployWithBuildSteps((steps) => steps.map((s) => (isRecordUpload(s) ? edit(s) : s)));
+const withIf = (condition: string) => editRecordUpload((s) => ({ ...s, if: condition }));
+const withPath = (value: string) => editRecordUpload((s) => ({ ...s, with: { ...s.with, path: value } }));
+const checkDeploy = (text: string) => check(adminConfig.outputDir, DEPLOY, text);
 
 describe('F3 変異: 片側だけ変えると落ちる', () => {
   it('前提: deploy-cms.yml の build ジョブに、e2e と、その記録のアップロードが 1 つずつある', () => {
     const steps = (yaml.load(textOf(DEPLOY)) as Workflow).jobs?.build?.steps ?? [];
-    expect([steps.filter(isAdminE2e).length, steps.filter(isRecordUpload).length]).toEqual([1, 1]);
+    expect({ outputDir: OUTPUT_DIR, e2e: steps.filter(isAdminE2e).length, upload: steps.filter(isRecordUpload).length }).toEqual({
+      outputDir: OUTPUT_DIR,
+      e2e: 1,
+      upload: 1,
+    });
   });
 
-  it('受け入れる形: if は always()・!cancelled() でもよく、置き場所は e2e より後ならどこでもよい（cms-site の後でも）', () => {
-    const withIf = (condition: string) =>
-      deployWithBuildSteps((steps) => steps.map((s) => (isRecordUpload(s) ? { ...s, if: condition } : s)));
+  it('受け入れる形: if は always()・failure()・!cancelled()（${{ }} 付きでも）、path は /** でもよく、置き場所は e2e より後ならどこでもよい', () => {
     const last = deployWithBuildSteps((steps) => [...withoutRecordUpload(steps), ...steps.filter(isRecordUpload)]);
-    for (const text of [withIf('always()'), withIf('${{ !cancelled() }}'), last]) {
-      expect(check(adminConfig.outputDir, DEPLOY, text)).toEqual([]);
+    // 成功のときだけ test-results/ 全体を上げるステップが、記録のアップロードより前にあってもよい
+    const successFirst = deployWithBuildSteps((steps) => {
+      const index = steps.findIndex(isRecordUpload);
+      const all: Step = { name: 'Upload all test results', uses: steps[index].uses, with: { name: 'all', path: 'test-results/' } };
+      return [...steps.slice(0, index), all, ...steps.slice(index)];
+    });
+    const variants = [withIf('${{ always() }}'), withIf('failure()'), withIf('${{ !cancelled() }}'), withPath(`${OUTPUT_DIR}/**`), last, successFirst];
+    for (const text of variants) {
+      expect(checkDeploy(text)).toEqual([]);
     }
   });
 
@@ -141,28 +186,44 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
   it('visual-text.yml: アップロードを成功のときだけにする', () => {
     const changed = textOf(VISUAL).replace('        if: always()\n        uses: actions/upload-artifact', '        uses: actions/upload-artifact');
     expect(changed).not.toBe(textOf(VISUAL));
-    expect(check(adminConfig.outputDir, VISUAL, changed).join('\n')).toContain('が失敗のときに動かない（if: undefined）');
+    expect(check(adminConfig.outputDir, VISUAL, changed).join('\n')).toContain('が失敗のときに動かない（if: undefined。');
   });
 
   it('deploy-cms.yml: 記録のアップロードを消す（残るのは配信用の cms-site だけ）', () => {
-    expect(check(adminConfig.outputDir, DEPLOY, deployWithBuildSteps(withoutRecordUpload))).toEqual([
+    expect(checkDeploy(deployWithBuildSteps(withoutRecordUpload))).toEqual([
       `playwright.admin.config.ts の outputDir=test-results/admin-cms が、${DEPLOY} の build ジョブの e2e より後のアップロードの path [cms/firebase.json, cms/dist] に無い`,
     ]);
   });
 
   it('deploy-cms.yml: 記録のアップロードを成功のときだけにする（if を外す・success() にする）', () => {
-    const dropIf = deployWithBuildSteps((steps) =>
-      steps.map((s) => {
-        if (!isRecordUpload(s)) return s;
-        const { if: _if, ...rest } = s;
-        return rest;
-      })
+    const dropIf = editRecordUpload(({ if: _if, ...rest }) => rest);
+    expect(checkDeploy(dropIf)).toEqual([
+      `${DEPLOY} の build ジョブ: outputDir を載せるアップロード「Upload the CMS admin e2e failure records」が失敗のときに動かない（if: undefined。受け入れる形: always()・failure()・!cancelled()）`,
+    ]);
+    expect(checkDeploy(withIf('success()')).join('\n')).toContain('が失敗のときに動かない（if: success()。');
+  });
+
+  it.each([
+    ['否定（${{ !failure() }}）', '${{ !failure() }}'],
+    ['always() && success()（成功のときだけ）', 'always() && success()'],
+    ['このワークフローでは起きないイベントを足す', "failure() && github.event_name == 'pull_request'"],
+  ])('deploy-cms.yml: 落ちたときに動かない条件を、受け入れる形の一部で書く: %s', (_, condition) => {
+    expect(checkDeploy(withIf(condition)).join('\n')).toContain('が失敗のときに動かない（if: ');
+  });
+
+  it('deploy-cms.yml: path に、outputDir 全体を外す行（!）を足す', () => {
+    expect(checkDeploy(withPath(`${OUTPUT_DIR}/\n!${OUTPUT_DIR}/**`)).join('\n')).toContain(
+      `outputDir=test-results/admin-cms が、${DEPLOY} の build ジョブの e2e より後のアップロードの path [test-results/admin-cms, !test-results/admin-cms, cms/firebase.json, cms/dist] に無い`
     );
-    const success = deployWithBuildSteps((steps) => steps.map((s) => (isRecordUpload(s) ? { ...s, if: 'success()' } : s)));
-    expect(check(adminConfig.outputDir, DEPLOY, dropIf).join('\n')).toContain(
-      `${DEPLOY} の build ジョブ: outputDir を載せるアップロード「Upload the CMS admin e2e records (on failure)」が失敗のときに動かない（if: undefined）`
+  });
+
+  it('deploy-cms.yml: e2e のコマンドで --output を渡して、出力先を変える', () => {
+    const moved = deployWithBuildSteps((steps) =>
+      steps.map((s) => (isAdminE2e(s) ? { ...s, run: `${s.run} -- --output=test-results/elsewhere` } : s))
     );
-    expect(check(adminConfig.outputDir, DEPLOY, success).join('\n')).toContain('が失敗のときに動かない（if: success()）');
+    expect(checkDeploy(moved).join('\n')).toContain(
+      `${DEPLOY} の build ジョブ: e2e のコマンドが --output で出力先を変えている（記録が outputDir=test-results/admin-cms に出ない）`
+    );
   });
 
   it('deploy-cms.yml: 記録のアップロードを e2e の前に移す', () => {
@@ -171,7 +232,7 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
       const e2eIndex = rest.findIndex(isAdminE2e);
       return [...rest.slice(0, e2eIndex), ...steps.filter(isRecordUpload), ...rest.slice(e2eIndex)];
     });
-    expect(check(adminConfig.outputDir, DEPLOY, moved).join('\n')).toContain(
+    expect(checkDeploy(moved).join('\n')).toContain(
       `outputDir=test-results/admin-cms が、${DEPLOY} の build ジョブの e2e より後のアップロードの path [cms/firebase.json, cms/dist] に無い`
     );
   });
@@ -183,7 +244,7 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
       )
     );
     expect(runsAdminE2e(direct)).toBe(true);
-    expect(check(adminConfig.outputDir, DEPLOY, direct).join('\n')).toContain(
+    expect(checkDeploy(direct).join('\n')).toContain(
       `outputDir=test-results/admin-cms が、${DEPLOY} の build ジョブの e2e より後のアップロードの path [`
     );
   });
