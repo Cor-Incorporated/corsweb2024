@@ -30,7 +30,7 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 **https://cor-jp-cms-admin.web.app/** だけを使います（`cor-jp-cms-admin.firebaseapp.com` や cor-jp.com の下では使えません。以前の `cor-jp-cms.web.app` は 2026-09-28 に削除しました）。
 
-認証の仕組み（Worker と GitHub の OAuth App）が用意できるまでは、画面は開いても「GitHub にログイン」が失敗します（2-1 の表の 13〜16）。
+認証の仕組み（Worker と GitHub の OAuth App。2-1 の表の 13〜16）は 2026-10-01 に用意しました。ただし `base_url`（16）が管理画面に届くのは、develop → main のリリースで `deploy-cms.yml` が配信した後です。それまでは、画面を開いても「GitHub にログイン」が失敗します。
 
 ### 1-3. ログイン
 
@@ -133,7 +133,7 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 | 16 | `base_url` | `cms/public/config.yml` を `https://cor-sveltia-cms-auth.company-997.workers.dev` に（develop へは PR で反映。管理画面に出るのは main へのリリース後） | 済 |
 | 17 | 旧サイト `cor-jp-cms`（プロジェクト cor-jp-web 内） | 2026-09-28 に削除（CEO 確認済み）。cor-jp-web に残るサイトは `cor-jp-main` と `cor-jp-web` | 済 |
 
-`CMS_DEPLOY_ENABLED` は `true` なので、`deploy-cms.yml` が main に入った最初の push で CMS が配信されます。13〜16 が終わるまでは、管理画面は開いても **ログインだけが失敗** します。
+`CMS_DEPLOY_ENABLED` は `true` なので、`cms/` などを変えた push が main に入ると CMS が配信されます（2026-09-30 の初回は firebase-tools の不具合で止まり、PR #359 で直した）。13〜16 は済んでいますが、16 の `base_url` を含む版が main から配信されるまでは、管理画面は開いても **ログインだけが失敗** します。
 
 確かめ方（番号は上の表の番号。すべて読み取りのみ）:
 
@@ -247,7 +247,7 @@ GitHub で **Organization「Cor-Incorporated」→ Settings → Developer settin
 
 値はコードやチャットに貼らないでください。secret は再デプロイしても消えません。
 
-| 名前 | 種類 | 現在値 → 設定する値 |
+| 名前 | 種類 | 値（2026-10-01 時点） |
 |---|---|---|
 | `GITHUB_CLIENT_ID` | secret | 2-4 の Client ID（2026-10-01 に登録済み） |
 | `GITHUB_CLIENT_SECRET` | secret | 2-4 の Client secret（2026-10-01 に登録済み） |

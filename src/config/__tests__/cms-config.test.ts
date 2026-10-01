@@ -310,13 +310,22 @@ function checkBaseUrl(config: CmsConfig, wrangler: Wrangler): string[] {
   ];
 }
 
-/** (g') 手順書に書いた Worker の URL は、すべて base_url と同じ（仮の値の履歴と <サブドメイン> の説明は対象外） */
+/**
+ * (g') 手順書に書いた Worker の URL は、すべて base_url と同じ。http・https と大文字小文字を問わず、ホスト名は
+ * 区切りの文字までの全体を取る（…workers.dev.example のようなよく似たホストも拾う）。
+ * 対象外は 2-6 の表に残した仮の値（履歴）の完全一致と、<サブドメイン> の説明（< で止まり、一致しない）だけ
+ */
 function checkDocsWorkerUrls(docs: string, wrangler: Wrangler): string[] {
+  const name = wrangler.name ?? '';
   const expected = workerUrlOf(wrangler);
-  const pattern = new RegExp(`https://${escapeRegExp(wrangler.name)}\\.[a-z0-9-]+\\.workers\\.dev`, 'g');
-  const found = [...docs.matchAll(pattern)].map((match) => match[0]);
+  const placeholder = `https://${name}.REPLACE-WITH-CF-SUBDOMAIN.workers.dev`;
+  const pattern = new RegExp(`https?://${escapeRegExp(name)}\\.[^/\\s\`'"()（）<>|、。]+`, 'gi');
+  const found = [...docs.matchAll(pattern)]
+    .map((match) => match[0])
+    .filter((url) => url !== placeholder);
+  if (found.length === 0) return [`docs/cms-sveltia.md に Worker の URL が 1 つも無い / 期待 "${expected}"`];
   const wrong = [...new Set(found.filter((url) => url !== expected))];
-  if (found.length > 0 && wrong.length === 0) return [];
+  if (wrong.length === 0) return [];
   return [
     `docs/cms-sveltia.md の Worker の URL: 期待と違うもの [${wrong.join(', ')}]（${found.length} 件中）/ 期待 "${expected}"`,
   ];
@@ -586,11 +595,11 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
   });
 
   it.each([
-    ['Worker の URL が決まる前の仮の値に戻す', 'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev'],
-    ['別のホストにする', 'https://auth.example.com'],
-    ['アカウントのサブドメインを打ち間違える', 'https://cor-sveltia-cms-auth.company-979.workers.dev'],
-    ['第三者のアカウントにある同名の Worker にする', 'https://cor-sveltia-cms-auth.attacker.workers.dev'],
-  ])('base_url を%s', (_, baseUrl) => {
+    ['Worker の URL が決まる前の仮の値', 'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev'],
+    ['別のホスト', 'https://auth.example.com'],
+    ['アカウントのサブドメインの打ち間違い', 'https://cor-sveltia-cms-auth.company-979.workers.dev'],
+    ['第三者のアカウントにある同名の Worker', 'https://cor-sveltia-cms-auth.attacker.workers.dev'],
+  ])('base_url を変える: %s', (_, baseUrl) => {
     const config = loadConfig();
     const mutated = { ...config, backend: { ...config.backend, base_url: baseUrl } };
     expect(checkBaseUrl(mutated, loadWrangler())).toEqual([
@@ -598,15 +607,22 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
     ]);
   });
 
-  it('手順書の Worker の URL を 1 か所だけ打ち間違える', () => {
+  it.each([
+    ['サブドメインの打ち間違い', 'https://cor-sveltia-cms-auth.company-979.workers.dev'],
+    ['大文字のサブドメインの打ち間違い', 'https://cor-sveltia-cms-auth.COMPANY-979.workers.dev'],
+    ['http', 'http://cor-sveltia-cms-auth.company-997.workers.dev'],
+    ['後ろに文字が付いたよく似たホスト', 'https://cor-sveltia-cms-auth.company-997.workers.dev.evil.example'],
+  ])('手順書の Worker の URL を 1 か所だけ変える: %s', (_, wrongUrl) => {
     const docs = readFileSync(DOCS_PATH, 'utf8');
-    const typo = 'https://cor-sveltia-cms-auth.company-979.workers.dev';
-    const mutated = docs.replace('https://cor-sveltia-cms-auth.company-997.workers.dev/callback', `${typo}/callback`);
+    const mutated = docs.replace(
+      'https://cor-sveltia-cms-auth.company-997.workers.dev/callback',
+      `${wrongUrl}/callback`
+    );
     expect(mutated).not.toBe(docs);
-    const total = [...mutated.matchAll(/https:\/\/cor-sveltia-cms-auth\.[a-z0-9-]+\.workers\.dev/g)].length;
-    expect(checkDocsWorkerUrls(mutated, loadWrangler())).toEqual([
-      `docs/cms-sveltia.md の Worker の URL: 期待と違うもの [${typo}]（${total} 件中）/ 期待 "https://cor-sveltia-cms-auth.company-997.workers.dev"`,
-    ]);
+    const [message, ...rest] = checkDocsWorkerUrls(mutated, loadWrangler());
+    expect(rest).toEqual([]);
+    expect(message).toContain(`期待と違うもの [${wrongUrl}]`);
+    expect(message).toContain('期待 "https://cor-sveltia-cms-auth.company-997.workers.dev"');
   });
 
   it('CSP に unpkg を足し、frame-ancestors を消す', () => {
