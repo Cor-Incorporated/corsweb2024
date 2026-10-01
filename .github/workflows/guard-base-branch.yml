@@ -16,9 +16,11 @@ name: Guard base branch
 #        必須チェック: build_and_deploy・Chromium visual text audit・guard・h5-admission・verify
 #      - 組織のルールセット「シークレット検査の必須化」（id 20776787。既定ブランチが対象で、除外なし）: PR が必須（承認 0 件）で、
 #        Cor-Incorporated/.github の .github/workflows/gitleaks.yml が通ること。既定ブランチを変えると main から外れる
-#      確かめるコマンド（上と同じ項目を出す）:
+#      確かめるコマンド（上の項目を、ブランチ保護・main に効くルール・ルールセットの対象と除外の順に出す。
+#      ワークフローの元のリポジトリ id 1332621736 は Cor-Incorporated/.github: gh api repositories/1332621736 --jq .full_name）:
 #        gh api repos/Cor-Incorporated/corsweb2024/branches/main/protection --jq '{push: [.restrictions.users[].login], enforce_admins: .enforce_admins.enabled, approvals: .required_pull_request_reviews.required_approving_review_count, dismiss_stale: .required_pull_request_reviews.dismiss_stale_reviews, checks: .required_status_checks.contexts}'
 #        gh api repos/Cor-Incorporated/corsweb2024/rules/branches/main --jq '[.[] | {type, ruleset_id, approvals: .parameters.required_approving_review_count, workflows: [.parameters.workflows[]?.path]}]'
+#        gh api repos/Cor-Incorporated/corsweb2024/rulesets/20776787 --jq '{target: .conditions.ref_name, bypass_actors, workflow_repos: [.rules[].parameters.workflows[]?.repository_id]}'
 
 on:
   pull_request:
