@@ -14,6 +14,7 @@ import yaml from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import {
   CONTENT_PREFIX,
+  PREVIEW_JOB,
   PREVIEW_SITE,
   REQUIRED_CHECKS,
   TRANSLATION_CHECK,
@@ -68,12 +69,14 @@ function checkTriggers(workflow: Workflow, { workflows }: Sources): string[] {
 
 /** 判定で使う名前が、ほかのワークフローと firebase.json の値と噛み合っているか */
 function checkNames({ workflows, translate, firebase }: Sources): string[] {
-  const jobNames = new Set(workflows.flatMap((w) => Object.values(w.jobs ?? {}).map((job) => job.name)));
+  // check run の名前は、ジョブの name（無ければジョブ id）
+  const jobNames = new Set(workflows.flatMap((w) => Object.entries(w.jobs ?? {}).map(([id, job]) => job.name ?? id)));
   const translateJobs = Object.values(translate.jobs ?? {}).map((job) => job.name ?? '');
   const paths = (translate.on?.pull_request as { paths?: string[] } | undefined)?.paths ?? [];
   const sites = ([] as { site?: string }[]).concat(firebase.hosting ?? []).map((hosting) => hosting.site ?? '');
   return [
     ...REQUIRED_CHECKS.filter((name) => !jobNames.has(name)).map((name) => `必須チェック "${name}"（pr-status-core.mjs）という name のジョブが無い`),
+    ...(jobNames.has(PREVIEW_JOB) ? [] : [`プレビューを作るジョブ "${PREVIEW_JOB}"（pr-status-core.mjs）という name・id のジョブが無い`]),
     ...(translateJobs.includes(TRANSLATION_CHECK)
       ? []
       : [`翻訳の検査 "${TRANSLATION_CHECK}"（pr-status-core.mjs）という name のジョブが translate-content.yml に無い（あるもの: ${sorted(translateJobs)}）`]),
@@ -213,6 +216,16 @@ describe('F3 変異: 片側だけ変える・守りを外すと落ちる', () =>
     const given = sources();
     const workflows = given.workflows.map((w) => (w.name === 'CI' ? { ...w, jobs: { verify: { ...w.jobs.verify, name: 'verify-all' } } } : w));
     expect(check(loadText(FILE), { ...given, workflows }).join('\n')).toContain('必須チェック "verify"（pr-status-core.mjs）という name のジョブが無い');
+  });
+
+  it('プレビューを作るジョブの id を、deploy.yml 側だけ変える', () => {
+    const given = sources();
+    const workflows = given.workflows.map((w) =>
+      w.name === 'Deploy to Firebase Hosting' ? { ...w, jobs: { deploy: w.jobs.build_and_deploy } } : w
+    );
+    expect(check(loadText(FILE), { ...given, workflows }).join('\n')).toContain(
+      'プレビューを作るジョブ "build_and_deploy"（pr-status-core.mjs）という name・id のジョブが無い'
+    );
   });
 
   it('翻訳の検査のジョブ名を、translate-content.yml 側だけ変える', () => {

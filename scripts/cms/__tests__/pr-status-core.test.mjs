@@ -167,6 +167,17 @@ describe('computeState: 失敗と公開できる', () => {
     });
   });
 
+  it('Deploy Preview の check run を作る前にデプロイが失敗したら、build_and_deploy の失敗をプレビューの行に書く', () => {
+    const checkRuns = [...without(greenChecks, 'Deploy Preview'), check(90, 'build_and_deploy', 'failure')];
+    const result = stateOf({ checkRuns });
+    expect(result).toMatchObject({
+      state: 'ready',
+      preview: { status: 'failed', check: { name: 'build_and_deploy', conclusion: 'failure', url: 'https://github.com/o/r/actions/runs/1/job/90' } },
+    });
+    expect(renderComment({ result, sha: SHA, isDraft: false })).toContain('[build_and_deploy](https://github.com/o/r/actions/runs/1/job/90): failure');
+    expect(stateOf({ checkRuns: [...greenChecks, check(91, 'build_and_deploy', 'failure')] }).preview).toEqual({ status: 'ok', url: PREVIEW });
+  });
+
   it('同じチェックが再実行で成功していれば、古い失敗は数えない', () => {
     expect(stateOf({ checkRuns: [check(10, 'verify', 'failure'), ...greenChecks.map((c) => ({ ...c, id: c.id + 100 }))] }).state).toBe('ready');
   });

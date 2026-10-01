@@ -32,6 +32,11 @@ export const TRANSLATION_CHECK = 'i18n-check';
 export const CONTENT_PREFIX = 'src/content/';
 /** PR ごとのプレビュー（deploy.yml の FirebaseExtended/action-hosting-deploy が作る check run） */
 export const PREVIEW_CHECK = 'Deploy Preview';
+/**
+ * プレビューを作るジョブ（deploy.yml の build_and_deploy。name が無いので check run の名前はジョブ id）。ビルドや資格情報の
+ * 確認で失敗すると Deploy Preview の check run が作られないので、そのときはこちらの失敗を見せる（cms-pr-status.test.ts が照合する）
+ */
+export const PREVIEW_JOB = 'build_and_deploy';
 /** プレビューのサイト（firebase.json の hosting.site。cms-pr-status.test.ts が照合する） */
 export const PREVIEW_SITE = 'cor-jp-main';
 /** develop に取り込める（CMS で「エントリーを公開」できる）アカウント。develop の push 制限と同じ */
@@ -106,10 +111,13 @@ function translationOf(run, files) {
 }
 
 /** プレビューの状態（公開の条件には入れない。必須チェックではないため） */
-function previewOf(run, prNumber) {
-  if (!run || run.status !== 'completed') return { status: 'none' };
-  if (!isSucceeded(run)) return { status: 'failed', check: linkOf(run) };
-  return { status: 'ok', url: previewUrlOf(run, prNumber) };
+function previewOf(latest, prNumber) {
+  const run = latest.get(PREVIEW_CHECK);
+  if (run?.status === 'completed') {
+    return isSucceeded(run) ? { status: 'ok', url: previewUrlOf(run, prNumber) } : { status: 'failed', check: linkOf(run) };
+  }
+  const job = latest.get(PREVIEW_JOB);
+  return isFailed(job) ? { status: 'failed', check: linkOf(job) } : { status: 'none' };
 }
 
 /**
@@ -128,7 +136,7 @@ export function computeState({ checkRuns, workflowRuns, files, prNumber }) {
   const requiredPassed = REQUIRED_CHECKS.every((name) => isPassed(latest.get(name)));
   if (failed.length > 0) return { state: 'failed', failed: failed.map(linkOf), translation, requiredPassed };
   if (!requiredPassed) return { state: 'pending' };
-  return { state: 'ready', translation, preview: previewOf(latest.get(PREVIEW_CHECK), prNumber) };
+  return { state: 'ready', translation, preview: previewOf(latest, prNumber) };
 }
 
 /** github-actions[bot] が最後に書いたコメントの目印（状態とコミットの先頭）。無ければ null */
