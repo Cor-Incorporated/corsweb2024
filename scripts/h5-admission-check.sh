@@ -13,12 +13,20 @@ cd "$ROOT"
 BASE_REF="${H5_BASE_REF:-origin/develop}"
 HEAD_REF="${H5_HEAD_REF:-HEAD}"
 PR_BODY="${H5_PR_BODY:-}"
-EVENT_NAME="${GITHUB_EVENT_NAME:-}"
 LEDGER_PATH="${H5_LEDGER_PATH:-$HOME/.claude/hooks/ledger/guard-ledger.jsonl}"
 
 log() { printf '%s\n' "$*"; }
 warn() { printf 'H5-WARN: %s\n' "$*" >&2; }
 fail() { printf 'H5-FAIL: %s\n' "$*" >&2; }
+# One block row in the guard ledger (H6 wiring). Nothing is written when LEDGER_PATH is empty.
+append_h5_block() {
+  local rule="$1" detail="$2" ts
+  [[ -z "$LEDGER_PATH" ]] && return 0
+  mkdir -p "$(dirname "$LEDGER_PATH")" 2>/dev/null || true
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+  printf '{"ts":"%s","component":"H5","event":"block","rule":"%s","detail":"%s","agent":"ci"}\n' \
+    "$ts" "$rule" "$detail" >>"$LEDGER_PATH" 2>/dev/null || true
+}
 
 # --- Collect PR body (CI or local override) ---
 if [[ -z "$PR_BODY" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
@@ -38,14 +46,41 @@ fi
 
 # --- Diff paths ---
 if [[ -n "${H5_DIFF_FILES:-}" ]]; then
-  # newline or space separated override (tests)
-  DIFF_FILES="$(printf '%s\n' $H5_DIFF_FILES)"
+  # Newline or space separated override (tests). Split on whitespace without glob expansion: an unquoted
+  # $H5_DIFF_FILES would also turn hooks/[x].sh into hooks/x.sh when that file exists.
+  DIFF_FILES="$(printf '%s' "$H5_DIFF_FILES" | tr -s '[:space:]' '\n')"
 else
-  git fetch --no-tags --depth=1 origin "$(echo "$BASE_REF" | sed 's#^origin/##')" 2>/dev/null || true
-  if git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
-    DIFF_FILES="$(git diff --name-only "$BASE_REF"...$HEAD_REF 2>/dev/null || git diff --name-only "$BASE_REF" $HEAD_REF 2>/dev/null || true)"
+  # --depth=1 only for a checkout that is already shallow. On a complete clone (CI checks out with fetch-depth: 0, and
+  # local clones are complete) it writes the base tip into .git/shallow: every worktree sharing that .git then sees cut
+  # history, and the base tip has no parents. Once that tip differs from the commit HEAD was built on (in CI the first
+  # parent of the test merge commit, e.g. on a re-run after the base moved; locally the PR's fork point), the three-dot
+  # diff below finds no merge base and falls back to two dots, counting the base's own changes (e.g. a workflow merged
+  # into develop meanwhile) as the PR's (2026-10-01).
+  # The explicit refspec also updates origin/<base> in a --single-branch clone, where a bare branch name only moves FETCH_HEAD.
+  base_branch="${BASE_REF#origin/}"
+  base_refspec="+refs/heads/${base_branch}:refs/remotes/origin/${base_branch}"
+  if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" == "true" ]]; then
+    git fetch --no-tags --depth=1 origin "$base_refspec" 2>/dev/null || true
   else
-    DIFF_FILES="$(git diff --name-only HEAD~1...HEAD 2>/dev/null || true)"
+    git fetch --no-tags origin "$base_refspec" 2>/dev/null || true
+  fi
+  if git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+    if ! DIFF_FILES="$(git diff --name-only "$BASE_REF"..."$HEAD_REF" 2>/dev/null)"; then
+      warn "three-dot diff $BASE_REF...$HEAD_REF failed (no merge base?): falling back to a two-dot diff, which also lists the base's own changes"
+      if ! DIFF_FILES="$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null)"; then
+        # Fail closed: an empty diff would pass any PR as "not a guard PR" (e.g. a mistyped H5_HEAD_REF).
+        fail "cannot diff $BASE_REF against $HEAD_REF: check H5_BASE_REF and H5_HEAD_REF"
+        append_h5_block "diff-unavailable" "base=$BASE_REF head=$HEAD_REF"
+        exit 1
+      fi
+    fi
+  else
+    # Fail closed: without the base the PR's own diff is unknown, and HEAD~1...HEAD (the last commit only) would miss a
+    # structural path changed in an earlier commit (e.g. a mistyped H5_BASE_REF). CI always has the base: h5-admission.yml
+    # runs on pull_request only, so github.base_ref is set, and the fetch above creates origin/<base>.
+    fail "cannot resolve $BASE_REF: check H5_BASE_REF, or pass H5_DIFF_FILES"
+    append_h5_block "diff-unavailable" "base=$BASE_REF unresolved"
+    exit 1
   fi
 fi
 
@@ -57,6 +92,9 @@ is_guard_pr=0
 _H5_STRUCT_RE='^(hooks/.+\.sh|scripts/.+\.sh|settings\.json|\.github/workflows/)'
 if printf '%s\n' "$DIFF_FILES" | grep -qE "$_H5_STRUCT_RE"; then
   is_guard_pr=1
+  # Name the paths that made this a guard PR, so a false positive (e.g. the two-dot fallback above) can be told apart
+  # from a real workflow change in the log. awk reads all of its input, so it cannot close the pipe early.
+  log "H5: structural paths in the diff: $(printf '%s\n' "$DIFF_FILES" | grep -E "$_H5_STRUCT_RE" | awk 'NR <= 5' | tr '\n' ' ')"
 fi
 # Self-declaration (PR template)
 if printf '%s' "$PR_BODY" | grep -qiE 'H5-guard:\s*yes|ブロック権限|完了判定検証器|block-capable guard'; then
@@ -224,13 +262,7 @@ if ((${#missing[@]} > 0)); then
   fail "ledger from code: a changed hooks/** or scripts/h5* file that runs the ledger append helper as a command, or appends (>>) to a *LEDGER* path"
   fail "Required: (1) 陰性テスト red 実測記録 (2) H6 台帳配線 (3) 廃止条件宣言 — in PR body and/or code"
   fail "See design/ops/harness/h5-negative-test-gate.md"
-  # Optional local ledger (does not affect CI if path missing)
-  if [[ -n "$LEDGER_PATH" ]]; then
-    mkdir -p "$(dirname "$LEDGER_PATH")" 2>/dev/null || true
-    ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-    printf '{"ts":"%s","component":"H5","event":"block","rule":"negative-test-missing","detail":"%s","agent":"ci"}\n' \
-      "$ts" "${missing[*]}" >>"$LEDGER_PATH" 2>/dev/null || true
-  fi
+  append_h5_block "negative-test-missing" "${missing[*]}"
   exit 1
 fi
 
