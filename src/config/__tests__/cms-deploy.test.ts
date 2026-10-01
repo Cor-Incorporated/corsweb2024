@@ -11,6 +11,9 @@
  *   - WIF のプロバイダとサービスアカウント ↔ docs に書いた値
  *   - 配信先のプロジェクト ↔ cms/firebase.json の hosting.site（既定サイト）
  *   - 鍵を使わない（secrets. なし・id-token は deploy だけ）、deploy ジョブのコマンドは許可リストだけ
+ *   - deploy ジョブの firebase-tools（単体バイナリの URL と sha256）↔ ci.yml の verify の同じ値
+ *     （deploy は main でしか動かないので、PR の段階では verify が同じバイナリで deploy の処理を読み込めるか
+ *     確かめる。2026-09-30 の初回配信は v15.31.0 の単体バイナリが exit 2 で止まった。firebase-tools #11168）
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -36,7 +39,7 @@ type Workflow = {
   permissions?: Record<string, string> | string;
   jobs: Record<string, Job>;
 };
-type Inputs = { workflow: string; docs: string; site: string };
+type Inputs = { workflow: string; docs: string; site: string; ci: string };
 
 const ROOT = process.cwd();
 const WORKFLOW_FILE = '.github/workflows/deploy-cms.yml';
@@ -46,6 +49,7 @@ const loadInputs = (): Inputs => ({
   workflow: read(WORKFLOW_FILE),
   docs: read('docs/cms-sveltia.md'),
   site: (JSON.parse(read('cms/firebase.json')) as { hosting: { site: string } }).hosting.site,
+  ci: read('.github/workflows/ci.yml'),
 });
 
 const PROVIDER =
@@ -302,12 +306,45 @@ function checkDeploySteps(workflow: Workflow, { site }: Inputs): string[] {
   return violations;
 }
 
+type Pin = { url: string; sha: string };
+const pinOf = (steps: Step[] | undefined): Pin | null => {
+  const step = steps?.find((s) => s.env?.FIREBASE_TOOLS_URL !== undefined);
+  return step
+    ? {
+        url: String(step.env?.FIREBASE_TOOLS_URL),
+        sha: String(step.env?.FIREBASE_TOOLS_SHA256 ?? '（なし）'),
+      }
+    : null;
+};
+const showPin = (pin: Pin | null) => (pin ? `${pin.url}（sha256 ${pin.sha}）` : '（なし）');
+
+/** ci.yml の verify が、deploy ジョブと同じ firebase-tools で deploy の処理を読み込めるか PR の段階で確かめる */
+function checkFirebaseToolsPin(workflow: Workflow, { ci }: Inputs): string[] {
+  const violations: string[] = [];
+  const steps = (yaml.load(ci) as Workflow).jobs.verify?.steps ?? [];
+  const deploy = pinOf(workflow.jobs.deploy?.steps);
+  const verify = pinOf(steps);
+  if (!deploy || !verify || deploy.url !== verify.url || deploy.sha !== verify.sha) {
+    violations.push(
+      `firebase-tools の単体バイナリ: deploy-cms.yml ${showPin(deploy)} / ci.yml の verify ${showPin(verify)}`
+    );
+  }
+  const run = steps.find((s) => s.env?.FIREBASE_TOOLS_URL !== undefined)?.run ?? '';
+  if (!/sha256sum -c/.test(run) || !/hosting:channel:deploy --help/.test(run)) {
+    violations.push(
+      'ci.yml の verify が、firebase-tools の単体バイナリを sha256 で照合して hosting:channel:deploy --help を実行していない'
+    );
+  }
+  return violations;
+}
+
 const checkAll = (inputs: Inputs): string[] => {
   const workflow = yaml.load(inputs.workflow) as Workflow;
   return [
     ...checkKeyless(workflow, inputs.workflow),
     ...checkGcpDocs(workflow, inputs),
     ...checkDeploySteps(workflow, inputs),
+    ...checkFirebaseToolsPin(workflow, inputs),
   ];
 };
 
@@ -334,6 +371,27 @@ describe('F3 変異: 片側だけを変えると両側の値を出して落ち�
     expect(docs).not.toBe(inputs.docs);
     return { ...inputs, docs };
   };
+  const inCi = (from: string | RegExp, to: string) => (inputs: Inputs) => {
+    const ci = inputs.ci.replace(from, to);
+    expect(ci).not.toBe(inputs.ci);
+    return { ...inputs, ci };
+  };
+
+  it('ci.yml の verify の firebase-tools だけを別の sha256 にし、--help の確認を外す', () => {
+    const deploy = pinOf((yaml.load(loadInputs().workflow) as Workflow).jobs.deploy?.steps);
+    // 数字だけの値は YAML が数値として読むので、英字の 16 進にする
+    const other = 'f'.repeat(64);
+    const message = mutate((inputs) =>
+      inCi(
+        'hosting:channel:deploy --help',
+        '--version'
+      )(inCi(/FIREBASE_TOOLS_SHA256: [0-9a-f]{64}/, `FIREBASE_TOOLS_SHA256: ${other}`)(inputs))
+    );
+    expect(deploy).not.toBeNull();
+    expect(message).toContain(`deploy-cms.yml ${showPin(deploy)}`);
+    expect(message).toContain(`ci.yml の verify ${deploy?.url}（sha256 ${other}）`);
+    expect(message).toContain('hosting:channel:deploy --help を実行していない');
+  });
 
   it('secrets. の鍵を使う', () => {
     const message = mutate(
