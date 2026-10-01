@@ -18,6 +18,10 @@ FIREBASE_ORIGIN = "https://cor-jp-main.web.app"
 [env.preview]
 name = "cor-contact-edge-preview"
 routes = []
+# workers.dev（<name>.<アカウントのサブドメイン>.workers.dev）では公開しない。routes が空のとき wrangler は workers.dev を
+# 既定で有効にするので、明示して止める（#362: 2026-10-01 に、このプレビューが外から届く状態だった）。
+# workers-dev-exposure.test.ts が、routes が空・無い環境に workers_dev の明示を求める。
+workers_dev = false
 
 [env.preview.vars]
 CONTACT_ORIGIN = "pages"
