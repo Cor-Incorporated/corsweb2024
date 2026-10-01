@@ -18,7 +18,8 @@ backend:
   # 形式: https://cor-sveltia-cms-auth.<Cloudflare アカウントの workers.dev サブドメイン>.workers.dev
   # Worker がトークンを渡す先は wrangler.toml の [vars] ALLOWED_DOMAINS（cor-jp-cms-admin.web.app だけ）。
   # 手順は docs/cms-sveltia.md の「管理者向けセットアップ」。
-  base_url: https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev
+  # 2026-10-01 にデプロイした認証 Worker（cor-sveltia-cms-auth、Company@cor-jp.com のアカウントの workers.dev）。
+  base_url: https://cor-sveltia-cms-auth.company-997.workers.dev
   # ログイン画面には「GitHub にログイン」だけを出す（アクセストークンの入力欄は出さない）。
   auth_methods: [oauth]
   # 公開リポジトリなので public_repo で足りる。既定の repo は編集者の非公開リポジトリにも及ぶ。

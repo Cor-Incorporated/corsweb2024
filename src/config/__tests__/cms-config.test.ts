@@ -291,9 +291,8 @@ function checkAllowedDomains(wrangler: Wrangler, hosting: CmsHosting): string[] 
 /** (g) config.yml の base_url ↔ 認証 Worker の名前（workers.dev の URL） */
 function checkBaseUrl(config: CmsConfig, wrangler: Wrangler): string[] {
   const baseUrl = config.backend.base_url ?? '（未定義）';
-  const pattern = new RegExp(
-    `^https://${wrangler.name}\\.(?:REPLACE-WITH-CF-SUBDOMAIN|[a-z0-9-]+)\\.workers\\.dev$`
-  );
+  // 2026-10-01 に Worker をデプロイして URL が決まったので、仮の値（REPLACE-WITH-CF-SUBDOMAIN）はもう通さない
+  const pattern = new RegExp(`^https://${wrangler.name}\\.[a-z0-9-]+\\.workers\\.dev$`);
   if (pattern.test(baseUrl)) return [];
   return [
     `base_url が認証 Worker の URL の形ではない: config.yml base_url "${baseUrl}" / wrangler.toml name "${wrangler.name}"（期待 https://${wrangler.name}.<サブドメイン>.workers.dev）`,
@@ -557,6 +556,15 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
     expect(message.join('\n')).toContain(
       'ALLOWED_DOMAINS "cor-jp-cms-admin.web.app" / cms/firebase.json hosting.site "cor-jp-cms-admin-2"（期待 cor-jp-cms-admin-2.web.app）'
     );
+  });
+
+  it('base_url を、Worker の URL が決まる前の仮の値に戻す', () => {
+    const config = loadConfig();
+    const placeholder = 'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev';
+    const mutated = { ...config, backend: { ...config.backend, base_url: placeholder } };
+    expect(checkBaseUrl(mutated, loadWrangler())).toEqual([
+      `base_url が認証 Worker の URL の形ではない: config.yml base_url "${placeholder}" / wrangler.toml name "cor-sveltia-cms-auth"（期待 https://cor-sveltia-cms-auth.<サブドメイン>.workers.dev）`,
+    ]);
   });
 
   it('base_url を別のホストにする', () => {
