@@ -4,102 +4,153 @@
  *
  * GitHub は、PR に付いたコメントを PR の作成者（CMS で書いた人）にメールで知らせ、@メンションした人にも知らせる。
  * CMS の画面には、翻訳が付いたか・チェックが通ったかが出ないので、次の 3 つの場面でコメントする（2026-10-01 の CEO の指摘）。
- * - ready:          必須チェックがすべて成功し、プレビューができた → 公開できる
- * - needs-approval: 翻訳 CI が GITHUB_TOKEN で積んだコミットのワークフローが action_required で止まっている
- * - failed:         必須チェックのどれかが失敗した（下書きの間は * の欄が空だと失敗する）
- * 同じコミット・同じ状態では書かない（コメントに埋めた目印で判定する）。
+ * - needs-approval: 見ているワークフローが action_required で止まっている（翻訳 CI が GITHUB_TOKEN で積んだコミット）
+ * - failed:         見ているワークフローがすべて終わり、必須チェックか翻訳の検査（i18n-check）が失敗した
+ * - ready:          見ているワークフローがすべて終わり、必須チェックと翻訳の検査が通った → 公開できる
+ * ワークフローが動いている間（pending）は書かない（失敗をまとめて 1 回で知らせ、翻訳の途中で「公開できます」と書かないため）。
+ * 最後に書いた状態・コミットと同じなら書かない（コメントに埋めた目印で判定する）。
  */
 
-/** develop のブランチ保護の必須チェック（ジョブ名）。src/config/__tests__/cms-pr-status.test.ts がワークフローの定義と照合する */
+/** 終わるたびに状態を見直すワークフロー（cms-pr-status.yml の workflow_run.workflows と同じ。cms-pr-status.test.ts が照合する） */
+export const WATCHED_WORKFLOWS = Object.freeze([
+  'CI',
+  'Responsive visual text',
+  'H5 Admission',
+  'Deploy to Firebase Hosting',
+  'Translate content (i18n)',
+]);
+/** develop のブランチ保護の必須チェック（ジョブ名）。cms-pr-status.test.ts がワークフローの定義と照合する */
 export const REQUIRED_CHECKS = Object.freeze(['h5-admission', 'verify', 'Chromium visual text audit']);
+/**
+ * 翻訳の検査（translate-content.yml の i18n-check ジョブ。PR で変えた記事の翻訳がそろい、ja の今の内容に合っているか）。
+ * 翻訳の有無は PR の差分ではなくこの結果で決める（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）
+ */
+export const TRANSLATION_CHECK = 'i18n-check';
+/** この下を変えた PR では翻訳 CI が動く（translate-content.yml の pull_request.paths。cms-pr-status.test.ts が照合する） */
+export const CONTENT_PREFIX = 'src/content/';
 /** PR ごとのプレビュー（deploy.yml の FirebaseExtended/action-hosting-deploy が作る check run） */
 export const PREVIEW_CHECK = 'Deploy Preview';
+/** プレビューのサイト（firebase.json の hosting.site。cms-pr-status.test.ts が照合する） */
+export const PREVIEW_SITE = 'cor-jp-main';
 /** develop に取り込める（CMS で「エントリーを公開」できる）アカウント。develop の push 制限と同じ */
 export const PUBLISHERS = Object.freeze(['terisuke', 'cloudia-Cor']);
 /** 翻訳先の言語（scripts/i18n/config.mjs の TARGET_LANGS と同じ。cms-pr-status.test.ts が照合する） */
 export const TRANSLATION_LANGS = Object.freeze(['en', 'zh', 'ko', 'es']);
 const LANG_LABELS = Object.freeze({ en: '英', zh: '中', ko: '韓', es: '西' });
 const NOTIFY_STATES = new Set(['ready', 'needs-approval', 'failed']);
-const FAILED_CONCLUSIONS = new Set(['failure', 'cancelled', 'timed_out', 'action_required', 'stale', 'startup_failure']);
+/** ブランチ保護と同じく、通ったとみなす結論 */
+const PASSED = new Set(['success', 'neutral', 'skipped']);
+const SUCCEEDED = new Set(['success']);
+/** 失敗とみなす結論。cancelled は数えない（同じコミットで走り直したときに出る。人が止めたときも、次の実行で知らせる） */
+const FAILED = new Set(['failure', 'timed_out', 'action_required', 'stale', 'startup_failure']);
 const MARKER_RE = /<!-- cms-pr-status: ([a-z-]+) ([0-9a-f]{7,40}) -->/;
-/** プレビューの URL として受け付ける形（PR ごとの Firebase Hosting のプレビューチャネル）。それ以外の URL は載せない */
-const PREVIEW_URL_RE = /https:\/\/[a-z0-9-]+--[a-z0-9-]+\.web\.app/;
+/** コメントにリンクとして載せる URL（GitHub の画面だけ） */
+const GITHUB_URL_RE = /^https:\/\/github\.com\/[^\s()<>[\]]+$/;
 
-/** 同じ名前の check run が複数あるとき（再実行など）は、新しいもの（id が大きいもの）だけを残す */
-export function latestByName(checkRuns) {
-  return checkRuns.reduce((latest, run) => {
-    const previous = latest.get(run.name);
-    return previous && previous.id > run.id ? latest : new Map(latest).set(run.name, run);
+const completedWith = (conclusions) => (run) => run?.status === 'completed' && conclusions.has(run.conclusion);
+const isPassed = completedWith(PASSED);
+const isSucceeded = completedWith(SUCCEEDED);
+const isFailed = completedWith(FAILED);
+const linkOf = ({ name, conclusion, html_url }) => ({ name, conclusion, url: html_url });
+
+/** key ごとに、id が最も大きい（新しい）ものを 1 つ残す */
+const latestBy = (items, keyOf) =>
+  items.reduce((latest, item) => {
+    const previous = latest.get(keyOf(item));
+    return previous && previous.id > item.id ? latest : new Map(latest).set(keyOf(item), item);
   }, new Map());
+
+/** 同じ名前の check run が複数あるとき（再実行など）は、新しいものだけを残す */
+export const latestByName = (checkRuns) => latestBy(checkRuns, (run) => run.name);
+
+/**
+ * 見ているワークフローの run を、ワークフロー × イベントごとに新しいものだけ残す。
+ * PR の本文を編集すると H5 Admission が同じコミットで走り直し、古い action_required の run が残るため。
+ * イベントは分ける（翻訳 CI が workflow_dispatch で起こす i18n-check の run が、pull_request の承認待ちを隠さないように）
+ */
+export const latestWatchedRuns = (workflowRuns) => [
+  ...latestBy(
+    workflowRuns.filter((run) => WATCHED_WORKFLOWS.includes(run.name)),
+    (run) => `${run.workflow_id ?? run.name}:${run.event}`
+  ).values(),
+];
+
+/** Deploy Preview の check run の summary から、この PR のプレビューチャネルの URL を取り出す（形が違えば null） */
+export function previewUrlOf(checkRun, prNumber) {
+  const pattern = new RegExp(`https://${PREVIEW_SITE}--pr${prNumber}-[a-z0-9-]+\\.web\\.app(?![\\w.-])`);
+  return pattern.exec(checkRun?.output?.summary ?? '')?.[0] ?? null;
 }
 
-/** Deploy Preview の check run の summary から、プレビューの URL を取り出す（形が違えば null） */
-export function previewUrlOf(checkRun) {
-  return PREVIEW_URL_RE.exec(checkRun?.output?.summary ?? '')?.[0] ?? null;
+/** 翻訳の検査の状態: none（PR が src/content/ を変えていない）・ok・failed・pending */
+function translationOf(latest, files) {
+  if (!files.some((file) => file.filename.startsWith(CONTENT_PREFIX))) return 'none';
+  const run = latest.get(TRANSLATION_CHECK);
+  if (isSucceeded(run)) return 'ok';
+  return isFailed(run) ? 'failed' : 'pending';
+}
+
+/** プレビューの状態（公開の条件には入れない。必須チェックではないため） */
+function previewOf(run, prNumber) {
+  if (!run || run.status !== 'completed') return { status: 'none' };
+  if (!isSucceeded(run)) return { status: 'failed', check: linkOf(run) };
+  return { status: 'ok', url: previewUrlOf(run, prNumber) };
 }
 
 /**
- * PR の先頭のコミットの check run と workflow run から、状態を決める。
- * 失敗 > 承認待ち > 公開できる > 進行中 の順に見る。
+ * PR の先頭のコミットの check run・workflow run と PR のファイルから、状態を決める。
+ * 承認待ち > 動いている > 失敗 > 公開できる の順に見る。
  */
-export function computeState({ checkRuns, workflowRuns }) {
+export function computeState({ checkRuns, workflowRuns, files, prNumber }) {
+  const runs = latestWatchedRuns(workflowRuns);
+  const waiting = runs.filter((run) => run.conclusion === 'action_required');
+  if (waiting.length > 0) return { state: 'needs-approval', waiting: waiting.map(linkOf) };
+  if (runs.some((run) => run.event === 'pull_request' && run.status !== 'completed')) return { state: 'pending' };
   const latest = latestByName(checkRuns);
-  const failed = REQUIRED_CHECKS.map((name) => latest.get(name)).filter(
-    (run) => run?.status === 'completed' && FAILED_CONCLUSIONS.has(run.conclusion)
-  );
-  if (failed.length > 0) {
-    return { state: 'failed', failed: failed.map(({ name, conclusion, html_url }) => ({ name, conclusion, url: html_url })) };
-  }
-  const waiting = workflowRuns.filter((run) => run.conclusion === 'action_required');
-  if (waiting.length > 0) {
-    return { state: 'needs-approval', waiting: waiting.map(({ name, html_url }) => ({ name, url: html_url })) };
-  }
-  const passed = REQUIRED_CHECKS.every((name) => {
-    const run = latest.get(name);
-    return run?.status === 'completed' && run.conclusion === 'success';
-  });
-  const preview = latest.get(PREVIEW_CHECK);
-  const previewReady = preview?.status === 'completed' && preview.conclusion === 'success';
-  return passed && previewReady ? { state: 'ready', previewUrl: previewUrlOf(preview) } : { state: 'pending' };
+  const translation = translationOf(latest, files);
+  const checks = translation === 'none' ? REQUIRED_CHECKS : [...REQUIRED_CHECKS, TRANSLATION_CHECK];
+  const failed = checks.map((name) => latest.get(name)).filter(isFailed);
+  if (failed.length > 0) return { state: 'failed', failed: failed.map(linkOf), translation };
+  if (!REQUIRED_CHECKS.every((name) => isPassed(latest.get(name))) || translation === 'pending') return { state: 'pending' };
+  return { state: 'ready', translation, preview: previewOf(latest.get(PREVIEW_CHECK), prNumber) };
 }
 
-/** PR のファイルから、ja の記事ごとに翻訳がそろった言語を数える（{ ja のパス: [言語] }） */
-export function translationsOf(files) {
-  const paths = files.map((file) => file.filename ?? file);
-  const sources = paths.filter((p) => /^src\/content\/(blog|news|cases)\/ja\/[^/]+\.md$/.test(p));
-  return Object.fromEntries(
-    sources.map((source) => [
-      source,
-      TRANSLATION_LANGS.filter((lang) => paths.includes(source.replace('/ja/', `/${lang}/`))),
-    ])
-  );
+/** github-actions[bot] が最後に書いたコメントの目印（状態とコミットの先頭）。無ければ null */
+export function lastMarker(comments) {
+  const last = comments.map((comment) => MARKER_RE.exec(comment.body ?? '')).filter(Boolean).at(-1);
+  return last ? { state: last[1], sha: last[2] } : null;
 }
 
-/** 先頭のコミットについて、すでに同じ状態をコメントしたか（コメントの目印で判定する） */
-export function alreadyNotified(comments, state, sha) {
-  return comments.some((comment) => {
-    const marker = MARKER_RE.exec(comment.body ?? '');
-    return marker !== null && marker[1] === state && sha.startsWith(marker[2]);
-  });
-}
-
-/** コメントするかどうか（知らせる状態で、まだ同じコミット・同じ状態で書いていない） */
+/** コメントするかどうか（知らせる状態で、最後に書いた状態・コミットと違う。前の失敗が直ってまた失敗したときも知らせる） */
 export function shouldNotify(comments, state, sha) {
-  return NOTIFY_STATES.has(state) && !alreadyNotified(comments, state, sha);
+  const last = lastMarker(comments);
+  return NOTIFY_STATES.has(state) && !(last !== null && last.state === state && sha.startsWith(last.sha));
 }
 
-const translationLine = (translations) => {
-  const entries = Object.values(translations);
-  if (entries.length === 0) return '- 翻訳: この PR には日本語の記事の変更がありません';
-  const complete = entries.every((langs) => langs.length === TRANSLATION_LANGS.length);
-  const labels = TRANSLATION_LANGS.map((lang) => LANG_LABELS[lang]).join('・');
-  return complete
-    ? `- 翻訳: ${labels}の ${TRANSLATION_LANGS.length} 言語がそろっています`
-    : `- 翻訳: まだそろっていません（${entries.map((langs) => langs.map((l) => LANG_LABELS[l]).join('・') || 'なし').join(' / ')}）`;
+/** チェックやワークフローの 1 行。URL は Markdown のリンクにする（URL の直後の全角の括弧まで、リンクに含まれないように） */
+const linkLine = ({ name, conclusion, url }) => {
+  const label = GITHUB_URL_RE.test(url ?? '') ? `[${name}](${url})` : name;
+  return conclusion ? `- ${label}: ${conclusion}` : `- ${label}`;
 };
 
-/** コメントの本文。PR から読んだ値は、チェックの名前・URL・言語の数だけを載せる */
-export function renderComment({ result, sha, translations, isDraft }) {
+const LANGS = TRANSLATION_LANGS.map((lang) => LANG_LABELS[lang]).join('・');
+const TRANSLATION_LINES = Object.freeze({
+  none: '- 翻訳: この PR は記事（src/content/）を変えていません',
+  ok: `- 翻訳: ${LANGS}の ${TRANSLATION_LANGS.length} 言語がそろっていて、日本語の今の内容に合っています（${TRANSLATION_CHECK}: 成功）`,
+  pending: `- 翻訳: 確かめています（${TRANSLATION_CHECK} の結果を待っています）`,
+  failed: `- 翻訳: 検査が通っていません（翻訳が無い・古い、または日本語の記事の * の欄が空。${TRANSLATION_CHECK} のログに記事と理由が出ています）`,
+});
+
+const previewLine = (preview) => {
+  if (preview.status === 'ok') return `- プレビュー: ${preview.url ?? 'CMS の「プレビューを見る」から開けます'}`;
+  if (preview.status === 'failed') return `- プレビュー: 作れませんでした（必須チェックではないので、公開はできます）\n  ${linkLine(preview.check)}`;
+  return '- プレビュー: ありません';
+};
+
+const DRAFT_HINT =
+  'この記事は CMS で「下書き」です。下書きの間は `*` の欄が空でも保存できますが、カテゴリ・タイトル・概要・公開日のどれかが空だとチェックが失敗します。欄を埋めて保存し直してください。';
+
+/** コメントの本文。PR から読んだ値は、チェックとワークフローの名前（定数と一致したもの）・GitHub の URL・プレビューの URL だけを載せる */
+export function renderComment({ result, sha, isDraft }) {
   const marker = `<!-- cms-pr-status: ${result.state} ${sha.slice(0, 12)} -->`;
   const publishers = PUBLISHERS.map((login) => `@${login}`).join(' ');
   if (result.state === 'ready') {
@@ -107,9 +158,9 @@ export function renderComment({ result, sha, translations, isDraft }) {
       marker,
       '**公開できます**（CMS の記事のチェックがすべて通りました）',
       '',
-      `- 必須チェック（${REQUIRED_CHECKS.join('・')}）: すべて成功`,
-      translationLine(translations),
-      `- プレビュー: ${result.previewUrl ?? 'CMS の「プレビューを見る」から開けます'}`,
+      `- 必須チェック（${REQUIRED_CHECKS.join('・')}）: すべて通過`,
+      TRANSLATION_LINES[result.translation],
+      previewLine(result.preview),
       '',
       `公開するときは、CMS でこの記事のステータスを「公開可」にして「エントリーを公開」を押してください（${publishers}）。`,
     ].join('\n');
@@ -119,15 +170,18 @@ export function renderComment({ result, sha, translations, isDraft }) {
       marker,
       '**チェックの実行に承認が必要です**',
       '',
-      '翻訳 CI が翻訳を PR に追加しました。このコミットは GitHub の標準のトークンで積んだため、続くチェックが自動では始まりません。',
-      translationLine(translations),
+      '翻訳 CI が GitHub の標準のトークンで積んだコミットでは、続くチェックが自動では始まりません。承認を待っているワークフロー:',
+      ...result.waiting.map(({ name, url }) => linkLine({ name, url })),
       '',
-      `${publishers} PR の画面の「Approve workflows to run」で承認してください。チェックが通ると、ここに「公開できます」と書きます。`,
+      `${publishers} PR の画面の「Approve workflows to run」で承認してください。チェックがすべて終わると、ここに結果を書きます（承認のボタンが出ないときは docs/i18n-translation.md の 6 章）。`,
     ].join('\n');
   }
-  const lines = result.failed.map(({ name, conclusion, url }) => `- ${name}: ${conclusion}（${url}）`);
-  const draftHint = isDraft
-    ? ['', 'この記事は CMS で「下書き」です。下書きの間は、`*` の欄（タイトル・概要・カテゴリなど）が空でも保存できますが、チェックは失敗します。欄を埋めて保存し直してください。']
-    : [];
-  return [marker, '**チェックが失敗しました**', '', ...lines, ...draftHint].join('\n');
+  return [
+    marker,
+    '**チェックが失敗しました**',
+    '',
+    ...result.failed.map(linkLine),
+    ...(result.translation === 'none' ? [] : [TRANSLATION_LINES[result.translation]]),
+    ...(isDraft ? ['', DRAFT_HINT] : []),
+  ].join('\n');
 }

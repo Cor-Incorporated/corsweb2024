@@ -1,57 +1,71 @@
 #!/usr/bin/env node
 /**
  * CMS（Sveltia CMS、ADR-0018）が作った PR の状態を、PR のコメントで知らせる。判定と文面は pr-status-core.mjs。
- * .github/workflows/cms-pr-status.yml（workflow_run）から、既定ブランチ（main）のこのファイルを動かす。
- * PR のコードは実行しない。PR からは、ブランチ名・チェックの結果・ファイル名・コメントだけを読む。
+ * .github/workflows/cms-pr-status.yml（workflow_run と、手で知らせ直す workflow_dispatch）から、既定ブランチ（main）の
+ * このファイルを動かす。PR のコードは実行しない。PR からは、ブランチ名・チェックと workflow run の結果・ファイル名・
+ * コメントだけを読む。リポジトリは gh が決める（GH_REPO、無ければカレントディレクトリの git remote）。
  *
  * 使い方:
- *   node scripts/cms/pr-status.mjs --branch cms/blog/<スラッグ>   # ワークフローから（GH_TOKEN と GITHUB_REPOSITORY を使う）
- *   node scripts/cms/pr-status.mjs --pr 367 --dry-run             # 手元で。コメントせず、判定と文面だけを表示する（gh のログインを使う）
- *   node scripts/cms/pr-status.mjs --pr 367 --dry-run --sha <コミット>  # 手元で、PR の過去のコミットの状態を見る（--dry-run のときだけ）
+ *   node scripts/cms/pr-status.mjs --branch cms/blog/<スラッグ>   # ワークフローから（GH_TOKEN と GH_REPO を使う）
+ *   node scripts/cms/pr-status.mjs --pr 367                      # ワークフローの手動実行から
+ *   node scripts/cms/pr-status.mjs --pr 367 --dry-run            # 手元で。コメントせず、判定と文面だけを表示する（gh のログインを使う）
+ *   node scripts/cms/pr-status.mjs --pr 367 --dry-run --sha <コミット>  # 過去のコミットの状態（ファイルとラベルは今の PR のもの）
+ *     翻訳 CI が翻訳を push したコミットの 1 つ前は、i18n-check が新しいコミットに検査を任せて成功で終わるので、翻訳が
+ *     そろっていると出る（本番では HEAD だけを判定し、そのコミットはもう HEAD ではないので起きない）
  */
 import { execFile } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { parseArgs, promisify } from 'node:util';
-import { computeState, renderComment, shouldNotify, translationsOf } from './pr-status-core.mjs';
+import { computeState, renderComment, shouldNotify } from './pr-status-core.mjs';
 
 const exec = promisify(execFile);
-const REPO = process.env.GITHUB_REPOSITORY || 'Cor-Incorporated/corsweb2024';
 const BOT = 'github-actions[bot]';
-const out = (line) => process.stdout.write(`${line}\n`);
+/** gh が {owner}/{repo} を GH_REPO（無ければ git remote）の値に置き換える */
+const REPO_PATH = 'repos/{owner}/{repo}';
 
 /** gh api を呼んで JSON を返す（引数はシェルを通さずに渡す） */
-async function gh(args) {
+async function ghApi(args) {
   const { stdout } = await exec('gh', ['api', ...args], { maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(stdout);
 }
-/** 全ページを取得する（ページごとの結果の配列） */
-const allPages = (path) => gh(['--paginate', '--slurp', path]);
 
-async function findPull({ pr, branch }) {
-  if (pr) return gh([`repos/${REPO}/pulls/${pr}`]);
-  const owner = REPO.split('/')[0];
-  const pulls = await gh([`repos/${REPO}/pulls?state=open&head=${encodeURIComponent(`${owner}:${branch}`)}`]);
-  return pulls[0] ?? null;
+/** リポジトリの API（gh はテストで差し替える）。all は全ページを 1 つの配列にする（--slurp はページの配列を返す） */
+const apiOf = (gh) => ({
+  get: (path) => gh([`${REPO_PATH}/${path}`]),
+  all: async (path, itemsOf = (page) => page) =>
+    (await gh(['--paginate', '--slurp', `${REPO_PATH}/${path}`])).flatMap(itemsOf),
+  comment: (number, body) => gh(['-X', 'POST', `${REPO_PATH}/issues/${number}/comments`, '-f', `body=${body}`]),
+});
+
+const isSameRepo = (pull) => pull.head.repo?.full_name === pull.base.repo.full_name;
+
+/** 開いている PR のうち、このリポジトリのそのブランチのもの（head= の絞り込みは、形が違うと黙って全件を返すので使わない） */
+async function findPull(api, { pr, branch }) {
+  if (pr) return api.get(`pulls/${pr}`);
+  const pulls = await api.all('pulls?state=open&per_page=100');
+  return pulls.find((pull) => pull.head.ref === branch && isSameRepo(pull)) ?? null;
 }
 
-async function collect(pull, sha) {
-  const [checkPages, runPages, filePages, commentPages] = await Promise.all([
-    allPages(`repos/${REPO}/commits/${sha}/check-runs?per_page=100`),
-    allPages(`repos/${REPO}/actions/runs?head_sha=${sha}&per_page=100`),
-    allPages(`repos/${REPO}/pulls/${pull.number}/files?per_page=100`),
-    allPages(`repos/${REPO}/issues/${pull.number}/comments?per_page=100`),
+async function collect(api, pull, sha) {
+  const [checkRuns, workflowRuns, files, comments] = await Promise.all([
+    api.all(`commits/${sha}/check-runs?per_page=100`, (page) => page.check_runs),
+    api.all(`actions/runs?head_sha=${sha}&per_page=100`, (page) => page.workflow_runs),
+    api.all(`pulls/${pull.number}/files?per_page=100`),
+    api.all(`issues/${pull.number}/comments?per_page=100`),
   ]);
-  return {
-    sha,
-    checkRuns: checkPages.flatMap((page) => page.check_runs),
-    workflowRuns: runPages.flatMap((page) => page.workflow_runs),
-    files: filePages.flat(),
-    // 目印の判定は、このワークフロー（github-actions[bot]）のコメントだけで行う（人が目印を書いても通知は止まらない）
-    botComments: commentPages.flat().filter((comment) => comment.user?.login === BOT),
-  };
+  // 目印の判定は、このワークフロー（github-actions[bot]）のコメントだけで行う（人が目印を書いても通知は止まらない）
+  return { checkRuns, workflowRuns, files, botComments: comments.filter((comment) => comment.user?.login === BOT) };
 }
 
-async function main() {
+/** 判定のあいだに CMS で保存し直されていないか（まだ開いていて、HEAD が同じか）。変わっていれば新しいコミットの実行が知らせる */
+async function isStillHead(api, pull, sha) {
+  const latest = await api.get(`pulls/${pull.number}`);
+  return latest.state === 'open' && latest.head.sha === sha;
+}
+
+export function parseOptions(args) {
   const { values } = parseArgs({
+    args,
     options: {
       pr: { type: 'string' },
       branch: { type: 'string' },
@@ -60,27 +74,38 @@ async function main() {
     },
   });
   if (values.sha && !values['dry-run']) throw new Error('--sha は --dry-run のときだけ使えます');
-  if (!values.pr && !values.branch?.startsWith('cms/')) {
-    throw new Error('--pr <番号> か、cms/ で始まる --branch を渡してください');
+  if (values.pr !== undefined && !/^[1-9][0-9]*$/.test(values.pr)) throw new Error(`--pr には PR の番号を渡してください（${values.pr}）`);
+  if (!values.pr && !values.branch) throw new Error('--pr <番号> か --branch <ブランチ名> を渡してください');
+  return values;
+}
+
+/** 1 つの PR の状態を判定し、知らせる場面ならコメントする（--dry-run では表示だけ）。進み具合は out に 1 行ずつ渡す */
+export async function run(args, { gh = ghApi, out = (line) => process.stdout.write(`${line}\n`) } = {}) {
+  const options = parseOptions(args);
+  const api = apiOf(gh);
+  const pull = await findPull(api, options);
+  if (!pull) return out(`${options.branch}: 開いている PR が無いので、何もしません`);
+  if (!isSameRepo(pull) || !pull.head.ref.startsWith('cms/') || (pull.state !== 'open' && !options['dry-run'])) {
+    return out(`#${pull.number}: 開いている CMS の PR（このリポジトリの cms/ ブランチ）ではないので、何もしません`);
   }
-  const pull = await findPull(values);
-  if (!pull) return out(`${values.branch}: 開いている PR が無いので、何もしません`);
-  if (pull.head.repo?.full_name !== REPO || !pull.head.ref.startsWith('cms/')) {
-    return out(`#${pull.number}: CMS の PR（このリポジトリの cms/ ブランチ）ではないので、何もしません`);
-  }
-  const { sha, checkRuns, workflowRuns, files, botComments } = await collect(pull, values.sha ?? pull.head.sha);
-  const result = computeState({ checkRuns, workflowRuns });
+  const sha = options.sha ?? pull.head.sha;
+  const { botComments, ...observed } = await collect(api, pull, sha);
+  const result = computeState({ ...observed, prNumber: pull.number });
   const notify = shouldNotify(botComments, result.state, sha);
   out(`#${pull.number} ${sha.slice(0, 7)} state=${result.state} notify=${notify}`);
   if (!notify) return undefined;
-  const isDraft = pull.labels.some((label) => label.name === 'sveltia-cms/draft');
-  const body = renderComment({ result, sha, translations: translationsOf(files), isDraft });
-  if (values['dry-run']) return out(body);
-  await gh(['-X', 'POST', `repos/${REPO}/issues/${pull.number}/comments`, '-f', `body=${body}`]);
+  const body = renderComment({ result, sha, isDraft: pull.labels.some((label) => label.name === 'sveltia-cms/draft') });
+  if (options['dry-run']) return out(body);
+  if (!(await isStillHead(api, pull, sha))) {
+    return out(`#${pull.number}: 判定のあいだに PR が更新されたので、コメントしません（新しいコミットのチェックが終わったときに知らせます）`);
+  }
+  await api.comment(pull.number, body);
   return out(`#${pull.number} にコメントしました（${result.state}）`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.stack ?? error}\n`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run(process.argv.slice(2)).catch((error) => {
+    process.stderr.write(`${error.stack ?? error}\n`);
+    process.exitCode = 1;
+  });
+}
