@@ -39,8 +39,11 @@ const ENV_HEADER = /^env\.([A-Za-z0-9_-]+)(\..+)?$/;
 const ENV_LIKE_HEADER = /^["']?env["']?\s*(?:\.|$)/;
 /** 最上位で env を見出し以外で書いた行: env.x.workers_dev = …・env.x = { … }・"env" = { … }・'env'.x.… （wrangler は環境として読む） */
 const TOP_LEVEL_ENV_KEY = /^["']?env["']?\s*[.=]/;
-/** route ごとのプレビュー URL（wrangler 4 の routes の previews_enabled）。preview_urls = false で止めるので使わない */
-const ROUTE_PREVIEWS = /\bpreviews_enabled\b/;
+/**
+ * route ごとのプレビュー URL（wrangler 4 の custom domain の routes の previews_enabled）。preview_urls とは別の経路
+ * なので、キーごと使わない。キーが置ける位置（行頭・{ や , の後）だけを見る（コメントや文字列の値は数えない）
+ */
+const ROUTE_PREVIEWS = /(?:^|[{,])\s*["']?previews_enabled["']?\s*=/;
 const KEY_LINE = /^["']?(workers_dev|preview_urls)["']?\s*=/;
 const KEY_VALUE = /^(workers_dev|preview_urls)\s*=\s*(true|false)\s*(?:#.*)?$/;
 
@@ -99,7 +102,7 @@ function checkWorker(worker: string, files: readonly string[], text: string | nu
 }
 
 /** git から消えたあとも残る、無視されたファイルだけのディレクトリ（例: 手元の workers/yomimono/node_modules）は Worker として数えない */
-const LEFTOVERS = new Set(['node_modules', '.wrangler', '.claude', '.DS_Store']);
+const LEFTOVERS = new Set(['node_modules', '.wrangler', '.claude', '.dev.vars', '.DS_Store']);
 const workerDirs = () =>
   readdirSync(WORKERS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -208,9 +211,16 @@ describe('F2 変異: 公開を暗黙にしたり、許可なく公開したり�
 
   it('route ごとのプレビュー URL（previews_enabled）を書く', () => {
     const route = 'routes = [{ pattern = "chat.example.com", custom_domain = true, previews_enabled = true }]';
-    expect(check('contact-edge', `${text('contact-edge')}\n[env.preview]\n${route}\n`)).toContain(
-      `contact-edge: previews_enabled（route ごとのプレビュー URL）は使わない: ${route}`
-    );
+    const staging = `[env.staging]\nworkers_dev = false\npreview_urls = false\n${route}\n`;
+    expect(check('contact-edge', `${text('contact-edge')}\n${staging}`)).toEqual([
+      `contact-edge: previews_enabled（route ごとのプレビュー URL）は使わない: ${route}`,
+    ]);
+  });
+
+  it('コメントや文字列の値の中の previews_enabled は数えない（キーとしてだけ見る）', () => {
+    const changed = replaceFirst(text('contact-edge'), '\npreview_urls = false\n', '\npreview_urls = false # previews_enabled も使わない\n');
+    const staging = '[env.staging]\nworkers_dev = false\npreview_urls = false\n\n[env.staging.vars]\nNOTE = "previews_enabled"\n';
+    expect(check('contact-edge', `${changed}\n${staging}`)).toEqual([]);
   });
 
   it('[env-x] のような env 以外のテーブルや、[ env.preview ] の前後の空白は、今までどおり読む', () => {
