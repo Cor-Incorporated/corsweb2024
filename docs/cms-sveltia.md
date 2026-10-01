@@ -375,8 +375,16 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | `src/config/__tests__/cms-config.test.ts` | `config.yml` ↔ スキーマ・カテゴリ定義・ADR-0018、`wrangler.toml` ↔ `cms/firebase.json` の照合 |
 | `src/config/__tests__/cms-deploy.test.ts` | `deploy-cms.yml` ↔ この文書（WIF・サービスアカウント）・`cms/firebase.json` の照合 |
 | `src/config/__tests__/content-safety.test.ts` | 記事をサイトと同じパイプラインで描画し、スクリプトが動く要素・属性・URL と SVG を検査する |
-| `e2e/admin-cms.spec.ts` | 本番と同じヘッダーで、ログイン画面と編集画面の CSP 違反 0 件を確認（`npm run build:cms && npm run test:e2e:admin`） |
+| `e2e/admin-cms.spec.ts` | 本番と同じヘッダーで、ログイン画面と編集画面の CSP 違反 0 件を確認（`npm run build:cms && npm run test:e2e:admin`）。CI の遅さは `CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin` で手元に再現できる（Chromium のみ）。失敗の記録（trace・`error-context.md`）は `test-results/admin-cms/` に出て、CI では visual-text.yml の成果物 `visual-text-audit` に載る |
 | `workers/sveltia-cms-auth/` | 認証 Worker（上流の取り込み）。`ALLOWED_DOMAINS` は `wrangler.toml` の `[vars]` |
 | `firebase.json`（公開サイト） | `/images/blog/**/*.svg` に `Content-Security-Policy: sandbox; default-src 'none'` |
 
 CMS の版を上げるときは `package.json` の `@sveltia/cms` を書き換える PR を作り、`npm run test:run`・`npm run build:cms`・`npm run test:e2e:admin` を通します（visual-text.yml で CI でも実行されます）。
+
+版を上げたら、Sveltia が欄を画面に入ってから描く作り（`@sveltia/ui` の `VisibilityObserver`）が、エディタの各欄（`entry-editor.svelte`）とオブジェクトの中の欄（`object-body.svelte`）に残っているかを確かめます。e2e の `uploadPng` のスクロールは、この作りを前提にしています。
+
+```bash
+node -e "const m=JSON.parse(require('fs').readFileSync('node_modules/@sveltia/cms/dist/sveltia-cms.mjs.map','utf8')); m.sources.forEach((s,i)=>{ if (/(entry-editor|object-body)\.svelte$/.test(s)) console.log(s.split('/').pop(), /VisibilityObserver/.test(m.sourcesContent[i])); })"
+```
+
+どちらも `true` なら前提のままです。`false` になったら、`e2e/admin-cms.spec.ts` の `uploadPng` のスクロールを外せるか見直します。
