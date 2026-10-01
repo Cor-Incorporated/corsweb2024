@@ -20,9 +20,16 @@ const CSP = declared('**', 'Content-Security-Policy') ?? '';
 test.use({ locale: 'ja-JP' });
 
 // CI のランナーの遅さを手元で再現する（例: CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin）。CI では使わない。
-const cpuThrottle = Number(process.env.CMS_E2E_CPU_THROTTLE ?? '0');
-test.beforeEach(async ({ page }) => {
+// 値を打ち間違えて黙って効かなくなる（「再現しない」と誤る）のを防ぐため、1 以上の数でなければ止める。
+const throttleEnv = process.env.CMS_E2E_CPU_THROTTLE;
+const cpuThrottle = throttleEnv === undefined || throttleEnv === '' ? 1 : Number(throttleEnv);
+if (!Number.isFinite(cpuThrottle) || cpuThrottle < 1) {
+  throw new Error(`CMS_E2E_CPU_THROTTLE は 1 以上の数にしてください（${throttleEnv}）`);
+}
+test.beforeEach(async ({ page, browserName }) => {
   if (cpuThrottle > 1) {
+    // CPU を遅くする CDP の命令は Chromium だけにある
+    if (browserName !== 'chromium') throw new Error(`CMS_E2E_CPU_THROTTLE は Chromium でだけ使えます（${browserName}）`);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuThrottle });
   }
@@ -66,13 +73,28 @@ const openEditorWithTestBackend = async (page: Page) => {
 };
 
 // 画像欄に PNG をアップロードする。config.yml の設定で WebP に変換される（WebAssembly のエンコーダーを使う）。
+//
+// Sveltia CMS（0.221.7）は、エディタの各欄も、オブジェクトの中の欄も、画面に入ってから描く（@sveltia/ui の
+// VisibilityObserver。entry-editor.svelte と object-body.svelte）。画面の外の欄は高さ 64px の空の枠のまま待つ。
+// 1. 「アイキャッチ画像」の欄そのものが、まだ描かれていないことがある（上に欄が増える・画面が低いとき）。描かれた最後の
+//    欄を画面の上に寄せて、次の欄を画面に入れることを、チェックボックスが現れるまで繰り返す。
+// 2. チェックのあと、中の欄（画像・代替テキスト）を画面に入れる。2026-10-01 の CI で 2 回落ちた（run 36837085826・
+//    36839110638）: 最初のクリックが、上の欄（本文）が描かれて配置が動いたために `<html> intercepts pointer events`
+//    で弾かれ、Playwright がやり直しでチェックボックスを画面の下端（block: 'end'）までしかスクロールしないので、
+//    中の欄が画面の外で待ち続け、「参照」が出なかった（trace を取る CI の設定だと遅くなって起きやすい。手元では
+//    CMS_E2E_CPU_THROTTLE=6 で 12 回中 6 回）。人はスクロールして見るので、テストでもチェックボックスを画面の上に寄せる。
 const uploadPng = async (page: Page) => {
   const toggle = page.getByRole('checkbox', { name: /アイキャッチ画像/ });
+  await expect(async () => {
+    if ((await toggle.count()) === 0) {
+      await page
+        .getByRole('group', { name: /」フィールド$/ })
+        .last()
+        .evaluate((field) => field.scrollIntoView({ block: 'start' }));
+    }
+    await expect(toggle).toBeAttached({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   await toggle.check();
-  // Sveltia CMS は、オブジェクトの中の欄を画面に入ってから描く（@sveltia/ui の VisibilityObserver）。Playwright は
-  // チェックボックスを見える所までしかスクロールしないので、画面の下端で押すと、中の欄（画像・代替テキスト）が
-  // 画面の外で待ち続け、「参照」が出ない（2026-10-01 の CI で 2 回: run 36837085826・36839110638。手元でも
-  // CMS_E2E_CPU_THROTTLE=6 で 12 回中 6 回）。人はスクロールして見るので、テストでもチェックボックスを画面の上に寄せる。
   await toggle.evaluate((element) => element.scrollIntoView({ block: 'start' }));
   // 画像欄（「参照」ボタン）が出てから、その隠れた file input にファイルを渡す。
   await expect(page.getByRole('button', { name: '参照', exact: true })).toBeVisible();
