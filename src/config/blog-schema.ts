@@ -12,8 +12,10 @@ import { getCategoryIds } from './categories';
  * - optional のキー ↔ config.yml の required: false（空のとき出力しない）
  */
 export const blogFrontmatterSchema = z.object({
-  title: z.string(),
-  description: z.string(),
+  // 空・空白だけは不可。CMS（Sveltia）は下書きの間は必須項目が空でも保存できるので、ビルドでも止める（2026-10-01 の通しの確認）。
+  // scripts/i18n/schema.mjs のミラーにも同じチェックを置く（schema-link.test.mjs が照合する）。
+  title: z.string().trim().min(1, { message: '空にできません（CMS では、レビュー中にする前に入れてください）' }),
+  description: z.string().trim().min(1, { message: '空にできません（CMS では、レビュー中にする前に入れてください）' }),
   pubDate: z.coerce.date(),
   updatedDate: z.coerce.date().optional(),
   author: z.string().default('Terisuke'),
