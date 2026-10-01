@@ -8,6 +8,7 @@
  * - failed:         見ているワークフローがすべて終わり、必須チェックか翻訳の検査（i18n-check）が失敗した
  * - ready:          見ているワークフローがすべて終わり、必須チェックと翻訳の検査が通った → 公開できる
  * ワークフローが動いている間（pending）は書かない（失敗をまとめて 1 回で知らせ、翻訳の途中で「公開できます」と書かないため）。
+ * すべて終わっても翻訳の検査の結果が無いとき（翻訳 CI を止めたなど）は、待たずに「確かめられていません」と書く。
  * 最後に書いた状態・コミットと同じなら書かない（コメントに埋めた目印で判定する）。
  */
 
@@ -93,11 +94,15 @@ function translationRunOf(checkRuns, workflowRuns) {
   return latestByName(fromPullRequests).get(TRANSLATION_CHECK);
 }
 
-/** 翻訳の検査の状態: none（PR が src/content/ を変えていない）・ok・failed・pending */
+/**
+ * 翻訳の検査の状態。見ているワークフローがすべて終わってから決めるので、待つことはない:
+ * none（PR が src/content/ を変えていない）・ok・failed・unchecked（PR の実行の i18n-check の結果が無い。
+ * 翻訳 CI を止めた〔docs/i18n-translation.md 10 章〕・取り消されたなど。待っても来ないので、そのことを書いて知らせる）
+ */
 function translationOf(run, files) {
   if (!files.some((file) => file.filename.startsWith(CONTENT_PREFIX))) return 'none';
   if (isSucceeded(run)) return 'ok';
-  return isFailed(run) ? 'failed' : 'pending';
+  return isFailed(run) ? 'failed' : 'unchecked';
 }
 
 /** プレビューの状態（公開の条件には入れない。必須チェックではないため） */
@@ -121,7 +126,7 @@ export function computeState({ checkRuns, workflowRuns, files, prNumber }) {
   const translation = translationOf(translationRun, files);
   const failed = [...REQUIRED_CHECKS.map((name) => latest.get(name)), ...(translation === 'none' ? [] : [translationRun])].filter(isFailed);
   if (failed.length > 0) return { state: 'failed', failed: failed.map(linkOf), translation };
-  if (!REQUIRED_CHECKS.every((name) => isPassed(latest.get(name))) || translation === 'pending') return { state: 'pending' };
+  if (!REQUIRED_CHECKS.every((name) => isPassed(latest.get(name)))) return { state: 'pending' };
   return { state: 'ready', translation, preview: previewOf(latest.get(PREVIEW_CHECK), prNumber) };
 }
 
@@ -147,8 +152,8 @@ const LANGS = TRANSLATION_LANGS.map((lang) => LANG_LABELS[lang]).join('・');
 const TRANSLATION_LINES = Object.freeze({
   none: '- 翻訳: この PR は記事（src/content/）を変えていません',
   ok: `- 翻訳: ${LANGS}の ${TRANSLATION_LANGS.length} 言語がそろっていて、日本語の今の内容に合っています（${TRANSLATION_CHECK}: 成功）`,
-  pending: `- 翻訳: 確かめています（${TRANSLATION_CHECK} の結果を待っています）`,
   failed: `- 翻訳: 検査が通っていません（翻訳が無い・古い、または日本語の記事の * の欄が空。${TRANSLATION_CHECK} のログに記事と理由が出ています）`,
+  unchecked: `- 翻訳: 確かめられていません（このコミットに、PR の実行の ${TRANSLATION_CHECK} の結果がありません。翻訳 CI が止まっていないか確かめてください）`,
 });
 
 const previewLine = (preview) => {
@@ -187,12 +192,15 @@ export function renderComment({ result, sha, isDraft }) {
       `${publishers} PR の画面の「Approve workflows to run」で承認してください。チェックがすべて終わると、ここに結果を書きます（承認のボタンが出ないときは docs/i18n-translation.md の 6 章）。`,
     ].join('\n');
   }
+  // 必須チェックが通り、翻訳の検査だけが失敗したときは、そう書く（公開はできる。下書きの空の欄のせいでもない）
+  const requiredFailed = result.failed.some(({ name }) => REQUIRED_CHECKS.includes(name));
   return [
     marker,
     '**チェックが失敗しました**',
     '',
     ...result.failed.map(linkLine),
+    ...(requiredFailed ? [] : [`- 必須チェック（${REQUIRED_CHECKS.join('・')}）: すべて通過（失敗したのは翻訳の検査だけです）`]),
     ...(result.translation === 'none' ? [] : [TRANSLATION_LINES[result.translation]]),
-    ...(isDraft ? ['', DRAFT_HINT] : []),
+    ...(isDraft && requiredFailed ? ['', DRAFT_HINT] : []),
   ].join('\n');
 }

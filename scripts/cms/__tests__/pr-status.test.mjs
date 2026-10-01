@@ -50,7 +50,12 @@ function fakeGh({ reads = [pullOf(OLD)], open = [pullOf(OLD)], comments = [] } =
   const gh = async (args) => {
     calls.push(args);
     if (args.includes('POST')) return { id: 1 };
-    return answer(args.find((arg) => arg.startsWith(PREFIX)).slice(PREFIX.length));
+    const path = args.find((arg) => arg.startsWith(PREFIX)).slice(PREFIX.length);
+    // 一覧（クエリ付き）は全ページを 1 つにまとめて取る。1 件の取得には付けない
+    if (path.includes('?') !== (args.includes('--paginate') && args.includes('--slurp'))) {
+      throw new Error(`一覧は --paginate --slurp で取る: ${args.join(' ')}`);
+    }
+    return answer(path);
   };
   return { gh, posts: () => calls.filter((args) => args.includes('POST')) };
 }

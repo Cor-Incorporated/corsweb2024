@@ -102,16 +102,16 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 - **公開できます**: ワークフローがすべて終わり、必須チェックと翻訳の検査（`i18n-check`）が通ったとき（翻訳がそろっていることと、プレビューの URL を書く。プレビューの配信だけが失敗したときも、そのことを書いて知らせる）
 - **チェックが失敗しました**: ワークフローがすべて終わり、必須チェックか `i18n-check` が失敗したとき（失敗したチェックへのリンクをまとめて書く。下書きなら、空にできない欄を案内する）
 
-ワークフローが動いている間は書きません（失敗をまとめて 1 回で知らせ、翻訳の途中で「公開できます」と書かないため）。翻訳がそろったかは、PR の差分ではなく `i18n-check` の結果で決めます（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）。使うのは PR のイベントで動いた `i18n-check` だけです（手で動かす `mode=check` は言語や記事を絞れるため）。
+ワークフローが動いている間は書きません（失敗をまとめて 1 回で知らせ、翻訳の途中で「公開できます」と書かないため）。翻訳がそろったかは、PR の差分ではなく `i18n-check` の結果で決めます（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）。使うのは PR のイベントで動いた `i18n-check` だけです（手で動かす `mode=check` は言語や記事を絞れるため）。ワークフローがすべて終わっても `i18n-check` の結果が無いとき（翻訳 CI を止めたときなど）は、待たずに「翻訳: 確かめられていません」と書いて知らせます。
 
-このワークフローは main に入ってから動きます（`workflow_run` は既定ブランチのワークフローでだけ動く）。通知が来ないときは、Actions タブ → **CMS PR status** → **Run workflow**（ブランチは main のまま）で PR の番号を入れると、今の状態を知らせ直します（main から起動したときだけ動く）。CLI では次の 2 つ（1 つ目で CMS の PR の番号とブランチが出る）:
+このワークフローは main に入ってから動きます（`workflow_run` は既定ブランチのワークフローでだけ動く）。通知が来ないときは、Actions タブ → **CMS PR status** → **Run workflow**（ブランチは main のまま）で PR の番号を入れると、今の状態を判定し直します（main から起動したときだけ動く）。コメントするのは、状態が「承認が必要」「失敗」「公開できます」のどれかで、最後のコメントと違うときだけです（それ以外は、実行のログに `state=… notify=false` と出ます）。CLI では次の 2 つ（1 つ目で CMS の PR の番号とブランチが出る）:
 
 ```bash
 gh pr list --repo Cor-Incorporated/corsweb2024 --json number,headRefName --jq '.[] | select(.headRefName | startswith("cms/")) | "\(.number) \(.headRefName)"'
 gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main -f pr=<1 つ目で出た番号>
 ```
 
-手元で確かめるときは `node scripts/cms/pr-status.mjs --pr <1 つ目で出た番号> --dry-run`（コメントせずに判定と文面を表示する）。
+手元で確かめるときは `GH_REPO=Cor-Incorporated/corsweb2024 node scripts/cms/pr-status.mjs --pr <1 つ目で出た番号> --dry-run`（コメントせずに判定と文面を表示する。`GH_REPO` が無いと、gh は `upstream` の remote〔旧名のリポジトリ〕を選ぶ）。
 
 - 公開（develop への取り込み）ができるのは **terisuke と cloudia-Cor の 2 アカウントだけ** です。develop のブランチ保護の push 制限で強制されていて、enforce_admins=true のため admin にも適用されます。ほかのアカウントで「エントリーを公開」を押すと失敗します。
 - 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）付きです。

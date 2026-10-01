@@ -82,6 +82,15 @@ describe('computeState: 承認待ちと、ワークフローが終わるまで',
     expect(stateOf({ workflowRuns })).toEqual({ state: 'pending' });
   });
 
+  it('承認待ちは、ほかのワークフローが動いていても先に知らせる', () => {
+    const workflowRuns = [run(200, 'CI', 'action_required'), run(201, 'Translate content (i18n)', null)];
+    expect(stateOf({ checkRuns: [], workflowRuns }).state).toBe('needs-approval');
+  });
+
+  it('手で動かした（workflow_dispatch の）実行は、動いていても待たない', () => {
+    expect(stateOf({ workflowRuns: [...greenRuns, run(300, 'CI', null, { event: 'workflow_dispatch' })] }).state).toBe('ready');
+  });
+
   it('見ていないワークフローは数えない（動いていても、承認待ちでも）', () => {
     const workflowRuns = [...greenRuns, run(400, 'Claude Code', null), run(401, 'Guard base branch', 'action_required')];
     expect(stateOf({ workflowRuns }).state).toBe('ready');
@@ -130,14 +139,16 @@ describe('computeState: 失敗と公開できる', () => {
     expect(result.failed).toEqual([{ name: 'i18n-check', conclusion: 'failure', url: 'https://github.com/o/r/actions/runs/1/job/4' }]);
   });
 
-  it('i18n-check が、翻訳 CI が起こす再検査（workflow_dispatch）の実行にしか無いうちは pending', () => {
+  it('i18n-check が翻訳 CI の再検査（workflow_dispatch）の実行にしか無ければ、それは使わず「確かめられていません」とする', () => {
     const dispatched = run(300, 'Translate content (i18n)', 'success', { event: 'workflow_dispatch' });
     const checkRuns = [...without(greenChecks, 'i18n-check'), i18nCheck(60, 'success', dispatched.check_suite_id)];
-    expect(stateOf({ checkRuns, workflowRuns: [...greenRuns, dispatched] })).toEqual({ state: 'pending' });
+    expect(stateOf({ checkRuns, workflowRuns: [...greenRuns, dispatched] })).toMatchObject({ state: 'ready', translation: 'unchecked' });
   });
 
-  it('src/content/ を変える PR で、i18n-check がまだ無いうちは pending', () => {
-    expect(stateOf({ checkRuns: without(greenChecks, 'i18n-check') })).toEqual({ state: 'pending' });
+  it('ワークフローがすべて終わっても PR の実行の i18n-check が無ければ（翻訳 CI を止めたなど）、待たずに知らせる', () => {
+    const result = stateOf({ checkRuns: without(greenChecks, 'i18n-check'), workflowRuns: without(greenRuns, 'Translate content (i18n)') });
+    expect(result).toMatchObject({ state: 'ready', translation: 'unchecked' });
+    expect(renderComment({ result, sha: SHA, isDraft: false })).toContain('- 翻訳: 確かめられていません');
   });
 
   it('src/content/ を変えない PR は、i18n-check を待たない', () => {
@@ -248,6 +259,13 @@ describe('renderComment', () => {
     expect(draft).toContain('- 翻訳: 検査が通っていません');
     expect(draft).toContain('カテゴリ・タイトル・概要・公開日のどれかが空だと');
     expect(renderComment({ result, sha: SHA, isDraft: false })).not.toContain('下書き');
+  });
+
+  it('翻訳の検査だけが失敗したときは、必須チェックが通っていることを書き、下書きでも空の欄のせいにしない', () => {
+    const result = stateOf({ checkRuns: [...without(greenChecks, 'i18n-check'), i18nCheck(70, 'failure')] });
+    const body = renderComment({ result, sha: SHA, isDraft: true });
+    expect(body).toContain('すべて通過（失敗したのは翻訳の検査だけです）');
+    expect(body).not.toContain('下書き');
   });
 
   it('プレビューが作れなかったときは、そのことと、失敗したチェックへのリンクを書く', () => {

@@ -8,13 +8,16 @@
  * 使い方:
  *   node scripts/cms/pr-status.mjs --branch cms/blog/<スラッグ>   # ワークフローから（GH_TOKEN と GH_REPO を使う）
  *   node scripts/cms/pr-status.mjs --pr 367                      # ワークフローの手動実行から
- *   node scripts/cms/pr-status.mjs --pr 367 --dry-run            # 手元で。コメントせず、判定と文面だけを表示する（gh のログインを使う）
+ *   GH_REPO=Cor-Incorporated/corsweb2024 node scripts/cms/pr-status.mjs --pr 367 --dry-run
+ *                                                                # 手元で。コメントせず、判定と文面だけを表示する（gh のログインを使う。
+ *                                                                # GH_REPO が無いと gh は upstream の remote〔旧名のリポジトリ〕を選ぶ）
  *   node scripts/cms/pr-status.mjs --pr 367 --dry-run --sha <コミット>  # 過去のコミットの状態（ファイルとラベルは今の PR のもの）
  *     翻訳 CI が翻訳を push したコミットの 1 つ前は、i18n-check が新しいコミットに検査を任せて成功で終わるので、翻訳が
  *     そろっていると出る（本番では HEAD だけを判定し、そのコミットはもう HEAD ではないので起きない）
  */
 import { execFile } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseArgs, promisify } from 'node:util';
 import { computeState, renderComment, shouldNotify } from './pr-status-core.mjs';
 
@@ -103,7 +106,16 @@ export async function run(args, { gh = ghApi, out = (line) => process.stdout.wri
   return out(`#${pull.number} にコメントしました（${result.state}）`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+/** node で直接動かしたか（テストの import では動かさない）。シンボリックリンク（macOS の /tmp など）を通したパスでも比べられるよう、実体で比べる */
+const isMain = () => {
+  try {
+    return realpathSync(process.argv[1] ?? '') === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+};
+
+if (isMain()) {
   run(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`${error.stack ?? error}\n`);
     process.exitCode = 1;
