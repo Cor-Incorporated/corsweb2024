@@ -27,13 +27,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD: ${{ github.head_ref }}
+          # head のリポジトリ。github.head_ref はブランチ名だけなので、フォークのブランチが develop という名前なら
+          # 通ってしまっていた（このリポジトリは公開。#374 のレビュー）。照合: src/config/__tests__/guard-base-branch.test.ts
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -eo pipefail
-          echo "main 宛 PR #${PR}  head=${HEAD}"
-          if [ "$HEAD" = "develop" ]; then
+          echo "main 宛 PR #${PR}  head=${HEAD_REPO}:${HEAD}"
+          if [ "$HEAD" = "develop" ] && [ "$HEAD_REPO" = "$REPO" ]; then
             echo "✅ develop → main は許可された唯一の経路です"
             exit 0
+          fi
+          if [ "$HEAD" = "develop" ]; then
+            # フォーク（またはフォークが消えた PR）の develop。フォークの PR の GITHUB_TOKEN は読み取り専用で
+            # 誘導コメントは書けないので、エラーだけを出す
+            echo "::error title=フォークの develop です::main へは ${REPO} の develop からの PR のみ許可されています（head は ${HEAD_REPO:-（不明）}:${HEAD}）。"
+            exit 1
           fi
           # 誘導コメントは初回のみ。隠しマーカーで既出を判定し、edited 連発でも重複させない。
           MARKER="<!-- guard-base-branch -->"
