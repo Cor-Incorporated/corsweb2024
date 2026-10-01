@@ -36,7 +36,8 @@ function describeSchema(schema) {
     case 'ZodEnum':
       return { enum: [...def.values] };
     case 'ZodString':
-      return { string: def.checks.map((c) => c.kind) };
+      // チェックの種類だけでなく値（min の 1 など）も比べる。メッセージは正本だけが持つので外す
+      return { string: def.checks.map(({ message: _message, ...check }) => check) };
     case 'ZodDate':
       return { date: { coerce: Boolean(def.coerce) } };
     default:
@@ -93,6 +94,8 @@ describe.each(['blog', 'cases', 'news'])(
         { ...data, lang: 'fr' },
         { ...data, tags: 'not-an-array' },
         { ...data, featured: 'yes' },
+        // blog だけ: タイトル・概要の空・空白だけを止める（src/config/blog-schema.ts の requiredText）
+        ...(collection === 'blog' ? [{ ...data, title: '' }, { ...data, description: '　\n' }] : []),
       ];
       for (const input of mutations) {
         expect(CONTENT_SCHEMAS[collection].safeParse(input).success).toBe(

@@ -39,6 +39,14 @@ describe('blog の frontmatter スキーマ', () => {
     expect(issuesOf({ ...valid, ...change })).toEqual(paths);
   });
 
+  it('エラーのメッセージに空の欄の名前が出る（独自のメッセージには、Astro が欄の名前を付けないため）', () => {
+    const result = blogFrontmatterSchema.safeParse({ ...valid, title: '', description: ' ' });
+    expect(result.success ? [] : result.error.issues.map((issue) => issue.message)).toEqual([
+      'title（タイトル） が空です（CMS では、レビュー中にする前に入れてください）',
+      'description（概要） が空です（CMS では、レビュー中にする前に入れてください）',
+    ]);
+  });
+
   it('前後の空白は取り除いて受け付ける', () => {
     const parsed = blogFrontmatterSchema.parse({ ...valid, title: '  CMS 動作確認  ' });
     expect(parsed.title).toBe('CMS 動作確認');
