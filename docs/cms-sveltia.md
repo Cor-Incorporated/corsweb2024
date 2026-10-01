@@ -62,6 +62,8 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 4. 右上の「**保存**」。ここで **下書きの PR** ができます（まだ公開されません）。
 
+   ステータスが「**下書き**」の間は、`*` の欄が空でも保存できます（Sveltia CMS の仕様。途中まで書いて置いておけるように）。ただし **カテゴリ・タイトル・概要・公開日** のどれかが空だと、下書きの PR のチェック（`verify` など）が失敗します（ビルドが止めるため。ログに空の欄の名前が出ます）。「**レビュー中**」「**公開可**」に進めるときは、CMS が空の `*` の欄を止めます。編集画面でステータスを変えるときは、CMS は画面に入っている値で確かめるので、**欄を埋めたら先に「保存」してから** 変えてください（保存せずにステータスを変えると、空のままの記事がレビューに回ります）。
+
 > 既存の記事を直すときは、本文を **Markdown のまま** 直してください。リッチテキストに切り替えると、数式・リンクカード・表などの書き方が自動で書き換わることがあります。
 
 ### 1-5. 本文に書けないもの（PR のチェックで止まる）
@@ -92,9 +94,26 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 |---|---|---|
 | レビューに送る | 保存後に出る確認で「**レビューを依頼**」（あとからでも、記事のステータスを「レビュー中」に変更） | PR にラベル `sveltia-cms/pending_review` が付く |
 | プレビューを見る | 保存から数分後、「プレビューを確認中」が「**プレビューを見る**」に変わったら押す（#341 のマージ後） | PR ごとのプレビューサイト（Firebase、30 日で失効）で記事が開く |
-| 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する |
-| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない |
+| 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する。このコミットのあとはチェックが自動では始まらないので、**terisuke か cloudia-Cor** が PR の画面の「Approve workflows to run」で承認する（PR のコメントとメールで知らせる） |
+| チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない。チェックと翻訳の検査がすべて終わると、PR のコメントとメールで結果（「公開できます」か「チェックが失敗しました」）を知らせる |
 | 公開 | **terisuke か cloudia-Cor** がステータスを「**公開可**」にして「**エントリーを公開**」 | PR が develop に merge commit で取り込まれ、作業ブランチ（`cms/blog/<スラッグ>`）は削除される |
+
+**通知（PR のコメントとメール）**: CMS の画面には、翻訳が付いたか・チェックが通ったかが出ません（2026-10-01 の通しの確認で分かった）。そのため `.github/workflows/cms-pr-status.yml` が、CMS の PR のワークフロー（CI・Responsive visual text・H5 Admission・Deploy to Firebase Hosting・Translate content (i18n)）が終わるたびに状態を見直し、次の場面でコメントします。GitHub はそれを PR の作成者（CMS で書いた人）と @メンションした人にメールで知らせます（各自の GitHub の通知設定で、Participating と @mentions の Email が有効な場合）。最後に書いた状態・コミットと同じなら書きません。
+
+- **チェックの実行に承認が必要です**: 翻訳 CI のコミットのあと、チェックが承認待ちで止まったとき（承認を待つワークフローへのリンク。terisuke と cloudia-Cor に @メンション）
+- **公開できます**: ワークフローがすべて終わり、必須チェックと翻訳の検査（`i18n-check`）が通ったとき（翻訳がそろっていることと、プレビューの URL を書く。プレビューの配信だけが失敗したときも、そのことを書いて知らせる）
+- **チェックが失敗しました**: ワークフローがすべて終わり、必須チェックか `i18n-check` が失敗したとき（失敗したチェックへのリンクをまとめて書く。下書きなら、空にできない欄を案内する）
+
+ワークフローが動いている間は書きません（失敗をまとめて 1 回で知らせ、翻訳の途中で「公開できます」と書かないため）。翻訳がそろったかは、PR の差分ではなく `i18n-check` の結果で決めます（書式だけ直した記事では、翻訳は作り直されず差分に出ないため）。使うのは PR のイベントで動いた `i18n-check` だけです（手で動かす `mode=check` は言語や記事を絞れるため）。ワークフローがすべて終わっても `i18n-check` の結果が無いとき（翻訳 CI を止めたときなど）は、待たずに「翻訳: 確かめられていません」と書いて知らせます。
+
+このワークフローは main に入ってから動きます（`workflow_run` は既定ブランチのワークフローでだけ動く）。通知が来ないときは、Actions タブ → **CMS PR status** → **Run workflow**（ブランチは main のまま）で PR の番号を入れると、今の状態を判定し直します（main から起動したときだけ動く）。コメントするのは、状態が「承認が必要」「失敗」「公開できます」のどれかで、最後のコメントと違うときだけです（それ以外は、実行のログに `state=… notify=false` と出ます）。CLI では次の 2 つ（1 つ目で CMS の PR の番号とブランチが出る）:
+
+```bash
+gh pr list --repo Cor-Incorporated/corsweb2024 --json number,headRefName --jq '.[] | select(.headRefName | startswith("cms/")) | "\(.number) \(.headRefName)"'
+gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main -f pr=<1 つ目で出た番号>
+```
+
+手元で確かめるときは `GH_REPO=Cor-Incorporated/corsweb2024 node scripts/cms/pr-status.mjs --pr <1 つ目で出た番号> --dry-run`（コメントせずに判定と文面を表示する。`GH_REPO` が無いと、gh は `upstream` の remote〔旧名のリポジトリ〕を選ぶ）。
 
 - 公開（develop への取り込み）ができるのは **terisuke と cloudia-Cor の 2 アカウントだけ** です。develop のブランチ保護の push 制限で強制されていて、enforce_admins=true のため admin にも適用されます。ほかのアカウントで「エントリーを公開」を押すと失敗します。
 - 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）付きです。
@@ -175,7 +194,7 @@ firebase hosting:sites:list --project cor-jp-web
 |---|---|
 | 起動 | main への push（`cms/**`・`package.json`・`package-lock.json`・このワークフローの変更時）と、main での手動実行。`on:` はこの 2 つだけ（`pull_request_target` などは足さない） |
 | 条件 | `CMS_DEPLOY_ENABLED` が `true` かつ ref が main（build・deploy とも） |
-| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる |
+| build ジョブ | 権限は `contents: read` だけ（id-token なし）。Node 22。`npm ci` → `npm run build:cms` → `npm run test:e2e:admin`（本番と同じヘッダーで CSP 違反 0 件）→ `cms/dist` と `cms/firebase.json` を artifact に上げる。e2e が落ちたら（時間切れを含む）、失敗の記録（`test-results/admin-cms/`）を成果物 `cms-admin-e2e` に 14 日残す（`if: failure() || cancelled()`。成功した配信では動かない。deploy ジョブは動かない。開き方は 3-1） |
 | deploy ジョブ | `needs: build`・`environment: cms-production`・権限は `contents: read` と `id-token: write`。artifact だけを受け取り、checkout も npm もしない。使うコマンドは jq・curl・gh api（読み取り）・sha256sum・chmod・firebase（hosting:channel:deploy と hosting:clone）だけ（テストで照合） |
 | deploy の手順 | ① main の最新の SHA と、この run の SHA が違えば止める（古い run の再実行で巻き戻さない）→ ② artifact を受け取る → ③ `firebase.json` に predeploy / postdeploy が無いことを確かめる → ④ firebase-tools v15.32.1 のリリースの単体バイナリ（`firebase-tools-linux`）を、GitHub がリリースに記録した sha256 で照合する → ④' 資格情報を作る前に `firebase hosting:channel:deploy --help` で deploy の処理を読み込めるか確かめる → ⑤ `google-github-actions/auth`（WIF、鍵なし）で `cms-deployer` になる → ⑥ プレビューチャネル `candidate` に配信（1 時間で失効。失敗したら `--json` の出力をログに出す）→ ⑦ candidate の CSP と COOP を `cms/firebase.json` と比べ、違えば止める（live は変わらない）→ ⑧ `hosting:clone` で candidate と同じ版を live に出す → ⑨ live の CSP と COOP を確かめる |
 | 止めているとき | `CMS_DEPLOY_ENABLED` が true でない（または main 以外）のときは配信せず、`cms/` の変更があれば `::warning::` を出す |
@@ -296,6 +315,7 @@ Write の編集者は記事を書いてレビューに送れますが、公開�
 | 記事を作って「レビューを依頼」 | base が develop の PR ができ、差分が `src/content/blog/ja/*.md` と `public/images/blog/*` だけ |
 | その PR | 必須チェックとプレビューが成功し、「プレビューを見る」で記事が開く |
 | 翻訳 CI が他言語を追加した後に ja を再保存 | 他言語のファイルが変わらない（#339 のマージ後） |
+| 翻訳 CI が他言語を追加した後の PR（cms-pr-status.yml が main に入った後） | PR に github-actions[bot] の「チェックの実行に承認が必要です」が付き、メールが届く。承認してチェックがすべて終わると「公開できます」が付き、メールが届く（来なければ 1-7 の Run workflow で知らせ直し、3 の「通知が来ない」を見る） |
 | terisuke か cloudia-Cor で「エントリーを公開」 | develop に merge commit で入り、`cms/blog/<スラッグ>` ブランチが消える |
 | それ以外の Write のアカウントで「エントリーを公開」 | 失敗する（develop の push 制限） |
 | 既存記事を開いて何も変えずに保存 | frontmatter の値が変わらない（キーの順序・引用符は変わりうる） |
@@ -317,6 +337,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | ログインの小窓が真っ白・404・別のサイトのエラーになる（GitHub で許可した後） | OAuth App の Callback URL が `https://cor-sveltia-cms-auth.company-997.workers.dev/callback` と違う（この Worker は GitHub に redirect_uri を送らないので、GitHub は登録した Callback URL に戻す） | 2-4 の Callback URL を直す |
 | `wrangler deploy` が `Binding name 'ALLOWED_DOMAINS' already in use` で失敗 | 同じ名前の secret が登録されている | `mise exec node@22 -- npx --yes wrangler@4.135.0 secret delete ALLOWED_DOMAINS` の後に再デプロイ（値は `[vars]` から入る） |
 | `wrangler` が `Wrangler requires at least Node.js v22.0.0` で止まる | wrangler 4 は Node.js 22 以上が必要 | コマンドの前に `mise exec node@22 --` を付ける（2-3） |
+| build ジョブの「CMS admin e2e …」が失敗（配信されない。live は変わらない） | CMS の版・`cms/public/config.yml`・`cms/firebase.json` の CSP の変更、または CI での描き遅れ | 3-1 で失敗の記録（trace）を開く。CI の遅さは `CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin` で手元に再現できる。直すときは develop 宛の PR で `npm run build:cms && npm run test:e2e:admin` を通す |
 | deploy ジョブの認証（google-github-actions/auth）が `unauthorized_client` や `Permission 'iam.serviceAccounts.getAccessToken' denied` で失敗 | プロバイダの条件（2-1 の 7）か利用許可（2-1 の 8）に合わない（main 以外・push と workflow_dispatch 以外・Environment の名前・ワークフローの名前・リポジトリの変更） | main の `deploy-cms.yml` から push か手動で動かす。名前を変えたなら GCP の条件と binding も同時に直す |
 | deploy ジョブが「Branch "…" is not allowed to deploy to cms-production」で始まらない | Environment の branch policy（main だけ） | main で動かす |
 | deploy ジョブが「main が進んでいます」で止まる | main に新しいコミットが入った後に、古い run を再実行した | 最新の main の run（またはその手動実行）を使う |
@@ -329,6 +350,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | 「エントリーを公開」が失敗する | (1) 必須チェック（約 13 分）がまだ緑でない (2) terisuke・cloudia-Cor 以外のアカウント（develop の push 制限） | (1) PR の Checks が緑になってから押す (2) terisuke か cloudia-Cor に公開を頼む |
 | 「アセット」画面からのアップロードが失敗する | develop は PR 必須で、直接の書き込みは拒否される | 記事の画像欄からアップロードする（記事の PR に入る） |
 | 「プレビューを確認中」のまま | PR のビルドが失敗（必須項目の漏れなど）、または #341 が未マージ | GitHub の PR の Checks で `build_and_deploy` を確認 |
+| PR のコメント（github-actions[bot]）やメールが来ない | (1) cms-pr-status.yml が main に未反映 (2) ワークフローがまだ動いている（すべて終わるまで書かない） (3) 承認のあとのチェックの終わりで、通知のワークフローが動かなかった（GitHub の仕様の確認待ち） (4) 各自の GitHub の通知設定でメールが無効 | (1) リリースを待つ (2) PR の Checks がすべて終わるのを待つ (3) 1-7 の Run workflow で PR の番号を入れて知らせ直す (4) GitHub の Settings → Notifications で Participating と @mentions の Email を有効にする |
 | PR のチェックで `content-safety.test.ts` が落ちる | 本文に 1-5 の書けないもの、または SVG 画像 | メッセージの `ファイル: <要素・属性>` を直す。埋め込みが必要ならエンジニアに相談する |
 | ブラウザの Console に CSP 違反が出る | CMS が使う送信元が `cms/firebase.json` の CSP に無い | 2-8 の最後の段落 |
 | 保存時に「保存中に他のユーザーがリポジトリを更新しました」 | 翻訳 CI が同じ PR に書き込んだ直後 | 画面を再読み込みしてもう一度保存 |
@@ -336,6 +358,34 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | スラッグで「英小文字・数字・ハイフンだけで入力してください」 | 大文字・日本語・空白・記号が入っている | `ai-adoption-roadmap` の形にする |
 | `config.yml` を直したのに管理画面が古いまま | main への反映と `deploy-cms.yml` がまだ、またはブラウザのキャッシュ | Actions の `Deploy CMS admin (cor-jp-cms-admin)` の完了を確認し、強制再読み込み（Windows: Ctrl+Shift+R、Mac: Cmd+Shift+R） |
 | `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
+| `npm run test:run` の `cms-pr-status.test.ts` が落ちる | `cms-pr-status.yml`・`scripts/cms/pr-status-core.mjs`・ほかのワークフローの `name` やジョブ名・`translate-content.yml` の paths・`firebase.json` のサイト名の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
+
+### 3-1. 配信の e2e の失敗の記録を開く
+
+成果物 `cms-admin-e2e` は、build ジョブの e2e のテストが落ちた run（時間切れで止まった run を含む）にだけでき、14 日で消えます。リポジトリの直下で実行します。いちばん新しい記録を、run ごとのフォルダ（`test-results/` の下。git の対象外）に落として開きます。
+
+```bash
+RUN=$(gh api 'repos/Cor-Incorporated/corsweb2024/actions/artifacts?name=cms-admin-e2e&per_page=100' --jq '[.artifacts[] | select(.expired | not)] | sort_by(.created_at) | last | .workflow_run.id // empty')
+if [ -z "$RUN" ]; then echo '14 日以内の記録はありません（下の段落を見てください）'; else
+  echo "run: $RUN"
+  gh run download "$RUN" --repo Cor-Incorporated/corsweb2024 --name cms-admin-e2e --dir "test-results/cms-admin-e2e/$RUN"
+  find "test-results/cms-admin-e2e/$RUN" -name trace.zip
+  npx playwright show-trace "$(find "test-results/cms-admin-e2e/$RUN" -name trace.zip | head -1)"
+fi
+```
+
+落ちたテストが 2 件以上なら、`find` が出した trace.zip のパスごとに `npx playwright show-trace` で開きます。記録が無いとき、または `run:` の番号が落ちた配信の run と違うときは、その配信の e2e は記録を残していません。主な理由は次のとおりです。
+
+- e2e より前のステップ（`npm ci`・`npm run build:cms` など）か、deploy ジョブで落ちた
+- テストが始まる前に落ちた（ローカルサーバーが起動しないなど）。出力先には隠しファイルの `.last-run.json` しか残らず、upload-artifact は隠しファイルを上げない
+- 14 日を過ぎた
+
+そのときは、落ちた配信（いちばん新しい失敗の run）のログを見ます。
+
+```bash
+FAILED=$(gh run list --repo Cor-Incorporated/corsweb2024 --workflow deploy-cms.yml --status failure --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run view "$FAILED" --repo Cor-Incorporated/corsweb2024 --log-failed
+```
 
 ## 4. 関係するファイル
 
@@ -353,8 +403,16 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | `src/config/__tests__/cms-config.test.ts` | `config.yml` ↔ スキーマ・カテゴリ定義・ADR-0018、`wrangler.toml` ↔ `cms/firebase.json` の照合 |
 | `src/config/__tests__/cms-deploy.test.ts` | `deploy-cms.yml` ↔ この文書（WIF・サービスアカウント）・`cms/firebase.json` の照合 |
 | `src/config/__tests__/content-safety.test.ts` | 記事をサイトと同じパイプラインで描画し、スクリプトが動く要素・属性・URL と SVG を検査する |
-| `e2e/admin-cms.spec.ts` | 本番と同じヘッダーで、ログイン画面と編集画面の CSP 違反 0 件を確認（`npm run build:cms && npm run test:e2e:admin`） |
+| `e2e/admin-cms.spec.ts` | 本番と同じヘッダーで、ログイン画面と編集画面の CSP 違反 0 件を確認（`npm run build:cms && npm run test:e2e:admin`）。CI の遅さは `CMS_E2E_CPU_THROTTLE=6 npm run test:e2e:admin` で手元に再現できる（Chromium のみ）。失敗の記録（trace・`error-context.md`）は `test-results/admin-cms/` に出て、CI では visual-text.yml の成果物 `visual-text-audit` と、main からの配信（deploy-cms.yml）で落ちたときの成果物 `cms-admin-e2e` に載る（どちらも 14 日。照合: `src/config/__tests__/admin-e2e-artifacts.test.ts`） |
 | `workers/sveltia-cms-auth/` | 認証 Worker（上流の取り込み）。`ALLOWED_DOMAINS` は `wrangler.toml` の `[vars]` |
 | `firebase.json`（公開サイト） | `/images/blog/**/*.svg` に `Content-Security-Policy: sandbox; default-src 'none'` |
 
 CMS の版を上げるときは `package.json` の `@sveltia/cms` を書き換える PR を作り、`npm run test:run`・`npm run build:cms`・`npm run test:e2e:admin` を通します（visual-text.yml で CI でも実行されます）。
+
+版を上げたら、Sveltia が欄を画面に入ってから描く作り（`@sveltia/ui` の `VisibilityObserver`）が、エディタの各欄（`entry-editor.svelte`）とオブジェクトの中の欄（`object-body.svelte`）に残っているかを確かめます。e2e の `uploadPng` のスクロールは、この作りを前提にしています。
+
+```bash
+node -e "const m=JSON.parse(require('fs').readFileSync('node_modules/@sveltia/cms/dist/sveltia-cms.mjs.map','utf8')); m.sources.forEach((s,i)=>{ if (/(entry-editor|object-body)\.svelte$/.test(s)) console.log(s.split('/').pop(), /VisibilityObserver/.test(m.sourcesContent[i])); })"
+```
+
+どちらも `true` なら前提のままです。`false` になったら、`e2e/admin-cms.spec.ts` の `uploadPng` のスクロールを外せるか見直します。

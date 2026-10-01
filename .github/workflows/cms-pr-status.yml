@@ -1,0 +1,79 @@
+name: CMS PR status
+
+# CMS（Sveltia CMS、ADR-0018）が作った PR（ブランチが cms/ で始まる）に、状態をコメントで知らせる。
+# CMS の画面には、翻訳が付いたか・チェックが通ったかが出ないため（2026-10-01 の CEO の指摘）。
+# GitHub は PR へのコメントを、PR の作成者（CMS で書いた人）と @メンションした人にメールで知らせる。
+# - 承認が要る: 翻訳 CI が GITHUB_TOKEN で積んだコミットのワークフローが action_required で止まっている
+# - 失敗した:   下のワークフローがすべて終わり、必須チェックか翻訳の検査（i18n-check）が失敗した（まとめて 1 回）
+# - 公開できる: 下のワークフローがすべて終わり、必須チェック（develop のブランチ保護）と翻訳の検査が通った
+# 最後に書いた状態・コミットと同じなら書かない。判定と文面は scripts/cms/pr-status-core.mjs。
+#
+# workflow_run は、既定ブランチ（main）にあるこのファイルでだけ動く（main に入るまでは動かない）。
+# PR のコードは checkout も実行もしない: checkout は既定ブランチ（main）だけで、動かすのは main の
+# scripts/cms/pr-status.mjs（Node の組み込みと gh だけを使う。npm は使わない）。PR から来る値（ブランチ名）は環境変数で渡す。
+# workflow_dispatch（PR の番号を入れて手で知らせ直す）も、既定ブランチから起動したときだけ動く。
+# 照合: src/config/__tests__/cms-pr-status.test.ts（workflows の名前・必須チェックのジョブ名・権限・checkout・起動の条件）
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Responsive visual text
+      - H5 Admission
+      - Deploy to Firebase Hosting
+      - Translate content (i18n)
+    types: [completed]
+    # CMS の作業ブランチの run だけ（ほかのブランチでは、このワークフローの run も作らない）
+    branches: ['cms/**']
+  # workflow_run が届かなかったときに、PR の番号を入れて手で知らせ直す（Actions タブ → CMS PR status → Run workflow）
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'CMS の PR の番号'
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  status:
+    name: Notify the CMS editor on the pull request
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+      github.ref_name == github.event.repository.default_branch) ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'cms/') &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    # 同じ PR の通知は 1 本ずつ（同時に走ると同じ状態を 2 回書きうる）。待っている run は新しい run に置き換わるが、
+    # どの run も最新の状態を読み直すので抜けない。job に置くのは、if で飛ばした run を待ちの列に入れないため。
+    # キーは PR の番号（自動と手動で同じにする）。workflow_run に PR が載っていないときだけブランチ名にする
+    concurrency:
+      group: cms-pr-status-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr || github.event.workflow_run.head_branch }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout the default branch (no pull request code)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Comment the status on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: |
+          if [ -n "$PR_NUMBER" ]; then
+            node scripts/cms/pr-status.mjs --pr "$PR_NUMBER"
+          else
+            node scripts/cms/pr-status.mjs --branch "$HEAD_BRANCH"
+          fi

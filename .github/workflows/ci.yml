@@ -43,6 +43,46 @@ jobs:
         with:
           persist-credentials: false
 
+      # ワークフロー（.github/workflows/）を actionlint で検査する。shellcheck も版を固定して渡す（runner に入っている
+      # shellcheck の版で結果が変わらないように）。pyflakes は使わない（runner にあるかどうかで結果が変わるため）。
+      # 2026-10-01 まで CI では動かしておらず、手元の版でだけ SC2016 が見つかっていた（#371）。
+      # 版を上げるときは URL と sha256 を同時に書き換え、sha256 はリリースの digest で確かめる:
+      #   gh api repos/rhysd/actionlint/releases/tags/<tag> --jq '.assets[] | "\(.name) \(.digest)"'
+      #   gh api repos/koalaman/shellcheck/releases/tags/<tag> --jq '.assets[] | "\(.name) \(.digest) \(.uploader.login)"'
+      # shellcheck は、リリースの CI（github-actions[bot]）が作った .tar.xz を使う（.tar.gz は後から手で足されたもの）。
+      # actionlint は -shellcheck のパスが無いと、何も言わずに shellcheck の検査を外す（exit 0 のまま）。そのため
+      # "$tools/shellcheck" --version で取り出せたことを確かめ、SC2016 を含むカナリアが落ちることも毎回確かめる。
+      # 照合: src/config/__tests__/actionlint-gate.test.ts（run の各行・env のキー・版の一致・握りつぶしが無いこと）
+      - name: Lint workflows (actionlint + shellcheck, pinned)
+        env:
+          ACTIONLINT_URL: https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+          SHELLCHECK_URL: https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
+          SHELLCHECK_SHA256: '8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198'
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/lint-tools"
+          mkdir -p "$tools"
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/actionlint.tar.gz" "$ACTIONLINT_URL"
+          echo "${ACTIONLINT_SHA256}  $tools/actionlint.tar.gz" | sha256sum -c -
+          curl -fsSL --retry 3 --retry-all-errors -o "$tools/shellcheck.tar.xz" "$SHELLCHECK_URL"
+          echo "${SHELLCHECK_SHA256}  $tools/shellcheck.tar.xz" | sha256sum -c -
+          tar -xzf "$tools/actionlint.tar.gz" -C "$tools" actionlint
+          tar -xJf "$tools/shellcheck.tar.xz" -C "$tools" --strip-components=1 --wildcards '*/shellcheck'
+          "$tools/shellcheck" --version
+          "$tools/actionlint" -version
+          printf '%s\n' 'on: push' 'jobs:' '  canary:' '    runs-on: ubuntu-latest' '    steps:' "      - run: echo '\$HOME'" > "$tools/canary.yml"
+          if "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= "$tools/canary.yml" > "$tools/canary.out"; then
+            echo "::error title=actionlint::shellcheck の検査が効いていない（SC2016 を含むカナリアが通った）"
+            exit 1
+          fi
+          if ! grep -q 'SC2016' "$tools/canary.out"; then
+            echo "::error title=actionlint::カナリアが SC2016 以外の理由で落ちた（shellcheck が効いているか分からない）"
+            cat "$tools/canary.out"
+            exit 1
+          fi
+          "$tools/actionlint" -shellcheck "$tools/shellcheck" -pyflakes= -color
+
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

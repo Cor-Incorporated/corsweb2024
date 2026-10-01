@@ -1,14 +1,27 @@
 name: Guard base branch
 
-# main へのマージは develop からのみ許可する。
-# それ以外のブランチから main 宛に PR が開かれたら、自動で fail させ、
-# develop 経由にするよう PR にコメントで誘導する（誤 base=main の再発防止）。
+# main へのマージは、このリポジトリの develop からのみ許可する。
+# それ以外（ほかのブランチ・フォークの develop）から main 宛に PR が開かれたら、自動で fail させる。
+# このリポジトリのブランチなら、develop 経由にするよう PR にコメントで誘導する（誤 base=main の再発防止）。
+# フォークの PR はトークンが読み取り専用でコメントを書けないので、::error を出して止まるだけ。
 #
-# 注1: pull_request ワークフローは base ブランチ側のファイルで実行されるため、
-#      このガードを効かせるには main にこのファイルが存在している必要がある。
-# 注2: ワークフロー単体ではマージを物理的にブロックできない（チェックが赤くなるだけ）。
-#      確実に止めるには main のブランチ保護で status check "guard" を
-#      required に設定すること（develop からの PR のみが緑になる）。
+# 注1: pull_request ワークフローは、PR のマージコミット（refs/pull/<番号>/merge。PR の変更を main に重ねたもの）の
+#      ファイルで実行される。main のファイルではない（GitHub Docs「Events that trigger workflows」の pull_request の
+#      GITHUB_SHA と、「Workflows > Workflow triggers」の、そのコミットのワークフローのファイルが動くという説明）。
+#      既定ブランチ（このリポジトリでは main。PR の base ではない）の版で動くのは pull_request_target。
+#      そのため、main 宛の PR がこのファイルを書き換えると、書き換えたガードが動く。このガードだけでは迂回を防げない。
+# 注2: main を守っているのは、main のブランチ保護と組織のルールセット。2026-10-01 に実測した値は次のとおり。
+#      このガード（status check "guard"）はブランチ保護の必須チェックの 1 つで、誤 base=main を早く知らせる役。
+#      ガードを書き換える PR は、承認する人とマージする人（terisuke / cloudia-Cor）が差分を見て止める運用（CODEOWNERS は無い）。
+#      - ブランチ保護: push（マージ）できるのは terisuke と cloudia-Cor だけ。enforce_admins も有効。承認 1 件（push で取り消し）。
+#        必須チェック: build_and_deploy・Chromium visual text audit・guard・h5-admission・verify
+#      - 組織のルールセット「シークレット検査の必須化」（id 20776787。既定ブランチが対象で、除外なし）: PR が必須（承認 0 件）で、
+#        Cor-Incorporated/.github の .github/workflows/gitleaks.yml が通ること。既定ブランチを変えると main から外れる
+#      確かめるコマンド（上の項目を、ブランチ保護・main に効くルール・ルールセットの対象と除外の順に出す。
+#      ワークフローの元のリポジトリ id 1332621736 は Cor-Incorporated/.github: gh api repositories/1332621736 --jq .full_name）:
+#        gh api repos/Cor-Incorporated/corsweb2024/branches/main/protection --jq '{push: [.restrictions.users[].login], enforce_admins: .enforce_admins.enabled, approvals: .required_pull_request_reviews.required_approving_review_count, dismiss_stale: .required_pull_request_reviews.dismiss_stale_reviews, checks: .required_status_checks.contexts}'
+#        gh api repos/Cor-Incorporated/corsweb2024/rules/branches/main --jq '[.[] | {type, ruleset_id, approvals: .parameters.required_approving_review_count, workflows: [.parameters.workflows[]?.path]}]'
+#        gh api repos/Cor-Incorporated/corsweb2024/rulesets/20776787 --jq '{target: .conditions.ref_name, bypass_actors, workflow_repos: [.rules[].parameters.workflows[]?.repository_id]}'
 
 on:
   pull_request:
@@ -27,13 +40,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD: ${{ github.head_ref }}
+          # head のリポジトリ。github.head_ref はブランチ名だけなので、フォークのブランチが develop という名前なら
+          # 通ってしまっていた（このリポジトリは公開。#374 のレビュー）。照合: src/config/__tests__/guard-base-branch.test.ts
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -eo pipefail
-          echo "main 宛 PR #${PR}  head=${HEAD}"
-          if [ "$HEAD" = "develop" ]; then
+          echo "main 宛 PR #${PR}  head=${HEAD_REPO}:${HEAD}"
+          if [ "$HEAD" = "develop" ] && [ "$HEAD_REPO" = "$REPO" ]; then
             echo "✅ develop → main は許可された唯一の経路です"
             exit 0
+          fi
+          if [ "$HEAD" = "develop" ]; then
+            # フォーク（またはフォークが消えた PR）の develop。フォークの PR の GITHUB_TOKEN は読み取り専用で
+            # 誘導コメントは書けないので、エラーだけを出す
+            echo "::error title=フォークの develop です::main へは ${REPO} の develop からの PR のみ許可されています（head は ${HEAD_REPO:-（不明）}:${HEAD}）。"
+            exit 1
           fi
           # 誘導コメントは初回のみ。隠しマーカーで既出を判定し、edited 連発でも重複させない。
           MARKER="<!-- guard-base-branch -->"
@@ -41,6 +63,8 @@ jobs:
             --jq "[.comments[] | select(.body | contains(\"$MARKER\"))] | length" 2>/dev/null || echo 0)
           if [ "${EXISTING:-0}" -eq 0 ]; then
             # 単一引用符の format 文字列なのでバッククォートはリテラル。動的値は %s で渡す。
+            # バッククォートは Markdown のコード表記で、展開させない（shellcheck の SC2016 は意図どおりなので止める）
+            # shellcheck disable=SC2016
             BODY=$(printf '%s\n🚫 **`main` へのマージは `develop` からのみ許可しています。**\n\nこのPRは head=`%s` → base=`main` ですが、変更は **`develop` を経由** してください:\n\n1. base を `develop` に変更（このPR画面の base 切替、または `gh pr edit %s --base develop`）\n2. develop に取り込まれた後、リリース時に develop → main をまとめて PR します。' "$MARKER" "$HEAD" "$PR")
             gh pr comment "$PR" --repo "$REPO" --body "$BODY" || true
           fi

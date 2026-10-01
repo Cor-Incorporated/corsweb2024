@@ -2,6 +2,14 @@ import { z } from 'astro/zod';
 import { getCategoryIds } from './categories';
 
 /**
+ * 空・空白だけを止める文字列。CMS（Sveltia）は下書きの間は必須項目が空でも保存できるので、ビルドでも止める
+ * （2026-10-01 の通しの確認）。scripts/i18n/schema.mjs のミラーにも同じチェックを置く（schema-link.test.mjs が値まで照合する）。
+ * メッセージに欄の名前を入れる: 独自のメッセージを付けると、Astro はビルドのエラーに欄の名前を付けない。
+ */
+const requiredText = (label: string) =>
+  z.string().trim().min(1, { message: `${label} が空です（CMS では、レビュー中にする前に入れてください）` });
+
+/**
  * ブログ記事（src/content/blog/<lang>/*.md）の frontmatter スキーマ。
  * src/content/config.ts の blog コレクションはこの定義だけを使う。
  *
@@ -12,8 +20,8 @@ import { getCategoryIds } from './categories';
  * - optional のキー ↔ config.yml の required: false（空のとき出力しない）
  */
 export const blogFrontmatterSchema = z.object({
-  title: z.string(),
-  description: z.string(),
+  title: requiredText('title（タイトル）'),
+  description: requiredText('description（概要）'),
   pubDate: z.coerce.date(),
   updatedDate: z.coerce.date().optional(),
   author: z.string().default('Terisuke'),

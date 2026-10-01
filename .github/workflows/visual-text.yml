@@ -53,7 +53,12 @@ jobs:
       - name: CMS admin e2e (cms/firebase.json headers, CSP violations 0)
         run: npm run build:cms && npm run test:e2e:admin
 
-      - name: Upload visual text artifacts
+      # test-results/admin-cms/ は CMS 管理画面の e2e の失敗の記録（trace・error-context.md。playwright.admin.config.ts の
+      # outputDir。成功したときは空）。照合: src/config/__tests__/admin-e2e-artifacts.test.ts
+      # 2026-10-01 まで管理画面の e2e は既定の test-results/ を出力先にしていて、開始時に Playwright がそこを空にするため、
+      # 先に作られた test-results/visual-text/（表示監査の結果と全ページの画面写真、約 26 MB）が毎回消えていた。
+      # 出力先を分けたので、表示監査の結果も載る。保存は 14 日にする。
+      - name: Upload visual text and CMS admin e2e artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -61,4 +66,6 @@ jobs:
           path: |
             test-results/visual-text/
             playwright-report/visual-text/
+            test-results/admin-cms/
           if-no-files-found: ignore
+          retention-days: 14
