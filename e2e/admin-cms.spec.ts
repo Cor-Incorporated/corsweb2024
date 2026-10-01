@@ -79,9 +79,10 @@ const openEditorWithTestBackend = async (page: Page) => {
 // 1. 「アイキャッチ画像」の欄そのものが、まだ描かれていないことがある（上に欄が増える・画面が低いとき）。描かれた最後の
 //    欄を画面の上に寄せて、次の欄を画面に入れることを、チェックボックスが現れるまで繰り返す。
 // 2. チェックのあと、中の欄（画像・代替テキスト）を画面に入れる。2026-10-01 の CI で 2 回落ちた（run 36837085826・
-//    36839110638）: 最初のクリックが、上の欄（本文）が描かれて配置が動いたために `<html> intercepts pointer events`
-//    で弾かれ、Playwright がやり直しでチェックボックスを画面の下端（block: 'end'）までしかスクロールしないので、
-//    中の欄が画面の外で待ち続け、「参照」が出なかった（trace を取る CI の設定だと遅くなって起きやすい。手元では
+//    36839110638）: 編集画面を開く画面遷移（Sveltia は document.startViewTransition を使う）がまだ終わっておらず、
+//    遷移中はどこを指しても <html> に当たるため、最初のクリックが `<html> intercepts pointer events` で弾かれ、
+//    Playwright がやり直しでチェックボックスを画面の下端（block: 'end'）までしかスクロールしないので、中の欄が
+//    画面の外で待ち続け、「参照」が出なかった（trace を取る CI の設定だと遅くなって起きやすい。手元では
 //    CMS_E2E_CPU_THROTTLE=6 で 12 回中 6 回）。人はスクロールして見るので、テストでもチェックボックスを画面の上に寄せる。
 const uploadPng = async (page: Page) => {
   const toggle = page.getByRole('checkbox', { name: /アイキャッチ画像/ });

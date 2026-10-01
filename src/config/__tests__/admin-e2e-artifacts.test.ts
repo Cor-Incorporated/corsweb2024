@@ -60,9 +60,10 @@ describe('CMS 管理画面の e2e の失敗の記録（outputDir ↔ visual-text
 
 describe('F3 変異: 片側だけ変えると落ちる', () => {
   it('outputDir だけを変える', () => {
-    expect(check('test-results/admin', workflowText()).join('\n')).toContain(
-      'playwright.admin.config.ts の outputDir=test-results/admin が、.github/workflows/visual-text.yml のアップロードの path [test-results/visual-text, playwright-report/visual-text, test-results/admin-cms] に無い'
-    );
+    const violations = check('test-results/admin', workflowText()).join('\n');
+    // 両方の値（outputDir と、アップロードの path の一つ）を出す。path の一覧は増えうるので、全体は照合しない
+    expect(violations).toContain('playwright.admin.config.ts の outputDir=test-results/admin が、.github/workflows/visual-text.yml のアップロードの path [');
+    expect(violations).toContain('test-results/admin-cms');
   });
 
   it('アップロードの path から管理画面の行だけを消す', () => {
@@ -72,9 +73,9 @@ describe('F3 変異: 片側だけ変えると落ちる', () => {
   });
 
   it('outputDir を既定（test-results）に戻す（表示監査の結果を消していた 2026-10-01 までの形）', () => {
-    expect(check(undefined, workflowText()).join('\n')).toContain(
-      'outputDir=test-results は開始時に空にされるが、その中に別の成果物 [test-results/visual-text, test-results/admin-cms] がある'
-    );
+    const violations = check(undefined, workflowText()).join('\n');
+    expect(violations).toContain('outputDir=test-results は開始時に空にされるが、その中に別の成果物 [');
+    expect(violations).toContain('test-results/visual-text');
   });
 
   it('アップロードを成功のときだけにする', () => {
