@@ -41,6 +41,8 @@ jobs:
             --jq "[.comments[] | select(.body | contains(\"$MARKER\"))] | length" 2>/dev/null || echo 0)
           if [ "${EXISTING:-0}" -eq 0 ]; then
             # 単一引用符の format 文字列なのでバッククォートはリテラル。動的値は %s で渡す。
+            # バッククォートは Markdown のコード表記で、展開させない（shellcheck の SC2016 は意図どおりなので止める）
+            # shellcheck disable=SC2016
             BODY=$(printf '%s\n🚫 **`main` へのマージは `develop` からのみ許可しています。**\n\nこのPRは head=`%s` → base=`main` ですが、変更は **`develop` を経由** してください:\n\n1. base を `develop` に変更（このPR画面の base 切替、または `gh pr edit %s --base develop`）\n2. develop に取り込まれた後、リリース時に develop → main をまとめて PR します。' "$MARKER" "$HEAD" "$PR")
             gh pr comment "$PR" --repo "$REPO" --body "$BODY" || true
           fi
