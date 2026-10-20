@@ -1,16 +1,16 @@
 ---
-title: "Grift — Resumes can be embellished. Evidence cannot. An OSS tool that extracts verifiable facts from git history"
-description: "Grift is our in-house product that extracts verifiable facts (test values) rather than scores from an engineer's git history. Here, we share the design and the story of how our strategy pivoted from an estimation support web app to an open-source CLI and recommendation support tool for staffing agencies and SES providers."
+title: "Grift — Resumes Can Be Embellished. Evidence Cannot. An OSS Tool Extracting Verifiable Facts from Git History"
+description: "Grift is our in-house product that extracts verifiable facts (test values)—not scores—from an engineer's git history. We introduce the design and the background behind shifting our direction from an estimation support web app to an OSS CLI and recommendation support tool for staffing agencies and SES providers."
 category: "grift"
-tags: ["Grift", "OSS", "CLI", "git", "Staffing Agencies", "SES"]
+tags: ["Grift", "OSS", "CLI", "git", "Recruitment", "SES"]
 publishedAt: 2026-06-30
 updatedAt: 2026-10-20
-summary: "Grift is our in-house product that extracts \"verifiable facts\" from an engineer's git history. Because it does not assign scores or rankings and does not use AI (LLMs) for measurement, it yields the exact same results regardless of who runs it, allowing the recipient to verify the findings. The CLI is released as open-source software under the MIT license."
+summary: "Grift is an in-house product that extracts \"verifiable facts\" from an engineer's git history. Without assigning scores or rankings, and without using AI (LLMs) for measurement, it produces the same results no matter who runs it, allowing recipients to verify the calculations themselves. The CLI is released as open-source software under the MIT license."
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "7f22d1e3435c1051e9b79ad280087a0dc968c2c0e947a92dd6d02a6f8e92f399"
-translatedAt: "2026-10-20T01:56:13.029Z"
+translationSourceHash: "50b777323f44c9fba4e13fe092c2a49e5ad8d2299c657eda38c22deedf720613"
+translatedAt: "2026-10-20T03:23:26.548Z"
 translationModel: "gemini-3.8-flash"
 ---
 
@@ -27,39 +27,41 @@ NDA・機密案件では具体名や数値をぼかし、frontmatter の securit
 
 ## Challenges
 
-When staffing agencies and SES (System Engineering Service) sales reps recommend candidates to client companies, they need to explain "why this candidate." Yet the materials at hand are almost entirely limited to resumes and impressions from interviews. Even if a resume states "5 years of Java experience," it does not convey the substance of the work—such as what kinds of changes were made and how they were validated.
+When recommending candidates to client companies, sales representatives at recruitment agencies and SES (System Engineering Services) firms need to explain *why* they are endorsing that particular person. However, the materials available at hand are mostly limited to resumes and impressions from interviews. Even if a resume states "5 years of Java," it does not convey the substance of the work—such as what kinds of changes were made and how they were verified during the process.
 
-At the same time, "activity volume"—such as GitHub contribution graphs and commit counts—can now be easily inflated using generative AI and agents. High volume alone is hardly grounds for recommendation anymore. On the other hand, collapsing everything into a single score erases what was measured, over what time frame, and across what population, turning it into a blunt screening tool. Both those making recommendations and those being recommended lacked "verifiable evidence."
+Meanwhile, "activity volume," such as GitHub contribution graphs and commit counts, can now easily be inflated using generative AI and agents. A high volume alone can hardly serve as grounds for a recommendation anymore. On the other hand, condensing everything into a single score obscures what was measured, over what period, and against what base population, leading to its misuse as a blunt filtering tool. Both those making recommendations and those being recommended lacked "verifiable materials."
 
 ## Approach
 
-Grift began in February 2026 as a web application supporting contract development estimates. While exploring the basis for these estimates, we realized that the most dependable evidence is the git history that engineers have built over time. In August 2026, we carved out the measurement component as a command-line tool. In September, we discontinued the legacy web application and shifted our direction toward supporting staffing agencies and SES sales teams.
+Grift began in February 2026 as a web application supporting estimates for custom software development. While exploring grounds for estimates, we realized that the most reliable material is the git history accumulated by engineers themselves, and in August 2026, we extracted the measurement component as a command-line tool. In September, we discontinued the former web application and pivoted toward supporting sales representatives at recruitment agencies and SES firms.
 
-During design, we established three commitments upfront:
+In our design, we established three core commitments upfront:
 
-- **No scoring** — Output test values; leave judgment to humans. We produce no composite scores, rankings, pass/fail decisions, or grades, and every metric always includes both a numerator and a denominator.
-- **Identical results every time** — No AI (LLMs) used in measurement. For the same repository and the same version, anyone running it gets the exact same numbers.
-- **Sent nowhere** — Runs entirely on the local machine. The individual decides whether to share and which repositories to include.
+- **Do not turn it into a score** — We output test values; humans make the judgment. We do not produce composite scores, rankings, pass/fail results, or grades, and numerical values are always accompanied by both a numerator and a denominator.
+- **Identical results every time** — We do not use AI (LLMs) for measurement. For the same repository and the same version, anyone running it will get the exact same numbers.
+- **Send nowhere** — It runs solely on the local PC. Candidates themselves decide whether to share the results and which repositories to present.
 
-In addition, we established a seven-article code of conduct, including rules such as "do not interpret absence as negative," "do not screen out candidates based on numbers alone," and "do not measure others without their consent." We decided that any usage failing to comply must not be called by the methodology's name (TEP: Technical Evidence Pipeline).
+In addition, we established a 7-article code of conduct, including principles such as "do not interpret absence as a negative," "do not filter candidates based solely on numerical values," and "do not measure others without their consent." We set a rule that any usage failing to uphold these principles must not be referred to by the method's name (TEP: Technical Evidence Pipeline).
 
 ## Implementation
 
-The Grift CLI extracts observations like the following exclusively from git history:
+Grift CLI extracts observations like the following exclusively from git history:
 
-- **Attribution classification**: Separates whose work it is across 11 categories, including the individual's original commits, work by others, bots, generated/vendor deliverables, and history inherited from upstream forks.
-- **Co-test rate**: The proportion of commits modifying production code that also modify tests in the same commit.
-- **Rework rate and refinement**: The proportion of redoing or revisiting recently touched files (recorded as a trend, not used for pass/fail decisions).
-- **Repository context**: Active working days, number of contributors and the primary author's share, proportion going through reviews, and more.
+- **Attribution distinction**: Differentiates whose work it is across 11 classifications, including the individual's original commits, others' work, bots, generated/vendor deliverables, and history inherited from upstream forks.
+- **Test co-modification rate**: The proportion of commits that modify tests in the same commit as production code changes.
+- **Rework rate / refinement**: The rate of redos and touches on recently modified files (recorded as a trend; not used for pass/fail decisions).
+- **Repository context**: Active working days, number of contributors involved, share of the primary author, proportion merged via review, etc.
 
-When the sample size is under 20, rates are not shown and only raw counts are provided. Anything that could not be observed is output not as "no track record," but as "unobserved" with a stated reason. `grift verify` recalculates a saved report under the same conditions and returns match, mismatch, or unverifiable, allowing the recipient to verify any tampering or discrepancies.
+When the base population is under 20, it displays only counts rather than percentages, and items that could not be observed are reported as "unobserved" with a stated reason, rather than "no track record." `grift verify` recalculates a saved report under the same conditions and returns match, mismatch, or unverifiable, allowing recipients to verify whether there has been tampering or discrepancies.
 
 - Repository: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
-- Distribution: PyPI "grift-cli" (`pipx install grift-cli`, Python 3.11+)
+- Distribution: PyPI "grift-cli" (`pipx install grift-cli`, Python 3.11 or higher)
 - License: MIT
 
-## Outcomes
+## Results
 
-On September 8, 2026, we released v0.7.2 on PyPI. The metrics were validated across 117 public repositories, and both comparisons that could be distinguished and those that could not yet be distinguished are published on GitHub (measured internally; not audited by a third party).
+On September 8, 2026, we released v0.7.2 on PyPI. The metrics were validated across 117 public repositories, and we have published on GitHub both the comparisons where distinctions could be made and those where distinctions could not yet be made (these are internal measurements and have not undergone third-party audit).
 
-We are currently preparing trials (PoCs) with staffing agencies and SES companies to substantiate the reasons for candidate recommendations using records candidates run locally on their own machines. We aim to launch the official release in 2027 based on the results of these trials. Grift is also introduced at [griftai.org](https://griftai.org).
+Currently, we are preparing proof-of-concept (PoC) trials with recruitment agencies and SES companies to substantiate recommendation rationales based on records run locally by the candidates themselves. We aim to launch the official version in 2027 based on the results of these pilot deployments. Grift is also introduced at [griftai.org](https://griftai.org).
+
+The philosophy behind Grift is also shared in our articles on [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) and [note](https://note.com/cor_instrument/n/nd58ba0955317).

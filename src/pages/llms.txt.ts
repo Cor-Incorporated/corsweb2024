@@ -32,7 +32,7 @@ Cor.株式会社（読み: コー株式会社、英文表記: Cor.Inc.）は福�
 
 ## 事業の柱（5本）
 
-1. Grift（自社プロダクト）— 経歴は盛れる。証拠は盛れない。エンジニアのgit履歴から確かめられる事実（検査値）を取り出す。点数・順位は出さず、計測にLLMを使わない。CLIはMITライセンスのOSSとして公開中（PyPI: grift-cli）。人材紹介会社・SES向けの試行（PoC）は個別案内、正式版は2027年の提供開始を目指す
+1. Grift（自社プロダクト）— 経歴は盛れる。証拠は盛れない。エンジニアのgit履歴から確かめられる事実（検査値）を取り出す。点数・順位は出さず、計測にLLMを使わない。CLIはMITライセンスのOSSとして公開中（PyPI: grift-cli）。人材紹介会社・SES向けのテスト導入（PoC）は個別案内、正式版は2027年の提供開始を目指す
 2. ローカルLLM・セキュアAI — データを外に出さずに生成AIを使う。契約書や顧客情報など外部AIに渡しにくい情報を扱えるAI環境を、社内ルール・権限・ログの設計まで含めてつくる。機密データAI活用診断（目安10万〜30万円）、ローカルLLM／AI基盤PoC（目安3か月300万円〜）を提供
 3. ハードウェアAI — 視覚障がいのある方に向けたスマートグラスを開発パートナーと開発中。利用者との実証を準備中（販売前）
 4. AI受託開発・導入支援 — PoCで終わらせない。課題の整理から設計・実装・運用まで一気通貫で伴走する
@@ -59,6 +59,8 @@ Cor.株式会社（読み: コー株式会社、英文表記: Cor.Inc.）は福�
 - Grift: ${grift}/
 - Grift CLI（GitHub）: ${GRIFT_CLI_GITHUB_URL}
 - Grift CLI（PyPI）: https://pypi.org/project/grift-cli/
+- Grift の思想（Qiita）: https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1
+- Grift の思想（note）: https://note.com/cor_instrument/n/nd58ba0955317
 `;
 
   return new Response(body, {
