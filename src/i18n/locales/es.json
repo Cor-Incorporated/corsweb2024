@@ -1019,7 +1019,7 @@
   },
   "privacy": {
     "title": "Política de Protección de Datos Personales (Política de Privacidad)",
-    "lastUpdate": "Fecha de referencia: 17 de julio de 2026 (Versión 0.3, Borrador)",
+    "lastUpdate": "Fecha de referencia: 20 de octubre de 2026 (Versión 0.4, Borrador)",
     "note": "La versión en japonés es el texto auténtico. Esta traducción al español se ofrece únicamente a título informativo.",
     "intro": "Cor. Inc. (en adelante, «la Empresa») reconoce la importancia de la información personal que trata y gestiona adecuadamente la información personal de clientes, empleados, candidatos a empleo y demás personas, de conformidad con la Ley de Protección de Información Personal (en adelante, la «Ley de Protección de Información Personal»), demás leyes y reglamentos pertinentes, directrices y el sistema de gestión de la seguridad de la información basado en la norma ISO/IEC 27001:2022 (JIS Q 27001:2023). La Empresa protege la información personal con arreglo a la siguiente política.",
     "businessTitle": "1. Información de la empresa",
@@ -1046,7 +1046,7 @@
       },
       {
         "label": "Consultas",
-        "value": "A través del punto de contacto establecido en el apartado 10."
+        "value": "A través del punto de contacto establecido en el apartado 11."
       }
     ],
     "purposeTitle": "2. Información personal recopilada y finalidad de su uso",
@@ -1062,6 +1062,10 @@
           {
             "label": "Finalidad del uso",
             "value": "Atención de consultas y solicitudes / celebración y ejecución de contratos, prestación del desarrollo, operación y mantenimiento de soluciones de IA / facturación, pago y demás procesos contables y financieros / comunicaciones e información relativas a los servicios / gestión de transacciones y contratos y cumplimiento de las obligaciones legales."
+          },
+          {
+            "label": "Uso de la Recepción con IA",
+            "value": "La información recopilada a través de la Recepción con IA (Cloudia) de la página de contacto, su finalidad del uso y la forma de su tratamiento son los que se establecen en el apartado 10."
           }
         ]
       },
@@ -1190,9 +1194,30 @@
           "Con el fin de gestionar la seguridad de la información, gestionar las relaciones laborales y registrar objetivamente la jornada laboral, la Empresa obtiene y supervisa, en los terminales y servicios en la nube utilizados para el trabajo, los registros (logs) relacionados con la actividad laboral (autenticación, ejecución de procesos, metadatos de comunicación, accesos a datos internos, configuración de software, asistencia/tiempo de uso). La Empresa no obtiene contenido privado (contenido de navegación personal, contenido de cuentas personales, pulsaciones de teclas).",
           "La finalidad, el alcance, el responsable, las condiciones de consulta y el periodo de conservación de la obtención y supervisión de registros (logs) se rigen por lo establecido en las normas internas «Reglamento de Obtención de Registros y Monitorización» y «Aviso y Consentimiento sobre la Monitorización de Empleados»."
         ]
+      },
+      {
+        "title": "10. Tratamiento de la información personal en la Recepción con IA (Cloudia)",
+        "body": [
+          "La Empresa ofrece en su página de contacto un servicio de recepción basado en IA (Cloudia; en adelante, la «Recepción con IA»). La Recepción con IA utiliza IA generativa para ordenar el contenido de su consulta y, a continuación, lo traslada al personal de la Empresa junto con los datos de contacto que usted introduzca en el último paso. El tratamiento de la información personal en la Recepción con IA se rige por lo dispuesto en el presente apartado y por las demás disposiciones de esta Política.",
+          "(1) Información recopilada: (i) el contenido de su consulta en la Recepción con IA (el texto escrito en el chat) y las respuestas de la IA; (ii) el tipo de consulta y la información que indica la procedencia de su visita (la posición en la página de origen, los parámetros UTM, etc.); (iii) el nombre, la dirección de correo electrónico, la razón social y el contenido de la consulta que usted introduzca en el paso de traslado; (iv) el resumen de la consulta, los elementos organizados, como la fase de la consulta, y el resultado de la clasificación del tipo de consulta, generados por la IA; y (v) información como la dirección IP obtenida con ocasión de la comunicación, para prevenir el uso indebido.",
+          "(2) Finalidad del uso: (i) responder a su consulta y ordenar su contenido; (ii) trasladarla al personal de la Empresa, así como responder a su consulta y ponerse en contacto con usted (incluido el envío de un correo de confirmación de recepción); (iii) clasificar el tipo de consulta (incluida la identificación de ofertas comerciales, mensajes molestos y similares); y (iv) prevenir el uso indebido y operar la Recepción con IA de forma segura. Los resúmenes y las clasificaciones de la IA se utilizan como referencia para que el personal estudie cómo responder; la decisión sobre la respuesta la toma el personal de la Empresa.",
+          "(3) Encargados del tratamiento: En la medida necesaria para operar la Recepción con IA, la Empresa encarga la totalidad o una parte del tratamiento de la información personal a las siguientes empresas (véase el apartado 3)."
+        ],
+        "list": [
+          "Servicio de IA generativa: Gemini de Vertex AI de Google Cloud (proveedor: Google LLC y sus filiales / Estados Unidos). Se envía el contenido de su consulta (tras el enmascaramiento descrito en el punto (4)) para generar las respuestas, los resúmenes y las clasificaciones de la IA. La Empresa utiliza este servicio con una configuración (el endpoint global) que no limita a Japón el lugar del procesamiento.",
+          "Servicio de IA generativa (alternativo): Claude de Anthropic (proveedor: Anthropic, PBC / Estados Unidos). La Empresa puede utilizarlo en lugar del anterior, por ejemplo en caso de avería, en cuyo caso se envía la misma información.",
+          "Servicio de envío de correo electrónico: Resend (proveedor: Plus Five Five, Inc. / Estados Unidos). Se utiliza para enviar los correos de notificación al personal de la Empresa y los correos de confirmación de recepción a usted. El correo de notificación incluye la información de los puntos (1)(ii) a (iv) y el extracto de la conversación descrito en el punto (5); el correo de confirmación incluye su nombre, el resumen y el contenido de su consulta.",
+          "Infraestructura en la nube: Cloudflare (proveedor: Cloudflare, Inc. / Estados Unidos). Se utiliza para el procesamiento en el servidor de la Recepción con IA, la conservación de la información descrita en el punto (5), la gestión del envío de notificaciones y la prevención del uso indebido."
+        ],
+        "bodyAfter": [
+          "(4) Información enviada a la IA generativa y enmascaramiento: Al servicio de IA generativa solo se envían el contenido de la consulta, las respuestas de la IA y la información del punto (1)(ii) (excepto los parámetros UTM); no se envía la información del punto (1)(iii). Antes del envío, el servidor de la Empresa sustituye automáticamente por marcadores enmascarados las cadenas de la consulta y de las respuestas de la IA que parezcan direcciones de correo electrónico, números de teléfono, códigos postales, secuencias largas de dígitos como números de tarjeta, códigos de autenticación o información secreta como claves de API. Este proceso detecta de forma mecánica cadenas con formatos predeterminados y no elimina toda la información personal, como nombres, direcciones postales o razones sociales. Le rogamos que no introduzca en la Recepción con IA información personal suya ni de terceros, ni información de carácter altamente confidencial.",
+          "(5) Conservación y plazos de conservación: La Empresa no conserva la conversación enviada desde su navegador en su forma original, sino como un extracto de la conversación sometido al enmascaramiento del punto (4) y con una longitud limitada tanto por mensaje como en total. Además, la Empresa conserva el resumen generado por la IA, los elementos organizados, como el tipo y la fase de la consulta, y la información del punto (1)(iii); el extracto de la conversación y la información del punto (1)(iii) se conservan cifrados. Esta información se elimina automáticamente una vez transcurridos los siguientes plazos: (i) la información sobre el uso de la Recepción con IA (extracto de la conversación, resumen, elementos organizados, etc.): 30 días desde el último intercambio; (ii) la información enviada en el paso de traslado (la información del punto (1)(iii), junto con el resumen, el extracto de la conversación, la información que indica la procedencia de la visita, etc. que se conservan con ella): 90 días desde su recepción.",
+          "No obstante, los correos de notificación recibidos por el personal de la Empresa y la correspondencia posterior con usted no están sujetos a la eliminación automática anterior; se tratan dentro del alcance de las finalidades del uso del apartado 2 (1) y se eliminan conforme al apartado 6 una vez que dejan de ser necesarios. Asimismo, los encargados del punto (3) también pueden conservar información durante un cierto periodo, según lo que establezca cada uno, para fines como la prestación de sus servicios y la prevención del uso indebido.",
+          "(6) Tratamiento en el extranjero: Los servicios de las empresas del punto (3) son prestados por empresas estadounidenses (incluidas sus filiales), por lo que los datos personales tratados en la Recepción con IA pueden tratarse fuera de Japón, incluido Estados Unidos. La Empresa los trata de forma adecuada conforme a los métodos establecidos en el apartado 4 (Uso de servicios en la nube y cesión a terceros situados en el extranjero)."
+        ]
       }
     ],
-    "inquiryTitle": "10. Punto de contacto para consultas",
+    "inquiryTitle": "11. Punto de contacto para consultas",
     "inquiryLead": "Las solicitudes de divulgación, entre otras, de los datos personales en posesión de la Empresa, así como las reclamaciones y consultas relativas al tratamiento de la información personal, se atienden en el siguiente punto de contacto.",
     "inquiryTable": [
       {
@@ -1204,14 +1229,14 @@
         "value": "Para las solicitudes de divulgación y similares (apartado 7), contáctenos en company@cor-jp.com adjuntando documentos que acrediten su identidad. Las reclamaciones y consultas relativas al tratamiento de información personal también se atienden a través de Cloudia (chat con IA) en nuestra página de contacto."
       }
     ],
-    "revisionTitle": "11. Modificación de la presente política",
+    "revisionTitle": "12. Modificación de la presente política",
     "revisionBody": [
       "La Empresa podrá modificar la presente política por motivos como reformas legales, cambios en su actividad empresarial u otras circunstancias. En caso de modificación, publicará el contenido modificado en el sitio web de la Empresa u otros medios. Cuando realice cambios importantes, los dará a conocer por un medio adecuado."
     ],
     "securityLinkPrefix": "Para conocer nuestro marco de seguridad de la información, consulte también nuestra página de ",
     "securityLinkText": "Seguridad",
     "securityLinkSuffix": ".",
-    "footer": "Versión: 0.3 (Borrador) / Fecha de referencia: 17 de julio de 2026 / Elaborado por: Cor. Inc. / Responsable: Responsable de Protección de Información Personal (Responsable de Gestión del ISMS, Nagisa Terada)",
+    "footer": "Versión: 0.4 (Borrador) / Fecha de referencia: 20 de octubre de 2026 / Elaborado por: Cor. Inc. / Responsable: Responsable de Protección de Información Personal (Responsable de Gestión del ISMS, Nagisa Terada)",
     "footerNote": "* La presente política es un resumen, con fines de publicación externa, de la norma interna «Reglamento de Tratamiento de Información Personal e Información Personal Específica», correspondiéndose ambos documentos; en caso de discrepancia entre ellos, se interpretará conforme a las leyes y reglamentos y al espíritu de dicha norma."
   },
   "security": {
