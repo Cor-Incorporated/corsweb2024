@@ -143,16 +143,17 @@ const secondaryHref = getContactUrl(currentLocale, {
             {page.cta.description}
           </p>
         </div>
-        <div class="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:justify-center">
+        <!-- 2つの文言が長い言語（zh など）ではタブレット幅で横並びにすると主ボタンの末尾が1文字だけ折り返すため、lg から横並び -->
+        <div class="flex w-full flex-col items-center gap-4 lg:w-auto lg:flex-row lg:justify-center">
           <a
             href={primaryHref}
-            class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-white px-6 py-4 text-center text-lg font-semibold text-[#2d4a6b] shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-auto sm:px-8"
+            class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-white px-6 py-4 text-center text-lg font-semibold text-[#2d4a6b] shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:w-auto sm:px-8"
           >
             {page.cta.primary}
           </a>
           <a
             href={secondaryHref}
-            class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-white/30 px-5 py-3 text-center text-base font-medium text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-auto"
+            class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-white/30 px-5 py-3 text-center text-base font-medium text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:w-auto"
           >
             {page.cta.secondary}
           </a>
