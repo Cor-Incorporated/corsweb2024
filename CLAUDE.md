@@ -74,9 +74,12 @@ These rules come from ADRs; the ADR is the source of truth if this summary
 and the ADR disagree.
 
 - **External expression guardrails** —
-  `docs/adr/ADR-0007-external-expression-guardrails.md`:
-  - ISMS may only be described as in preparation (「整備中」). Never write that
-    it has been obtained, and never state an acquisition date or audit body.
+  `docs/adr/ADR-0007-external-expression-guardrails.md`, partly replaced by
+  `docs/adr/ADR-0022-business-pillars-grift-cli.md`:
+  - ISMS: you may write that the ISO/IEC 27001 stage 2 audit was completed in
+    October 2026 and that certification registration is expected around
+    December 2026. Until registration is complete, never write that it has been
+    obtained (「取得済み」「認証取得」), and never name the audit body.
     P-mark / SCS are not mentioned at all
   - The retired business lines and product names listed in ADR-0007 were
     removed from the site. Do not reintroduce them anywhere (pages,
@@ -90,8 +93,14 @@ and the ADR disagree.
     Internal measurements, multipliers and reduction rates only with a linked
     page that explains the conditions; "coming soon" cases never appear in
     the works list
-  - Grift gives a reference estimate (「参考見積もり」); never promise a final
-    quote
+  - Grift is an own product that extracts verifiable facts from engineers'
+    git history (OSS CLI `grift-cli`, MIT; trial for recruiting/SES agencies;
+    no scores or rankings). It is no longer an estimation tool (ADR-0022)
+  - The business has five pillars (Grift / local LLM & secure AI / hardware AI /
+    AI contract development & adoption support / education & community); keep
+    their order and wording in sync across `services2026`, `companyPage`, FAQ,
+    meta and the Cloudia knowledge (ADR-0022). Of the partners, only Engineer
+    Cafe may be named
 - **Cross-site links and intents**: the Grift URL comes from
   `PUBLIC_GRIFT_BASE_URL` via `src/config/site.ts` — never hard-code
   `griftai.org` (`npm run check:links`; ADR-0010). Contact intents are the 7
