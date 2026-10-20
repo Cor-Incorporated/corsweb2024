@@ -88,10 +88,11 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          # workers/contact-edge は独自の package-lock.json を持つので、キャッシュの鍵に含める。
+          # workers/contact-edge と workers/contact-chat は独自の package-lock.json を持つので、キャッシュの鍵に含める。
           cache-dependency-path: |
             package-lock.json
             workers/contact-edge/package-lock.json
+            workers/contact-chat/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -106,6 +107,17 @@ jobs:
         run: |
           npm ci --prefix workers/contact-edge --ignore-scripts --no-audit --no-fund
           npm test --prefix workers/contact-edge
+
+      # workers/contact-chat（/api/contact/* の Worker）も独自の package.json を持ち、ルートの vitest には含まれない。
+      # 以前はどのワークフローでも実行されておらず、npm run test が scripts/ の node:test のテストまで vitest で
+      # 集めて exit 1 になっていたことに気づけなかった（vitest の対象は workers/contact-chat/vitest.config.ts で絞る）。
+      # scripts/sync-public-knowledge.test.mjs は node:test で書かれているので、knowledge:test で別に実行する。
+      - name: contact-chat worker typecheck and tests
+        run: |
+          npm ci --prefix workers/contact-chat --ignore-scripts --no-audit --no-fund
+          npm run typecheck --prefix workers/contact-chat
+          npm test --prefix workers/contact-chat
+          npm run knowledge:test --prefix workers/contact-chat
 
       - name: Type check and build
         run: npm run build

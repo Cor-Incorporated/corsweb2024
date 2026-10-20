@@ -49,7 +49,8 @@ npm run seo:snapshot -- --out snapshot.json   # SEO/AIO snapshot of dist (see sc
 What CI runs (`.github/workflows/`):
 
 - `ci.yml` (job `verify`, PRs to develop/main): `test:run`, the
-  `workers/contact-edge` tests, `build`, `security:audit:dist`, `test:dist`
+  `workers/contact-edge` tests, the `workers/contact-chat` `typecheck` /
+  `test` / `knowledge:test`, `build`, `security:audit:dist`, `test:dist`
   (also a second build with the calendar enabled), and the Firebase / Worker
   header audits
 - `visual-text.yml`: `test:run`, `verify:visual-text`, and
