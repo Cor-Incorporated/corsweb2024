@@ -48,7 +48,7 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 |------|------|------|
 | `LLM_PROVIDER` | `vertex-gemini` | Cloud Run Gateway経由のVertex Gemini。`anthropic`でロールバック可能 |
 | `CONTACT_TO_EMAIL` | `cloudia@cor-jp.com` | 問い合わせメールの宛先 |
-| `CONTACT_CC_EMAILS` | `company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com` | 社内通知のCC（カンマ区切りで配列化） |
+| `CONTACT_CC_EMAILS` | `company@cor-jp.com,nagisa.terada@cor-jp.com` | 社内通知のCC（カンマ区切りで配列化） |
 | `CONTACT_CC_EMAIL` | （旧互換） | 旧単一CC。`CONTACT_CC_EMAILS` 未設定時のみ利用 |
 | `CONTACT_FROM_EMAIL` | `noreply@cor-jp.com` | 問い合わせメールの差出人 |
 

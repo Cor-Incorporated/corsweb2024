@@ -109,7 +109,7 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
   const env = {
     RESEND_API_KEY: 're_test',
     CONTACT_TO_EMAIL: 'info@cor-jp.com',
-    CONTACT_CC_EMAILS: 'company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com',
+    CONTACT_CC_EMAILS: 'company@cor-jp.com,nagisa.terada@cor-jp.com',
     CONTACT_FROM_EMAIL: 'noreply@cor-jp.com',
   } as unknown as Env;
 
@@ -128,7 +128,7 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
     const payload = JSON.parse(init.body as string);
     expect(payload.to).toBe('info@cor-jp.com');
     expect(payload.from).toBe('noreply@cor-jp.com');
-    expect(payload.cc).toEqual(['company@cor-jp.com', 'k.isayama@cor-jp.com', 'nagisa.terada@cor-jp.com']);
+    expect(payload.cc).toEqual(['company@cor-jp.com', 'nagisa.terada@cor-jp.com']);
     expect(payload.text).toContain('taro@example.com');
     // reply_to に問い合わせ者のメールが入る（担当者の返信が顧客へ届く）
     expect(payload.reply_to).toBe('taro@example.com');
@@ -181,12 +181,11 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
 
   it('CC設定は重複・不正値を除去し、旧単一値にも対応する', () => {
     expect(getInternalCcRecipients({
-      CONTACT_CC_EMAILS: 'Company@cor-jp.com, bad, company@cor-jp.com, k.isayama@cor-jp.com',
-    } as unknown as Env)).toEqual(['company@cor-jp.com', 'k.isayama@cor-jp.com']);
+      CONTACT_CC_EMAILS: 'Company@cor-jp.com, bad, company@cor-jp.com, nagisa.terada@cor-jp.com',
+    } as unknown as Env)).toEqual(['company@cor-jp.com', 'nagisa.terada@cor-jp.com']);
     expect(getInternalCcRecipients({ CONTACT_CC_EMAIL: 'company@cor-jp.com' } as unknown as Env)).toEqual(['company@cor-jp.com']);
     expect(getInternalCcRecipients({} as unknown as Env)).toEqual([
       'company@cor-jp.com',
-      'k.isayama@cor-jp.com',
       'nagisa.terada@cor-jp.com',
     ]);
   });
