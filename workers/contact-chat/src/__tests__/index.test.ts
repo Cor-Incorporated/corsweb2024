@@ -414,7 +414,7 @@ describe('worker.fetch — ハンドラレベル', () => {
     const env = {
       ...ENV,
       RESEND_API_KEY: 're_test',
-      CONTACT_CC_EMAILS: 'company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com',
+      CONTACT_CC_EMAILS: 'company@cor-jp.com,nagisa.terada@cor-jp.com',
     } as unknown as Env;
     const res = await worker.fetch(
       post('/api/contact/submit', {
@@ -432,7 +432,7 @@ describe('worker.fetch — ハンドラレベル', () => {
     const first = JSON.parse(firstCall[1].body as string);
     const second = JSON.parse(secondCall[1].body as string);
     expect(first.to).toBe('info@cor-jp.com');
-    expect(first.cc).toEqual(['company@cor-jp.com', 'k.isayama@cor-jp.com', 'nagisa.terada@cor-jp.com']);
+    expect(first.cc).toEqual(['company@cor-jp.com', 'nagisa.terada@cor-jp.com']);
     expect(second.to).toBe('taro@example.com');
     expect(second.cc).toBeUndefined();
     expect(second.reply_to).toBeUndefined();

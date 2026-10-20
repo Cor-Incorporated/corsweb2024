@@ -27,7 +27,7 @@ GOOGLE_CLOUD_LOCATION = "global"
 VERTEX_MODEL = "gemini-3.5-flash"
 # 問い合わせメールの宛先/差出人（PIIではなく運用設定。シークレットにしてもよい）。
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
-CONTACT_CC_EMAILS = "company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com"
+CONTACT_CC_EMAILS = "company@cor-jp.com,nagisa.terada@cor-jp.com"
 CONTACT_FROM_EMAIL = "noreply@cor-jp.com"
 
 # D1 stores redacted session metadata and encrypted, short-lived submit data.
@@ -67,7 +67,7 @@ GOOGLE_CLOUD_PROJECT = "cor-jp-web"
 GOOGLE_CLOUD_LOCATION = "global"
 VERTEX_MODEL = "gemini-3.5-flash"
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
-CONTACT_CC_EMAILS = "company@cor-jp.com,k.isayama@cor-jp.com,nagisa.terada@cor-jp.com"
+CONTACT_CC_EMAILS = "company@cor-jp.com,nagisa.terada@cor-jp.com"
 CONTACT_FROM_EMAIL = "noreply@cor-jp.com"
 
 [[env.preview.d1_databases]]

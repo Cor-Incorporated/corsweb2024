@@ -96,7 +96,6 @@ export function getEmailProvider(env: Env): EmailProviderResult {
 
 const DEFAULT_INTERNAL_CC = [
   'company@cor-jp.com',
-  'k.isayama@cor-jp.com',
   'nagisa.terada@cor-jp.com',
 ] as const;
 
