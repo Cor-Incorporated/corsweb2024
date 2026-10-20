@@ -1,0 +1,77 @@
+---
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import { ENGINEER_CAFE_CASE_PATH } from '../../config/site';
+import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+const r = t.regionalTrust;
+---
+
+<section class="py-24 sm:py-32">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-10 sm:gap-12">
+      <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+        <p
+          class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
+        >
+          {r.eyebrow}
+        </p>
+        <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">{r.title}</h2>
+        <p class="text-lg text-primary-950/70 dark:text-primary-200/70">{r.description}</p>
+      </div>
+      <ul class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <li
+          class="flex flex-col gap-5 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:flex-row sm:items-center"
+          data-reveal
+          style="--reveal-delay:0.1s"
+        >
+          {/* 掲載条件（クリックで特設ページへ・掲載期限）はコンポーネント側で担保する。 */}
+          <Fukuoka100Emblem variant="portrait" imgClass="h-28 w-auto" class="shrink-0 self-start" />
+          <div class="flex flex-col gap-2">
+            <h3 class="text-lg font-medium tracking-tight">{r.fukuoka100Title}</h3>
+            <p class="text-base text-primary-950/70 dark:text-primary-200/70">{r.fukuoka100Body}</p>
+          </div>
+        </li>
+        <li
+          class="flex flex-col gap-5 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:flex-row sm:items-center"
+          data-reveal
+          style="--reveal-delay:0.18s"
+        >
+          {/* エンジニアカフェの公式ロゴは黒の線画。ダークモードでも読めるよう白地に置く。 */}
+          <span class="flex size-28 shrink-0 items-center justify-center self-start rounded-2xl bg-white p-2">
+            <img
+              src="/assets/partners/engineer-cafe-logo.png"
+              alt={r.engineerCafeLogoAlt}
+              width="182"
+              height="162"
+              class="h-auto w-full"
+              loading="lazy"
+              decoding="async"
+            />
+          </span>
+          <div class="flex flex-col gap-2">
+            <h3 class="text-lg font-medium tracking-tight">{r.engineerCafeTitle}</h3>
+            <p class="text-base text-primary-950/70 dark:text-primary-200/70">{r.engineerCafeBody}</p>
+            <p class="text-sm">
+              <a
+                href={getLocalizedUrl(ENGINEER_CAFE_CASE_PATH, currentLocale)}
+                class="font-medium text-primary-950/80 underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200/80"
+              >
+                {r.engineerCafeLink}
+              </a>
+            </p>
+          </div>
+        </li>
+      </ul>
+      <div data-reveal style="--reveal-delay:0.26s">
+        <a
+          href={getLocalizedUrl('/company', currentLocale)}
+          class="inline-flex items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10"
+        >
+          {r.companyLink}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

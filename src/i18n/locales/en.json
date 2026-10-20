@@ -34,9 +34,9 @@
   },
   "homeHero": {
     "kicker": "Building with you, beyond what you imagined.",
-    "title": "<span class='nowrap'>Turn stuck work</span><br />into what we build together.",
-    "subtitle": "Built around confidential-data AI, local LLMs, and Grift,<br class='sm:hidden' />Cor. Inc. walks with you end to end — from framing the problem to design, build, and operations.<br />We don't just take orders: when it's right, we'll even propose <em>not</em> building yet.",
-    "support": "A Fukuoka-born AI implementation company that walks with you end to end — from framing the problem to design, build, and operations — built around confidential-data AI, local LLMs, and Grift.",
+    "title": "<span class='nowrap'>AI for the front lines,</span><br />ready to use with confidence.",
+    "subtitle": "Cor.Inc. is an AI implementation company in Fukuoka. <br class='sm:hidden' />Our work centers on local LLMs that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and contract development from design through operations, and we also help create opportunities for learning and community in the region.<br />When it's right, we'll even propose <em>not</em> building yet.",
+    "support": "A Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — also creating opportunities for learning and community in the region.",
     "primaryCta": "Discuss a confidential-data AI assessment",
     "secondaryCta": "Discuss a local LLM / secure AI PoC",
     "philosophyCta": "Read about our \"Kyousou\" philosophy",
@@ -85,20 +85,31 @@
     "ctaSecondary": "See how Grift works"
   },
   "griftBridge": {
-    "eyebrow": "Try Our AI / Grift",
-    "title": "Before you put it into words, why not try it with AI?",
-    "description": "Based on our past development track record and current market rates, we provide reference cost, timeline, and similar cases.",
+    "eyebrow": "Our Product / Grift",
+    "title": "Résumés can be padded. Evidence can't.",
+    "description": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores, and it gives the same result no matter who runs it. Sales teams at recruiting agencies and SES (IT staffing) companies can use it to explain why they recommend a candidate, backed by evidence.",
     "cta": "See how Grift works",
-    "note": "Grift's results are a reference estimate for before we talk. The formal price and timeline are confirmed after we review your requirements.",
-    "mock": {
-      "input": "I want to automate sales-quote creation with AI",
-      "costLabel": "Reference cost",
-      "cost": "From ¥1.8M",
-      "durationLabel": "Reference timeline",
-      "duration": "From 4 weeks",
-      "similarLabel": "Similar cases",
-      "similar": "5",
-      "similarNote": "Based on our own track record"
+    "ctaGithub": "View Grift CLI on GitHub",
+    "note": "Grift CLI is published free of charge as open source under the MIT License. We welcome inquiries from recruiting agencies and SES companies about trials (PoCs).",
+    "promises": [
+      {
+        "title": "No scores",
+        "body": "It reports measured values. Judgment stays with people."
+      },
+      {
+        "title": "Same result every time",
+        "body": "No AI (LLM) is used for measurement, so anyone who runs it gets the same numbers."
+      },
+      {
+        "title": "Sends nothing anywhere",
+        "body": "It runs only on your own computer. Whether to share the results is up to the engineer."
+      }
+    ],
+    "terminalLabel": "Example of using Grift CLI",
+    "terminalComments": {
+      "install": "Install (Python 3.11+)",
+      "report": "Measure and record",
+      "verify": "Recompute under the same conditions to verify"
     }
   },
   "proof": {
@@ -107,9 +118,9 @@
     "description": "Contracts, minutes, estimates, customer data, and internal knowledge. Cor.Inc. designs secure processing for sensitive information—including input boundaries, permissions, logs, and human approval—implementing robust AI systems that actually work for your business.",
     "stats": [
       {
-        "label": "Core Businesses",
-        "value": "3 Areas",
-        "note": "Grift / Local LLM / Custom AI"
+        "label": "Business Pillars",
+        "value": "5 Pillars",
+        "note": "Grift / Local LLM / Hardware AI / Custom AI / Education & Community"
       },
       {
         "label": "AI Operations",
@@ -134,7 +145,7 @@
     "description": "To balance developer comfort with the responsibility of protecting our customers' information, Cor. operates a local-first setup, minimal security logging, and a sensitivity-tier-based approach.",
     "items": [
       "Working with our retained legal counsel to review contracts, AI, personal information, and ISMS operations",
-      "Building out ISMS operations, targeting ISO/IEC 27001 certification",
+      "Completed the Stage 2 audit for ISO/IEC 27001 (ISMS) in October 2026; certification registration expected around December",
       "Choosing approved AI, company accounts, and isolated environments according to sensitivity tier",
       "Company-issued Macs, encryption, MDM, and lightweight detection-and-response controls"
     ],
@@ -176,7 +187,7 @@
     "title": "Move stuck work forward with implementation.",
     "description": "From framing the problem to AI design, build, and operations — a Fukuoka-based AI implementation partner works with you end to end.",
     "primary": "Discuss a confidential-data AI assessment",
-    "secondary": "See Grift Team Beta"
+    "secondary": "See Grift"
   },
   "serviceCtas": {
     "heading": "Reach out based on what you need.",
@@ -190,7 +201,7 @@
         "intent": "local-llm-poc"
       },
       {
-        "label": "See Grift Team Beta",
+        "label": "See Grift (evidence for recommendations)",
         "intent": "grift-team-beta",
         "external": "grift"
       }
@@ -293,17 +304,17 @@
         },
         {
           "challenge": "Organizing estimates and internal buy-in",
-          "service": "Grift",
-          "description": "Get a reference estimate up front to use as a starting point for approval and budgeting. The formal price and timeline are confirmed after we review your requirements."
+          "service": "AI contract development",
+          "description": "We prepare estimates that make the requirements, assumptions, risks, and scope of work clear, and you can consult us from the stage of drafting a starting point for approval and budgeting. The formal price and timeline are confirmed after we review your requirements."
         }
       ]
     },
     "cta": {
       "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also review how Grift builds estimate rationale.",
+      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
       "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "See how Grift works",
-      "note": "Grift outputs are reference estimates before consultation. Formal price and schedule are confirmed after requirements review."
+      "secondary": "Discuss a local LLM / secure AI PoC",
+      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
     }
   },
   "industryShigyo": {
@@ -363,10 +374,10 @@
     },
     "cta": {
       "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also review how Grift builds estimate rationale.",
+      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
       "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "See how Grift works",
-      "note": "Grift outputs are reference estimates before consultation. Formal price and schedule are confirmed after requirements review."
+      "secondary": "Discuss a local LLM / secure AI PoC",
+      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
     }
   },
   "industryConstruction": {
@@ -434,10 +445,10 @@
     },
     "cta": {
       "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also review how Grift builds estimate rationale.",
+      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
       "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "See how Grift works",
-      "note": "Grift outputs are reference estimates before consultation. Formal price and schedule are confirmed after requirements review."
+      "secondary": "Discuss a local LLM / secure AI PoC",
+      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
     }
   },
   "industryManufacturing": {
@@ -497,10 +508,10 @@
     },
     "cta": {
       "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also review how Grift builds estimate rationale.",
+      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
       "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "See how Grift works",
-      "note": "Grift outputs are reference estimates before consultation. Formal price and schedule are confirmed after requirements review."
+      "secondary": "Discuss a local LLM / secure AI PoC",
+      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
     }
   },
   "industryEducation": {
@@ -560,10 +571,10 @@
     },
     "cta": {
       "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also review how Grift builds estimate rationale.",
+      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
       "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "See how Grift works",
-      "note": "Grift outputs are reference estimates before consultation. Formal price and schedule are confirmed after requirements review."
+      "secondary": "Discuss a local LLM / secure AI PoC",
+      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
     }
   },
   "works": {
@@ -575,9 +586,9 @@
     "ndaNote": "* Under NDA: client names, product names, and some specifications are presented in abstracted form.",
     "items": [
       {
-        "name": "Grift — an AI estimation support tool that turns estimate rationale into a company asset",
+        "name": "Grift — our own product that extracts verifiable facts from git history",
         "tag": "In-house product",
-        "description": "A product under validation that does not hand estimation over to AI, but instead increases the rationale that people can take responsibility for. Challenge: in contract development, estimation know-how depends on individuals and the rationale easily becomes a black box. Design & implementation: AI organizes past data and assumptions, and we designed and built a UI/UX that makes them easy for people to review and correct. Operation: currently in Team Beta validation, aiming to turn know-how held in individual heads into a company asset and to run estimation transparently.",
+        "description": "Résumés can be padded. Evidence can't. Challenge: résumés and interviews alone rarely convey what an engineer's work actually involves, and activity metrics such as commit counts are easily inflated with generative AI. Design & implementation: we built a CLI that uses no AI (LLM) for measurement and extracts facts such as attribution and test co-changes from git history, and published it as open source (MIT License). Operation: we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES companies explain why they recommend a candidate, backed by evidence.",
         "href": "grift"
       },
       {
@@ -621,23 +632,27 @@
     ]
   },
   "services2026": {
-    "title": "Bringing AI — technology that thinks and acts on people's behalf — into the front lines of your business.",
+    "title": "Five pillars that make AI ready to use with confidence.",
     "items": [
       {
-        "name": "AI contract development",
-        "description": "We help build production systems using generative AI, RAG, agents, and image/audio processing — walking with you from requirements through to operation."
+        "name": "Grift | Résumés can be padded. Evidence can't.",
+        "description": "Our own product that extracts verifiable facts from an engineer's development record. It assigns no scores and gives the same result no matter who runs it. Sales teams at recruiting agencies and SES companies can use it to explain why they recommend a candidate, backed by evidence."
       },
       {
-        "name": "AI advisory & training",
-        "description": "We work alongside your leadership, development, and frontline teams on AI strategy, tool selection, rolling AI into daily work, and building in-house capability."
+        "name": "Local LLM & Secure AI | Use generative AI without sending your data outside.",
+        "description": "We build AI environments that can handle information that is hard to hand to external AI, such as contracts and customer data — including the design of internal rules, permissions, and logs. We choose between cloud AI and local LLMs according to how sensitive the information is."
       },
       {
-        "name": "Local LLM & secure AI",
-        "description": "We help design AI operations that match the sensitivity of your data, without sending confidential information outside when it isn't needed."
+        "name": "Hardware AI | Using AI to make up for limited vision.",
+        "description": "Together with a development partner, we are developing smart glasses for people with visual impairments. We are preparing a field trial together with users."
       },
       {
-        "name": "Grift",
-        "description": "Our in-house AI tool that generates explainable reference estimates from GitHub track records and market rates."
+        "name": "AI Contract Development & Adoption Support | Don't stop at PoC.",
+        "description": "We work with you end to end — from framing the problem to design, implementation, and operations. Using generative AI, RAG, AI agents, image and audio processing, and more, we help you build AI systems that fit into day-to-day work, including AI usage policies and internal rules."
+      },
+      {
+        "name": "Education & Community | Growing the number of people who build AI in Fukuoka.",
+        "description": "Through teaching at a vocational school (planned from April 2027), our work as an education partner for an international programming certification, and preparations for a generative AI exhibition in Fukuoka (being planned with Engineer Cafe), we help grow the number of people who drive AI in Kyushu."
       }
     ]
   },
@@ -754,7 +769,7 @@
         "consultationTypePlaceholder": "Please select consultation type",
         "consultationOptions": [
           "Confidential-data AI assessment",
-          "Grift Team Beta",
+          "Grift",
           "Local LLM / secure AI",
           "AI contract development / adoption support",
           "AI training / speaker request",
@@ -823,9 +838,10 @@
       "contact": "Contact",
       "privacy": "Privacy",
       "security": "Security",
-      "legal": "Legal Notice"
+      "legal": "Legal Notice",
+      "company": "Company Profile"
     },
-    "description": "Cor.inc's mission is to 'pioneer the future through co-creation rather than competition, realizing a happy society.' We plan, define requirements for, develop, and operate AI solutions, along with associated accounting and financial operations. We emphasize 'co-creation' over 'competition' and leverage the startup strength of 'speed' to provide services full of creativity and innovation.",
+    "description": "Cor.Inc. is a Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — and we also help create opportunities for learning and community in the region.",
     "copyright": "Cor.inc"
   },
   "features": {
@@ -864,12 +880,12 @@
     ]
   },
   "header": {
-    "mobileMenuDescription": "Cor.inc's mission is to 'pioneer the future through co-creation rather than competition, realizing a happy society.' We plan, define requirements for, develop, and operate AI solutions, along with associated accounting and financial operations. We emphasize 'co-creation' over 'competition' and leverage the startup strength of 'speed' to provide services full of creativity and innovation."
+    "mobileMenuDescription": "Cor.Inc. is an AI implementation company based in Fukuoka. Our work centers on local LLMs and secure AI, our own product Grift, and AI contract development and adoption support, and we are also working on hardware AI and on creating opportunities for learning and community in the region."
   },
   "aboutPage": {
     "kicker": "About Cor.Inc.",
     "title": "Chasing \"Kyousou.\"",
-    "lead": "Cor. is not a company where everyone is forced to get along. It is a company where people who hold their own values come together, don't hide their differences, seek each other's growth, and use AI and technology to give shape to real challenges on the ground.",
+    "lead": "Cor.Inc. is an AI implementation company based in Fukuoka. Our work centers on local LLMs that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and contract development from design through operations, and we also help create opportunities for learning and community in the region. We listen closely to the real voices on the ground — \"we want to do it, but it isn't moving forward\" — and rather than treating AI as the goal, we offer technology as a means of solving real business problems.",
     "kyousouTitle": "What \"Kyousou\" means.",
     "kyousouLead": "AI and systems create value only when they are used on the ground. That is why we are not simply order-takers who build whatever we are told. We face the challenge alongside our customers as equals, and when systematization is not the best path, we honestly suggest that it may be better not to build yet. We value the spirit of \"Kyousou\" — co-creating essential problem-solving together.",
     "kyousou": [
@@ -896,7 +912,7 @@
     ],
     "kyousouAxis": "\"Kyousou\" is the implementation mindset that turns differences into outcomes.",
     "whyFocusTitle": "To go beyond the walls that stall real work.",
-    "whyFocusBody": "Confidential information that is hard to send to external AI, and the invisible assumptions behind estimates that rely on individuals. Real workplaces have walls that generic cloud AI alone cannot solve. To clear this uncertainty and black-boxing, we focus on secure AI infrastructure designed starting from how data is handled, and on Grift, which turns the rationale behind estimates into a company asset.",
+    "whyFocusBody": "Confidential information that is hard to hand to external AI, and the substance of an engineer's work that résumés and interviews alone can't reveal. Real workplaces have walls that generic cloud AI alone cannot solve. To clear away this practical uncertainty and these black boxes, we focus on secure AI infrastructure designed starting from how data is handled, and on Grift, which extracts verifiable facts from git history.",
     "mvvTitle": "Mission / Vision / Values",
     "mission": "Through \"Kyousou,\" unlock the potential of makers and their businesses.",
     "vision": "Build a society where differences in values lead not to division, but to better implementation.",
@@ -923,7 +939,7 @@
       }
     ],
     "founderTitle": "Founder's Story",
-    "founderLead": "Cor.'s \"Kyousou\" grew out of the experience of our founder, Kousuke Terada.",
+    "founderLead": "Our founder Kousuke Terada's formative experience as a musician left him with a strong awareness of \"what words alone cannot convey.\" Working later in sales and development, he realized that solving complex business problems first requires putting them into words and organizing them — and that our role is to carry what has been organized all the way through implementation and operation. This thinking leads naturally to our current work: Grift, which produces verifiable evidence; local LLMs that fit real work; AI contract development; and creating opportunities for learning and community in the region.",
     "founderPlaceholder": "The details of the founder's story are being prepared.",
     "teamTitle": "Meet our team",
     "teamBody": "From articulating challenges to designing and implementing secure AI infrastructure, to building operational frameworks. Members with distinct expertise engage honestly with the concerns of customers who are not familiar with engineering, supporting them end-to-end.",
@@ -957,7 +973,7 @@
     "questions": [
       {
         "question": "What can we consult Cor.Inc. about?",
-        "answer": "We focus on AI infrastructure for secure data handling, Local LLM/Secure AI, custom AI development, AI implementation support, and our proprietary AI estimation tool 'Grift'. We clarify how to handle sensitive information—such as contracts, minutes, estimates, customer data, and internal knowledge—designing and implementing practical AI systems for your business operations."
+        "answer": "We focus on local LLMs and secure AI, our own product Grift, and AI contract development and AI adoption support, and you can consult us end to end — from framing the problem through design, implementation, and operations. We are also developing hardware AI (smart glasses) and running initiatives in education and the local community."
       },
       {
         "question": "What is the first step in introducing AI?",
@@ -973,15 +989,15 @@
       },
       {
         "question": "What is the duration and cost for a Local LLM or AI Infrastructure PoC?",
-        "answer": "As a general guideline, a Local LLM/AI Infrastructure PoC takes about 3 months, starting from ¥3M. This includes workflow organization, data management design, test environment setup, evaluation metrics definition, and post-PoC production viability assessment."
+        "answer": "It varies with the problem you want to solve and the scope, but as a general guide:\n• Confidential Data AI Assessment: around ¥100k - ¥300k\n• Local LLM / AI Infrastructure PoC: from ¥3M for 3 months\n• Production build and operations/maintenance: quoted individually based on requirements\nOur quotes make the assumptions, risks, and scope of work clear."
       },
       {
         "question": "How are security and privacy handled?",
-        "answer": "AI implementation requires strict design of input data, access rights, logs, human approvals, and deletion rules. We organize where info is processed, who reviews it, and how logs are stored. We are currently preparing our ISMS operations with the goal of obtaining ISO/IEC 27001 certification. *We never misrepresent an unacquired certification as completed."
+        "answer": "We build practical requirements into the design: input data management, access rights, operation logs, human approval flows, deletion rules, and clear operational responsibility. Internally, we operate an ISMS and completed the Stage 2 audit for ISO/IEC 27001 in October 2026. We expect certification registration around December 2026."
       },
       {
         "question": "What is Grift?",
-        "answer": "Grift is an AI estimation support tool that visualizes estimation rationales for custom development. Instead of delegating everything to AI, it aims to enhance verifiable rationales based on past projects, GitHub histories, technical risks, and market benchmarks so that humans can explain quotes responsibly."
+        "answer": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores or rankings and uses no AI (LLM) for measurement, so it gives the same result no matter who runs it, and whoever receives the output can verify it. The CLI is published free of charge as open source under the MIT License, and we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES (IT staffing) companies explain why they recommend a candidate, backed by evidence."
       }
     ]
   },
@@ -1112,33 +1128,33 @@
     },
     "industryMedical": {
       "title": "AI partnership for healthcare | Cor.Inc.",
-      "description": "The challenges of healthcare — using in-hospital data, patient response, information security, AI strategy, organizing estimates — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, local LLM, and Grift."
+      "description": "The challenges of healthcare — using in-hospital data, patient response, information security, AI strategy, organizing estimates — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, and local LLM."
     },
     "industryShigyo": {
       "title": "AI partnership for professional services | Cor.Inc.",
-      "description": "The challenges of professional services — reviewing contracts, filings and registrations, deadline management, subsidy applications — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, local LLM, and Grift."
+      "description": "The challenges of professional services — reviewing contracts, filings and registrations, deadline management, subsidy applications — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, and local LLM."
     },
     "industryConstruction": {
       "title": "AI partnership for construction | Cor.Inc.",
-      "description": "The challenges of construction sites — labor management, design changes, safety checks, passing on know-how — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, local LLM, and Grift."
+      "description": "The challenges of construction sites — labor management, design changes, safety checks, passing on know-how — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, and local LLM."
     },
     "industryManufacturing": {
       "title": "AI partnership for manufacturing | Cor.Inc.",
-      "description": "The challenges of manufacturing sites — visual inspection, passing on know-how, equipment maintenance, inventory management — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, local LLM, and Grift."
+      "description": "The challenges of manufacturing sites — visual inspection, passing on know-how, equipment maintenance, inventory management — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, and local LLM."
     },
     "industryEducation": {
       "title": "AI partnership for education | Cor.Inc.",
-      "description": "The challenges of education sites — exam tasks, parent communication, survey reports, ICT roster management — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, local LLM, and Grift."
+      "description": "The challenges of education sites — exam tasks, parent communication, survey reports, ICT roster management — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, and local LLM."
     },
     "home": {
-      "title": "Cor.Inc. | Practical AI Implementation, Local LLM, and Grift",
-      "description": "Cor.Inc. builds robust, operational AI systems tailored to your business, centering on confidential data AI, Local LLMs, and Grift, incorporating essential designs for input boundaries, permissions, logs, and human approval.",
-      "ogTitle": "Cor.Inc. | Practical AI Implementation, Local LLM, and Grift",
-      "ogDescription": "Cor.Inc. builds robust, operational AI systems tailored to your business, centering on confidential data AI, Local LLMs, and Grift, incorporating essential designs for input boundaries, permissions, logs, and human approval."
+      "title": "Cor.Inc. | AI Implementation Company in Fukuoka (Local LLM, Grift, AI Contract Development)",
+      "description": "Cor.Inc. is an AI implementation company in Fukuoka. Built around local LLMs and secure AI that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and AI contract development from design through operations, we are also advancing hardware AI and initiatives in education and the local community. When it's right, we'll even propose not building yet.",
+      "ogTitle": "AI for the front lines, ready to use with confidence. | Cor.Inc.",
+      "ogDescription": "A Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development, also creating opportunities for learning and community in the region. You can consult us even before your AI or system requirements are settled."
     },
     "about": {
       "title": "About · Cor.inc",
-      "description": "Find more our history, values, mission and more. We are a group of people who share the same values."
+      "description": "Cor.Inc. is a Fukuoka-based AI implementation company that works with you end to end — from framing the problem to design, implementation, and operations — built around local LLMs, our own product Grift, and AI contract development. Learn about our \"Kyousou\" approach and our implementation capabilities."
     },
     "contact": {
       "title": "Contact · Cor.inc",
@@ -1154,7 +1170,7 @@
     },
     "security": {
       "title": "Security | Cor.Inc.",
-      "description": "Cor. Inc.'s information security: our ISMS roadmap, and a local-first, sensitivity-tiered AI development environment."
+      "description": "Cor.Inc.'s security policy as a partner handling confidential-data AI and local LLMs: designing input data and permissions, human approval processes, retention and deletion rules, and our completed Stage 2 audit for ISO/IEC 27001 (ISMS) with certification registration expected."
     },
     "news": {
       "title": "News | Cor.Inc.",
@@ -1162,11 +1178,15 @@
     },
     "works": {
       "title": "Works | Cor.Inc.",
-      "description": "Case studies from Cor.Inc. — how we framed, designed, implemented, and operated solutions for our clients' business challenges, centred on confidential-data AI, local LLMs, and Grift."
+      "description": "Case studies from Cor.Inc. — how we framed, designed, implemented, and operated solutions for our clients' business challenges. Built around local LLMs, AI contract development, and Grift, we work with you starting from information design, before AI is even used."
     },
     "press": {
       "title": "Press releases | Cor.Inc.",
       "description": "Official press releases from Cor.Inc."
+    },
+    "company": {
+      "title": "Company Profile | Cor.Inc.",
+      "description": "Company profile of Cor.Inc. (Fukuoka City): address, founding date, representative, business areas (local LLM & secure AI, Grift, hardware AI, AI contract development & adoption support, education & community), our information security efforts, and our selection as one of Fukuoka's 100 Representative Companies."
     }
   },
   "privacy": {
@@ -1412,7 +1432,7 @@
     "statusTitle": "Building Our Framework",
     "status": {
       "legal": "Since June 2026, in collaboration with our retained legal counsel, we have been building a legal review framework covering contracts, personal information, AI use, and information security operations.",
-      "isms": "Cor. Inc. is advancing the operational readiness of its ISMS (Information Security Management System), targeting ISO/IEC 27001 certification."
+      "isms": "We operate an Information Security Management System (ISMS) and are undergoing certification audits for the international standard ISO/IEC 27001. We completed the Stage 2 audit in October 2026 and expect certification registration around December 2026. Through continuous strengthening of our framework, we fulfill our responsibility to protect our customers' information."
     },
     "aiTitle": "AI Usage Policy",
     "aiDescription": "Cor. actively leverages AI tools for our work. At the same time, when handling customer confidential data, personal information, source code, training data, and the like, we use AI tools under contracts and configurations that prevent training use, company accounts, or approved environments. AI outputs are verified by people and used only after confirming rights, accuracy, and safety.",
@@ -1430,8 +1450,8 @@
       },
       {
         "area": "ISMS",
-        "effort": "Targeting ISO/IEC 27001 certification, building risk management, training, policies, and audit framework",
-        "state": "In progress"
+        "effort": "Operating risk management, training, policies, and internal audits based on ISO/IEC 27001",
+        "state": "Stage 2 audit completed (October 2026); registration expected around December"
       },
       {
         "area": "Device Management",
@@ -1460,7 +1480,7 @@
     "privacySuffix": ".",
     "privacyLead": "* For legal details on how we handle personal information and customer data, please see our Privacy Policy.",
     "governanceTitle": "Building Our Framework",
-    "governanceDescription": "Cor. Inc. is advancing the operational readiness of its ISMS (Information Security Management System), targeting ISO/IEC 27001 certification.",
+    "governanceDescription": "We operate an Information Security Management System (ISMS) and are undergoing certification audits for the international standard ISO/IEC 27001. We completed the Stage 2 audit in October 2026 and expect certification registration around December 2026. Through continuous strengthening of our framework, we fulfill our responsibility to protect our customers' information.",
     "ctas": {
       "primary": "Discuss a confidential-data AI assessment",
       "secondary": "Talk to us",
@@ -1512,7 +1532,7 @@
       "tech-culture": "Tech culture"
     },
     "ctas": {
-      "grift": "Ask about Grift Team Beta",
+      "grift": "Ask about a Grift trial",
       "confidential-ai": "Discuss a confidential-data AI assessment",
       "local-llm": "Discuss a local LLM / AI platform PoC",
       "ai-contract": "Discuss AI contract development",
@@ -1520,5 +1540,104 @@
       "techCultureContact": "Contact"
     },
     "titleSuffix": " | Cor.Inc."
+  },
+  "regionalTrust": {
+    "eyebrow": "Fukuoka / With our community",
+    "title": "From Fukuoka, growing the people and places that build AI.",
+    "description": "Based in Fukuoka, we work with local facilities and places of learning to put AI into a form that can be used on the ground.",
+    "fukuoka100Title": "Fukuoka's 100 Representative Companies 2026-2027",
+    "fukuoka100Body": "We were selected for Made In Local's \"Fukuoka's 100 Representative Companies 2026-2027\" and are featured on its special website.",
+    "engineerCafeTitle": "Developing and operating Engineer Cafe's multilingual AI reception as open source",
+    "engineerCafeBody": "For Engineer Cafe in Fukuoka City, we developed Engineer Cafe Navigator, a multilingual voice AI reception system, and published it as open source (in live operation). We are also planning a generative AI exhibition in Fukuoka together with Engineer Cafe.",
+    "engineerCafeLink": "Read the case study",
+    "engineerCafeLogoAlt": "Engineer Cafe",
+    "companyLink": "View company profile"
+  },
+  "companyPage": {
+    "kicker": "Company",
+    "title": "Company Profile",
+    "lead": "Cor.Inc. is an AI implementation company based in Fukuoka. Our work centers on local LLMs that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and contract development from design through operations, and we also help create opportunities for learning and community in the region.",
+    "asOf": "As of October 20, 2026",
+    "profileTitle": "Basic Information",
+    "profile": [
+      {
+        "label": "Company name",
+        "value": "Cor.Inc. (Japanese legal name: Cor.株式会社)"
+      },
+      {
+        "label": "Founded",
+        "value": "December 2023"
+      },
+      {
+        "label": "Representative",
+        "value": "Representative Director Kousuke Terada"
+      },
+      {
+        "label": "Address",
+        "value": "Tenjin Pine Crest 719, 2-3-10 Tenjin, Chuo-ku, Fukuoka 810-0001, Japan (〒810-0001 福岡県福岡市中央区天神2丁目3-10 天神パインクレスト719号)"
+      },
+      {
+        "label": "Business",
+        "value": "Planning, requirements definition, development, and operation of AI solutions (local LLM & secure AI, our own product Grift, hardware AI, AI contract development & adoption support, and initiatives in education and the local community)"
+      },
+      {
+        "label": "Service area",
+        "value": "Based in Fukuoka, serving all of Japan (online consultations are also available)"
+      },
+      {
+        "label": "Contact",
+        "value": "Please reach us through our contact page (AI reception \"Cloudia\")."
+      }
+    ],
+    "businessTitle": "Business Pillars",
+    "businessLead": "All five pillars serve one aim: \"AI for the front lines, ready to use with confidence.\" Here is each one, including where it stands today.",
+    "business": [
+      {
+        "name": "Grift",
+        "tagline": "Résumés can be padded. Evidence can't.",
+        "description": "Our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores and gives the same result no matter who runs it.",
+        "status": "The CLI is available free of charge under the MIT License. We are preparing trials (PoCs) for recruiting agencies and SES (IT staffing) companies."
+      },
+      {
+        "name": "Local LLM & Secure AI",
+        "tagline": "Use generative AI without sending your data outside.",
+        "description": "We build AI environments that can handle information that is hard to hand to external AI, such as contracts and customer data — including the design of internal rules, permissions, and logs.",
+        "status": "We offer the Confidential Data AI Assessment and Local LLM / AI Infrastructure PoCs, and we continue to validate our local LLM infrastructure in-house."
+      },
+      {
+        "name": "Hardware AI",
+        "tagline": "Using AI to make up for limited vision.",
+        "description": "Together with a development partner, we are developing smart glasses for people with visual impairments.",
+        "status": "We are preparing a field trial together with users."
+      },
+      {
+        "name": "AI Contract Development & Adoption Support",
+        "tagline": "Don't stop at PoC.",
+        "description": "We work with you end to end — from framing the problem to design, implementation, and operations.",
+        "status": "We provide ongoing support for development with generative AI, RAG, AI agents, and more, from design through operations."
+      },
+      {
+        "name": "Education & Community",
+        "tagline": "Growing the number of people who build AI in Fukuoka.",
+        "description": "Through teaching at a vocational school, our work as an education partner for an international programming certification, and preparations for a generative AI exhibition in Fukuoka, we help grow the number of people who drive AI in Kyushu.",
+        "status": "The education partner agreement has been signed. Teaching is planned from April 2027, and the exhibition is being planned with Engineer Cafe."
+      }
+    ],
+    "securityTitle": "Information Security",
+    "securityBody": "In October 2026, we completed the Stage 2 audit for ISO/IEC 27001 (ISMS), the international standard for information security. We expect certification registration around December 2026.",
+    "securityLink": "See our security policy",
+    "recognitionTitle": "Recognition & Community Ties",
+    "fukuoka100Body": "We were selected for Made In Local's \"Fukuoka's 100 Representative Companies 2026-2027.\"",
+    "engineerCafeBody": "For Engineer Cafe in Fukuoka City, we developed Engineer Cafe Navigator, a multilingual voice AI reception system, and published it as open source (in live operation).",
+    "engineerCafeLink": "Read the case study",
+    "linksTitle": "Related Pages",
+    "links": {
+      "about": "About Cor.Inc.",
+      "works": "Works & Case Studies",
+      "security": "Security Policy",
+      "news": "News",
+      "legal": "Legal Notice (Specified Commercial Transactions Act)"
+    },
+    "cta": "Contact"
   }
 }

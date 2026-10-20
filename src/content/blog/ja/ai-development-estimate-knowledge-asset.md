@@ -6,11 +6,15 @@ author: "Terisuke"
 category: "engineering"
 tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "ja"
-featured: true
+featured: false
+updatedDate: 2026-10-20
 isDraft: false
 ---
 
 受託開発の見積もりは、なぜ属人化するのでしょうか。理由は単純です。見積もりに必要な情報が、過去案件、GitHub、工数、リスク、営業の記憶、担当者の経験に散らばっているからです。これを個人の頭の中に置いたままでは、チームの提案品質は安定しません。
+
+> **2026年10月20日 追記**
+> Griftは2026年9月に見積支援のWebアプリの提供を終え、現在はエンジニアのgit履歴から確かめられる事実を取り出すOSSのCLI（[griftai.org](https://griftai.org)）へ方針を変えています。本記事のGriftに関する記述は公開当時の内容です。受託開発・AI開発の見積もりのご相談は、AI受託開発として[お問い合わせ](/contact)からお受けしています。
 
 ## 見積もりの属人化解消はGriftへ
 

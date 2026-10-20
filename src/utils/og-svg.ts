@@ -17,10 +17,11 @@ export interface BlogOgInput {
 export const OG_PAGES: OgPage[] = [
   {
     slug: 'home',
-    title: 'AIで、現場の課題を一緒に形にする。',
-    subtitle: 'AI受託開発・DXコンサルティング・ローカルLLM',
+    title: 'AIを、安心して使える形で現場へ。',
+    subtitle: 'ローカルLLM・Grift・AI受託開発・教育と地域',
   },
-  { slug: 'about', title: '会社概要', subtitle: '「きょうそう」を追い続ける' },
+  { slug: 'about', title: 'Cor.株式会社について', subtitle: '「きょうそう」を追い続ける' },
+  { slug: 'company', title: '会社概要', subtitle: '福岡のAI実装会社・Cor.株式会社' },
   {
     slug: 'works',
     title: '実績・事例',
@@ -30,7 +31,7 @@ export const OG_PAGES: OgPage[] = [
   {
     slug: 'security',
     title: 'セキュリティ',
-    subtitle: 'ローカルファースト・機密度ティア・ISMS整備中',
+    subtitle: 'ローカルファースト・機密度ティア・ISMS運用',
   },
   { slug: 'contact', title: 'お問い合わせ', subtitle: 'ご相談・お見積もりはお気軽に' },
   { slug: 'privacy', title: 'プライバシーポリシー', subtitle: '個人情報保護方針' },

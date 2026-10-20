@@ -28,6 +28,7 @@
 | [ADR-0019](./ADR-0019-i18n-auto-translation.md) | コンテンツ多言語化は ja 正本・他言語は CI が Gemini で差分翻訳・検証して専有（ADR-0006 の原則をコンテンツへ拡張） | Accepted (2026-09-28) |
 | [ADR-0020](./ADR-0020-blog-cta-intent.md) | ブログ記事の CTA と相談の種類（intent）の既定値 | Proposed (2026-09-27) |
 | [ADR-0021](./ADR-0021-contact-guard-phone-detection.md) | /contact 回帰ガードの電話検出（判定の対象・電話番号・句） | Accepted (2026-09-28) |
+| [ADR-0022](./ADR-0022-business-pillars-grift-cli.md) | 事業の柱を5本にし、Grift を CLI（OSS）＋紹介会社向け試行として扱う（ISMS 表現・会社概要・llms.txt を含む） | Proposed (2026-10-20) |
 
 ## フェーズ対応
 
@@ -43,9 +44,9 @@
 |---|---|
 | `confidential-ai-assessment` | 機密データAI活用診断 |
 | `local-llm-poc` | ローカルLLM / セキュアAI PoC |
-| `grift-team-beta` | Grift Team Beta |
-| `grift-paid-trial` | Grift Paid Trial |
-| `estimate-audit` | Estimate Audit |
+| `grift-team-beta` | Grift の相談（2026-10 以降は CLI・紹介会社向け試行。キー名は据え置き、ADR-0022） |
+| `grift-paid-trial` | Grift Paid Trial（2026-10 に取り下げ。LP からは送られない） |
+| `estimate-audit` | Estimate Audit（2026-10 に取り下げ。LP からは送られない） |
 | `press-speaking-other` | 取材・登壇・その他 |
 | `contract-dev` | 受託開発相談（ADR-0014 で追加。Grift への自動引き継ぎは #259 で未実装） |
 
