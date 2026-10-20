@@ -5,42 +5,159 @@ with code in this repository.
 
 ## Project Overview
 
-This is a high-performance corporate website for Cor.inc built with Astro
-4.8.7, focusing on extreme loading speed optimization. The site features
-multilingual content (Japanese, English, Chinese, Korean, Spanish) and showcases
-services in Python data analysis, web/mobile development, and machine learning
-solutions. The project includes an integrated blog system with AI-powered automated
-translation capabilities.
+This is the corporate website of Cor.株式会社 (`https://cor-jp.com`), a static
+Astro 4 site (`astro@^4.8.7` in `package.json`) deployed to Firebase Hosting,
+with a strong focus on loading speed. It is published in five languages
+(Japanese, English, Chinese, Korean, Spanish) and has three Content
+Collections — blog, news and cases (works) — whose non-Japanese versions are
+machine-translated in CI. The site stays static Astro (no SSR, no Next.js
+migration: `docs/adr/ADR-0017-static-astro-direction-2026q4.md`).
+
+What the site may say about the company and its services is governed by the
+ADRs in `docs/adr/` (index: `docs/adr/README.md`), not by this file. Read
+**Content & Public Copy Rules** below before editing any page, component,
+locale file or article.
 
 ## Development Commands
 
 ```bash
-npm run dev      # Start development server on localhost:4321
-npm run build    # Type check and build for production
-npm run preview  # Preview production build locally
+npm run dev            # Dev server on localhost:4321
+npm run build          # astro check (type check) + astro build → dist/
+npm run preview        # Preview the production build
+npm run preview:ci     # Preview on 127.0.0.1:4322 (used by the visual-text tests)
+npm run build:cms      # Build the Sveltia CMS admin (cms/ → cms/dist)
 ```
+
+### Tests and Checks
+
+```bash
+npm run test:run          # Vitest unit tests: src/**/*.test.* and scripts/**/*.test.* (vitest.config.ts)
+npm run test              # Vitest in watch mode (test:ui / test:coverage also exist)
+npm run test:dist         # Vitest on the built dist (vitest.dist.config.ts → tests/build-output/); run after `npm run build`
+npm run test:e2e          # Playwright e2e/ against `npm run dev` (playwright.config.ts; admin-cms.spec.ts excluded)
+npm run test:visual-text  # Playwright e2e/visual-text.spec.ts against preview:ci (playwright.visual.config.ts)
+npm run verify:visual-text  # build + test:visual-text
+npm run test:e2e:admin    # Playwright CMS admin test (playwright.admin.config.ts; run `npm run build:cms` first)
+npm run security:audit:dist      # Audit dist/ (SEO tags, JSON-LD, secrets, allowed origins, no runtime CDN code); run after build
+npm run security:audit           # security:audit:firebase + security:audit:workers + security:audit:dist
+npm run i18n:check        # Missing/outdated content translations (no API key; exit 1 if any)
+npm run check:links       # scripts/check-external-links.mjs: no hard-coded griftai.org, no unbacked "30秒" / multipliers in pages, components, i18n
+npm run blog:check -- src/content/blog/ja/your-post.md   # scripts/blog-guardrails.mjs on one article (ADR-0007 wording)
+npm run seo:snapshot -- --out snapshot.json   # SEO/AIO snapshot of dist (see scripts/seo-snapshot.mjs for --compare)
+```
+
+What CI runs (`.github/workflows/`):
+
+- `ci.yml` (job `verify`, PRs to develop/main): `test:run`, the
+  `workers/contact-edge` tests, `build`, `security:audit:dist`, `test:dist`
+  (also a second build with the calendar enabled), and the Firebase / Worker
+  header audits
+- `visual-text.yml`: `test:run`, `verify:visual-text`, and
+  `build:cms` + `test:e2e:admin`
+- `translate-content.yml`: content translation and the `i18n-check` job
+- `deploy.yml`: Firebase Hosting deploy (`main` = production, `develop` and
+  PRs = preview channels); `deploy-cms.yml` deploys the CMS admin
+- `h5-admission.yml` (`scripts/h5-admission-check.sh`) and `guard-base-branch.yml`
+
+`check:links` and `blog:check` are not run by CI — run them yourself when you
+touch public copy or articles.
+
+### Branches and Pull Requests
+
+- Open PRs against `develop`. Only `develop` may be merged into `main`
+  (`guard-base-branch.yml` fails any other PR to `main`); `main` is production
+- Fill in `.github/pull_request_template.md`
+
+## Content & Public Copy Rules
+
+These rules come from ADRs; the ADR is the source of truth if this summary
+and the ADR disagree.
+
+- **External expression guardrails** —
+  `docs/adr/ADR-0007-external-expression-guardrails.md`:
+  - ISMS may only be described as in preparation (「整備中」). Never write that
+    it has been obtained, and never state an acquisition date or audit body.
+    P-mark / SCS are not mentioned at all
+  - The retired business lines and product names listed in ADR-0007 were
+    removed from the site. Do not reintroduce them anywhere (pages,
+    components, `src/i18n/locales/*.json`, articles, structured data).
+    `scripts/blog-guardrails.mjs` flags them in articles
+  - The company name is 「Cor.株式会社」. Per-locale display names live in
+    `ORGANIZATION_NAMES` in `src/config/organization.ts` (the single source for
+    company facts used by JSON-LD, footer, RSS and titles); do not hard-code
+    other spellings
+  - No absolute claims, invented testimonials or unapproved customer names.
+    Internal measurements, multipliers and reduction rates only with a linked
+    page that explains the conditions; "coming soon" cases never appear in
+    the works list
+  - Grift gives a reference estimate (「参考見積もり」); never promise a final
+    quote
+- **Cross-site links and intents**: the Grift URL comes from
+  `PUBLIC_GRIFT_BASE_URL` via `src/config/site.ts` — never hard-code
+  `griftai.org` (`npm run check:links`; ADR-0010). Contact intents are the 7
+  keys in `CONTACT_INTENTS` (`src/config/site.ts`, ADR-0014); blog CTA intent
+  defaults are in ADR-0020
+- **Contact**: inquiries are consolidated in Cloudia + the `contact-chat`
+  Worker with the fallback form kept (ADR-0005, ADR-0012, ADR-0013); `/contact`
+  regression guards are ADR-0021 + `src/config/contact-guards.ts` (checked by
+  `npm run test:dist`)
+- **Analytics**: Cloudflare Web Analytics + Microsoft Clarity (ADR-0004)
+
+## Internationalization
+
+There are two separate mechanisms. Do not mix them up.
+
+1. **UI strings** — `src/i18n/locales/{ja,en,zh,ko,es}.json`, read through
+   `src/utils/i18n.ts` (`getTranslations(locale)`, `getJaTranslations()` for
+   ja-only sections). Translation CI never touches these files: when you add
+   or change a UI string, write the ja, en, zh, ko and es values yourself in
+   all five files (ADR-0006 principle, ADR-0019 scope). Every locale is typed
+   against `en.json`, so a key missing from any locale file fails the type
+   check in `npm run build` (ja may have extra ja-only keys)
+2. **Content Collections** — `src/content/{blog,news,cases}/<lang>/*.md`.
+   Only `ja/` is edited by humans (and the CMS); `en/zh/ko/es` are generated
+   and owned by CI and get overwritten on the next ja change, so do not edit
+   them by hand. Fix wording in the ja source instead (ADR-0019,
+   `docs/i18n-translation.md`)
 
 ## Architecture & Key Patterns
 
 ### Tech Stack
 
-- **Framework**: Astro 4.8.7 with Islands Architecture (selective hydration)
+- **Framework**: Astro 4 with Islands Architecture (selective hydration),
+  built-in i18n routing (`prefixDefaultLocale: false`, so ja has no prefix)
 - **Interactivity**: Alpine.js 3.14 bundled from npm (`src/components/layout/AlpineInit.astro`; no CDN)
 - **Styling**: Tailwind CSS with stone color palette as primary,
   @tailwindcss/typography for blog content
-- **TypeScript**: Custom Alpine.js type definitions in `/types/types.d.ts`
+- **TypeScript**: Custom Alpine.js type definitions in `/types/types.d.ts`;
+  public env vars are declared in `src/env.d.ts`
 - **AI Translation**: Gemini API (`@google/genai`, default `gemini-3.8-flash`)
   run in CI for incremental content translation (ADR-0019)
-- **Content Management**: Astro Content Collections with Zod schema validation
+- **Content Management**: Astro Content Collections with Zod schema
+  validation; Sveltia CMS for Japanese blog posts (ADR-0018)
 
-### Component Structure
+### Repository Layout
 
-Components are organized by feature under `/src/components/`:
-
-- `home/`, `about/`, `contact/`, `products/` - Page-specific components
-- `layout/` - Shared Header and Footer components
-- `blog/` - Blog-specific components (CategoryBadge, PostCard, ShareButtons,
-  TableOfContents, TagList, TipButton)
+- `src/pages/` — ja pages at the root; `en/`, `zh/`, `ko/`, `es/` hold the
+  localized copies of most pages; `[lang]/` serves news, works and
+  industries for the non-ja locales; `og/` generates OGP images
+- `src/components/` — by feature: `home/`, `about/`, `blog/`, `news/`,
+  `works/`, `industry/`, `contact/`, `products/`, `common/`, `layout/`
+  (Header, Footer, AlpineInit, ThemeInit), `analytics/`, `youtube/`
+- `src/config/` — site facts and single sources: `organization.ts`,
+  `author.ts`, `site.ts`, `blog-schema.ts`, `categories.ts`,
+  `news-categories.ts`, `indexing.ts` (noindex / sitemap), `contact-guards.ts`
+- `src/utils/` — i18n, structured data / JSON-LD, OG image rendering,
+  Alpine stores
+- `scripts/` — audits and guards (`audit-*.mjs`, `check-external-links.mjs`,
+  `blog-guardrails.mjs`, `seo-snapshot.mjs`), `i18n/` (translation pipeline),
+  `cms/`
+- `cms/` — Sveltia CMS admin (`docs/cms-sveltia.md`)
+- `workers/` — Cloudflare Workers: `contact-chat` (`/api/contact/*`),
+  `contact-edge` (`/contact/chat/` → Cloudia Pages), `sveltia-cms-auth`
+- `services/vertex-gateway/` — Cloud Run gateway to Vertex AI Gemini for Cloudia
+- `e2e/` — Playwright specs; `tests/build-output/` — dist tests
+- `docs/` — ADRs, i18n guide, CMS guide, blog style guide
 
 Pages use a consistent pattern:
 
@@ -50,11 +167,12 @@ Pages use a consistent pattern:
 
 ### Performance Optimizations
 
-- All images use AVIF format with WebP fallbacks
-- Multiple responsive image sizes (e.g., hero-480w.avif, hero-800w.avif)
+- Images are served as AVIF (e.g. responsive `public/assets/hero-480w.avif`)
 - Aggressive compression via astro-compress and astro-compressor plugins
-- Firebase hosting with 1-year cache headers for assets
-- View Transitions API enabled for smooth navigation
+- Firebase Hosting serves JS/CSS/fonts/images with 1-year immutable cache
+  headers (`firebase.json`)
+- View Transitions API enabled for smooth navigation (`<ViewTransitions />` in
+  `src/layouts/Layout.astro`)
 - Core Web Vitals field data comes from Cloudflare Web Analytics (the beacon in
   `src/components/analytics/Analytics.astro`, production only). Bundle libraries
   from npm instead of loading them from a public CDN at runtime:
@@ -93,65 +211,36 @@ Comprehensive blog functionality with AI-powered translation, featuring:
 - **Rich Markdown**: GitHub Flavored Markdown, math equations (KaTeX), syntax
   highlighting, rich link cards with automatic metadata fetching
 - **SEO**: Auto-generated OGP images, structured data, meta tags, breadcrumbs
-- **Interactive Features**: Category filtering, related posts, table of
+- **Interactive Features**: Category and tag pages, related posts, table of
   contents, share buttons
 - **Monetization**: Stripe-powered tip/support functionality
 - **Performance**: Optimized with same caching strategies as main site
+
+Writing style: `docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above).
 
 ### Content Structure
 
 ```text
 src/content/
-├── blog/
-│   ├── ja/          # Japanese blog posts (source)
-│   │   ├── post-1.md
-│   │   └── post-2.md
-│   ├── en/          # English blog posts (auto-translated)
-│   │   ├── post-1.md
-│   │   └── post-2.md
-│   ├── zh/          # Chinese blog posts (auto-translated)
-│   │   ├── post-1.md
-│   │   └── post-2.md
-│   ├── ko/          # Korean blog posts (auto-translated)
-│   │   ├── post-1.md
-│   │   └── post-2.md
-│   └── es/          # Spanish blog posts (auto-translated)
-│       ├── post-1.md
-│       └── post-2.md
-├── config.ts        # Content collection schemas
-└── content_backup/  # Backup of old content (can be removed)
+├── blog/{ja,en,zh,ko,es}/*.md    # Blog posts (ja = source, others = CI translations)
+├── news/{ja,en,zh,ko,es}/*.md    # News / press releases
+├── cases/{ja,en,zh,ko,es}/*.md   # Case studies shown under /works
+└── config.ts                     # Collection definitions
 ```
 
-### Blog Schema (Zod)
+### Blog Schema
 
-```typescript
-const blogCollection = defineCollection({
-  type: 'content',
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    pubDate: z.coerce.date(),
-    updatedDate: z.coerce.date().optional(),
-    author: z.string().default('Terisuke'),
-    category: z.enum([
-      'ai-driven-futures',
-      'high-performance-engineering', 
-      'founders-journey',
-      'tech-lab-creativity'
-    ]),
-    tags: z.array(z.string()).default([]),
-    image: z.object({
-      url: z.string(),
-      alt: z.string()
-    }).optional(),
-    ogImage: z.string().optional(),
-    isDraft: z.boolean().default(false),
-    featured: z.boolean().default(false),
-    lang: z.enum(['ja', 'en', 'zh', 'ko', 'es']).default('ja'),
-    readingTime: z.number().optional(),
-  }),
-});
-```
+The blog frontmatter schema is `blogFrontmatterSchema` in
+`src/config/blog-schema.ts` (used by `src/content/config.ts`). Category ids
+come from `BLOG_CATEGORIES` in `src/config/categories.ts`: `ai`, `engineering`,
+`founder`, `lab`. `title` and `description` must be non-empty. The CMS field
+list in `cms/public/config.yml` mirrors this schema, and
+`src/config/__tests__/cms-config.test.ts` fails if only one side changes — update
+both together. The translation pipeline keeps a Zod mirror in
+`scripts/i18n/schema.mjs`, also linked by a test.
+
+News categories: `src/config/news-categories.ts`. Case categories:
+`caseCategories` in `src/content/config.ts`.
 
 ### AI Translation System
 
@@ -190,40 +279,18 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
 
 ### Blog Routing & Pages
 
-#### Japanese Blog
+ja has no URL prefix; the other locales use `/en`, `/zh`, `/ko`, `/es` and
+have the same files under `src/pages/<lang>/blog/`.
 
-- **List Page**: `/blog/` → `src/pages/blog/[...page].astro`
-- **Post Page**: `/blog/[slug]` → `src/pages/blog/[...slug].astro`
-- **Category Pages**: `/blog/category/[category]/` →
-  `src/pages/blog/category/[category]/[...page].astro`
+| Page | ja URL | ja file |
+|---|---|---|
+| List | `/blog/` | `src/pages/blog/[...page].astro` |
+| Post | `/blog/<slug>/` | `src/pages/blog/[...slug].astro` |
+| Category | `/blog/category/<id>/` | `src/pages/blog/category/[id]/[...page].astro` |
+| Tag (noindex) | `/blog/tags/<tag>/` | `src/pages/blog/tags/[tag]/[...page].astro` |
 
-#### English Blog
-
-- **List Page**: `/en/blog/` → `src/pages/en/blog/[...page].astro`
-- **Post Page**: `/en/blog/[slug]` → `src/pages/en/blog/[...slug].astro`
-- **Category Pages**: `/en/blog/category/[category]/` →
-  `src/pages/en/blog/category/[category]/[...page].astro`
-
-#### Chinese Blog
-
-- **List Page**: `/zh/blog/` → `src/pages/zh/blog/[...page].astro`
-- **Post Page**: `/zh/blog/[slug]` → `src/pages/zh/blog/[...slug].astro`
-- **Category Pages**: `/zh/blog/category/[category]/` →
-  `src/pages/zh/blog/category/[category]/[...page].astro`
-
-#### Korean Blog
-
-- **List Page**: `/ko/blog/` → `src/pages/ko/blog/[...page].astro`
-- **Post Page**: `/ko/blog/[slug]` → `src/pages/ko/blog/[...slug].astro`
-- **Category Pages**: `/ko/blog/category/[category]/` →
-  `src/pages/ko/blog/category/[category]/[...page].astro`
-
-#### Spanish Blog
-
-- **List Page**: `/es/blog/` → `src/pages/es/blog/[...page].astro`
-- **Post Page**: `/es/blog/[slug]` → `src/pages/es/blog/[...slug].astro`
-- **Category Pages**: `/es/blog/category/[category]/` →
-  `src/pages/es/blog/category/[category]/[...page].astro`
+RSS: `src/pages/rss.xml.ts` and `src/pages/<lang>/rss.xml.ts` (blog),
+`src/pages/news.xml.ts` and `src/pages/[lang]/news.xml.ts` (news).
 
 #### Individual Post Features (All Languages)
 
@@ -239,8 +306,10 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
 #### Blog Layout
 
 - **Shared Layout**: `src/layouts/BlogLayout.astro`
-  - Enhanced SEO with structured data (Article, BreadcrumbList)
-  - Auto-generated OGP images at `/og/[slug].svg`
+  - Enhanced SEO with structured data (Article, BreadcrumbList) via
+    `src/components/blog/seo/`
+  - Default OGP image `/og/<slug>.png`, generated by `src/pages/og/`
+    (PNG and SVG; `og/page/` for non-article pages)
   - Multilingual hreflang tags (5 languages)
   - KaTeX CSS for math rendering: self-hosted (`katex` from npm, inlined by
     `src/components/blog/KatexStyles.astro`) and emitted only on posts that contain
@@ -252,6 +321,8 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
 - **AuthorBox.astro**: Author photo, name, title, bio and profile link for every
   locale. Author facts live in `src/config/author.ts` (also used for the Person
   JSON-LD referenced by `Article.author`); add new authors there
+- **BlogArchiveHeader.astro** / **BlogCategoryNav.astro**: List page header and
+  category navigation
 - **CategoryBadge.astro**: Color-coded category badges with responsive design
 - **PostCard.astro**: Responsive blog post preview cards for lists with hover
   effects
@@ -261,41 +332,28 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   with smooth scrolling
 - **TagList.astro**: Tag display with consistent styling and hover effects
 - **TipButton.astro**: Stripe-powered support/tip functionality with Payment
-  Links integration
-
-### Navigation Features
-
-- **Previous/Next Posts**: Automatic chronological navigation between posts
-- **Related Posts**: Dynamic display of same-category posts (max 3)
-- **Category Filtering**: Dedicated pages for each category with pagination
-- **Multilingual Support**: Separate navigation for all 5 languages:
-  - Japanese (`/blog/`)
-  - English (`/en/blog/`)
-  - Chinese (`/zh/blog/`)
-  - Korean (`/ko/blog/`)
-  - Spanish (`/es/blog/`)
-- **Responsive Design**: Mobile-first approach with touch-friendly navigation
-- **SEO**: Proper canonical URLs and hreflang tags for all navigation links
+  Links integration (`PUBLIC_STRIPE_PAYMENT_LINK`)
 
 ### SEO & Performance Features
 
-- **Auto-generated OGP Images**: Dynamic SVG generation at
-  `/og/[slug].svg.ts`
-- **Structured Data**: JSON-LD for Article and BreadcrumbList schemas
+- **Structured Data**: JSON-LD for Article and BreadcrumbList schemas;
+  Organization / Person come from `src/config/organization.ts` and
+  `src/config/author.ts`
 - **Multilingual SEO**: Proper hreflang tags and canonical URLs for 5 languages
 - **Meta Tags**: Comprehensive OpenGraph and Twitter Card support
-- **Sitemap**: Auto-generated with @astrojs/sitemap
+- **Sitemap**: @astrojs/sitemap, filtered by `src/config/indexing.ts` (the same
+  rules as the meta robots tag); blog posts get `lastmod`
+- **robots.txt**: generated by `src/pages/robots.txt.ts` (`src/config/robots.ts`)
 - **Performance**: critical CSS, font optimization (Core Web Vitals field data:
   Cloudflare Web Analytics)
 
 ### Writing New Blog Posts
 
-**✅ FULLY AUTOMATED SYSTEM**
-The blog system now uses Astro Content Collections throughout, providing
-complete automation for blog post management. Simply add markdown files and
-they'll automatically appear on the site.
-
-#### **Step-by-Step Process**
+Add a markdown file and it appears on the site after the next build — lists,
+category pages, navigation, related posts, sitemap and RSS update
+automatically. Posts can also be written in the CMS
+(`https://cor-jp-cms-admin.web.app/`, `docs/cms-sveltia.md`), which opens a PR
+to `develop`.
 
 1. **Create Japanese Post**: Write markdown file in `/src/content/blog/ja/your-post-name.md`
 2. **Use Proper Frontmatter**:
@@ -305,42 +363,22 @@ they'll automatically appear on the site.
    title: "Your Post Title"
    description: "Brief description for SEO and previews"
    pubDate: 2024-01-01
-   category: "ai"  # Options: "ai", "engineering", "founder", "lab"
+   category: "ai"  # One of: "ai", "engineering", "founder", "lab"
    tags: ["tag1", "tag2", "tag3"]
    author: "Terisuke"
    lang: "ja"
    featured: true  # Optional: feature on homepage
-   # image:  # Optional - currently commented out
+   # image:  # Optional
    #   url: "/images/blog/your-image.avif"
    #   alt: "Image description"
    ---
    ```
 
-3. **Auto-translate**: open a PR; CI translates to en/zh/ko/es and commits the
-   translations to the PR (local runs: `npm run i18n:translate`, see
-   `docs/i18n-translation.md`)
-4. **Build & Deploy**: Run `npm run build` - the post automatically appears
-
-#### **Automatic Features**
-
-- **✅ Automatic HTML Generation**: Markdown → `/blog/your-post-name/index.html`
-- **✅ Auto-updating Navigation**: Previous/Next links automatically
-  recalculate
-- **✅ Dynamic Related Posts**: Same-category posts automatically linked
-- **✅ SEO Generation**: OGP images, meta tags, structured data
-  auto-generated
-- **✅ Sitemap Integration**: New posts automatically added to sitemap
-- **✅ RSS Feed Updates**: All 5 language RSS feeds auto-update (ja, en, zh, ko, es)
-- **✅ Category Pages**: Posts automatically appear in category listings
-- **✅ Reading Time Calculation**: Dynamically calculated from content length
-
-#### **Content Collections Benefits**
-
-- **Type Safety**: Zod schema validation at build time
-- **Hot Reloading**: Changes appear instantly in development
-- **Build Optimization**: Only builds when content actually changes
-- **Error Detection**: Invalid frontmatter caught during build
-- **Performance**: Static generation with optimal caching
+3. **Check wording**: `npm run blog:check -- src/content/blog/ja/your-post-name.md`
+4. **Auto-translate**: open a PR to `develop`; CI translates to en/zh/ko/es and
+   commits the translations to the PR (local runs: `npm run i18n:translate`,
+   see `docs/i18n-translation.md`)
+5. **Build**: `npm run build` must pass (invalid frontmatter fails the build)
 
 ### Rich Content Support
 
@@ -370,30 +408,27 @@ https://github.com
 
 The site deploys to Firebase Hosting with specific caching rules defined in
 `firebase.json`. Production builds are optimized for long-term caching of
-assets while keeping HTML fresh. Blog OGP images (SVG) are cached with
-immutable headers.
+assets while keeping HTML fresh. `.github/workflows/deploy.yml` deploys `main`
+to production and `develop` / PRs to preview channels.
 
 ## Important Notes
 
-- **No test framework configured** - verify changes manually with
-  `npm run build` and `npm run dev`
-- **Content Collections**: All blog functionality now uses Astro Content
-  Collections for type safety and performance
-- **Automatic Features**: Posts, navigation, and related content update
-  automatically - no manual configuration needed
-- **Image Management**: Images currently commented out in frontmatter -
-  uncomment `image:` section when adding images
+- **Verify changes** with `npm run test:run` and `npm run build`; after a build
+  also `npm run security:audit:dist` and `npm run test:dist`. Run
+  `npm run test:visual-text` for layout/text changes and `npm run check:links`
+  for public copy changes
 - **Performance Goal**: Match or exceed Hiroshi Abe's website loading speed
   through aggressive optimization
 - **Multilingual Workflow**:
 
   1. Write Japanese post in `/src/content/blog/ja/`
-  2. Open a PR; CI translates to all languages (`npm run i18n:check` verifies)
+  2. Open a PR to `develop`; CI translates to all languages (`npm run i18n:check` verifies)
   3. Review translations for accuracy (optional)
-  4. Deploy with `npm run build`
+  4. Merge; `develop` → `main` releases deploy to production
 - **Environment Variables**: `GEMINI_API_KEY` is a GitHub secret for CI; for
-  local translation runs pass it via `node --env-file=.env`
-- **Category System**: Use exact category names: `"ai"`, `"engineering"`,
+  local translation runs pass it via `node --env-file=.env`. Public build-time
+  variables (`PUBLIC_*`) are listed in `src/env.d.ts`
+- **Category System**: Use exact category ids: `"ai"`, `"engineering"`,
   `"founder"`, `"lab"`
 - **URL Structure**: Posts are available in all languages:
   - Japanese: `/blog/post-name/`
@@ -402,42 +437,19 @@ immutable headers.
   - Korean: `/ko/blog/post-name/`
   - Spanish: `/es/blog/post-name/`
 
-## Product & Service Names
-
-### Current Product Portfolio
-
-The site features three main product lines with updated branding:
-
-1. **TapForge** - NFC Smart Business Cards
-   - Previous name: NFCデジタル名刺作成
-   - Description: Next-gen business networking with just a tap
-   - Pricing: ¥3,000 initial cost, ¥500/additional card
-
-2. **BoltSite** - Ultra-Fast Website Development
-   - Previous name: 高性能ホームページ制作
-   - Description: Lightning-fast 0.3s loading with perfect SEO scores
-   - Features: Astro 4.8.7, SSG architecture, CDN optimization
-   - Pricing: ¥15,000-50,000+/month
-
-3. **IoTRealm** - AI/IoT Integration Platform
-   - Previous name: AI・IoTソリューション開発
-   - Description: Bridging digital innovation with physical reality
-   - Pricing: ¥1M-5M+ for development, ¥100K+/month maintenance
-
 ## YouTube Integration
 
 ### Random Video Player Component
 
-The site includes a sophisticated YouTube integration system:
-
-**Location**: `/src/components/youtube/RandomPlayer.astro`
+**Location**: `/src/components/youtube/RandomPlayer.astro`, used by
+`src/components/about/FounderNote.astro` on the About page
 
 **Features**:
 
 - **API Integration**: Uses YouTube Data API v3 to fetch channel videos
 - **Random Selection**: Automatically selects random videos from the channel
-- **Error Handling**: Comprehensive error management and fallbacks
-- **Performance**: Optimized loading with proper iframe attributes
+- **Error Handling**: Shows a fallback message (from the `messages` prop) when
+  the API key is missing, no videos are found or loading fails
 - **View Transitions Support**: Seamless player re-initialization on page navigation
 - **Loading States**: Visual feedback during video loading
 - **Origin Security**: Explicit origin parameter to prevent postMessage warnings
@@ -457,75 +469,11 @@ PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key_here
 3. Randomly selects one video per page load
 4. Embeds using YouTube IFrame API with optimized settings
 5. Handles View Transitions with automatic re-initialization
-6. Preloads YouTube API for faster initialization on navigation
 
-**Usage**: Integrated into ProductsTable.astro for dynamic video content
-display
+## About Page
 
-**Recent Improvements**:
-
-- Fixed postMessage origin warnings
-- Added View Transitions API support for smooth navigation
-- Implemented loading states for better UX
-- Optimized initialization timing
-- Added prefetch strategy adjustments
-
-## Image Optimization
-
-### Team Member Images
-
-- **Format**: AVIF for optimal compression and quality
-- **Sizing**: Standardized to 400x400px for consistency
-- **Processing**: Automatic cropping and centering for profile images
-- **Performance**: Significant file size reduction (80%+ compression)
-
-### Image Pipeline
-
-- Original images stored in PNG format for editing
-- AVIF conversion for web delivery
-- Responsive sizing with proper aspect ratios
-- Automatic optimization via Astro's built-in image processing
-
-## Team Component
-
-### Team Member Display Pattern
-
-The Team component (`/src/components/about/Team.astro`) follows a unified design pattern for displaying team member profiles:
-
-**Icon Link Strategy**:
-- **Priority System**: `zennLink` takes precedence over `link` when both are available
-- **Consistent UX**: All team members have clickable profile icons, no separate text links
-- **Simplified Design**: Removed per-member link lists below profiles for visual consistency
-
-**Link Priority Logic**:
-```typescript
-function getIconLink(item) {
-  return item.zennLink || item.link || null;
-}
-```
-
-**Team Data Structure** (in `i18n.ts`):
-- `link`: Primary profile link (e.g., TapForge profile, personal website)
-- `zennLink`: Zenn profile link (takes priority for icon linking)
-- Icon automatically uses `zennLink` if available, otherwise falls back to `link`
-
-**Current Team Setup**:
-- **Kousuke Terada (CEO)**: Icon links to TapForge profile
-- **Cloudia Sorano (AI Ambassador)**: Icon links to Zenn profile (prioritized over X/Twitter)
-- **Nagisa Terada (Staff)**: Icon links to personal website
-
-This approach ensures a clean, uniform presentation across all team members while maintaining flexibility for different profile link types.
-
-## External Media Integration
-
-### Media Section Updates
-
-- **Title**: Changed from "メディア紹介" to "外部メディア" (External Media)
-- **Layout**: Center-aligned components for better visual hierarchy
-- **Responsive**: Mobile-first design with proper spacing
-
-### External Media Component Structure
-
-- Note articles displayed in centered card layout
-- YouTube content in dedicated full-width section
-- Proper semantic HTML with accessibility considerations
+`src/pages/about.astro` (and `src/pages/<lang>/about.astro`) is built from
+`src/components/about/` (AboutHero, MvvSection, KyousouDefinition, WhyFocus,
+FounderNote, TeamIntro). Its text lives in the `aboutPage` keys of
+`src/i18n/locales/*.json`. Company facts (legal name, IDs, social links) come
+from `src/config/organization.ts`; author facts from `src/config/author.ts`.
