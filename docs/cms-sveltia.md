@@ -22,7 +22,7 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 - トークンの範囲は `public_repo,user` です。**あなたが書き込める全ての公開リポジトリ**（このリポジトリ以外も含む）へのコードの書き込み・共同編集者の追加などと、プロフィールの読み書きに及びます。
 - トークンに期限はありません。使い終わったら右上のアカウントメニューから「ログアウト」してください（ブラウザからトークンが消えます）。共用の PC では必ずログアウトしてください。
-- 2026-09-28 時点の権限（`gh api repos/Cor-Incorporated/corsweb2024/collaborators --jq '.[]|.login+" "+.role_name'`）: **admin は terisuke だけ**、nagi0705・kisayama0725・cloudia-Cor は write。組織の既定権限は write（`gh api orgs/Cor-Incorporated --jq .default_repository_permission`）。
+- 2026-10-20 時点の権限（`gh api repos/Cor-Incorporated/corsweb2024/collaborators --jq '.[]|.login+" "+.role_name'`）: **admin は terisuke だけ**、nagi0705・cloudia-Cor は write。組織の既定権限は write（2026-09-28 時点。`gh api orgs/Cor-Incorporated --jq .default_repository_permission`）。
 - admin のアカウント（terisuke）のトークンが漏れると、公開リポジトリの設定の変更や共同編集者の追加まで行えてしまいます。編集には、できるだけ admin ではない Write だけのアカウントを使ってください。
 - CMS の配信元を公開サイトと別のプロジェクト・別オリジンにしているのは、このトークンを公開サイトの外部スクリプトや、公開サイトの配信権限から守るためです（ADR-0018）。
 
