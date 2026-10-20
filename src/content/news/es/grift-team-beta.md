@@ -1,15 +1,15 @@
 ---
-title: "Ya está disponible la página informativa de Grift Team Beta"
-description: "Hemos publicado la página informativa de Grift Team Beta, una herramienta con IA para gestionar en equipo la justificación de los presupuestos."
+title: "Publicada la página informativa de Grift Team Beta (retirada en octubre de 2026)"
+description: "Hemos publicado la página informativa de Grift Team Beta, una herramienta asistida por IA para gestionar en equipo los fundamentos de las estimaciones. Grift Team Beta se retirará en octubre de 2026, y Grift está cambiando su enfoque hacia una CLI para extraer hechos comprobables a partir del historial de git."
 publishedAt: 2026-07-08
 category: "update"
-tags: ["Grift", "Presupuestos con IA", "Producto"]
+tags: ["Grift", "Estimación con IA", "Producto"]
 externalUrl: "https://griftai.org"
 source: "Grift"
 isDraft: false
-featured: true
+featured: false
 lang: "es"
-translationSourceHash: "0c2cf36eb623caf6c8a2c919cf7513c4f625ce1cd96f33f4b49bc082fcab871b"
-translatedAt: "2026-09-28T06:09:16.049Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "8e72e3395f7e3e154fd7ded27a5bd3d5cd7111cc5d67301dd63fe1d3576de005"
+translatedAt: "2026-10-20T01:58:42.971Z"
+translationModel: "gemini-3.8-flash"
 ---

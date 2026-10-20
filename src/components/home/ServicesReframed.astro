@@ -5,13 +5,15 @@ import { getGriftUrl } from '../../config/site';
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-// services2026.items（全言語同一の並び）に対応する関連ページ。
-// /works・/works/<slug>・/security はいずれも各言語版があるため localize、Grift は env 経由（ADR-0010）。
+// services2026.items（全言語同一の並び＝事業の5本柱、ADR-0022）に対応する関連ページ。
+// /works・/works/<slug>・/company は各言語版があるため localize、Grift は env 経由（ADR-0010）。
+// ハードウェアAIは開発・実証の準備段階で紹介ページが無いため、リンクを付けない（null）。
 const SERVICE_HREFS: (string | null)[] = [
-  getLocalizedUrl('/works', currentLocale),    // 業務に入るAI開発 → 実績一覧
-  getLocalizedUrl('/works/confidential-data-ai-assessment', currentLocale), // 判断基準づくり → 機密データAI活用診断
-  getLocalizedUrl('/security', currentLocale),  // 機密データの扱い → セキュリティ設計
-  getGriftUrl('/', { intent: 'grift-team-beta', source: 'services-reframed' }), // 見積根拠 → Grift
+  getGriftUrl('/', { intent: 'grift-team-beta', source: 'services-reframed' }), // Grift
+  getLocalizedUrl('/works/local-llm-poc', currentLocale), // ローカルLLM・セキュアAI → PoC の進め方
+  null, // ハードウェアAI
+  getLocalizedUrl('/works', currentLocale), // AI受託開発・導入支援 → 実績一覧
+  getLocalizedUrl('/company', currentLocale), // 教育・地域 → 会社概要（事業の柱）
 ];
 ---
 
@@ -21,7 +23,7 @@ const SERVICE_HREFS: (string | null)[] = [
       <h2 class="max-w-3xl text-3xl font-medium tracking-tight sm:text-4xl" data-reveal>
         {t.services2026.title}
       </h2>
-      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {
           t.services2026.items.map((item, i) => {
             const href = SERVICE_HREFS[i];

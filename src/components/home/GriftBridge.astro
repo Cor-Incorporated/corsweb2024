@@ -1,75 +1,84 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
-import { getGriftUrl } from '../../config/site';
+import { getGriftUrl, GRIFT_CLI_GITHUB_URL } from '../../config/site';
 
 const t = getTranslations(getCurrentLocale(Astro.url));
 
+// 2026-10: Grift は「git履歴から確かめられる事実を取り出す CLI（OSS）＋紹介会社さま向けの試行」へ
+// 方針転換した。旧Webアプリの見積デモ（参考コスト・納期・類似実績のモック）は撤去済み（ADR-0022）。
 const griftUrl = getGriftUrl('/', {
   intent: 'grift-team-beta',
   source: 'grift-bridge',
 });
-const mock = t.griftBridge.mock;
+const bridge = t.griftBridge;
+const comments = bridge.terminalComments;
 ---
 
 <section class="py-24 sm:py-32">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
     <div class="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
-      <div class="flex flex-col gap-4 sm:gap-6" data-reveal>
+      <div class="flex min-w-0 flex-col gap-4 sm:gap-6" data-reveal>
         <p
           class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
         >
-          {t.griftBridge.eyebrow}
+          {bridge.eyebrow}
         </p>
         <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">
-          {t.griftBridge.title}
+          {bridge.title}
         </h2>
         <p class="text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-          {t.griftBridge.description}
+          {bridge.description}
         </p>
-        <div>
+        <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {
+            bridge.promises.map((item) => (
+              <li class="rounded-2xl bg-primary-500/10 p-4 dark:bg-primary-400/10">
+                <p class="text-base font-medium">{item.title}</p>
+                <p class="mt-1 text-sm text-primary-950/70 dark:text-primary-200/70">{item.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="flex flex-col gap-3 sm:flex-row">
           <a
             href={griftUrl}
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-5 py-3 text-base font-medium text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b]"
           >
-            {t.griftBridge.cta}
+            {bridge.cta}
+          </a>
+          <a
+            href={GRIFT_CLI_GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10"
+          >
+            {bridge.ctaGithub}
           </a>
         </div>
         <p class="text-sm text-primary-950/70 dark:text-primary-200/70">
-          {t.griftBridge.note}
+          {bridge.note}
         </p>
       </div>
 
-      <!-- ミニモック -->
-      <div class="rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:p-8">
-        <div class="flex flex-col gap-5">
-          <div
-            class="rounded-2xl bg-primary-50 p-4 text-base text-primary-950 dark:bg-primary-950 dark:text-primary-200"
-            data-reveal
-            style="--reveal-delay:0.15s"
-          >
-            {mock.input}
-          </div>
-          <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div class="flex flex-col gap-1 rounded-2xl bg-primary-50 p-4 dark:bg-primary-950" data-reveal style="--reveal-delay:0.4s">
-              <dt class="text-sm text-primary-950/70 dark:text-primary-200/70">{mock.costLabel}</dt>
-              <dd class="text-xl font-medium tracking-tight">{mock.cost}</dd>
-            </div>
-            <div class="flex flex-col gap-1 rounded-2xl bg-primary-50 p-4 dark:bg-primary-950" data-reveal style="--reveal-delay:0.55s">
-              <dt class="text-sm text-primary-950/70 dark:text-primary-200/70">{mock.durationLabel}</dt>
-              <dd class="text-xl font-medium tracking-tight">{mock.duration}</dd>
-            </div>
-            <div class="flex flex-col gap-1 rounded-2xl bg-primary-50 p-4 dark:bg-primary-950" data-reveal style="--reveal-delay:0.7s">
-              <dt class="text-sm text-primary-950/70 dark:text-primary-200/70">{mock.similarLabel}</dt>
-              <dd class="text-xl font-medium tracking-tight">{mock.similar}</dd>
-              {mock.similarNote && (
-                <dd class="text-xs text-primary-950/60 dark:text-primary-200/60">{mock.similarNote}</dd>
-              )}
-            </div>
-          </dl>
-        </div>
-      </div>
+      <!-- CLI の使い方の例（コマンドは翻訳しない。コメントだけ各言語） -->
+      <figure
+        class="min-w-0 rounded-3xl bg-primary-950 p-6 text-primary-50 dark:bg-black/40 sm:p-8"
+        aria-label={bridge.terminalLabel}
+        data-reveal
+        style="--reveal-delay:0.15s"
+      >
+        <pre class="whitespace-pre-wrap break-words text-sm leading-7"><code><span class="text-primary-50/60"># {comments.install}</span>
+<span class="text-primary-300">$</span> pipx install grift-cli
+
+<span class="text-primary-50/60"># {comments.report}</span>
+<span class="text-primary-300">$</span> grift report
+
+<span class="text-primary-50/60"># {comments.verify}</span>
+<span class="text-primary-300">$</span> grift verify
+VERIFIED: all fields match recomputation under recorded provenance</code></pre>
+      </figure>
     </div>
   </div>
 </section>

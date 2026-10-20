@@ -18,7 +18,7 @@ const TEXT_EXTENSIONS = new Set([
   '.webmanifest',
   '.xml',
 ]);
-const REQUIRED_SEO_PAGES = ['index.html', 'blog/index.html', 'news/index.html', 'works/index.html', 'security/index.html'];
+const REQUIRED_SEO_PAGES = ['index.html', 'blog/index.html', 'news/index.html', 'works/index.html', 'security/index.html', 'company/index.html'];
 const ALLOWED_LOCAL_STORAGE_KEYS = new Set(['theme']);
 const ALLOWED_HTTP_HOSTS = new Set(['www.w3.org']);
 const ALLOWED_ORIGINS = new Set([
