@@ -1,15 +1,15 @@
 ---
-title: "The Grift Team Beta information page is now available"
-description: "We have published an information page for Grift Team Beta, an AI-assisted tool for handling the rationale behind estimates as a team."
+title: "Published the Announcement Page for Grift Team Beta (Withdrawn in October 2026)"
+description: "We have published the announcement page for Grift Team Beta, an AI-powered tool for teams to handle the rationale behind estimates. Grift Team Beta was withdrawn in October 2026, and Grift has pivoted its direction to a CLI that extracts verifiable facts from git history."
 publishedAt: 2026-07-08
 category: "update"
-tags: ["Grift", "AI estimation", "Product"]
+tags: ["Grift", "AI Estimation", "Products"]
 externalUrl: "https://griftai.org"
 source: "Grift"
 isDraft: false
-featured: true
+featured: false
 lang: "en"
-translationSourceHash: "0c2cf36eb623caf6c8a2c919cf7513c4f625ce1cd96f33f4b49bc082fcab871b"
-translatedAt: "2026-09-28T06:09:16.045Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "8e72e3395f7e3e154fd7ded27a5bd3d5cd7111cc5d67301dd63fe1d3576de005"
+translatedAt: "2026-10-20T01:56:55.157Z"
+translationModel: "gemini-3.8-flash"
 ---

@@ -1,0 +1,28 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CompanyProfile from '../../components/company/CompanyProfile.astro';
+import NextStep from '../../components/common/NextStep.astro';
+import { getLocalizedUrl, getTranslations, type Locale } from '../../utils/i18n';
+import { NON_JA_LOCALES } from '../../utils/content-i18n';
+
+// ja はルート直下 (/company) が担当。ここは非ja の言語ルートを生成する（/works と同じ方式）。
+export function getStaticPaths() {
+  return NON_JA_LOCALES.map((lang) => ({ params: { lang } }));
+}
+
+const { lang } = Astro.params;
+const locale = lang as Locale;
+const t = getTranslations(locale);
+---
+
+<Layout
+  description={t.meta.company.description}
+  title={t.meta.company.title}
+  availableLocales={['ja', 'en', 'zh', 'ko', 'es']}
+>
+  <CompanyProfile />
+  <NextStep
+    heading={t.nextStep.about.heading}
+    ctas={[{ label: t.companyPage.cta, href: getLocalizedUrl('/contact', locale), primary: true }]}
+  />
+</Layout>

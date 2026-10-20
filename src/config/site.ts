@@ -151,6 +151,16 @@ export function resolveExternalHref(
 }
 
 /**
+ * Grift CLI（OSS・MIT）の公開リポジトリ（ADR-0022）。griftai.org と違い env で差し替えない固定の一次情報。
+ */
+export const GRIFT_CLI_GITHUB_URL = 'https://github.com/Cor-Incorporated/grift-cli';
+
+/**
+ * エンジニアカフェ向け多言語AI受付「Engineer Cafe Navigator」の事例ページのパス（各言語で localize する）。
+ */
+export const ENGINEER_CAFE_CASE_PATH = '/works/engineer-cafe-navigator';
+
+/**
  * 会社紹介資料（Google スライド）の公開 URL（#291）。
  * 閲覧専用の /preview を使い、共有元 URL の個人アカウント ID（ouid）等は載せない。
  * 外部リンクとして別タブで開く（利用側で target=_blank / rel=noopener を付与）。

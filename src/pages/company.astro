@@ -1,0 +1,17 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CompanyProfile from '../components/company/CompanyProfile.astro';
+import NextStep from '../components/common/NextStep.astro';
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../utils/i18n';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+---
+
+<Layout description={t.meta.company.description} title={t.meta.company.title}>
+  <CompanyProfile />
+  <NextStep
+    heading={t.nextStep.about.heading}
+    ctas={[{ label: t.companyPage.cta, href: getLocalizedUrl('/contact', currentLocale), primary: true }]}
+  />
+</Layout>

@@ -1,0 +1,144 @@
+---
+// 会社概要（ADR-0022）。所在地・設立・代表者・事業の柱・情報セキュリティ・選出を1ページにまとめる。
+// 会社の基本情報は回答エンジン（AIO）が引用しやすいよう dl の表で出す。表に出した事実
+// （設立・所在地・選出）は Organization JSON-LD（utils/structured-data.ts）にも載せている。
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import { ENGINEER_CAFE_CASE_PATH } from '../../config/site';
+import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+const c = t.companyPage;
+
+const relatedLinks = [
+  { label: c.links.about, href: getLocalizedUrl('/about', currentLocale) },
+  { label: c.links.works, href: getLocalizedUrl('/works', currentLocale) },
+  { label: c.links.security, href: getLocalizedUrl('/security', currentLocale) },
+  { label: c.links.news, href: getLocalizedUrl('/news', currentLocale) },
+  { label: c.links.legal, href: getLocalizedUrl('/legal/tokushoho', currentLocale) },
+];
+---
+
+<div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+  <div class="flex flex-col gap-4 pb-12 text-start sm:pb-16">
+    <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
+      {c.kicker}
+    </p>
+    <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">
+      {c.title}
+    </h1>
+    <p class="type-copy text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+      {c.lead}
+    </p>
+  </div>
+
+  <section aria-labelledby="company-profile">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 id="company-profile" class="type-heading text-xl font-medium sm:text-2xl">
+        {c.profileTitle}
+      </h2>
+      <p class="text-sm text-primary-950/60 dark:text-primary-200/60">{c.asOf}</p>
+    </div>
+    <dl class="mt-6 divide-y divide-primary-900/15 border-y border-primary-900/15 dark:divide-primary-300/15 dark:border-primary-300/15">
+      {
+        c.profile.map((row) => (
+          <div class="grid grid-cols-1 gap-1 py-4 sm:grid-cols-[9rem_1fr] sm:gap-6">
+            <dt class="text-sm font-medium text-primary-950/70 dark:text-primary-200/70">{row.label}</dt>
+            <dd class="text-base leading-relaxed">{row.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section id="business" aria-labelledby="company-business" class="mt-16 scroll-mt-24">
+    <h2 id="company-business" class="type-heading text-xl font-medium sm:text-2xl">
+      {c.businessTitle}
+    </h2>
+    <p class="mt-4 text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+      {c.businessLead}
+    </p>
+    <ol class="mt-6 flex flex-col gap-4">
+      {
+        c.business.map((item) => (
+          <li class="rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10">
+            <h3 class="text-lg font-medium tracking-tight">{item.name}</h3>
+            <p class="mt-1 text-base font-medium text-primary-700 dark:text-primary-300">{item.tagline}</p>
+            <p class="mt-3 text-base leading-relaxed">{item.description}</p>
+            <p class="mt-3 text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70">{item.status}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section aria-labelledby="company-security" class="mt-16">
+    <h2 id="company-security" class="type-heading text-xl font-medium sm:text-2xl">
+      {c.securityTitle}
+    </h2>
+    <p class="mt-4 text-base leading-relaxed">{c.securityBody}</p>
+    <p class="mt-3 text-sm">
+      <a
+        href={getLocalizedUrl('/security', currentLocale)}
+        class="font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      >
+        {c.securityLink}
+      </a>
+    </p>
+  </section>
+
+  <section aria-labelledby="company-recognition" class="mt-16">
+    <h2 id="company-recognition" class="type-heading text-xl font-medium sm:text-2xl">
+      {c.recognitionTitle}
+    </h2>
+    <ul class="mt-6 flex flex-col gap-4">
+      <li class="flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:flex-row sm:items-center">
+        {/* 掲載条件（クリックで特設ページへ・掲載期限）はコンポーネント側で担保する。 */}
+        <Fukuoka100Emblem variant="portrait" imgClass="h-24 w-auto" class="shrink-0 self-start" />
+        <p class="text-base leading-relaxed">{c.fukuoka100Body}</p>
+      </li>
+      <li class="flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:flex-row sm:items-center">
+        <span class="flex size-24 shrink-0 items-center justify-center self-start rounded-2xl bg-white p-2">
+          <img
+            src="/assets/partners/engineer-cafe-logo.png"
+            alt={t.regionalTrust.engineerCafeLogoAlt}
+            width="182"
+            height="162"
+            class="h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
+        <div class="flex flex-col gap-2">
+          <p class="text-base leading-relaxed">{c.engineerCafeBody}</p>
+          <p class="text-sm">
+            <a
+              href={getLocalizedUrl(ENGINEER_CAFE_CASE_PATH, currentLocale)}
+              class="font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            >
+              {c.engineerCafeLink}
+            </a>
+          </p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <nav aria-labelledby="company-links" class="mt-16 border-t border-primary-900/15 pt-8 dark:border-primary-300/15">
+    <h2 id="company-links" class="text-base font-medium">{c.linksTitle}</h2>
+    <ul class="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+      {
+        relatedLinks.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class="underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            >
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</div>

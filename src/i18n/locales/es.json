@@ -34,9 +34,9 @@
   },
   "homeHero": {
     "kicker": "Más allá de lo imaginado, lo construimos contigo.",
-    "title": "Convertimos lo estancado<br />en avances construidos juntos.",
-    "subtitle": "Cor. Inc. se apoya en IA para datos confidenciales, LLM locales y Grift,<br class='sm:hidden' />y te acompaña de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación.<br />No solo recibimos encargos: cuando conviene, también proponemos «aún no construirlo».",
-    "support": "Una empresa de implementación de IA nacida en Fukuoka que te acompaña de principio a fin —desde ordenar el problema hasta el diseño, la implementación y la operación— apoyada en IA para datos confidenciales, LLM locales y Grift.",
+    "title": "IA para el día a día,<br />lista para usar con tranquilidad.",
+    "subtitle": "Cor.Inc. es una empresa de implementación de IA de Fukuoka. <br class='sm:hidden' />Nos centramos en LLM locales que no sacan los datos confidenciales al exterior, en «Grift», nuestro producto propio para generar evidencias verificables, y en el desarrollo a medida desde el diseño hasta la operación; también impulsamos espacios de aprendizaje y comunidad en la región.<br />Cuando conviene, también proponemos «aún no construirlo».",
+    "support": "Una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región.",
     "primaryCta": "Consultar diagnóstico de IA con datos confidenciales",
     "secondaryCta": "Consultar PoC de LLM local / IA segura",
     "philosophyCta": "Lee la filosofía de «Kyousou»",
@@ -85,20 +85,31 @@
     "ctaSecondary": "Ver cómo funciona Grift"
   },
   "griftBridge": {
-    "eyebrow": "Try Our AI / Grift",
-    "title": "Antes de explicarlo con palabras, ¿por qué no lo pruebas con IA?",
-    "description": "A partir de proyectos de desarrollo anteriores y de las tarifas del mercado, ofrecemos un coste, un plazo y casos similares de referencia.",
+    "eyebrow": "Our Product / Grift",
+    "title": "El currículum se puede inflar. La evidencia, no.",
+    "description": "Grift es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute. Los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato.",
     "cta": "Ver cómo funciona Grift",
-    "note": "Los resultados de Grift son un presupuesto orientativo previo a la consulta. El importe y el plazo definitivos se fijan tras confirmar los requisitos.",
-    "mock": {
-      "input": "Quiero automatizar con IA la creación de presupuestos de ventas",
-      "costLabel": "Coste de referencia",
-      "cost": "desde 1,8 M JPY",
-      "durationLabel": "Plazo de referencia",
-      "duration": "desde 4 semanas",
-      "similarLabel": "Casos similares",
-      "similar": "5",
-      "similarNote": "Según proyectos internos"
+    "ctaGithub": "Ver Grift CLI en GitHub",
+    "note": "Grift CLI se publica de forma gratuita como software de código abierto con licencia MIT. Atendemos consultas de agencias de selección y empresas de SES sobre pruebas piloto (PoC).",
+    "promises": [
+      {
+        "title": "Sin puntuaciones",
+        "body": "Ofrece valores medidos. Quien decide es una persona."
+      },
+      {
+        "title": "Siempre el mismo resultado",
+        "body": "No usa IA (LLM) para medir, así que cualquiera que lo ejecute obtiene las mismas cifras."
+      },
+      {
+        "title": "No envía nada a ningún sitio",
+        "body": "Funciona solo en tu propio equipo. Compartir o no los resultados lo decide la propia persona."
+      }
+    ],
+    "terminalLabel": "Ejemplo de uso de Grift CLI",
+    "terminalComments": {
+      "install": "Instalación (Python 3.11 o superior)",
+      "report": "Medir y registrar",
+      "verify": "Recalcular en las mismas condiciones para verificar"
     }
   },
   "proof": {
@@ -107,9 +118,9 @@
     "description": "Contratos, minutas, presupuestos, datos de clientes y conocimiento interno. Cor.Inc. diseña el procesamiento seguro de información confidencial —incluyendo límites de entrada, permisos, registros y aprobación humana— implementando sistemas de IA robustos que realmente funcionan para su negocio.",
     "stats": [
       {
-        "label": "Negocios Centrales",
-        "value": "3 Áreas",
-        "note": "Grift / LLM Local / IA a Medida"
+        "label": "Pilares del negocio",
+        "value": "5 pilares",
+        "note": "Grift / LLM Local / IA en Hardware / IA a Medida / Educación y Comunidad"
       },
       {
         "label": "Diseño de Operaciones IA",
@@ -134,7 +145,7 @@
     "description": "Para conciliar la comodidad del desarrollador con la responsabilidad de proteger la información de nuestros clientes, Cor. organiza su operación en torno a un enfoque local-first, un registro de seguridad mínimo y niveles de confidencialidad.",
     "items": [
       "Revisión de contratos, IA, información personal y operación de ISMS en colaboración con nuestro asesor legal",
-      "Preparación operativa del ISMS con el objetivo de obtener la certificación ISO/IEC 27001",
+      "Auditoría de etapa 2 de la ISO/IEC 27001 (ISMS) completada en octubre de 2026; registro de la certificación previsto hacia diciembre",
       "Uso selectivo de IA aprobada, cuentas de empresa y entornos aislados según el nivel de confidencialidad",
       "Macs proporcionados por la empresa, cifrado, MDM y controles ligeros de detección y respuesta"
     ],
@@ -176,7 +187,7 @@
     "title": "Avancemos el trabajo atascado con implementación.",
     "description": "Desde ordenar el reto hasta diseñar, construir y operar con IA: un socio de implementación desde Fukuoka te acompaña de punta a punta.",
     "primary": "Consultar diagnóstico de IA con datos confidenciales",
-    "secondary": "Ver Grift Team Beta"
+    "secondary": "Ver Grift"
   },
   "serviceCtas": {
     "heading": "Consúltanos según lo que necesites.",
@@ -190,7 +201,7 @@
         "intent": "local-llm-poc"
       },
       {
-        "label": "Ver Grift Team Beta",
+        "label": "Ver Grift (evidencias para recomendar)",
         "intent": "grift-team-beta",
         "external": "grift"
       }
@@ -293,17 +304,17 @@
         },
         {
           "challenge": "Presupuestos y preparación de la justificación interna",
-          "service": "Grift",
-          "description": "Obtén primero un presupuesto de referencia como base para tu solicitud de aprobación o tu presupuesto. El importe y el plazo definitivos se fijan tras confirmar los requisitos."
+          "service": "Desarrollo a medida con IA",
+          "description": "Elaboramos presupuestos que dejan claros los requisitos, los supuestos, los riesgos y el alcance del trabajo, y puedes consultarnos desde la preparación de una base para tu solicitud de aprobación o tu presupuesto. El importe y el plazo definitivos se fijan tras confirmar los requisitos."
         }
       ]
     },
     "cta": {
       "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes ver cómo Grift organiza el fundamento del presupuesto.",
+      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
       "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Ver cómo funciona Grift",
-      "note": "Los resultados de Grift son presupuestos de referencia previos a la consulta. El precio y el plazo formales se confirman tras revisar los requisitos."
+      "secondary": "Consultar PoC de LLM local / IA segura",
+      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
     }
   },
   "industryShigyo": {
@@ -363,10 +374,10 @@
     },
     "cta": {
       "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes ver cómo Grift organiza el fundamento del presupuesto.",
+      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
       "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Ver cómo funciona Grift",
-      "note": "Los resultados de Grift son presupuestos de referencia previos a la consulta. El precio y el plazo formales se confirman tras revisar los requisitos."
+      "secondary": "Consultar PoC de LLM local / IA segura",
+      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
     }
   },
   "industryConstruction": {
@@ -434,10 +445,10 @@
     },
     "cta": {
       "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes ver cómo Grift organiza el fundamento del presupuesto.",
+      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
       "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Ver cómo funciona Grift",
-      "note": "Los resultados de Grift son presupuestos de referencia previos a la consulta. El precio y el plazo formales se confirman tras revisar los requisitos."
+      "secondary": "Consultar PoC de LLM local / IA segura",
+      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
     }
   },
   "industryManufacturing": {
@@ -497,10 +508,10 @@
     },
     "cta": {
       "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes ver cómo Grift organiza el fundamento del presupuesto.",
+      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
       "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Ver cómo funciona Grift",
-      "note": "Los resultados de Grift son presupuestos de referencia previos a la consulta. El precio y el plazo formales se confirman tras revisar los requisitos."
+      "secondary": "Consultar PoC de LLM local / IA segura",
+      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
     }
   },
   "industryEducation": {
@@ -560,10 +571,10 @@
     },
     "cta": {
       "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes ver cómo Grift organiza el fundamento del presupuesto.",
+      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
       "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Ver cómo funciona Grift",
-      "note": "Los resultados de Grift son presupuestos de referencia previos a la consulta. El precio y el plazo formales se confirman tras revisar los requisitos."
+      "secondary": "Consultar PoC de LLM local / IA segura",
+      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
     }
   },
   "works": {
@@ -575,9 +586,9 @@
     "ndaNote": "* Bajo NDA: los nombres de cliente y de producto y algunas especificaciones se publican de forma abstracta.",
     "items": [
       {
-        "name": "«Grift», una herramienta de presupuestos con IA que convierte la justificación en un activo de la empresa",
+        "name": "«Grift», nuestro producto propio que extrae hechos verificables del historial de git",
         "tag": "Producto propio",
-        "description": "Un producto en fase de validación que no delega el presupuesto en la IA, sino que amplía la justificación de la que las personas pueden responsabilizarse. Reto: en el desarrollo a medida, el conocimiento sobre presupuestos depende de cada persona y su justificación se convierte fácilmente en una caja negra. Diseño e implementación: la IA organiza los datos anteriores y las premisas, y diseñamos e implementamos una UI/UX que facilita revisarlos y corregirlos. Operación: en validación con Team Beta, con el objetivo de convertir en un activo de la empresa el conocimiento que estaba en la cabeza de cada responsable y de operar los presupuestos con transparencia.",
+        "description": "El currículum se puede inflar. La evidencia, no. Reto: con el currículum y una entrevista apenas se transmite en qué consiste realmente el trabajo de un ingeniero, y métricas de actividad como el número de commits se inflan fácilmente con IA generativa. Diseño e implementación: desarrollamos una CLI que no usa IA (LLM) para medir y que extrae del historial de git hechos como la atribución del trabajo o los cambios en las pruebas hechos junto al código, y la publicamos como código abierto (licencia MIT). Operación: atendemos consultas sobre pruebas piloto (PoC) para que los equipos comerciales de agencias de selección y empresas de SES expliquen, con evidencias, por qué recomiendan a un candidato.",
         "href": "grift"
       },
       {
@@ -621,23 +632,27 @@
     ]
   },
   "services2026": {
-    "title": "Llevamos la IA —tecnología que piensa y actúa en lugar de las personas— al día a día de tu negocio, contigo.",
+    "title": "Cinco pilares para que la IA esté lista para usarse con tranquilidad.",
     "items": [
       {
-        "name": "Desarrollo a medida con IA",
-        "description": "Te acompañamos para construir sistemas en producción con IA generativa, RAG, agentes y procesamiento de imagen/voz, desde la definición de requisitos hasta la operación."
+        "name": "Grift | El currículum se puede inflar. La evidencia, no.",
+        "description": "Nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero. No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute. Los equipos comerciales de agencias de selección y empresas de SES pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato."
       },
       {
-        "name": "Asesoría y formación en IA",
-        "description": "Caminamos junto a tus equipos de dirección, desarrollo y operación en la estrategia de IA, la elección de herramientas, su adopción en el trabajo diario y el desarrollo de capacidades internas."
+        "name": "LLM local e IA segura | IA generativa sin sacar tus datos al exterior.",
+        "description": "Creamos entornos de IA capaces de manejar información difícil de entregar a una IA externa, como contratos o datos de clientes, incluido el diseño de normas internas, permisos y registros. Elegimos entre IA en la nube y LLM locales según el nivel de confidencialidad de la información."
       },
       {
-        "name": "LLM local · IA segura",
-        "description": "Diseñamos contigo una operación de IA acorde al nivel de confidencialidad de tus datos, sin sacar fuera información sensible cuando no es necesario."
+        "name": "IA en hardware | La IA como apoyo cuando ver resulta difícil.",
+        "description": "Junto con un socio de desarrollo, estamos desarrollando gafas inteligentes para personas con discapacidad visual. Nos preparamos para realizar una prueba de campo junto con los usuarios."
       },
       {
-        "name": "Grift",
-        "description": "Nuestra herramienta de IA propia que genera presupuestos de referencia explicables a partir del historial de GitHub y las tarifas del mercado."
+        "name": "Desarrollo de IA a medida y apoyo a la adopción | Que no se quede en una PoC.",
+        "description": "Te acompañamos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación. Con IA generativa, RAG, agentes de IA, procesamiento de imagen y voz, entre otros, te ayudamos a crear sistemas de IA que se integren en el trabajo diario, incluida la definición de políticas de uso de IA y normas internas."
+      },
+      {
+        "name": "Educación y comunidad | Más personas que crean IA en Fukuoka.",
+        "description": "A través de la docencia en una escuela de formación profesional (prevista a partir de abril de 2027), nuestra labor como socio educativo de una certificación internacional de programación y la preparación de una exposición de IA generativa en Fukuoka (en fase de planificación con el Engineer Cafe), queremos aumentar el número de personas que impulsan la IA en Kyushu."
       }
     ]
   },
@@ -754,7 +769,7 @@
         "consultationTypePlaceholder": "Seleccione el tipo de consulta",
         "consultationOptions": [
           "Diagnóstico de uso de IA con datos confidenciales",
-          "Grift Team Beta",
+          "Grift",
           "LLM local / IA segura",
           "Desarrollo por contrato con IA / soporte de adopción",
           "Formación en IA / solicitud de ponente",
@@ -823,9 +838,10 @@
       "contact": "Contacto",
       "privacy": "Privacidad",
       "security": "Seguridad",
-      "legal": "Aviso Legal"
+      "legal": "Aviso Legal",
+      "company": "Perfil de la empresa"
     },
-    "description": "Cor.inc tiene como misión 'Abrir el futuro a través de la co-creación en lugar de la competencia, y realizar una sociedad feliz', y se dedica a la planificación, definición de requisitos, desarrollo y operación de soluciones de IA, así como a las operaciones de contabilidad y finanzas asociadas. Valoramos la 'co-creación' más que la 'competencia', y aprovechamos la 'sensación de velocidad' que es una fortaleza de las startups para proporcionar servicios llenos de creatividad e innovación.",
+    "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región.",
     "copyright": "Cor.inc"
   },
   "features": {
@@ -864,12 +880,12 @@
     ]
   },
   "header": {
-    "mobileMenuDescription": "Cor.inc tiene como misión \"pionear el futuro a través de la co-creación en lugar de la competencia, realizando una sociedad feliz\". Nos dedicamos a la planificación, definición de requisitos, desarrollo y operación de soluciones de IA, así como a las operaciones de contabilidad y finanzas asociadas. Valoramos la \"co-creación\" sobre la \"competencia\" y aprovechamos la fortaleza de las startups de \"sentido de velocidad\" para proporcionar servicios llenos de creatividad e innovación."
+    "mobileMenuDescription": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nos centramos en LLM locales e IA segura, nuestro producto propio «Grift» y el desarrollo de IA a medida y el apoyo a su adopción; también trabajamos en IA en hardware y en crear espacios de aprendizaje y comunidad en la región."
   },
   "aboutPage": {
     "kicker": "Sobre Cor.Inc.",
     "title": "Persiguiendo el «Kyousou».",
-    "lead": "Cor. no es una empresa donde todos deban entenderse a la fuerza. Es una empresa donde personas con sus propios valores se reúnen, no ocultan sus diferencias, buscan el crecimiento mutuo y dan forma con IA y tecnología a los desafíos del terreno.",
+    "lead": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nos centramos en LLM locales que no sacan los datos confidenciales al exterior, en «Grift», nuestro producto propio para generar evidencias verificables, y en el desarrollo a medida desde el diseño hasta la operación; también impulsamos espacios de aprendizaje y comunidad en la región. Escuchamos de cerca la voz real de quienes «quieren hacerlo, pero no logran avanzar» y, sin convertir la IA en un fin en sí mismo, ofrecemos la tecnología como medio para resolver problemas reales del negocio.",
     "kyousouTitle": "Qué es el «Kyousou».",
     "kyousouLead": "La IA y los sistemas solo generan valor cuando se usan en el terreno. Por eso no somos simples tomadores de pedidos que construimos lo que nos dicen. Encaramos los desafíos junto a nuestros clientes en pie de igualdad, y cuando la sistematización no es el mejor camino, sugerimos con honestidad que puede ser mejor no construir todavía. Valoramos el espíritu del «Kyousou»: co-crear juntos la resolución esencial de los problemas.",
     "kyousou": [
@@ -896,7 +912,7 @@
     ],
     "kyousouAxis": "El «Kyousou» es la actitud de implementación que convierte las diferencias en resultados.",
     "whyFocusTitle": "Para superar los muros que estancan el trabajo real.",
-    "whyFocusBody": "Información confidencial difícil de enviar a una IA externa, y los supuestos invisibles detrás de presupuestos que dependen de individuos. Los lugares de trabajo reales tienen muros que la IA en la nube genérica por sí sola no puede resolver. Para despejar esta incertidumbre y esa caja negra, nos enfocamos en una infraestructura de IA segura diseñada desde cómo se tratan los datos, y en Grift, que convierte el fundamento de los presupuestos en un activo de la empresa.",
+    "whyFocusBody": "Información confidencial difícil de entregar a una IA externa, y el contenido real del trabajo de un ingeniero, que no se aprecia solo con el currículum o una entrevista. Los lugares de trabajo reales tienen muros que la IA en la nube genérica por sí sola no puede resolver. Para despejar esta incertidumbre práctica y esas cajas negras, nos enfocamos en una infraestructura de IA segura diseñada desde cómo se tratan los datos, y en Grift, que extrae hechos verificables del historial de git.",
     "mvvTitle": "Mission / Vision / Values",
     "mission": "A través del «Kyousou», liberar el potencial de quienes crean y de sus negocios.",
     "vision": "Construir una sociedad donde las diferencias de valores no lleven a la división, sino a una mejor implementación.",
@@ -923,7 +939,7 @@
       }
     ],
     "founderTitle": "Historia del fundador",
-    "founderLead": "El «Kyousou» de Cor. nació de la experiencia de nuestro fundador, Kousuke Terada.",
+    "founderLead": "La experiencia formativa de nuestro fundador, Kousuke Terada, como músico le dejó una fuerte conciencia de «lo que las palabras por sí solas no logran transmitir». Más tarde, trabajando en ventas y en desarrollo, se dio cuenta de que para resolver problemas de negocio complejos primero hay que ponerlos en palabras y ordenarlos, y de que nuestro papel es llevar lo ordenado hasta la implementación y la operación. Esta forma de pensar conecta de manera natural con nuestras actividades actuales: Grift, que genera evidencias verificables; LLM locales adaptados al trabajo real; el desarrollo de IA a medida, y la creación de espacios de aprendizaje y comunidad en la región.",
     "founderPlaceholder": "Los detalles de la historia del fundador están en preparación.",
     "teamTitle": "Conoce a nuestro equipo",
     "teamBody": "Desde la articulación de desafíos hasta el diseño e implementación de infraestructura de IA segura y la construcción de marcos operativos. Miembros con experiencia distinta se enfrentan con honestidad a las inquietudes de clientes que no están familiarizados con la ingeniería, acompañándolos de principio a fin.",
@@ -957,7 +973,7 @@
     "questions": [
       {
         "question": "¿Qué tipo de consultas podemos realizar a Cor.Inc.?",
-        "answer": "Nos enfocamos en infraestructura de IA para el manejo seguro de datos, LLM Local/IA Segura, desarrollo de IA a medida, soporte de implementación de IA y nuestra herramienta propia de soporte de estimación de IA 'Grift'. Evaluamos cómo manejar información confidencial —como contratos, minutas, presupuestos, datos de clientes y conocimiento interno— diseñando e implementando sistemas de IA prácticos para su negocio."
+        "answer": "Nos centramos en LLM locales e IA segura, nuestro producto propio «Grift» y el desarrollo de IA a medida y el apoyo a su adopción, y puede consultarnos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación. También estamos desarrollando IA en hardware (gafas inteligentes) e impulsando iniciativas en educación y en la comunidad local."
       },
       {
         "question": "¿Cuál es el primer paso para introducir la IA?",
@@ -973,15 +989,15 @@
       },
       {
         "question": "¿Cuál es la duración y el costo de una PoC de LLM Local o Infraestructura de IA?",
-        "answer": "Como guía general, una PoC de LLM Local/Infraestructura de IA toma alrededor de 3 meses, desde ¥3M de yenes. Esto incluye la organización del flujo de trabajo, el diseño de la gestión de datos, la configuración del entorno de prueba, la definición de métricas de evaluación y la evaluación de viabilidad de producción post-PoC."
+        "answer": "Varía según el problema que quiera resolver y el alcance, pero como referencia:\n• Evaluación de IA para Datos Confidenciales: unos ¥100k - ¥300k\n• PoC de LLM Local / Infraestructura de IA: desde ¥3M por 3 meses\n• Construcción en producción y operación/mantenimiento: presupuesto individual según los requisitos\nPresupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo."
       },
       {
         "question": "¿Cómo se manejan la seguridad y la privacidad?",
-        "answer": "La implementación de la IA requiere un diseño estricto de los datos de entrada, derechos de acceso, registros, aprobaciones humanas y reglas de eliminación. Organizamos dónde se procesa la información, quién la revisa y cómo se almacenan los registros. Actualmente estamos preparando nuestras operaciones de ISMS con el objetivo de obtener la certificación ISO/IEC 27001. *Nunca representamos una certificación no adquirida como completada."
+        "answer": "Incorporamos al diseño los requisitos prácticos: gestión de los datos de entrada, derechos de acceso, registro de operaciones, flujos de aprobación humana, reglas de eliminación y la asignación de responsabilidades operativas. Además, internamente operamos un ISMS y en octubre de 2026 completamos la auditoría de etapa 2 de la ISO/IEC 27001. Prevemos el registro de la certificación hacia diciembre de 2026."
       },
       {
         "question": "¿Qué es Grift?",
-        "answer": "Grift es una herramienta de soporte de estimación de IA que visualiza las justificaciones de los presupuestos para desarrollos a medida. En lugar de delegar todo a la IA, su objetivo es mejorar las bases verificables a partir de proyectos pasados, historiales de GitHub, riesgos técnicos y puntos de referencia del mercado para que los humanos puedan explicar los presupuestos de manera responsable."
+        "answer": "Es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). No asigna puntuaciones ni clasificaciones y no utiliza IA (LLM) para medir, por lo que obtiene el mismo resultado sin importar quién lo ejecute, y quien recibe el informe puede comprobarlo. La CLI se publica de forma gratuita como software de código abierto con licencia MIT, y atendemos consultas sobre pruebas piloto (PoC) para que los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) puedan explicar, con evidencias, por qué recomiendan a un candidato."
       }
     ]
   },
@@ -1112,33 +1128,33 @@
     },
     "industryMedical": {
       "title": "Acompañamiento con IA para sanidad | Cor.Inc.",
-      "description": "Los desafíos del ámbito sanitario——uso de datos internos, atención al paciente, seguridad de la información, estrategia de IA, orden de presupuestos——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA, LLM local y Grift."
+      "description": "Los desafíos del ámbito sanitario——uso de datos internos, atención al paciente, seguridad de la información, estrategia de IA, orden de presupuestos——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA y LLM local."
     },
     "industryShigyo": {
       "title": "Acompañamiento con IA para servicios profesionales | Cor.Inc.",
-      "description": "Los desafíos de los servicios profesionales——revisión de contratos, trámites y registros, gestión de plazos, solicitud de subvenciones——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA, LLM local y Grift."
+      "description": "Los desafíos de los servicios profesionales——revisión de contratos, trámites y registros, gestión de plazos, solicitud de subvenciones——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA y LLM local."
     },
     "industryConstruction": {
       "title": "Acompañamiento con IA para construcción | Cor.Inc.",
-      "description": "Los desafíos de las obras——gestión laboral, cambios de diseño, verificación de seguridad, transmisión del saber hacer——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA, LLM local y Grift."
+      "description": "Los desafíos de las obras——gestión laboral, cambios de diseño, verificación de seguridad, transmisión del saber hacer——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA y LLM local."
     },
     "industryManufacturing": {
       "title": "Acompañamiento con IA para manufactura | Cor.Inc.",
-      "description": "Los desafíos de la fábrica——inspección visual, transmisión del saber hacer, mantenimiento de equipos, gestión de inventario——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA, LLM local y Grift."
+      "description": "Los desafíos de la fábrica——inspección visual, transmisión del saber hacer, mantenimiento de equipos, gestión de inventario——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA y LLM local."
     },
     "industryEducation": {
       "title": "Acompañamiento con IA para educación | Cor.Inc.",
-      "description": "Los desafíos del ámbito educativo——tareas de exámenes, comunicación con familias, informes y encuestas, gestión de listas con TIC——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA, LLM local y Grift."
+      "description": "Los desafíos del ámbito educativo——tareas de exámenes, comunicación con familias, informes y encuestas, gestión de listas con TIC——Cor. avanza contigo. Te acompañamos con desarrollo a medida con IA, asesoría en IA y LLM local."
     },
     "home": {
-      "title": "Cor.Inc. | Implementación de IA Práctica, LLM Local y Grift",
-      "description": "Cor.Inc. construye sistemas de IA operativos y adaptados a su negocio, basándose en IA para datos confidenciales, LLM Locales y Grift, e integrando diseños clave como límites de entrada, permisos, registros y aprobación humana.",
-      "ogTitle": "Cor.Inc. | Implementación de IA Práctica, LLM Local y Grift",
-      "ogDescription": "Cor.Inc. construye sistemas de IA operativos y adaptados a su negocio, basándose en IA para datos confidenciales, LLM Locales y Grift, e integrando diseños clave como límites de entrada, permisos, registros y aprobación humana."
+      "title": "Cor.Inc. | Empresa de implementación de IA en Fukuoka (LLM local, Grift, desarrollo de IA a medida)",
+      "description": "Cor.Inc., empresa de implementación de IA en Fukuoka. Nos centramos en LLM locales e IA segura que no sacan los datos confidenciales al exterior, en «Grift», nuestro producto propio para generar evidencias verificables, y en el desarrollo de IA a medida desde el diseño hasta la operación; también impulsamos la IA en hardware e iniciativas en educación y en la comunidad local. Cuando conviene, proponemos incluso «aún no construirlo».",
+      "ogTitle": "IA para el día a día, lista para usar con tranquilidad. | Cor.Inc.",
+      "ogDescription": "Empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región. Puedes consultarnos aunque aún no tengas definidos los requisitos de IA o del sistema."
     },
     "about": {
       "title": "Acerca de · Cor.inc",
-      "description": "Conoce más sobre nuestra historia, valores, misión y más. Somos un grupo de personas que comparten los mismos valores."
+      "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka que te acompaña de principio a fin —desde ordenar el problema hasta el diseño, la implementación y la operación—, centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida. Conoce nuestra actitud «Kyousou» y nuestra capacidad de implementación."
     },
     "contact": {
       "title": "Contacto · Cor.inc",
@@ -1154,7 +1170,7 @@
     },
     "security": {
       "title": "Seguridad | Cor.Inc.",
-      "description": "Sobre la seguridad de la información de Cor. Inc., su hoja de ruta hacia la ISMS y un entorno de desarrollo de IA local-first con niveles de confidencialidad."
+      "description": "La política de seguridad de Cor.Inc. como socio que trabaja con IA para datos confidenciales y LLM locales: diseño de los datos de entrada y los permisos, procesos de aprobación humana, reglas de conservación y eliminación, y la auditoría de etapa 2 de la ISO/IEC 27001 (ISMS) ya completada, con el registro de la certificación previsto."
     },
     "news": {
       "title": "Noticias | Cor.Inc.",
@@ -1162,11 +1178,15 @@
     },
     "works": {
       "title": "Proyectos | Cor.Inc.",
-      "description": "Proyectos de Cor.Inc.: casos en los que estructuramos, diseñamos, implementamos y operamos soluciones para los retos de negocio de nuestros clientes, con foco en IA con datos confidenciales, LLM locales y Grift."
+      "description": "Proyectos de Cor.Inc.: casos en los que resolvimos los retos de negocio de nuestros clientes a lo largo del problema, el diseño, la implementación y la operación. Con foco en LLM locales, desarrollo de IA a medida y Grift, te acompañamos desde el diseño de la información previo al uso de la IA."
     },
     "press": {
       "title": "Notas de prensa | Cor.Inc.",
       "description": "Notas de prensa oficiales de Cor.Inc."
+    },
+    "company": {
+      "title": "Perfil de la empresa | Cor.Inc.",
+      "description": "Perfil de Cor.Inc. (ciudad de Fukuoka): dirección, fundación, representante, actividades (LLM local e IA segura, Grift, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, educación y comunidad local), nuestras iniciativas de seguridad de la información y nuestra selección entre las «100 empresas representativas de Fukuoka»."
     }
   },
   "privacy": {
@@ -1412,7 +1432,7 @@
     "statusTitle": "Desarrollo del marco",
     "status": {
       "legal": "Desde junio de 2026, en colaboración con nuestro asesor legal, estamos desarrollando un marco de revisión legal que abarca contratos, información personal, uso de IA y operación de la seguridad de la información.",
-      "isms": "Cor. Inc. avanza en la preparación operativa de su ISMS (Sistema de Gestión de Seguridad de la Información), con el objetivo de obtener la certificación ISO/IEC 27001."
+      "isms": "Operamos un Sistema de Gestión de Seguridad de la Información (ISMS) y estamos en proceso de auditoría de certificación según la norma internacional ISO/IEC 27001. En octubre de 2026 completamos la auditoría de etapa 2 y prevemos el registro de la certificación hacia diciembre de 2026. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes."
     },
     "aiTitle": "Política de uso de IA",
     "aiDescription": "Cor. aprovecha activamente las herramientas de IA para su trabajo. Al mismo tiempo, al manejar datos confidenciales de clientes, información personal, código fuente, datos de entrenamiento y similares, utilizamos herramientas de IA con contratos y configuraciones que impiden su uso para entrenamiento, cuentas de empresa o entornos aprobados. Los resultados de la IA son verificados por personas y se utilizan solo tras confirmar derechos, exactitud y seguridad.",
@@ -1430,8 +1450,8 @@
       },
       {
         "area": "ISMS",
-        "effort": "Con el objetivo de la certificación ISO/IEC 27001, desarrollo de gestión de riesgos, formación, políticas y marco de auditoría",
-        "state": "En desarrollo"
+        "effort": "Gestión de riesgos, formación, políticas y auditorías internas en funcionamiento conforme a la ISO/IEC 27001",
+        "state": "Auditoría de etapa 2 completada (octubre de 2026) · registro previsto hacia diciembre"
       },
       {
         "area": "Gestión de dispositivos",
@@ -1460,7 +1480,7 @@
     "privacySuffix": ".",
     "privacyLead": "* Para los detalles legales sobre el tratamiento de la información personal y los datos de clientes, consulta nuestra Política de privacidad.",
     "governanceTitle": "Desarrollo del marco",
-    "governanceDescription": "Cor. Inc. avanza en la preparación operativa de su ISMS (Sistema de Gestión de Seguridad de la Información), con el objetivo de obtener la certificación ISO/IEC 27001.",
+    "governanceDescription": "Operamos un Sistema de Gestión de Seguridad de la Información (ISMS) y estamos en proceso de auditoría de certificación según la norma internacional ISO/IEC 27001. En octubre de 2026 completamos la auditoría de etapa 2 y prevemos el registro de la certificación hacia diciembre de 2026. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes.",
     "ctas": {
       "primary": "Consulta gratuita",
       "secondary": "Contáctanos",
@@ -1512,7 +1532,7 @@
       "tech-culture": "Cultura tecnológica"
     },
     "ctas": {
-      "grift": "Preguntar por Grift Team Beta",
+      "grift": "Preguntar por una prueba piloto de Grift",
       "confidential-ai": "Consultar el diagnóstico de IA con datos confidenciales",
       "local-llm": "Consultar un PoC de LLM local / plataforma de IA",
       "ai-contract": "Consultar desarrollo de IA por contrato",
@@ -1520,5 +1540,104 @@
       "techCultureContact": "Contacto"
     },
     "titleSuffix": " | Cor.Inc."
+  },
+  "regionalTrust": {
+    "eyebrow": "Fukuoka / Junto a la comunidad",
+    "title": "Desde Fukuoka, más personas y espacios que crean IA.",
+    "description": "Con sede en Fukuoka, trabajamos con instalaciones locales y espacios de aprendizaje para que la IA se pueda usar en el día a día.",
+    "fukuoka100Title": "100 empresas representativas de Fukuoka 2026-2027",
+    "fukuoka100Body": "Fuimos seleccionados entre las «100 empresas representativas de Fukuoka 2026-2027» de Made In Local y aparecemos en su página especial.",
+    "engineerCafeTitle": "Desarrollo y operación en código abierto de la recepción con IA multilingüe del Engineer Cafe",
+    "engineerCafeBody": "Para el Engineer Cafe de la ciudad de Fukuoka, desarrollamos Engineer Cafe Navigator, un sistema de recepción con IA de voz multilingüe, y lo publicamos como código abierto (en funcionamiento). También estamos planificando con el Engineer Cafe una exposición de IA generativa en Fukuoka.",
+    "engineerCafeLink": "Leer el caso",
+    "engineerCafeLogoAlt": "Engineer Cafe",
+    "companyLink": "Ver el perfil de la empresa"
+  },
+  "companyPage": {
+    "kicker": "Company",
+    "title": "Perfil de la empresa",
+    "lead": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nos centramos en LLM locales que no sacan los datos confidenciales al exterior, en «Grift», nuestro producto propio para generar evidencias verificables, y en el desarrollo a medida desde el diseño hasta la operación; también impulsamos espacios de aprendizaje y comunidad en la región.",
+    "asOf": "A 20 de octubre de 2026",
+    "profileTitle": "Información básica",
+    "profile": [
+      {
+        "label": "Razón social",
+        "value": "Cor.Inc. (en japonés: Cor.株式会社)"
+      },
+      {
+        "label": "Fundación",
+        "value": "Diciembre de 2023"
+      },
+      {
+        "label": "Representante",
+        "value": "Director Representante Kousuke Terada"
+      },
+      {
+        "label": "Dirección",
+        "value": "Tenjin Pine Crest 719, 2-3-10 Tenjin, Chuo-ku, Fukuoka 810-0001, Japón (〒810-0001 福岡県福岡市中央区天神2丁目3-10 天神パインクレスト719号)"
+      },
+      {
+        "label": "Actividad",
+        "value": "Planificación, definición de requisitos, desarrollo y operación de soluciones de IA (LLM local e IA segura, nuestro producto propio «Grift», IA en hardware, desarrollo de IA a medida y apoyo a la adopción, e iniciativas en educación y en la comunidad local)"
+      },
+      {
+        "label": "Cobertura",
+        "value": "Con sede en Fukuoka y cobertura en todo Japón (también es posible consultarnos en línea)"
+      },
+      {
+        "label": "Contacto",
+        "value": "Contáctenos a través de nuestra página de contacto (recepción con IA «Cloudia»)."
+      }
+    ],
+    "businessTitle": "Pilares del negocio",
+    "businessLead": "Los cinco pilares persiguen un mismo fin: «IA para el día a día, lista para usar con tranquilidad». Los presentamos junto con su grado de avance.",
+    "business": [
+      {
+        "name": "Grift",
+        "tagline": "El currículum se puede inflar. La evidencia, no.",
+        "description": "Nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute.",
+        "status": "La CLI está disponible gratis con licencia MIT. Estamos preparando pruebas piloto (PoC) para agencias de selección y empresas de SES (cesión de ingenieros)."
+      },
+      {
+        "name": "LLM local e IA segura",
+        "tagline": "IA generativa sin sacar tus datos al exterior.",
+        "description": "Creamos entornos de IA capaces de manejar información difícil de entregar a una IA externa, como contratos o datos de clientes, incluido el diseño de normas internas, permisos y registros.",
+        "status": "Ofrecemos la Evaluación de IA para Datos Confidenciales y PoC de LLM local / infraestructura de IA. También seguimos validando internamente nuestra infraestructura de LLM local."
+      },
+      {
+        "name": "IA en hardware",
+        "tagline": "La IA como apoyo cuando ver resulta difícil.",
+        "description": "Junto con un socio de desarrollo, estamos desarrollando gafas inteligentes para personas con discapacidad visual.",
+        "status": "Nos preparamos para realizar una prueba de campo junto con los usuarios."
+      },
+      {
+        "name": "Desarrollo de IA a medida y apoyo a la adopción",
+        "tagline": "Que no se quede en una PoC.",
+        "description": "Te acompañamos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación.",
+        "status": "Damos soporte continuo a desarrollos con IA generativa, RAG, agentes de IA y más, desde el diseño hasta la operación."
+      },
+      {
+        "name": "Educación y comunidad",
+        "tagline": "Más personas que crean IA en Fukuoka.",
+        "description": "A través de la docencia en una escuela de formación profesional, nuestra labor como socio educativo de una certificación internacional de programación y la preparación de una exposición de IA generativa en Fukuoka, queremos aumentar el número de personas que impulsan la IA en Kyushu.",
+        "status": "El acuerdo de socio educativo ya está firmado. La docencia está prevista a partir de abril de 2027 y la exposición se está planificando con el Engineer Cafe."
+      }
+    ],
+    "securityTitle": "Seguridad de la información",
+    "securityBody": "En octubre de 2026 completamos la auditoría de etapa 2 de la ISO/IEC 27001 (ISMS), la norma internacional de seguridad de la información. Prevemos el registro de la certificación hacia diciembre de 2026.",
+    "securityLink": "Ver nuestra política de seguridad",
+    "recognitionTitle": "Reconocimientos y vínculos con la comunidad",
+    "fukuoka100Body": "Fuimos seleccionados entre las «100 empresas representativas de Fukuoka 2026-2027» de Made In Local.",
+    "engineerCafeBody": "Para el Engineer Cafe de la ciudad de Fukuoka, desarrollamos Engineer Cafe Navigator, un sistema de recepción con IA de voz multilingüe, y lo publicamos como código abierto (en funcionamiento).",
+    "engineerCafeLink": "Leer el caso",
+    "linksTitle": "Páginas relacionadas",
+    "links": {
+      "about": "Sobre Cor.Inc.",
+      "works": "Proyectos y casos",
+      "security": "Política de seguridad",
+      "news": "Noticias",
+      "legal": "Aviso Legal (Ley de Transacciones Comerciales Específicas)"
+    },
+    "cta": "Contacto"
   }
 }

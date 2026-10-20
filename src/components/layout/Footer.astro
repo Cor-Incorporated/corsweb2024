@@ -25,6 +25,12 @@ const bottomLinks = [
         href: getLocalizedUrl('/about', currentLocale),
         isExternal: false,
       },
+      // 会社概要（所在地・設立・代表者・事業の柱）。全言語にページがある。
+      {
+        name: t.footer.links.company,
+        href: getLocalizedUrl('/company', currentLocale),
+        isExternal: false,
+      },
       // /works と /news は [lang] ルートで全言語に存在する（#313）。
       {
         name: t.nav.works,

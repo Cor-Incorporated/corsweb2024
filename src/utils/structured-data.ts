@@ -53,14 +53,17 @@ export function buildOrganizationJsonLd(locale: Locale): JsonLd {
       url: `${SITE_ORIGIN}${getLocalizedUrl('/contact/', locale)}`,
       availableLanguage: ['Japanese', 'English'],
     },
+    // 所在地・設立・選出は会社概要ページ（/company）に表示している事実（ADR-0017・ADR-0022）
     address: {
       '@type': 'PostalAddress',
-      streetAddress: '福岡県福岡市中央区天神',
+      streetAddress: '中央区天神2丁目3-10 天神パインクレスト719号',
       addressLocality: '福岡市',
       addressRegion: '福岡県',
       postalCode: '810-0001',
       addressCountry: 'JP',
     },
+    foundingDate: '2023-12',
+    award: '福岡を代表する企業100選 2026-2027（Made In Local）',
     sameAs: [...ORGANIZATION_SAME_AS],
     // 代表者の事実は config/author.ts が正本（記事ページの Person ノードと同じ @id）
     founder: {
