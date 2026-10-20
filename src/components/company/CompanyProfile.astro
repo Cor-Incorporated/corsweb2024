@@ -3,7 +3,7 @@
 // 会社の基本情報は回答エンジン（AIO）が引用しやすいよう dl の表で出す。表に出した事実
 // （設立・所在地・選出）は Organization JSON-LD（utils/structured-data.ts）にも載せている。
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
-import { ENGINEER_CAFE_CASE_PATH } from '../../config/site';
+import { ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
@@ -92,12 +92,26 @@ const relatedLinks = [
       {c.recognitionTitle}
     </h2>
     <ul class="mt-6 flex flex-col gap-4">
-      <li class="flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:flex-row sm:items-center">
-        {/* 掲載条件（クリックで特設ページへ・掲載期限）はコンポーネント側で担保する。 */}
-        <Fukuoka100Emblem variant="portrait" imgClass="h-24 w-auto" class="shrink-0 self-start" />
-        <p class="text-base leading-relaxed">{c.fukuoka100Body}</p>
+      {/* カード全体をクリックできるように、短いリンク（見出し）の ::after をカードいっぱいに広げる。
+          エンブレム自体のリンク（掲載条件。行き先は同じ特設ページ）は前面に置く。 */}
+      <li class="group relative flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10 sm:flex-row sm:items-center">
+        <Fukuoka100Emblem variant="portrait" imgClass="h-24 w-auto" class="relative z-10 shrink-0 self-start" />
+        <div class="flex flex-col gap-2">
+          <h3 class="flex items-start justify-between gap-2 text-base font-medium">
+            <a
+              href={FUKUOKA100_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+            >
+              {t.regionalTrust.fukuoka100Title}
+            </a>
+            <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">↗</span>
+          </h3>
+          <p class="text-base leading-relaxed">{c.fukuoka100Body}</p>
+        </div>
       </li>
-      <li class="flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 sm:flex-row sm:items-center">
+      <li class="group relative flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10 sm:flex-row sm:items-center">
         <span class="flex size-24 shrink-0 items-center justify-center self-start rounded-2xl bg-white p-2">
           <img
             src="/assets/partners/engineer-cafe-logo.png"
@@ -111,13 +125,14 @@ const relatedLinks = [
         </span>
         <div class="flex flex-col gap-2">
           <p class="text-base leading-relaxed">{c.engineerCafeBody}</p>
-          <p class="text-sm">
+          <p class="flex items-center gap-1 text-sm">
             <a
               href={getLocalizedUrl(ENGINEER_CAFE_CASE_PATH, currentLocale)}
-              class="font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+              class="font-medium underline underline-offset-4 group-hover:no-underline after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
             >
               {c.engineerCafeLink}
             </a>
+            <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">→</span>
           </p>
         </div>
       </li>

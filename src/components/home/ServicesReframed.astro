@@ -53,7 +53,7 @@ const SERVICE_HREFS: (string | null)[] = [
                     )}
                   </h3>
                   {href && (
-                    <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-950/40 opacity-0 transition group-hover:opacity-100 dark:text-primary-200/40">↗</span>
+                    <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">{isExternal ? '↗' : '→'}</span>
                   )}
                 </div>
                 <p class="text-base text-primary-950/70 dark:text-primary-200/70">

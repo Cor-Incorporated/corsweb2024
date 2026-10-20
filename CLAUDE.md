@@ -95,7 +95,8 @@ and the ADR disagree.
     the works list
   - Grift is an own product that extracts verifiable facts from engineers'
     git history (OSS CLI `grift-cli`, MIT; trial for recruiting/SES agencies;
-    no scores or rankings). It is no longer an estimation tool (ADR-0022)
+    no scores or rankings). It is no longer an estimation tool (ADR-0022).
+    Call the agency trial 「テスト導入（PoC）」, never 「試行」
   - The business has five pillars (Grift / local LLM & secure AI / hardware AI /
     AI contract development & adoption support / education & community); keep
     their order and wording in sync across `services2026`, `companyPage`, FAQ,
