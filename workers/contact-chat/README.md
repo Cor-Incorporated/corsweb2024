@@ -89,7 +89,8 @@ npx wrangler deploy --env=""
 検証:
 ```bash
 npm run typecheck   # tsc --noEmit
-npm run test        # vitest run
+npm run test        # vitest run（src/**/*.test.ts。vitest.config.ts）
+npm run knowledge:test  # node --test（scripts/sync-public-knowledge.test.mjs は node:test で書かれている）
 npx wrangler deploy --dry-run
 ```
 
