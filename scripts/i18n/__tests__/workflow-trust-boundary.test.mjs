@@ -55,7 +55,8 @@ const WRITE_JOB_ALLOWLIST = {
     ],
     uses: ['actions/checkout', 'actions/download-artifact'],
   },
-  'dispatch-check': { commands: ['echo', 'gh', 'set'], uses: [] },
+  // [ は起動に失敗したワークフローがあったかを見るため（2026-10-23、必須チェックも起動するようにした）
+  'dispatch-check': { commands: ['[', 'echo', 'gh', 'set'], uses: [] },
 };
 const hasWriteToken = (job) =>
   Object.values(job.permissions ?? {}).includes('write') ||
