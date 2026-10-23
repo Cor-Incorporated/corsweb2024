@@ -1,41 +1,43 @@
 ---
-title: "Cómo configurar Codex MCP para usar Claude Desktop"
-description: "Claude Code MCP dejó de funcionar, así que introduje el nuevo Codex CLI MCP. Un registro de solución de problemas de cómo salí del infierno de configuración lleno de errores con la ayuda de Warp AI."
+title: "Cómo configurar Codex MCP para usarlo en Claude Desktop"
+description: "Dado que Claude Code MCP dejó de funcionar, introduje el nuevo MCP de Codex CLI. Un registro real de resolución de problemas, desde el calvario de la configuración plagada de errores hasta la solución gracias a los consejos de Warp AI."
+summary: "El motivo por el cual Codex MCP no respondía desde Claude Desktop era que la configuración de env era insuficiente y no se transmitía la ruta al comando codex. Funcionó al cambiar args a mcp-server y especificar el PATH en env."
 pubDate: 2025-10-16
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "lab"
 tags: ["MCP", "Claude Desktop", "Codex CLI", "トラブルシューティング", "Warp AI", "ChatGPT"]
 image:
   url: "/images/blog/スクリーンショット-2025-10-16-16.52.24.avif"
-  alt: "Codex MCPの設定方法"
+  alt: "Método de configuración de Codex MCP"
 lang: "es"
 featured: true
-translationSourceHash: "1bcd5dea86c80ec5be559d88239bced030c915cf654507f76872a672295482fa"
-translatedAt: "2026-09-28T06:09:16.022Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "a889e72c1e2a84040a81c77befce353b5407fafad1b74947813303560fd0b954"
+translatedAt: "2026-10-23T06:24:43.557Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-Claude Desktop ya no puede usar Claude Code MCP. La desesperación de perder a mi fiel compañero de desarrollo impulsado por IA. Sin embargo, no hay tiempo para lamentarse. Como alternativa, decidí implementar el MCP de Codex CLI, que ha estado en boca de todos.
+Claude Code MCP dejó de funcionar en Claude Desktop. Desesperé al perder a ese compañero de confianza para el desarrollo impulsado por IA. Aun así, no había tiempo para lamentarse. Decidí implementar en su lugar el MCP del popular Codex CLI.
 
-A partir de ahí, comenzó el infierno de la configuración. Y finalmente, Warp AI apareció como un salvador. Hoy, este es mi registro.
+A partir de ahí comenzó un infierno de configuración, hasta que al final fui rescatado por mi salvador: Warp AI. Esta es la crónica de lo sucedido.
 
-## El Comienzo: La Desaparición de Claude Code MCP
+## El detonante: la desaparición de Claude Code MCP
 
-Un día, de repente, Claude Code MCP dejó de funcionar en Claude Desktop. La útil función que analizaba mi directorio de proyectos desapareció. No hubo mensajes de error, simplemente dejó de funcionar en silencio.
+Un día, de repente, Claude Code MCP dejó de funcionar en Claude Desktop. La práctica función que analizaba los directorios de los proyectos desapareció. Dejó de funcionar sin mostrar ningún mensaje de error.
 
 ![Claude Code MCP dejó de funcionar](/images/blog/スクリーンショット-2025-10-16-16.56.23.avif)
 
-"No hay remedio, voy a cambiar a una nueva herramienta."
+«No hay más remedio, tendré que cambiar a una nueva herramienta».
 
-¿Por qué no usar OpenAI Codex CLI a través de MCP, que ha sido un tema candente últimamente? Hay un excelente artículo de Tmasuyama en Zenn. Debería ser fácil seguir esto.
+¿Por qué no usar el tan comentado OpenAI Codex CLI a través de MCP? Además, había un artículo excelente de Tomada en Zenn. Basándome en él, seguro que sería fácil.
 
 https://zenn.dev/tmasuyama1114/articles/cdfd4562bdce78
 
 Hubo un tiempo en el que yo también pensaba así.
 
-## Primera Prueba: Los Argumentos son Diferentes
+## La primera prueba: los args son diferentes
 
-Agregué la configuración a `claude_desktop_config.json` según el artículo:
+Añadí la configuración a `claude_desktop_config.json` siguiendo el artículo.
 
 ```json
 {
@@ -51,9 +53,9 @@ Agregué la configuración a `claude_desktop_config.json` según el artículo:
 
 Reinicié Claude Desktop. Apareció un error.
 
-"¿Eh? ¿Si lo hice como decía el artículo?"
+«¿Cómo? ¿Si lo hice exactamente como decía el artículo?».
 
-Cuando lo comprobé en la terminal, el comando de Codex CLI era `mcp-server`:
+Al comprobarlo en la terminal, el comando de Codex CLI era `mcp-server`.
 
 ```bash
 $ codex mcp-server --help
@@ -62,7 +64,7 @@ $ codex mcp-server --help
 Usage: codex mcp-server [OPTIONS]
 ```
 
-Ya veo, el artículo y el comando real son diferentes. Tal vez cambió debido a una actualización de versión. Corrijámoslo:
+Ya veo, el comando real era distinto al del artículo. Quizás cambió con una actualización de versión. Lo corregí de la siguiente manera:
 
 ```json
 {
@@ -75,21 +77,21 @@ Ya veo, el artículo y el comando real son diferentes. Tal vez cambió debido a 
 }
 ```
 
-El error desapareció. "¡Bien, ahora funcionará!"
+El error desapareció. «Listo, con esto funcionará».
 
 No funcionó.
 
-## Segunda Prueba: El Muro de la Suscripción
+## La segunda prueba: la barrera de la suscripción
 
-No importa cuántas veces lo intentara en Claude Desktop, Codex MCP no respondía. Solo el silencio regresaba.
+Por más que lo intentaba en Claude Desktop, Codex MCP no reaccionaba. Solo devolvía silencio.
 
-"Espera un momento..."
+«Ahora que lo pienso...»
 
-Recordé que para ejecutar Codex CLI, se requería una clave API de OpenAI o una suscripción a ChatGPT. Estaba tan absorto en el desarrollo que olvidé por completo la configuración de la cuenta.
+Recordé que para ejecutar Codex CLI se necesitaba una clave de API de OpenAI o una suscripción a ChatGPT. Absorto en el desarrollo, me había olvidado por completo de configurar la cuenta.
 
-Accedí a [ChatGPT](https://chatgpt.com/) y me suscribí al plan de $20/mes. Sorprendentemente, ahora es gratuito el primer mes. Qué suerte.
+Accedí a [ChatGPT](https://chatgpt.com/) y me suscribí al plan de 20 $/mes. Y para colmo, ahora el primer mes es gratis. Qué suerte.
 
-A continuación, seguí la configuración de la CLI basándome en la nota del Sr. Npaka. La autenticación también se completó. Ahora todo está perfecto.
+A continuación, avancé con la configuración de la CLI tomando como referencia el artículo de note del profesor npaka. La autenticación también fue correcta. Ahora sí estaba perfecto.
 
 https://note.com/npaka/n/n7b6448020250
 
@@ -98,31 +100,31 @@ codex login
 # ✓ Successfully authenticated!
 ```
 
-Reinicié Claude Desktop. Llamé a Codex MCP con gran expectación.
+Reinicié Claude Desktop. Con altas expectativas, llamé a Codex MCP.
 
-Todavía no funcionaba.
+Seguía sin funcionar.
 
-## Tercera Prueba: Último Recurso, Warp AI
+## La tercera prueba: el último recurso, Warp AI
 
-Ya no podía hacerlo solo. En el momento en que me di cuenta de esto, recordé Warp, el editor de IA. Warp tiene un asistente de IA integrado. Voy a preguntarles por si acaso.
+Ya no podía solucionarlo por mi cuenta. Al darme cuenta, me acordé del editor con IA, Warp. Warp cuenta con un asistente de IA integrado. Decidí preguntar por si acaso.
 
 https://www.warp.dev/
 
 > I set codex mcp in /Users/teradakousuke/Library/Application Support/Claude/claude_desktop_config.json and tried to use it from Claude Desktop, but it's not responding. Please identify the cause and resolve it.
 
-Warp AI leyó el archivo de configuración, ejecutó algunos comandos y llegó a una respuesta fácilmente.
+Warp AI leyó el archivo de configuración, ejecutó algunos comandos y dio con la respuesta sin despeinarse.
 
-![Dios, Buda, Warp](/images/blog/スクリーンショット-2025-10-16-17.00.37.avif)
+![Bendito sea Warp](/images/blog/スクリーンショット-2025-10-16-17.00.37.avif)
 
-## La Esencia del Problema: Falta la Configuración de `env`
+## La esencia del problema: falta la configuración de env
 
-Diagnóstico de Warp AI:
+El resultado del diagnóstico de Warp AI constaba de los siguientes tres puntos:
 
-1. **Falta el campo `env`**: El servidor MCP necesita acceso a las variables de entorno.
-2. **PATH no configurado**: La ruta al comando Codex no se está pasando.
-3. **El campo `type` es innecesario**: Es redundante ya que `stdio` es el valor predeterminado.
+1. El servidor MCP necesita acceso a las variables de entorno, pero falta el campo `env`.
+2. El PATH no está configurado y no se transmite la ruta al comando de Codex.
+3. El campo `type` no es necesario. Dado que por defecto es `stdio`, resulta redundante.
 
-Aquí está la configuración corregida:
+La configuración corregida quedó de la siguiente manera:
 
 ```json
 {
@@ -148,11 +150,11 @@ Aquí está la configuración corregida:
 }
 ```
 
-**Lo importante es el campo `env`**. El servidor MCP se inicia como un subproceso de Claude Desktop. Las variables de entorno del proceso padre no se heredan automáticamente.
+El campo `env` es especialmente importante. El servidor MCP se inicia como un subproceso de Claude Desktop. Las variables de entorno del proceso padre no se heredan automáticamente.
 
-Especialmente si estás administrando Node.js con NVM, la ruta al comando `codex` no se encontrará a menos que se especifique explícitamente.
+En particular, si gestionas Node.js con NVM, no se encontrará a menos que especifiques de forma explícita la ruta al comando codex.
 
-## El Momento en que Funcionó
+## El momento en que funcionó
 
 ```bash
 pkill -f "Claude.app" && sleep 2 && open -a Claude
@@ -160,26 +162,26 @@ pkill -f "Claude.app" && sleep 2 && open -a Claude
 
 Reinicié Claude Desktop y llamé a Codex MCP.
 
-**Finalmente respondió.**
+**Por fin reaccionó**.
 
 ```text
 ✓ codex MCP server connected
 ```
 
-## Lo Que Aprendí
+## Lecciones aprendidas
 
-### 1. La Documentación Oficial También Envejece
+### 1. La documentación oficial también se queda obsoleta
 
-El artículo de Zenn fue excelente, pero el comando `mcp` de Codex CLI cambió a `mcp-server` con una actualización. Acostúmbrate a consultar siempre la ayuda oficial:
+El artículo de Zenn era fantástico, pero con la actualización de Codex CLI el comando `mcp` había cambiado a `mcp-server`. Acostumbrémonos a consultar siempre la ayuda oficial.
 
 ```bash
 codex --help
 codex mcp-server --help
 ```
 
-### 2. Especificar Explícitamente las Variables de Entorno de los Subprocesos
+### 2. Especificar explícitamente las variables de entorno de los subprocesos
 
-El servidor MCP es un proceso independiente iniciado desde Claude Desktop. No esperes que herede las variables de entorno del padre. Especialmente, la variable PATH debe especificarse explícitamente:
+El servidor MCP es un proceso independiente iniciado desde Claude Desktop. No se debe asumir que heredará las variables de entorno del padre. En particular, es necesario especificar el PATH de forma explícita.
 
 ```json
 "env": {
@@ -187,28 +189,28 @@ El servidor MCP es un proceso independiente iniciado desde Claude Desktop. No es
 }
 ```
 
-### 3. Usuarios de NVM, Tengan Cuidado
+### 3. Atención especial para usuarios de NVM
 
-Si administra Node.js con NVM, el comando `codex` se instalará en el directorio de NVM. Si no incluye esta ruta en `env.PATH`, Claude Desktop no podrá encontrarlo.
+Si gestionas Node.js con NVM, el comando codex se instala en el directorio de NVM. Si no incluyes esta ruta en `env.PATH`, Claude Desktop no podrá encontrarlo.
 
-Verifique dónde está su `codex`:
+Comprueba dónde se encuentra tu codex:
 
 ```bash
 which codex
-# Ejemplo de salida: /Users/teradakousuke/.nvm/versions/node/v20.15.0/bin/codex
+# 出力例: /Users/teradakousuke/.nvm/versions/node/v20.15.0/bin/codex
 ```
 
-Incluya este directorio en su `PATH`.
+Incluye este directorio en `PATH`.
 
-### 4. La Era de Usar IA para Resolver Problemas de IA
+### 4. La era de resolver problemas de IA con otra IA
 
-Finalmente, Warp AI resolvió el problema. Una estructura anidada donde le preguntas a otra IA cuando una herramienta de desarrollo impulsada por IA no funciona.
+Al final fue Warp AI quien solucionó el problema. Una estructura anidada en la que, cuando una herramienta de desarrollo impulsado por IA no funciona, le preguntas a otra IA.
 
-La era de buscar respuestas en Stack Overflow podría haber terminado. Si aparece un error, pregúntale a la IA. Ese es el estilo de desarrollo de 2025.
+Tal vez ya haya terminado la época de buscar respuestas en Stack Overflow. Si sale un error, de momento se le pregunta a la IA. Ese es el estilo de desarrollo de 2025.
 
-## Visión General de la Configuración Completa
+## Visión general de la configuración completa
 
-Como referencia, aquí está la configuración completa y funcional:
+A modo de referencia, dejo la configuración completa y operativa.
 
 ```json
 {
@@ -236,41 +238,41 @@ Como referencia, aquí está la configuración completa y funcional:
 }
 ```
 
-### Lista de Verificación
+### Lista de verificación
 
-Cosas que verificar al implementar Codex MCP:
+Los puntos a verificar al implementar Codex MCP son los siguientes:
 
-- [ ] Suscripción a ChatGPT contratada (o clave API de OpenAI configurada)
+- [ ] Suscripción a ChatGPT contratada (o clave de API de OpenAI configurada)
 - [ ] Autenticación completada con `codex login`
-- [ ] Ruta verificada con `which codex`
-- [ ] `env.PATH` agregado a `claude_desktop_config.json`
-- [ ] Los `args` son `["mcp-server"]` (no `["mcp"]`)
-- [ ] Claude Desktop reiniciado completamente
+- [ ] Ruta confirmada con `which codex`
+- [ ] `env.PATH` añadido a `claude_desktop_config.json`
+- [ ] `args` establecido como `["mcp-server"]` (no `["mcp"]`)
+- [ ] Claude Desktop reiniciado por completo
 
-## Resumen: Un Viaje de Resolución de Problemas
+## Conclusión: el viaje de la resolución de problemas
 
-El camino desde que Claude Code MCP dejó de funcionar hasta la implementación de Codex MCP fue más arduo de lo esperado. Sin embargo, aprendí mucho en este proceso:
+Desde que Claude Code MCP dejó de funcionar hasta que implementé Codex MCP, el camino fue más empinado de lo esperado. Aun así, aprendí mucho durante este proceso:
 
-- **No confíes ciegamente en la documentación**: Los comandos cambian con las actualizaciones de versiones.
-- **Especifica explícitamente las variables de entorno**: Los subprocesos no heredan el entorno del padre.
-- **Busca ayuda de la IA**: El tiempo humano es valioso.
+- No confiar ciegamente en la documentación. Los comandos cambian con las actualizaciones de versión.
+- Especificar explícitamente las variables de entorno. Los subprocesos no heredan el entorno del padre.
+- Pedir ayuda a la IA. El tiempo de los humanos es valioso.
 
-Que Warp AI finalmente resolviera el problema es, en cierto modo, irónico. Resolver la configuración de una herramienta de desarrollo de IA con otra herramienta de desarrollo de IA. Fue una experiencia meta.
+Que al final lo haya resuelto Warp AI resulta, en cierto modo, irónico. Solucionar la configuración de una herramienta de desarrollo con IA utilizando otra herramienta de desarrollo con IA: una experiencia de lo más meta.
 
-Pero está bien. Los desarrolladores del futuro necesitarán dominar el uso de la IA como medio para resolver problemas. Stack Overflow y la documentación siguen siendo importantes, pero el valor de un asistente de IA que brinda respuestas instantáneas en el campo es inconmensurable.
+Sin embargo, así está bien. A partir de ahora, los desarrolladores debemos dominar la IA como medio para resolver problemas. Tanto Stack Overflow como la documentación son importantes, pero el valor de un asistente de IA que te da la respuesta al instante sobre la marcha es incalculable.
 
-Codex MCP finalmente comenzó a funcionar. A partir de ahora, el desarrollo se acelerará con la poderosa combinación de Claude Desktop y Codex CLI... o eso espero.
+Codex MCP por fin ha empezado a funcionar. A partir de aquí, con la potente combinación de Claude Desktop y Codex CLI, el desarrollo se acelerará... o eso espero.
 
-¿Qué será lo próximo que se rompa? Ya estoy deseando saberlo (¿en serio?).
+Ya tengo curiosidad por ver qué será lo próximo que deje de funcionar (¿en serio?).
+
+Espero que esto sirva de ayuda a quienes se encuentren con el mismo problema. El desarrollo impulsado por IA no es fácil, pero sí muy divertido.
 
 ---
 
-## Enlaces de Referencia
+## Materiales de referencia
 
-Artículos que me ayudaron con la configuración:
+Artículos que resultaron útiles para la configuración:
 
-- [Claude Code ahora puede llamar a Codex con MCP](https://zenn.dev/tmasuyama1114/articles/cdfd4562bdce78)
-- [Configuración de Codex CLI](https://note.com/npaka/n/n7b6448020250)
+- [Claude CodeからCodexをMCPで呼び出せるようになった話](https://zenn.dev/tmasuyama1114/articles/cdfd4562bdce78)
+- [Codex CLI のセットアップ](https://note.com/npaka/n/n7b6448020250)
 - [ChatGPT](https://chatgpt.com/)
-
-*Espero que esto ayude a quienes tienen el mismo problema. El desarrollo impulsado por IA no es fácil, pero es divertido.*

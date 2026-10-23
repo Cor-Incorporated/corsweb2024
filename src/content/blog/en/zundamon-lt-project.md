@@ -1,21 +1,23 @@
 ---
-title: "【Marp×VOICEVOX×VTubeStudio】A Story About Having Zundamon Give an LT Presentation"
-description: "Creative utilization of technology! An experimental project that combined Marp, VOICEVOX, and VTubeStudio to build an automatic LT presentation system by Zundamon."
+title: "[Marp × VOICEVOX × VTubeStudio] Having Zundamon Deliver a Lightning Talk"
+description: "Creative use of technology! An experimental project combining Marp, VOICEVOX, and VTubeStudio to build an automated lightning talk presentation system powered by Zundamon."
+summary: "By combining Marp, VOICEVOX, and VTubeStudio, I built a system that lets Zundamon deliver lightning talks automatically. This project reminded me of the value of using technology not just \"seriously,\" but also for \"fun.\""
 pubDate: 2024-01-30
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "lab"
 tags: ["Marp", "VOICEVOX", "VTubeStudio", "自動化", "創造的プロジェクト"]
 lang: "en"
-translationSourceHash: "1415a08c523813b0effca65908d713100563119940d89a8ecb6f61be7869c763"
-translatedAt: "2026-09-28T06:09:16.005Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "b0bd9e555315e8e86f5120fcb295e7228d9711993aef7027766bb2ad1406c978"
+translatedAt: "2026-10-23T06:17:20.973Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-# 【Marp × VOICEVOX × VTubeStudio】The Story of Having Zundamon Give an LT Presentation
+# [Marp × VOICEVOX × VTubeStudio] Having Zundamon Deliver a Lightning Talk
 
-This project began with a pure curiosity: "I want to do silly things with AI!" As an experiment in creatively utilizing technology, I built a system that automatically has Zundamon give Light Talks (LTs).
+This project started out of pure curiosity: "I want to use AI to build something silly." As an experiment in using technology in a fun and creative way, I built a system that lets Zundamon deliver a lightning talk automatically.
 
-I was getting tired of presenting myself, so I decided to completely hand it over to Zundamon. As a side note, she ended up becoming more popular than me.
+I was getting tired of presenting myself anyway, so I outsourced the whole thing to Zundamon. Needless to say, she ended up being more popular than I am.
 
 ## Project Components
 
@@ -28,14 +30,14 @@ theme: default
 class: lead
 ---
 
-# Zundamon's LT
-## Let's Play with Technology!
+# ずんだもんのLT
+## 技術で遊ぼう！
 
 ---
 
-# Today's Talk
-- Automation is fun!
-- Let's enjoy technology together!
+# 今日のお話
+- 自動化って楽しいのだ！
+- みんなで技術を楽しむのだ！
 ```
 
 ### 2. VOICEVOX - Speech Synthesis
@@ -46,16 +48,16 @@ import requests
 API_URL = "http://localhost:50021"
 
 def generate_zundamon_voice(text: str) -> bytes:
-    """Calls the VOICEVOX API to get audio data (wav)"""
+    """VOICEVOX API を呼び出して音声データ (wav) を取得する"""
 
     query_params = {"text": text, "speaker": 3}
 
-    # Generate audio query
+    # 音声クエリ生成
     query_resp = requests.post(f"{API_URL}/audio_query", params=query_params, timeout=10)
     if query_resp.status_code != 200:
         raise RuntimeError(f"audio_query failed → {query_resp.status_code}: {query_resp.text}")
 
-    # Synthesize audio
+    # 音声合成
     synth_resp = requests.post(
         f"{API_URL}/synthesis",
         params={"speaker": 3},
@@ -71,7 +73,7 @@ def generate_zundamon_voice(text: str) -> bytes:
 ### 3. VTubeStudio - Character Control
 
 ```javascript
-// Character control using VTubeStudio API
+// VTubeStudio API を使ったキャラクター制御
 class VTubeStudioController {
   constructor(wsUrl = "ws://localhost:8001") {
     this.wsUrl = wsUrl;
@@ -113,7 +115,7 @@ class VTubeStudioController {
   }
 
   syncWithAudio(audioTimestamps) {
-    // Trigger mouth animations based on audio timestamps
+    // 音声タイムスタンプに合わせて口パクをトリガー
     audioTimestamps.forEach((ts) => {
       setTimeout(() => this.triggerExpression("mouth_animation"), ts);
     });
@@ -123,51 +125,45 @@ class VTubeStudioController {
 
 ## System Integration
 
-### Automated Workflow
+### Automation Workflow
 
 ```bash
 #!/bin/bash
-# Automatic LT Generation Script
+# 自動LT生成スクリプト
 
-# 1. Generate slides from Markdown
+# 1. Markdownからスライド生成
 marp presentation.md -o slides.html
 
-# 2. Generate audio from slide content
+# 2. スライド内容から音声生成
 python generate_voice.py
 
-# 3. Control character in VTubeStudio
+# 3. VTubeStudioでキャラクター制御
 node control_vtube.js
 
-# 4. Record and stream with OBS
+# 4. OBSで録画・配信
 obs-cli start-recording
 ```
 
-## Co-starring with Claudia
+## Co-starring with Cloudia
 
-In this project, I also utilized another persona, "Claudia" (a character who speaks in Hakata dialect), to aim for a more approachable technical presentation.
+In this project, I also introduced another persona, "Cloudia" (a character who speaks the Hakata dialect), aiming for a more approachable tech presentation.
 
-It turned into something like "A Stand-up Comedy Routine by Zundamon and Claudia," and surprisingly, it was well-received, even though it was a technical presentation.
+It turned into something like "a manzai comedy duo with Zundamon and Cloudia," and it was surprisingly well received—even though it was supposed to be a technical presentation.
 
 ## Lessons Learned
 
-- **The Joy of Combining Technologies**: The fun of connecting different tools (the pinnacle of API chaining).
-- **Community Interaction**: The value of sharing "fun" (calling something "silly" is a compliment).
-- **The Importance of Creativity**: Technology is a means; what's important is what you express (although, I mostly did it because Zundamon is cute).
+- Combining and integrating different tools is fun (the ultimate exercise in stringing APIs together).
+- Sharing something "fun" with the community has real value ("silly" is a compliment).
+- Technology is just a means; what matters is the creativity in what you express (though honestly, I just did it because Zundamon is cute).
 
-## Project Evolution
+## Future Development
 
-This system is continually evolving, and the following features are planned for addition:
+This system is still evolving, and I plan to add the following features:
 
-- **Real-time Q&A**: Integration with ChatGPT API (a future where Zundamon answers questions).
-- **Improved Emotional Expression**: Richer animations (I want to see an angry Zundamon too).
-- **Multilingual Support**: English presentation functionality (the birth of Global Zundamon).
+- Real-time Q&A: Integration with the ChatGPT API (a future where Zundamon answers questions)
+- Improved emotional expression: Richer animations (I want to see an angry Zundamon too)
+- Multilingual support: Ability to present in English (the birth of Global Zundamon)
 
-This project reaffirmed the value of using technology not just "seriously" but also "joyfully."
+This project made me realize once again the value of using technology not just "seriously," but "playfully."
 
-In the end, maybe engineering is all about "how seriously you take doing absurd things."
-
----
-
-*If you have any ideas for interesting technology experiments, please feel free to share them via [Contact](/contact)!*
-
-*Ideas like "I want Zundamon to rap" or "I want Hatsune Miku to review code" – those kinds of absurd ideas are what make the world more interesting.*
+In the end, maybe the essence of engineering is all about "how seriously you can pursue something utterly ridiculous."

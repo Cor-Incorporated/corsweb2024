@@ -1,86 +1,88 @@
 ---
-title: "La migración completa de un proyecto de Google Cloud entre organizaciones se completó en un día"
-description: "Los registros de las lágrimas de un desarrollador que había creado un script para migrar GCS poco a poco, solo para descubrir que los proyectos se podían mover enteros."
+title: "Migré un proyecto completo de Google Cloud entre organizaciones y terminó en solo un día"
+description: "El registro entre lágrimas de un desarrollador que llegó a crear scripts para migrar GCS poco a poco, solo para descubrir que se podía mover el proyecto entero"
+summary: "Los proyectos de Google Cloud se pueden mover por completo incluso entre distintas organizaciones mediante gcloud beta projects move. Se abre un corredor de migración, se asignan permisos, se reasigna la cuenta de facturación tras el traslado y se eliminan las políticas y permisos habilitados. El comando de migración en sí se completó en menos de un minuto."
 pubDate: 2025-07-24
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "engineering"
 tags: ["Google Cloud", "DevOps", "移行", "gcloud", "プロジェクト管理"]
 image:
   url: "/images/blog/gcp-logo.avif"
-  alt: "Google Cloud Platform ロゴ"
+  alt: "Logotipo de Google Cloud Platform"
 lang: "es"
 featured: false
-translationSourceHash: "65d2d8e4ee3fb4c439d95c88fea7fca7e8286479aa45bbc964a3c502518304aa"
-translatedAt: "2026-09-28T06:09:16.025Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "e931b0447ea24de7c5e3f41cbc9e772c31e92f20d0c727fd4e64f15c53057372"
+translatedAt: "2026-10-23T06:25:25.041Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-# Cómo la migración completa de un proyecto de Google Cloud entre organizaciones se completó en un día
+# Migré un proyecto completo de Google Cloud entre organizaciones y terminó en solo un día
 
 Hola, soy Terisuke.
 
-Hoy, quiero contarles una historia sobre **cómo desperdicié mucho tiempo**.
+Hoy voy a contar una historia sobre cómo perdí una cantidad enorme de tiempo.
 
-Tuvimos que organizar nuestro entorno de nube y era necesario mover un proyecto gestionado por `company@example-a.com` a la organización `company@example-b.com`.
+Tuvimos que organizar el entorno en la nube de la empresa y surgió la necesidad de mover un proyecto administrado en `company@example-a.com` a la organización de `company@example-b.com`.
 
-Al principio, estaba emocionado: "¡De acuerdo, usaré terraform y gcloud para migrar poco a poco los buckets de GCS y las instancias de Compute!".
+Al principio estaba entusiasmado: "¡Bien, usaré Terraform y gcloud para migrar poco a poco los buckets de GCS y las instancias de Compute!".
 
-**Sin embargo, descubrí que existe una forma de mover todo el proyecto de una vez si están en la misma organización de Google Cloud.**
+Sin embargo, descubrí que, si se trata del mismo Google Cloud, existe una forma de mover el proyecto entero de una sola vez.
 
-Como resultado, el script de migración de GCS que había creado se volvió completamente inútil (llorando).
+Como resultado, el script de migración de GCS que preparé con tanto esfuerzo quedó completamente inservible (lloro).
 
-Pero para evitar tropezar con la misma piedra, resumiré ese método como un registro de memoria.
+Aun así, para no volver a cometer el mismo error y a modo de recordatorio, resumo aquí el método.
 
-## Prerrequisitos (esto es importante)
+## Requisitos previos
 
-Primero, debes cumplir las siguientes condiciones:
+Esto es importante. Primero, es necesario cumplir con las siguientes condiciones:
 
-- ✅ Tener permisos de propietario en ambas organizaciones.
-- ✅ El proyecto a migrar no utiliza VPC Service Controls ni Shared VPC.
-- ✅ No se utilizan servicios de pago de Marketplace (será necesario volver a comprarlos).
+- Contar con permisos de propietario (Owner) en ambas organizaciones.
+- Que el proyecto a migrar no utilice VPC Service Controls ni Shared VPC.
+- Que no utilice servicios de pago de Marketplace (sería necesario comprarlos de nuevo).
 
-## Flujo de Migración (Procedimiento Realizado)
+## Pasos de la migración que realicé
 
-### 1. Confirmación de ID de Organización
+### 1. Confirmación de los IDs de organización
 
-Primero, confirma los ID de las organizaciones de origen y destino. Esto es crucial para la configuración posterior.
+Primero, confirmamos los IDs de la organización de origen y de la de destino. Esto será fundamental para la configuración posterior.
 
 ```bash
-# Iniciar sesión en la organización de origen
+# 移行元組織にログイン
 gcloud config set account company@example-a.com
 gcloud organizations list
 # DISPLAY_NAME     ID             DIRECTORY_CUSTOMER_ID
 # example-a.com    123456789012   C02xxxxxx
 
-# Iniciar sesión en la organización de destino
+# 移行先組織にログイン  
 gcloud config set account company@example-b.com
 gcloud organizations list
 # DISPLAY_NAME     ID             DIRECTORY_CUSTOMER_ID
 # example-b.com    987654321098   C02yyyyyy
 ```
 
-### 2. Verificación Preliminar (Si hay problemas aquí, será molesto)
+### 2. Comprobaciones previas
 
-Verifica lo siguiente antes de la migración. Es realmente molesto darse cuenta de un error después de que ocurra.
+Revisa los siguientes puntos antes de la migración. Darse cuenta después de que aparezca un error es sumamente molesto.
 
 ```bash
-# Verificación de VPC Service Controls (si hay un error, está bien)
+# VPC Service Controlsの確認（エラーが出ればOK）
 gcloud access-context-manager perimeters list
 
-# Verificación de Shared VPC (si devuelve {}, está bien)
+# Shared VPCの確認（{}が返ればOK）
 gcloud compute shared-vpc get-host-project your-project-id
 
-# Anota la cuenta de facturación actual
+# 現在の請求アカウントをメモ
 gcloud beta billing projects describe your-project-id
 ```
 
-### 3. Configuración del Corredor de Migración (esto es clave)
+### 3. Configuración del corredor de migración
 
-Esta es la parte más importante. Establecemos un "corredor de migración" para permitir que los proyectos se muevan entre organizaciones. En resumen, es una configuración para que las organizaciones confíen mutuamente.
+Esta es la parte más importante. Abrimos un "corredor de migración" para poder mover proyectos entre organizaciones. En resumen, es una configuración para que ambas organizaciones confíen entre sí.
 
-**Configurar permiso de exportación en la organización de origen:**
+En la organización de origen, se configura el permiso de exportación.
 ```bash
-# Crear export-policy.yaml
+# export-policy.yamlを作成
 cat > export-policy.yaml << EOF
 name: organizations/123456789012/policies/resourcemanager.allowedExportDestinations
 spec:
@@ -90,16 +92,16 @@ spec:
           - under:organizations/987654321098
 EOF
 
-# Aplicar la política
+# ポリシーを適用
 gcloud org-policies set-policy export-policy.yaml
 ```
 
-**Configurar permiso de importación en la organización de destino:**
+En la organización de destino, se configura el permiso de importación.
 ```bash
-# Iniciar sesión en la organización de destino
+# 移行先組織にログイン
 gcloud config set account company@example-b.com
 
-# Crear import-policy.yaml
+# import-policy.yamlを作成
 cat > import-policy.yaml << EOF
 name: organizations/987654321098/policies/resourcemanager.allowedImportSources
 spec:
@@ -109,19 +111,19 @@ spec:
           - under:organizations/123456789012
 EOF
 
-# Aplicar la política
+# ポリシーを適用
 gcloud org-policies set-policy import-policy.yaml
 ```
 
-### 4. Concesión de Permisos (aquí tuve problemas)
+### 4. Asignación de permisos
 
-Incluso con permisos de propietario de organización, se requerían permisos a nivel de proyecto. Me di cuenta después de recibir un error, pero se requieren los siguientes permisos:
+Aquí me quedé atascado. Incluso siendo propietario de la organización, se requerían permisos a nivel de proyecto. Me di cuenta tras encontrar un error; se necesitan los siguientes permisos:
 
 ```bash
-# Volver a la cuenta de origen
+# 移行元アカウントに戻る
 gcloud config set account company@example-a.com
 
-# Conceder permisos al proyecto y a la organización
+# プロジェクトと組織に権限を付与
 gcloud projects add-iam-policy-binding your-project-id \
     --member="user:company@example-a.com" \
     --role="roles/resourcemanager.projectMover"
@@ -130,94 +132,94 @@ gcloud organizations add-iam-policy-binding 123456789012 \
     --member="user:company@example-a.com" \
     --role="roles/resourcemanager.projectMover"
 
-# Conceder permisos también a la organización de destino (concesión de permisos entre organizaciones)
+# 移行先組織にも権限を付与（組織をまたいだ権限付与）
 gcloud config set account company@example-b.com
 gcloud organizations add-iam-policy-binding 987654321098 \
     --member="user:company@example-a.com" \
     --role="roles/resourcemanager.projectCreator"
 ```
 
-### 5. ¡Finalmente la Migración (solo 1 comando)!
+### 5. La migración definitiva
 
-Una vez que todo esté listo, puedes migrar con solo un comando.
+Una vez completados los preparativos, la migración se realiza con un solo comando.
 
 ```bash
-# Ejecutar con la cuenta de origen
+# 移行元アカウントで実行
 gcloud config set account company@example-a.com
 gcloud beta projects move your-project-id --organization 987654321098
 ```
 
-Aparecerá una advertencia, pero procede con `Y`. **La migración se completó en menos de 1 minuto**. Fue tan rápido que me quedé boquiabierto.
+Aparecerá una advertencia, pero avanzamos con `Y`. La migración terminó en menos de un minuto. Fue tan rápido que me dejó desconcertado.
 
-### 6. Cambio de Cuenta de Facturación (es un problema si lo olvidas)
+### 6. Cambio de la cuenta de facturación
 
-El proyecto se movió, pero la cuenta de facturación no. Si olvidas esto, la facturación seguirá yendo a la organización antigua.
+El proyecto se movió, pero la cuenta de facturación sigue siendo la misma. Si olvidas esto, se seguirá facturando a la organización anterior y será un gran problema.
 
 ```bash
-# Cambiar a la cuenta de destino
+# 移行先アカウントに切り替え
 gcloud config set account company@example-b.com
 
-# Vincular a la nueva cuenta de facturación
+# 新しい請求先に紐付け
 gcloud beta billing accounts list
 gcloud beta billing projects link your-project-id --billing-account NEW-BILLING-ID
 ```
 
-Aquí también hubo un error de permisos, por lo que fue necesario conceder permisos de propietario del proyecto a la cuenta de destino.
+Aquí también apareció un error de permisos, por lo que fue necesario otorgar el rol de propietario del proyecto a la cuenta de destino.
 
 ```bash
-# Ejecutar con la cuenta de origen
+# 移行元アカウントで実行
 gcloud config set account company@example-a.com
 gcloud projects add-iam-policy-binding your-project-id \
     --member="user:company@example-b.com" \
     --role="roles/owner"
 ```
 
-### 7. Limpieza (muy importante)
+### 7. Limpieza
 
-Cierra el "agujero de seguridad" que abriste para la migración. Si olvidas esto, la capacidad de mover proyectos libremente entre organizaciones continuará.
+Cerramos la "brecha de seguridad" que abrimos para la migración. Este paso es fundamental: si se olvida, continuará el estado en el que se pueden mover proyectos libremente entre las organizaciones.
 
 ```bash
-# Eliminar políticas de organización
+# 組織ポリシーを削除
 gcloud config set account company@example-a.com
 gcloud org-policies delete resourcemanager.allowedExportDestinations --organization=123456789012
 
 gcloud config set account company@example-b.com
 gcloud org-policies delete resourcemanager.allowedImportSources --organization=987654321098
 
-# Eliminar también permisos entre organizaciones
+# 組織間の権限も削除
 gcloud organizations remove-iam-policy-binding 987654321098 \
     --member="user:company@example-a.com" \
     --role="roles/resourcemanager.projectCreator"
 ```
 
-## Notas Post-Migración
+## Puntos a tener en cuenta tras la migración
 
-- **Las políticas de IAM heredadas se pierden.** Los permisos otorgados a nivel de organización deberán ser reconfigurados.
-- **Las alertas de presupuesto** también deben ser reconfiguradas. La configuración del presupuesto no se transfiere a la nueva cuenta de facturación.
-- **La verificación del funcionamiento de los servicios** es esencial. Presta especial atención a los servicios que se integran externamente.
+- Las políticas de IAM heredadas se pierden. Es necesario volver a configurar los permisos otorgados a nivel de organización.
+- Las alertas de presupuesto también deben volver a configurarse. La nueva cuenta de facturación no hereda las configuraciones de presupuesto.
+- Es indispensable comprobar el funcionamiento de los servicios. Conviene revisar con especial atención los servicios con integraciones externas.
 
-## El Desenlace: El Script de Migración de GCS Inútil
+## La moraleja: el script de migración de GCS que quedó inservible
 
-De hecho, al principio de la tarea de migración, incluso había creado un script para migrar buckets de GCS a través de una conexión local.
+A decir verdad, al iniciar los trabajos de migración, llegué a programar un script para migrar los buckets de GCS a través de local.
 
 https://github.com/terisuke/gcs-migration-project
 
-Implementé descargas paralelas, visualización de progreso y manejo de errores, y estaba emocionado: "¡Ahora puedo migrar fácilmente grandes cantidades de buckets!".
+Implementé descargas en paralelo, barra de progreso y manejo de errores, entusiasmado pensando: "¡Con esto podré migrar una gran cantidad de buckets fácilmente!".
 
-**En el momento en que descubrí que podía mover proyectos completos, todo se volvió inútil.**
+Todo eso quedó completamente inutilizado en el momento en que supe que se podía mover el proyecto entero.
 
-Pero bueno, aprendí sobre el procesamiento paralelo de `gsutil` y la operación de GCS en Python, y si no puedes cruzar organizaciones, puedes usarlo, así que no es completamente inútil... me lo digo a mí mismo.
+Aun así, me digo a mí mismo que no fue una pérdida de tiempo total: sirvió para aprender sobre el procesamiento en paralelo de gsutil y la manipulación de GCS con Python, y además servirá cuando no sea posible migrar entre organizaciones.
 
-## Resumen
+## Conclusión
 
-La migración de proyectos de Google Cloud fue sorprendentemente fácil, siempre que se tengan los permisos y la configuración correctos. Sin embargo, no olvides la limpieza de la configuración de seguridad.
+La migración de proyectos en Google Cloud fue sorprendentemente sencilla siempre que se cuente con los permisos y la configuración adecuados. No obstante, no olvides limpiar la configuración de seguridad.
 
-Si alguien más tiene que realizar una tarea de migración similar, recomiendo buscar la existencia de `gcloud beta projects move` desde el principio. Re inventar la rueda es divertido, pero el tiempo es limitado.
+Si alguien tiene que hacer una migración similar, recomiendo investigar desde el principio la existencia de `gcloud beta projects move`. Reinventar la rueda es divertido, pero el tiempo es limitado.
 
-Aún así, desearía que me devolvieran los 3 días que dediqué a crear ese script de migración de GCS.
+Aun así, ojalá me devolvieran los tres días que pasé creando aquel script de migración de GCS.
 
 ---
 
-**¡Gracias por leer!**
+Gracias por leer.
 
-Si has tenido una experiencia similar, o si tienes previsto realizar tareas de migración, por favor, házmelo saber en los comentarios. Lloraremos juntos (¡jaja!).
+Si has pasado por una experiencia similar o tienes planeado realizar una migración pronto, cuéntamelo en los comentarios. Lloremos juntos, jaja.

@@ -1,70 +1,56 @@
 ---
-title: "Productividad multiplicada por 7 con desarrollo impulsado por IA: Mi experiencia real"
-description: "Un estudio de caso práctico que logró una velocidad de desarrollo 7 veces mayor que la tradicional mediante un flujo de trabajo de desarrollo que combina las últimas herramientas de IA."
+title: "La productividad se multiplica por 7 con el desarrollo impulsado por IA: mi experiencia práctica"
+description: "Un caso de estudio práctico en el que, mediante un flujo de trabajo de desarrollo que combina las herramientas de IA más recientes, las contribuciones en GitHub aumentaron 7 veces, pasando de unas 50 a más de 350 al mes"
+summary: "Desde que cambié al desarrollo impulsado por IA, las contribuciones en GitHub se multiplicaron por 7, pasando de unas 50 al mes a más de 350. Genero especificaciones y código con Claude Desktop y Claude Code, y doy el acabado final con la revisión de CodeRabbit y Cursor."
 pubDate: 2024-01-15
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "ai"
 tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "es"
 featured: true
-translationSourceHash: "e44a175f9b52f956850c28731e793da30a7af7639f6841f41f631a9c03f67fbd"
-translatedAt: "2026-09-28T06:09:16.021Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "ed0176d934a14b7285d9bbf477e8c07d66cff7938bf7a6ae93e9e8698ce3c118"
+translatedAt: "2026-10-23T06:24:11.806Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-## Productividad multiplicada por 7 con el desarrollo impulsado por IA: Mi experiencia real
+## Multiplicar la productividad por 7 con el desarrollo impulsado por IA: mi experiencia real
 
-La transición de los métodos de desarrollo tradicionales al desarrollo impulsado por IA ha mejorado drásticamente la productividad de los desarrolladores. Siete veces. No es una broma, es realmente siete veces. ¿Cómo lo logramos? Te lo contaré todo.
+Al pasar de los métodos de desarrollo tradicionales al desarrollo impulsado por IA, la productividad del desarrollo mejoró de forma drástica. El número de contribuciones en GitHub, que a lo sumo rondaba las 50 al mes, pasó a superar las 350 mensuales. Se multiplicó por 7. No es una broma, realmente se multiplicó por 7. Aquí dejo por escrito todo sobre cómo lo logré.
 
-## Construyendo un flujo de trabajo de desarrollo impulsado por IA
+## Construcción del flujo de trabajo de desarrollo impulsado por IA
 
 ### 1. Automatización de la generación de código
 
-```javascript
-// Ejemplo de generación de código por IA (GitHub Copilot)
-async function fetchUserProfile(userId) {
-  try {
-    const response = await fetch(`/api/users/${userId}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch user profile');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    throw error;
-  }
-}
-```
+Hago que Claude Code escriba el código. En primer lugar, interactúo con Claude Desktop para elaborar las instrucciones detalladas y luego transmito ese contenido a Claude Code en la terminal. En cuestión de minutos, la estructura básica del código está lista. A partir de ahí, voy añadiendo instrucciones concretas como: «añade un método a esta clase y escribe también las pruebas unitarias».
 
-### 2. Eficiencia en la revisión de código
+### 2. Optimización de la revisión de código
 
-Un conejo inteligente llamado CodeRabbit se encarga de la revisión de código. Reduce el tiempo de revisión manual en un 80%. Mientras los humanos toman café, el conejo termina el trabajo. Qué tiempos tan maravillosos vivimos.
+Un conejo inteligente llamado CodeRabbit se encarga de la revisión de código. Al crear un PR, la revisión comienza de forma automática y señala mediante comentarios en el PR posibles errores, vulnerabilidades de seguridad, infracciones de las normas de codificación, entre otros aspectos. Los puntos señalados se corrigen con la función Agent de Cursor. Vivimos en una época maravillosa.
 
-## Datos medidos
+## Datos reales medidos
 
-Los números no mienten:
+Lo que medí fue el número de contribuciones en GitHub. Anteriormente, las contribuciones a proyectos personales o de código abierto rondaban, como mucho, unas 50 al mes. Desde que comencé a desarrollar junto con la IA, pasé a superar las 350 al mes.
 
-- **Velocidad de desarrollo**: 7 veces más rápido que antes (en serio)
-- **Tasa de errores**: Reducción del 40% (la IA no comete errores triviales)
-- **Tiempo de revisión de código**: Reducción del 80% (el conejo es rápido)
+Sin embargo, las contribuciones no son solo el número de commits. Según la definición de GitHub, además de los commits, también se cuentan las Issues, los Pull Requests, las revisiones, etc. Los detalles de la evolución de estas cifras los expliqué en el artículo de note citado en las referencias.
 
-## Detalles de la cadena de herramientas
+## Detalle de la cadena de herramientas
 
-### Herramientas Principales - Mis compañeros inseparables
-- **Cursor**: Editor integrado con IA (ya no puedo vivir sin él)
-- **GitHub Copilot**: El mago de la autocompletación de código
-- **CodeRabbit**: El conejo inteligente para la revisión automática de código
+### Herramientas principales: los compañeros de equipo
 
-Este flujo de trabajo innovador va más allá de la simple optimización, transformando la experiencia de desarrollo en sí misma. Ya no se siente como escribir código, sino como resolver problemas interactuando con la IA.
+- Cursor: editor integrado con IA. Corrige los puntos señalados mediante la función Agent (ya no puedo vivir sin él)
+- Claude Desktop: elabora las instrucciones dialogando de forma interactiva
+- Claude Code: escribe el código a partir de las instrucciones
+- CodeRabbit: un conejo inteligente que revisa el código de forma automática
 
-## Enlaces de referencia
+Este flujo de trabajo no solo aumenta la eficiencia, sino que transforma la experiencia de desarrollo en sí misma. Ya no se siente tanto como escribir código, sino más bien como resolver problemas dialogando con la IA.
 
-Estos son los servicios que utilizo actualmente:
+## Referencias
+
+- [Cómo combiné las últimas herramientas de IA para multiplicar por 7 la velocidad de desarrollo: mi desarrollo ultrarrápido impulsado por IA](https://note.com/cor_instrument/n/n800a959f7284) (note, 1 de junio de 2025). Artículo en el que explico cómo las contribuciones en GitHub aumentaron de unas 50 al mes a más de 350.
+
+Estos son los servicios que utilizo en la práctica.
 
 https://cor-jp.com/
 
 https://github.com
-
----
-
-*Si estás considerando implementar el desarrollo impulsado por IA, no dudes en contactarnos a través de [Contacto](/contact) para discutirlo. Experimentemos juntos una productividad 7 veces mayor (aunque los resultados pueden variar, garantizamos al menos el doble).*

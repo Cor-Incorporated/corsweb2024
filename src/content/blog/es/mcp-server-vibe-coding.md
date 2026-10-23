@@ -1,59 +1,59 @@
 ---
-title: "¡Crea un servidor MCP con un servidor MCP en 15 minutos! La historia detrás de la aplicación 'Hazlo bien y ya'"
-description: "La milagrosa creación nacida de la desesperación por la cancelación de una LT. Un relato de la experiencia definitiva de codificación vibrante lograda con Claude Desktop y Claude Code."
+title: "【A toda velocidad en 15 minutos】 ¡Creando un servidor MCP con un servidor MCP! La historia detrás del desarrollo de la «app que se encarga de todo a la perfección»"
+description: "El milagro nacido de la desesperación tras cancelarse una LT. Una crónica de la experiencia de vibe coding lograda con Claude Desktop y Claude Code"
+summary: "Tras la cancelación de la LT de la semana 60, asumí el reto de los 15 minutos restantes en un YouTube LIVE de emergencia. Al usar Claude Code desde Claude Desktop para crear un servidor MCP con un servidor MCP, se completó sin escribir una sola línea de código y funcionó a la primera. Crear cosas descabelladas es, sin duda, muy divertido."
 pubDate: 2025-08-02
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "lab"
 tags: ["MCP", "Claude Desktop", "vibe coding", "締切駆動開発", "創造的プロジェクト"]
 image:
   url: "/images/blog/スクリーンショット-2025-08-02-21.12.56.avif"
-  alt: "YouTube LIVEの企画"
+  alt: "Planificación para YouTube LIVE"
 lang: "es"
 featured: true
-translationSourceHash: "a97ec2074a35e85ec15b09d1bda3dc8ecd0ba3aad616a0b27e12e504e1a2fea7"
-translatedAt: "2026-09-28T06:09:16.025Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "5774d80806f640b538e51bd49ab800c668a5be6a9eea76811b0f4a644e82c4b1"
+translatedAt: "2026-10-23T06:25:49.819Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-# ¡Crea un servidor MCP en un servidor MCP en 15 minutos! La historia detrás de la aplicación "Hazlo bien y ya"
+# 【A toda velocidad en 15 minutos】 ¡Creando un servidor MCP con un servidor MCP! La historia detrás del desarrollo de la «app que se encarga de todo a la perfección»
 
-La tarde del último día de julio, mi corazón, que estaba reconfortablemente caliente como en un baño de vapor, se enfrió en un instante. Esta historia comienza en el momento en que se canceló abruptamente el evento LT de la semana 60.
-![Captura de pantalla de tuiteo de conmoción por la cancelación del LT](/images/blog/スクリーンショット-2025-08-02-18.25.01.avif)
+La tarde del último día de julio, la agradable calidez que sentía tras una sesión de baño de vapor en piedra caliente se enfrió en un instante. Esta historia comienza en el momento en que se canceló repentinamente la sesión de presentaciones relámpago (LT) de la semana número 60.
+![Tuit impactado por la cancelación de la LT](/images/blog/スクリーンショット-2025-08-02-18.25.01.avif)
 
-## Un gran regreso desde la desesperación
+## La gran remontada desde la desesperación
 
-Había participado en un evento LT cada semana sin falta. Justo antes de la esperada semana 60, recibí la inesperada notificación de cancelación. Sin embargo, no podía rendirme. Como una revancha del fracaso masivo en YouTube LIVE durante el Año Nuevo, decidí organizar una iniciativa increíble de emergencia.
+Presentaciones relámpago que había mantenido semana tras semana sin falta. Justo a las puertas de la emblemática semana 60, llegó el inesperado aviso de cancelación. Sin embargo, rendirse no era una opción. Decidí organizar de urgencia una iniciativa disparatada, a modo de revancha por el gran fracaso en YouTube LIVE de las fiestas de fin de año y Año Nuevo.
 
-**"En 2 horas, usando herramientas de IA, haré 'vibe coding' basándome en un tema, desplegaré hasta el final, y en los últimos 30 minutos crearé diapositivas para hacer un LT en YouTube LIVE".**
+"**Un YouTube LIVE donde, usando herramientas de IA a fondo, programamos con puro vibe a partir de temas propuestos, desplegamos en 2 horas y preparamos las diapositivas en los últimos 30 minutos para dar la LT**"
 
-![Plan de YouTube LIVE](/images/blog/スクリーンショット-2025-08-02-18.52.51.avif)
+![Planificación del YouTube LIVE](/images/blog/スクリーンショット-2025-08-02-18.52.51.avif)
 
-Al pedir temas en X, llegaron innumerables peticiones descabelladas. Procesamos con éxito dos temas, y quedaban 15 minutos para empezar a crear las diapositivas a las 21:00. En el momento en que giré la ruleta una vez más, apareció el tema del destino.
+Al pedir propuestas de temas en X, empezaron a llegar una tras otra peticiones de lo más descabelladas. Tras despachar con éxito dos de los temas, solo quedaban 15 minutos para las 21:00, hora de empezar a preparar las diapositivas. Al girar la ruleta por última vez, apareció el tema del destino:
 
-!["Una aplicación que elige algo al azar en tu escritorio y lo arregla bien cuando le pides 'Arréglalo bien' (irreversible)"](/images/blog/スクリーンショット-2025-08-02-20.15.01.avif)
+![«Una app a la que le pides "hazme ese temita a tu manera" y elige algo al azar en tu escritorio para hacértelo a su manera (de forma irreversible)»](/images/blog/スクリーンショット-2025-08-02-20.15.01.avif)
 
-Mi cerebro se congeló por un instante. ¿Cómo iba a implementar esto en los últimos 15 minutos?
+Por un instante, el cerebro se me quedó congelado. ¿Cómo implementar esto a falta de solo 15 minutos?
 
-## La técnica prohibida de crear un servidor MCP usando un servidor MCP
+## La técnica prohibida: crear un servidor MCP con un servidor MCP
 
-En medio de la desesperación, se me ocurrió una idea. En Claude Desktop, había registrado "Claude Code" como mi servidor MCP. Y lo que necesitaba ahora era un servidor MCP. Es decir...
+En medio de una situación desesperada, de repente se me encendió la bombilla. En Claude Desktop tengo registrado "Claude Code" como servidor MCP. Y lo que necesito ahora también es un servidor MCP. Es decir, **bastaba con usar un servidor MCP para crear otro servidor MCP**.
 
-**Simplemente, crearía un servidor MCP usando un servidor MCP.**
-
-Decidí intentar implementar esta estructura anidada. No podía detener YouTube LIVE. Aposté todo o nada, con la audiencia observando.
+Decidí asumir el reto de implementar esta estructura anidada. El directo de YouTube no se podía detener. Con la audiencia observando en tiempo real, me lo jugué todo a una sola carta.
 
 ```javascript
-// Parte del código generado
+// 実際に生成されたコードの一部
 const randomElements = {
   folders: [
-    'El jardín secreto',
-    'Recuerdos perdidos',
-    'Melancolía de lunes',
-    'Euforia de viernes',
-    'La habitación cerrada',
-    'Parece importante de alguna manera'
+    '秘密の花園',
+    '迷子の思い出',
+    '月曜日の憂鬱',
+    '金曜日の解放感',
+    '開かずの間',
+    'なんとなく大事そう'
   ],
-
+  
   actions: [
     'createRandomFolder',
     'createArtFolder',
@@ -64,81 +64,81 @@ const randomElements = {
 };
 ```
 
-## El milagro de la aplicación completada en 15 minutos
+## La app milagrosa completada en 15 minutos
 
-Claude Code no defraudó. Sin escribir una sola línea de código, solo a través de la interacción, se completó un servidor MCP con las siguientes funciones:
+Claude Code no defraudó. Sin escribir una sola línea de código, interactuando únicamente mediante diálogo, se completó un servidor MCP con las siguientes funciones:
 
-### Siete acciones aleatorias implementadas
+### Las 7 acciones aleatorias implementadas
 
-1. **Creación de carpetas aleatorias**: Genera carpetas con nombres poéticos como "Melancolía de lunes" o "Euforia de viernes".
-2. **Creación de archivos aleatorios**: Genera automáticamente haikus, horóscopos, notas de compra, etc.
-3. **Organización de archivos**: Mueve archivos de imagen a la carpeta "Tesoros encontrados".
-4. **Renombrado de archivos**: Renombra capturas de pantalla a algo como "Probablemente importante.png".
-5. **Galería de escritorio**: Exhibe obras de arte moderno en ASCII art.
-6. **Creación de archivos secretos**: Genera un archivo oculto llamado `.secret_treasure.txt`.
-7. **Cápsula del tiempo**: Crea un mensaje para ti mismo dentro de un año.
+1. Creación de carpetas aleatorias: genera carpetas con nombres poéticos como "Melancolía de lunes" o "Sensación de libertad del viernes"
+2. Creación de archivos aleatorios: genera automáticamente haikus, predicciones de la fortuna, listas de la compra, etc.
+3. Organización de archivos: traslada archivos de imagen a la carpeta "Tesoros encontrados"
+4. Renombrado de archivos: renombra capturas de pantalla a cosas como "probablemente_importante.png"
+5. Museo en el escritorio: exhibe obras de arte contemporáneo en arte ASCII
+6. Creación de archivos secretos: genera un archivo oculto llamado `.secret_treasure.txt`
+7. Cápsula del tiempo: redacta un mensaje para uno mismo dentro de un año
 
-### Ejemplo de contenido generado
+### Ejemplos de contenidos generados
 
 ```text
-// Haiku
-Archivos dispersos
-en el escritorio
-cielo de verano
+// 俳句
+デスクトップに
+散らばるファイル
+夏の空
 
-// Nota de compra
-- Leche
-- Pan
-- Libro de autoayuda para organizar
-- Motivación (si está a la venta)
-- Tiempo (si también estuviera a la venta)
+// 買い物メモ
+- 牛乳
+- パン
+- 整理整頓の本
+- やる気（売ってたら）
+- 時間（これも売ってたら）
 
-// Filosofía del escritorio
-"Un escritorio perfectamente organizado es
-un escritorio que no se utiliza"
-- Alguna persona importante (probablemente)
+// デスクトップ哲学
+「完璧に整理されたデスクトップは、
+ 使われていないデスクトップである」
+- 誰か偉い人（たぶん）
 ```
 
-## El misterioso incidente de la implementación de la interfaz de usuario HTML
+## El misterioso incidente de la implementación de una interfaz HTML
 
-Lo más divertido fue que Claude Code implementó por sí solo una interfaz de usuario HTML. Quizás porque le pedí una "aplicación", se completó una interfaz web impresionante que se movía dinámicamente. Sin embargo, este servidor MCP solo se puede usar a través de Claude Desktop. Al final, la interfaz de usuario no se usó en absoluto, solo existió.
+Lo más divertido fue que Claude Code implementó por su cuenta una interfaz gráfica en HTML. Quizá porque le pedí una "app", completó una interfaz web dinámica de aspecto impecable. Sin embargo, este servidor MCP solo se puede utilizar a través de Claude Desktop. Al final, la interfaz nunca se llegó a usar y se quedó allí, simplemente existiendo.
 
-Incluso preguntando a la IA por qué la implementó, no obtuve respuesta.
+Por más que se le pregunte a la IA por qué la implementó, no hay respuesta.
 
-## Resultado de la implementación práctica
+## Resultados tras ponerla a prueba en el campo de batalla
 
-Registré el servidor MCP completado en Claude Desktop y lo ejecuté. Sorprendentemente, funcionó perfectamente a la primera.
+Registré el servidor MCP completado en Claude Desktop y lo ejecuté. Para mi sorpresa, funcionó a la primera y sin ningún problema.
 
-### Primera ejecución: Inauguración de la Galería de Escritorio
+### 1.ª ejecución: Inauguración del museo en el escritorio
 ```
-✨ ¡Lo he arreglado bien!
+✨ いい感じにアレしておきました！
 
-🎨 ¡Hemos inaugurado la "Galería de Escritorio"! También hemos expuesto obras de arte.
-```
-
-Una carpeta de galería apareció de repente en mi escritorio. Dentro, se encontraba una obra de arte moderno en ASCII art.
-
-### Segunda ejecución: El destino de las capturas de pantalla
-```
-✨ ¡Lo he arreglado bien!
-
-🏷️ ¡He renombrado "Captura de pantalla_2024-08-01.png" a "Probablemente importante.png"!
+🎨 「デスクトップ美術館」を開館しました！芸術作品も展示済みです
 ```
 
-Una carpeta con un montón de capturas de pantalla se convirtió en "Probablemente importante.png" en un instante. Quizás fuera importante, o quizás no.
+Una carpeta de museo apareció repentinamente en el escritorio. En su interior reposaban obras de arte contemporáneo en arte ASCII.
 
-## Aprendizaje técnico
+### 2.ª ejecución: El destino de las capturas de pantalla
+```
+✨ いい感じにアレしておきました！
 
-Aunque a primera vista parezca una broma, hubo varios descubrimientos importantes.
+🏷️ 「スクリーンショット_2024-08-01.png」を「たぶん重要.png」にリネームしました！
+```
 
-### 1. El potencial del MCP (Model Context Protocol)
-Los servidores MCP se pueden implementar de forma sorprendentemente sencilla. Para algo como "manipular el escritorio", 15 minutos son suficientes.
+Un montón de carpetas de capturas de pantalla se transformaron al instante en "probablemente_importante.png". Ciertamente podrían ser importantes, o tal vez no.
 
-### 2. La realización del desarrollo de IA por IA
-La estructura anidada de crear un servidor MCP con Claude Code nos dio un vistazo al futuro donde la IA crea IA. Los humanos solo necesitan aportar ideas, y la implementación puede dejarse completamente a la IA.
+## Aprendizajes técnicos
 
-### 3. El poder del desarrollo impulsado por plazos
-La situación extrema de los últimos 15 minutos, por el contrario, hizo explotar la creatividad. Si hubiera tenido tiempo, habría intentado hacer algo "correcto" y probablemente habría resultado aburrido.
+Aunque a simple vista parezca una broma, en realidad hubo varios hallazgos de gran importancia.
+
+### 1. El potencial de MCP (Model Context Protocol)
+Los servidores MCP se pueden implementar de manera mucho más simple de lo imaginado. Para algo como "interactuar con el escritorio" como en esta ocasión, 15 minutos son más que suficientes.
+
+### 2. La realidad del desarrollo de IA mediante IA
+La estructura anidada de crear un servidor MCP con Claude Code nos permitió vislumbrar un futuro en el que la IA crea IA. En esta ocasión, la labor del humano se limitó únicamente a proponer la idea; toda la implementación se delegó por completo en la IA.
+
+### 3. El poder del desarrollo impulsado por fechas límite
+El estado límite de disponer de tan solo 15 minutos desató, por el contrario, una explosión de creatividad. De haber tenido más tiempo, habríamos intentado hacer algo "como es debido", y con seguridad habría resultado algo aburrido.
 
 ### Puntos clave de la implementación
 
@@ -146,58 +146,58 @@ La situación extrema de los últimos 15 minutos, por el contrario, hizo explota
 class IikanjiServer {
   async handleIikanjini(args) {
     const desktopPath = args.desktopPath || path.join(os.homedir(), 'Desktop');
-
-    // Selecciona una acción aleatoria
+    
+    // ランダムなアクションを選択
     const action = randomElements.actions[
       Math.floor(Math.random() * randomElements.actions.length)
     ];
-
-    // Ejecuta cada acción
+    
+    // 各アクションを実行
     switch (action) {
       case 'createArtFolder':
         result = await this.createArtFolder(desktopPath);
         break;
-      // ... otras acciones
+      // ... 他のアクション
     }
-
+    
     return {
       content: [{
         type: 'text',
-        text: `✨ ¡Lo he arreglado bien!\n\n${result}`,
+        text: `✨ いい感じにアレしておきました！\n\n${result}`,
       }],
     };
   }
 }
 ```
 
-Aunque es una estructura simple, con esto se convierte en un servidor MCP legítimo que se puede llamar desde Claude Desktop.
+Posee una estructura simple, pero solo con esto se convierte en un servidor MCP en toda regla, invocable desde Claude Desktop.
 
-## La creatividad generada por el "vibe coding"
+## La creatividad que genera el vibe coding
 
-Con esta experiencia, estoy convencido. El "vibe coding", que se crea con el impulso y la energía del momento en lugar de perseguir la exactitud técnica o la perfección, tiene un encanto único.
+Esta experiencia me convenció plenamente. Más que perseguir la rigurosidad técnica o el perfeccionismo, el "vibe coding", que consiste en construir al ritmo de la vibra y el impulso del momento, posee un atractivo único.
 
-- **Las restricciones generan creatividad**: La limitación de tiempo de 15 minutos dio lugar a ideas innovadoras.
-- **No busques la perfección**: La ambigüedad de "arreglarlo bien" genera diversión.
-- **Prioridad a la diversión**: Se prioriza "divertirse creándolo" sobre la utilidad práctica.
+- Las restricciones generan creatividad, tal como el límite de 15 minutos dio lugar a ideas innovadoras
+- La ambigüedad de buscar que quede "a su manera" sin aspirar a la perfección produce, por el contrario, un resultado fascinante
+- Priorizar la diversión e importar más el "disfrutar construyéndolo" que la utilidad práctica
 
-## Conclusión: La alegría de crear algo loco
+## Conclusión: La satisfacción de crear cosas disparatadas
 
-La "aplicación 'Hazlo bien y ya'" es, técnicamente hablando, un servidor MCP extremadamente simple. Sin embargo, su concepto, el proceso de implementación y la imprevisibilidad de los resultados que produce la convierten en una aplicación especial.
+La "App que te hace ese temita a su manera" es técnicamente un servidor MCP en extremo simple. No obstante, su concepto, su proceso de desarrollo y la naturaleza impredecible de sus resultados hacen de esta app algo especial.
 
-Nacida de la desesperación de la cancelación de un evento LT, esta aplicación demostró el potencial del desarrollo impulsado por plazos y un nuevo estilo de desarrollo en la era de la IA. Los servidores MCP se pueden crear con IA. Y crear cosas locas es, después de todo, divertido.
+Nacida de la desesperación por la cancelación de un evento de LT, esta app demostró el potencial del desarrollo impulsado por fechas límite y un nuevo estilo de desarrollo en la era de la IA. Los servidores MCP se pueden crear con IA. Y, definitivamente, construir cosas disparatadas siempre es divertido.
 
-La próxima vez que tu escritorio esté desordenado, ¿por qué no le pides que "lo arregle bien y ya"? Seguramente lo arreglará bien de una manera que nunca podrías haber imaginado.
+La próxima vez que tengas el escritorio desordenado, ¿por qué no pruebas a pedirle que "te haga ese temita a su manera"? Seguro que te lo resolverá a su modo y de una forma totalmente inesperada.
 
-Sin embargo, ten cuidado si tienes archivos importantes, ya que el resultado es irreversible. Pero eso también es parte de la vida.
+Eso sí: ten en cuenta que el resultado es irreversible, así que mucho cuidado si tienes archivos importantes. Pero bueno, así es la vida.
 
 ---
 
-*Puedes ver cómo fue la transmisión real de YouTube LIVE aquí. Te recomiendo encarecidamente que veas el milagroso proceso de desarrollo a partir de los últimos 15 minutos.*
+*Aquí puedes ver la transmisión real en YouTube LIVE. No te pierdas el milagroso proceso de desarrollo a partir de los últimos 15 minutos.*
 
 https://www.youtube.com/live/9gGjM0YrqJE?si=kGLBBCYsQp5F4GPi
 
-*Por cierto, aquí está el servidor MCP de "Hazlo bien y ya" que creé.*
+*Por cierto, aquí tienes el servidor MCP "que te hace ese temita a su manera" que construimos.*
 
 https://github.com/terisuke/iikanjini
 
-*Te animo a que lo pruebes.*
+*¡No dudes en probarlo!*
