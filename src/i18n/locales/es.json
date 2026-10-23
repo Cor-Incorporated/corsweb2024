@@ -674,86 +674,7 @@
     "consult": "Contactar",
     "press": "Notas de prensa"
   },
-  "hero": {
-    "title": "Más rápido que cualquiera, más allá del horizonte.",
-    "subtitle": "Superando las barreras del idioma y la cultura con IA para crear una sociedad donde las personas se entiendan verdaderamente.",
-    "cta": "Ver nuestro trabajo y productos"
-  },
-  "services": {
-    "title": "Servicios",
-    "items": [
-      {
-        "step": "01",
-        "name": "Consultoría IT y Análisis de Datos",
-        "description": "Servicio de apoyo DX que visualiza el estado actual mediante scraping basado en Python y análisis BI, acompañando desde la planificación estratégica hasta la implementación."
-      },
-      {
-        "step": "02",
-        "name": "Desarrollo de Aplicaciones Web y Móviles",
-        "description": "Provisión integral de aplicaciones B2B/B2C de alta velocidad y UX rica utilizando frameworks más recientes como Flutter y React."
-      },
-      {
-        "step": "03",
-        "name": "Desarrollo de Soluciones IA",
-        "description": "Desarrollo de aplicaciones inteligentes y herramientas de automatización optimizadas para los desafíos del cliente utilizando IA generativa/LLM, reconocimiento de imágenes y procesamiento de voz."
-      }
-    ]
-  },
-  "about": {
-    "title": "Sobre Cor.Inc.",
-    "description": "Cor.inc tiene como misión 'Abrir el futuro a través de la co-creación en lugar de la competencia, y realizar una sociedad feliz', y se dedica a la planificación, definición de requisitos, desarrollo y operación de soluciones de IA, así como a las operaciones de contabilidad y finanzas asociadas. Valoramos la 'co-creación' más que la 'competencia', y aprovechamos la 'sensación de velocidad' que es una fortaleza de las startups para proporcionar servicios llenos de creatividad e innovación.",
-    "cta": "Más detalles",
-    "heading": {
-      "title": "Sobre Cor.Inc.",
-      "description": "Cor.inc tiene como misión 'Abrir el futuro a través de la co-creación en lugar de la competencia, y realizar una sociedad feliz', y se dedica a la planificación, definición de requisitos, desarrollo y operación de soluciones de IA, así como a las operaciones de contabilidad y finanzas asociadas. Valoramos la 'co-creación' más que la 'competencia', y aprovechamos la 'sensación de velocidad' que es una fortaleza de las startups para proporcionar servicios llenos de creatividad e innovación."
-    }
-  },
-  "mission": {
-    "title": "Nuestra misión",
-    "subtitle": "Lo que una vez perseguí con la trompeta - comunicación más allá de las palabras - ahora a través de la tecnología.",
-    "paragraphs": [
-      "Nuestro fundador tiene TEA y conoce el dolor de 'no ser comprendido'.",
-      "Por eso nos tomamos en serio la realización de una comunicación sin malentendidos.",
-      "A través de intercambios de tarjetas de presentación, sitios web y conversaciones mediadas por IA. Pequeños momentos de 'ah, lo entendieron' en la vida cotidiana.",
-      "Cuando se acumulan, todos pueden transmitir adecuadamente y ser comprendidos por su valor.",
-      "Usamos la tecnología para eliminar las 'barreras del lenguaje' entre las personas, creando un mundo donde todos puedan brillar como ellos mismos."
-    ],
-    "stats": [
-      {
-        "name": "Desde la fundación",
-        "value": "2 años"
-      },
-      {
-        "name": "Idiomas disponibles",
-        "value": "10"
-      },
-      {
-        "name": "Proyectos",
-        "value": "15"
-      },
-      {
-        "name": "Servicios ofrecidos",
-        "value": "Desarrollo de Apps & Estrategia IT/IA"
-      }
-    ]
-  },
-  "founderStory": {
-    "title": "Historia del Fundador",
-    "subtitle": "¿Por qué un ex músico dirige un negocio no relacionado con la música?",
-    "paragraphs": [
-      "Desde pequeño, era 'el niño que no sabía leer el ambiente'. Con ASD, siempre he sentido un muro entre yo y los demás.",
-      "En mi segundo año de secundaria, tocando un solo de trompeta en un auditorio lleno de 2,000 personas, experimenté por primera vez la emoción de 'comunicación más allá de las palabras'. Toda la conciencia del lugar se concentró en mí, y mi alma tembló con una sensación de unidad que no necesitaba palabras.",
-      "Pero en la industria musical, nunca volví a sentir esa emoción. Conexiones, jerarquía, leer entre líneas. La expresión se degradó a mero 'trabajo', y enfermé.",
-      "Durante la pandemia, dejé la música y trabajé en ventas en Recruit. Allí, enfrenté 'las limitaciones de las herramientas existentes' y 'la frustración de que las palabras no llegaran a la gente'.",
-      "Luego descubrí la tecnología. El código no traiciona. La IA no se vuelve emocional. Y sobre todo, pude presenciar cómo lo que creé resolvió los problemas de alguien y enriqueció sus vidas.",
-      "Esa emoción de la secundaria, ahora en la vida cotidiana. En intercambios de tarjetas de presentación, en sitios web, a través de comunicación mediada por IA. Acumulando pequeños momentos de 'ah, llegó'.",
-      "Ese es el origen de Cor.inc."
-    ]
-  },
   "contact": {
-    "title": "¡Consulte con confianza!",
-    "description1": "Después de confirmar el contenido de la consulta, nos pondremos en contacto con usted dentro de 3 días hábiles. Por favor, espere un momento.",
-    "description2": "Si no recibe respuesta dentro del período anterior, es posible que haya un problema de envío. Le pedimos que se ponga en contacto con nosotros nuevamente.",
     "heading": {
       "title": "Cuéntanos dónde se atasca.",
       "description": "No necesitas requisitos cerrados. Comparte el problema, las restricciones o la idea; respondemos en 3 días hábiles."
@@ -844,41 +765,6 @@
     "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región.",
     "copyright": "Cor.inc"
   },
-  "features": {
-    "title": "Características",
-    "items": [
-      {
-        "id": "uniqueness-1",
-        "name": "Integración de tecnologías digitales",
-        "description": "Formulamos estrategias de TI basadas en información recopilada con Python, desarrollamos aplicaciones web MVP para realizar marketing de prueba... Podemos cubrir proyectos que abarcan múltiples tecnologías y procesos como este con una sola empresa."
-      },
-      {
-        "id": "uniqueness-2",
-        "name": "Servicio integral",
-        "description": "Nos encargamos de todo desde la planificación hasta el desarrollo, lanzamiento de prueba y inicio de prestación de servicios. Como el mismo equipo se encarga, es menos probable que haya discrepancias en la comprensión, y proporcionamos desarrollo más rápido y de menor costo."
-      },
-      {
-        "id": "uniqueness-3",
-        "name": "Desarrollo centrado en el cliente",
-        "description": "Lo que más valoramos en nuestro desarrollo es la \"resolución del cliente\". A través de retroalimentación detallada, marketing de prueba y hitos, identificamos lo que el cliente realmente necesita y construimos una relación que puede ser un socio comercial Win-Win."
-      },
-      {
-        "id": "uniqueness-4",
-        "name": "Experiencia 「ultra rápida e inteligente」",
-        "description": "Capturamos agudamente nuevas tendencias y conocimientos. Reflejamos rápidamente soluciones beneficiosas en nuestras propuestas, proporcionando experiencias nuevas nunca antes vistas."
-      },
-      {
-        "id": "uniqueness-5",
-        "name": "Creación de nuevos valores",
-        "description": "Sin estar limitados por conceptos tradicionales, nos enfrentamos seriamente a nuevas perspectivas e ideas. Aprovechamos al máximo el \"sentido de velocidad\" característico de las startups para dar voz a valores recién nacidos a través de la tecnología."
-      },
-      {
-        "id": "uniqueness-6",
-        "name": "Resolución de desafíos sociales desde una perspectiva única",
-        "description": "La pasión por el progreso humano no se detiene. Utilizamos la tecnología para llenar brechas, promover comunicación significativa y abordar activamente la resolución de problemas sociales que acompañan al progreso."
-      }
-    ]
-  },
   "header": {
     "mobileMenuDescription": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nos centramos en LLM locales e IA segura, nuestro producto propio «Grift» y el desarrollo de IA a medida y el apoyo a su adopción; también trabajamos en IA en hardware y en crear espacios de aprendizaje y comunidad en la región."
   },
@@ -956,18 +842,6 @@
       "videosNotFound": "No se encontraron videos"
     }
   },
-  "values": {
-    "title": "Nuestros Valores"
-  },
-  "team": {
-    "title": "Conoce a nuestro equipo"
-  },
-  "linkTypes": {
-    "LitLink": "LitLink",
-    "X": "X",
-    "Zenn": "Zenn",
-    "Homepage": "Página web"
-  },
   "faq": {
     "title": "Preguntas Frecuentes",
     "questions": [
@@ -1007,44 +881,6 @@
     "ariaLabel": "Calendario de agenda del CEO",
     "note": "* Si no encuentra un horario adecuado, contáctenos a través de Cloudia, nuestro chat con IA."
   },
-  "testimonials": {
-    "title": "Experiencia Técnica",
-    "items": [
-      {
-        "name": "JavaScript/TypeScript",
-        "description": "Desarrollo Frontend & Backend",
-        "image": "/assets/jsts.avif",
-        "message": "JavaScript nació en 1995 en Netscape y se ha convertido en la base del desarrollo web. TypeScript, como su superconjunto, añade tipado estático para mejorar la mantenibilidad en proyectos a gran escala. Se usa en combinación con Node.js y React para comunicación en tiempo real y construcción de UI. Con procesamiento asíncrono y un ecosistema rico, es ideal para el desarrollo rápido e interactivo de aplicaciones."
-      },
-      {
-        "name": "Python",
-        "description": "IA & Aprendizaje Automático",
-        "image": "/assets/python.avif",
-        "message": "Python es un lenguaje de programación de propósito general desarrollado en 1991. Su característica es una sintaxis simple y legible, ampliamente utilizado en aprendizaje automático, desarrollo de IA y análisis de datos. Al aprovechar bibliotecas como TensorFlow y PyTorch, se pueden construir modelos de IA complejos rápidamente, y es ampliamente apoyado desde principiantes hasta usuarios avanzados."
-      },
-      {
-        "name": "Go",
-        "description": "Backend & Sistemas de Alto Rendimiento",
-        "image": "/assets/go.avif",
-        "message": "Go (Golang) es un lenguaje de programación ligero y de alta velocidad desarrollado por Google en 2009. Su característica es una sintaxis simple y procesamiento concurrente (goroutines), adecuado para aplicaciones nativas de la nube y microservicios. Tiene una velocidad de compilación rápida y alta eficiencia de memoria, lo que lo hace ideal para el desarrollo de servidores escalables."
-      }
-    ]
-  },
-  "cta": {
-    "title": "¿Necesita información más detallada?",
-    "description": "No dude en contactarnos. Si necesita información más detallada o tiene preguntas específicas, nuestro equipo le ayudará."
-  },
-  "products": {
-    "heading": {
-      "title": "Productos e Insights",
-      "description": "Información detallada sobre nuestros productos, servicios e insights técnicos."
-    }
-  },
-  "homeCta": {
-    "title": "Contáctanos",
-    "description": "No dude en contactarnos para cualquier pregunta, consulta o solicitud de cotización.",
-    "button": "Contáctanos"
-  },
   "contactInfo": {
     "address": {
       "label": "Dirección postal",
@@ -1057,42 +893,6 @@
       "notice": "Contacta con nosotros por teléfono. Un miembro del equipo le devolverá la llamada."
     }
   },
-  "valuesData": [
-    [
-      {
-        "ref": "01",
-        "name": "Primero actuar",
-        "description": "Cualquiera puede solo pensar. Acepta que la respuesta correcta será juzgada por las personas futuras, y una vez decidido, actúa rápidamente hacia el mejor resultado."
-      },
-      {
-        "ref": "02",
-        "name": "Siempre auto-reflexionar",
-        "description": "La forma de la felicidad está constantemente cambiando. Para perseguir la verdadera felicidad, debemos siempre preguntarnos \"¿Es esto lo mejor?\" y continuar moviéndonos sin detener nuestro pensamiento."
-      },
-      {
-        "ref": "03",
-        "name": "Hacer felices tanto a otros como a uno mismo",
-        "description": "Solo las personas felices pueden hacer felices a otros. Siempre piensa en acciones que creen situaciones ganar-ganar tanto para ti como para otros sin sacrificar nada."
-      }
-    ],
-    [
-      {
-        "ref": "04",
-        "name": "Expresar intenciones claramente",
-        "description": "Las acciones indecisas son desperdiciadas y no benefician a nadie. Toma decisiones firmes por ti mismo y comprométete completamente con todo."
-      },
-      {
-        "ref": "05",
-        "name": "Servicios flexibles",
-        "description": "Ayuda a tantos interesados como sea posible a ser felices. Para este propósito, deliberadamente evitamos servicios estandarizados y construimos servicios óptimos adaptados a tareas individuales. (Ejemplo) Personalizar instantáneamente tarjetas de presentación WebAR y chatbots de IA según los requisitos del cliente"
-      },
-      {
-        "ref": "06",
-        "name": "Forjar tu propio destino",
-        "description": "Independientemente del éxito o fracaso, tus propias acciones son tu responsabilidad. Los resultados y la reflexión son el resultado de tus propias acciones, acéptalo con una sonrisa."
-      }
-    ]
-  ],
   "teamData": [
     {
       "id": "kousuke-terada",
@@ -1102,23 +902,6 @@
       "description": "Graduado de universidad de música → Ventas en fabricante de instrumentos → Ventas corporativas en mega-venture → Transición a IT. Aprovechando este trasfondo único para desafiar \"tender puentes entre tecnología y lenguaje\".",
       "comingSoon": false,
       "link": "https://cor-jp.com/about"
-    },
-    {
-      "name": "Cloudia Sorano",
-      "image": "/assets/cloudia.avif",
-      "job": "Embajadora de IA",
-      "description": "IA interna que comparte temas técnicos en dialecto de Fukuoka. Actualmente desafiando 51 semanas consecutivas de Lightning Talks en Zenn y X.",
-      "comingSoon": false,
-      "link": "https://x.com/Cloudia_Cor",
-      "zennLink": "https://zenn.dev/cloudia"
-    },
-    {
-      "name": "Nagisa Terada",
-      "image": "/assets/nagi.avif",
-      "job": "Personal",
-      "description": "Después de graduarse de la escuela de belleza, trabajó en un salón durante 7 años. Transición a IT después de aprender programación. Esforzándose diariamente para convertir desafíos en posibilidades.",
-      "comingSoon": false,
-      "link": "https://digital-studio-c5abe.web.app/"
     }
   ],
   "meta": {
@@ -1159,10 +942,6 @@
     "contact": {
       "title": "Contacto · Cor.inc",
       "description": "Contacta con nuestro equipo para aprender más sobre cómo podemos ayudarte."
-    },
-    "products": {
-      "title": "Productos&Insights · Cor.inc",
-      "description": "Explora nuestra página de productos e insights que muestra nuestras soluciones IT innovadoras y alcance mediático. Esta página ofrece información detallada sobre nuestro portafolio de productos, servicios de desarrollo e insights estratégicos. Descubre nuestras soluciones tecnológicas de vanguardia, lee sobre nuestros enfoques innovadores y aprende cómo podemos ayudar a transformar tu presencia digital. Ideal para empresas que buscan servicios IT integrales y soluciones de productos."
     },
     "privacy": {
       "title": "Política de privacidad | Cor.Inc.",

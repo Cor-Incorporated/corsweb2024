@@ -50,86 +50,7 @@
     "consult": "お問い合わせ",
     "press": "プレスリリース"
   },
-  "hero": {
-    "title": "言葉を超えて、想いを届ける。",
-    "subtitle": "かつてトランペットで伝えた感動を、今はコードで。元音楽家が追求する「誤解のないコミュニケーション」の実現。",
-    "cta": "実績とプロダクトを見る"
-  },
-  "services": {
-    "title": "Services",
-    "items": [
-      {
-        "step": "01",
-        "name": "IT コンサルティング・データ分析",
-        "description": "Python ベースのスクレイピングと BI 分析で現状を可視化し、戦略立案から実装まで伴走する DX 支援サービスです。"
-      },
-      {
-        "step": "02",
-        "name": "Web・モバイルアプリ開発",
-        "description": "Flutter・React など最新 FW を駆使し、高速かつリッチな UX の B2B/B2C アプリをワンストップで提供します。"
-      },
-      {
-        "step": "03",
-        "name": "AI ソリューション開発",
-        "description": "生成 AI／LLM・画像認識・音声処理を活用し、お客様の課題に最適化した知的アプリや自動化ツールを開発します。"
-      }
-    ]
-  },
-  "about": {
-    "title": "Cor.株式会社について",
-    "description": "Cor.inc は「競争ではなく共創を通じて未来を切り拓き、幸福な社会を実現する。」をミッションに掲げ、AIソリューションの企画・要件定義・開発・運用、及び付随する経理・財務業務を行っています。「競争」よりも「共創」を重視し、スタートアップの強みである「スピード感」を活かし、創造性と革新性に満ちたサービスを提供しています。",
-    "cta": "More details",
-    "heading": {
-      "title": "Cor.株式会社について",
-      "description": "Cor.inc は「競争ではなく共創を通じて未来を切り拓き、幸福な社会を実現する。」をミッションに掲げ、AIソリューションの企画・要件定義・開発・運用、及び付随する経理・財務業務を行っています。「競争」よりも「共創」を重視し、スタートアップの強みである「スピード感」を活かし、創造性と革新性に満ちたサービスを提供しています。"
-    }
-  },
-  "mission": {
-    "title": "Our mission",
-    "subtitle": "かつてトランペットで追い求めた「言葉を超えた伝達」を、今はテクノロジーで。",
-    "paragraphs": [
-      "創業者自身がASDという特性を持ち、「伝わらない」苦しみを知っています。",
-      "だからこそ、誤解のないコミュニケーション実現に本気です。",
-      "名刺交換で、ホームページで、AIを介した対話で。日常の小さな瞬間に「ああ、伝わった」という感動を。",
-      "それが積み重なれば、誰もが自分の価値を正しく伝え、理解される社会になる。",
-      "私たちは、テクノロジーを使って、人と人の間にある「言葉の壁」を取り払い、誰もが自分らしく輝ける世界を創ります。"
-    ],
-    "stats": [
-      {
-        "name": "設立から",
-        "value": "2年"
-      },
-      {
-        "name": "使える言語",
-        "value": "10"
-      },
-      {
-        "name": "プロジェクト",
-        "value": "15"
-      },
-      {
-        "name": "提供サービス",
-        "value": "App Develop & IT/AI Strategy"
-      }
-    ]
-  },
-  "founderStory": {
-    "title": "代表の想い",
-    "subtitle": "なぜ元音楽家が、音楽関連ではない事業を?",
-    "paragraphs": [
-      "小さい頃から「空気の読めない子供」でした。ASDという特性を持ち、他者との壁を常に感じながら生きてきました。",
-      "高校2年生の冬、2000人のホールでトランペットソロを吹いた時、初めて「言葉を超えたコミュニケーション」の感動を味わいました。会場の全ての意識が集中し、言葉など必要ない一体感に魂を震わせました。",
-      "しかし音楽業界で、その感動を二度と味わえませんでした。コネ、立場、腹の探り合い。表現は「仕事」に成り下がり、私は心を病みました。",
-      "コロナ禍で音楽の道を離れ、リクルートで営業を経験。そこで「既存ツールの限界」と「言葉が届かないもどかしさ」に直面しました。",
-      "そしてテクノロジーと出会いました。コードは裏切らない。AIは感情的にならない。何より、作ったものが誰かの課題を解決し、実際に生活を豊かにする様子を目の当たりにできる。",
-      "あの高校時代の感動を、今度は日常に。名刺交換で、ホームページで、AIを介したコミュニケーションで。「ああ、伝わった」という小さな感動を積み重ねていく。",
-      "それが、Cor.incの原点です。"
-    ]
-  },
   "contact": {
-    "title": "まずは、業務の「進まない」をお聞かせください。",
-    "description1": "内容を確認のうえ、原則3営業日以内に担当者よりご連絡します。",
-    "description2": "上記期間内に返信がない場合は、送信トラブルの可能性がございます。お手数をおかけいたしますが、再度ご連絡いただけますようお願い申し上げます。",
     "heading": {
       "title": "まずは、業務の「進まない」をお聞かせください。",
       "description": "具体的に何が決まっていなくても問題ありません。業務の無駄、使いにくいシステム、AI導入、機密データの扱い方、Grift、ローカルLLM、AI開発・研修まで、目的に合わせて整理します。内容を確認のうえ、原則3営業日以内にご連絡します。"
@@ -222,41 +143,6 @@
     "description": "Cor.株式会社は、ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む福岡のAI実装会社です。",
     "copyright": "Cor.inc"
   },
-  "features": {
-    "title": "Features",
-    "items": [
-      {
-        "id": "uniqueness-1",
-        "name": "デジタル技術の統合",
-        "description": "Pythonで収集した情報をもとにIT戦略を立案、MVPのWebアプリを開発してテストマーケティングを行う...このような複数の技術・工程にまたがったプロジェクトを全て私たち1社でカバーすることができます。"
-      },
-      {
-        "id": "uniqueness-2",
-        "name": "ワンストップなサービス",
-        "description": "企画立案から開発、テストリリース、サービス提供開始まで一貫して私たちが担当します。同じチームが担当するので、認識の食い違いが起きにくく、よりローコストでスピーディーな開発を提供します。"
-      },
-      {
-        "id": "uniqueness-3",
-        "name": "カスタマーファーストな開発",
-        "description": "私たちの開発で最も重視することは「顧客の解像度」。細やかなフィードバックやテストマーケティング、マイルストーンを通じて顧客の本当に求めているものを見抜き、Win-Winなビジネスパートナーになれる関係性を築いていきます。"
-      },
-      {
-        "id": "uniqueness-4",
-        "name": "「最速でスマート」な体験を",
-        "description": "私たちは新たなトレンドや知識を常に鋭く捉えます。関係者全員にとって有益なソリューションを素早く提案に反映し、これまでにない新しい体験を提供します。"
-      },
-      {
-        "id": "uniqueness-5",
-        "name": "新しい価値観の創造",
-        "description": "従来の概念にとらわれることなく、新しい視点やアイデアに真摯に向き合います。スタートアップ特有の「スピード感」を最大限に活かして、生まれたばかりの価値観にテクノロジーを通じて声を与えます。"
-      },
-      {
-        "id": "uniqueness-6",
-        "name": "独自視点による社会課題の解決",
-        "description": "人類の進歩への情熱は止まるところを知りません。私たちは、テクノロジーを利用してギャップを埋め、有意義なコミュニケーションを促進しながら、進歩に伴う社会問題の解決に積極的に取り組んでいます。"
-      }
-    ]
-  },
   "header": {
     "mobileMenuDescription": "Cor.株式会社は、福岡のAI実装会社です。ローカルLLM・セキュアAI、自社プロダクト「Grift」、AI受託開発・導入支援を軸に、ハードウェアAIや教育・地域での場づくりにも取り組んでいます。"
   },
@@ -334,18 +220,6 @@
       "videosNotFound": "動画が見つかりません"
     }
   },
-  "values": {
-    "title": "Our Values"
-  },
-  "team": {
-    "title": "Meet our team"
-  },
-  "linkTypes": {
-    "LitLink": "LitLink",
-    "X": "X",
-    "Zenn": "Zenn",
-    "Homepage": "ホームページ"
-  },
   "faq": {
     "title": "FAQ",
     "questions": [
@@ -391,44 +265,6 @@
     "ariaLabel": "代表スケジュールカレンダー",
     "note": "※ ご希望の日時が見つからない場合は、Cloudia（AIチャット）からご連絡ください。"
   },
-  "testimonials": {
-    "title": "Technical Expertise",
-    "items": [
-      {
-        "name": "JavaScript/TypeScript",
-        "description": "フロントエンド&サーバーサイド開発",
-        "image": "/assets/jsts.avif",
-        "message": "JavaScriptは1995年にNetscapeで生まれ、ウェブ開発の基盤となる言語です。TypeScriptはそのスーパーセットとして、静的型付けを追加し、大規模プロジェクトでの保守性を向上させます。Node.jsやReactと組み合わせてリアルタイム通信やUI構築に活用され、非同期処理や豊富なエコシステムにより、迅速でインタラクティブなアプリケーション開発に適しています。"
-      },
-      {
-        "name": "Python",
-        "description": "AI&機械学習",
-        "image": "/assets/python.avif",
-        "message": "Pythonは1991年に開発された汎用性の高いプログラミング言語です。シンプルで読みやすい文法が特徴で、機械学習、AI開発、データ分析に広く使われます。TensorFlowやPyTorchといったライブラリを活用することで、複雑なAIモデルを迅速に構築でき、初心者から上級者まで幅広く支持されています。"
-      },
-      {
-        "name": "Go",
-        "description": "バックエンド&高性能システム",
-        "image": "/assets/go.avif",
-        "message": "Go（Golang）は2009年にGoogleが開発した軽量かつ高速なプログラミング言語です。シンプルな文法と並行処理（goroutines）が特徴で、クラウドネイティブなアプリケーションやマイクロサービスに適しています。コンパイル速度が速く、メモリ効率が高いため、スケーラブルなサーバー開発に最適です。"
-      }
-    ]
-  },
-  "cta": {
-    "title": "より詳細な情報を希望ですか?",
-    "description": "お気軽にお問い合わせください。さらに詳しい情報が必要である場合や、具体的なご質問がございましたら、私たちのチームがサポートいたします。"
-  },
-  "products": {
-    "heading": {
-      "title": "Products & Insights",
-      "description": "私たちの製品やサービスに関する最新情報や、業界のトレンド、お役立ち情報をお届けします。"
-    }
-  },
-  "homeCta": {
-    "title": "お問い合わせ",
-    "description": "ご質問やご相談、お見積もりのご依頼など、お気軽にお問い合わせください。",
-    "button": "Contact us"
-  },
   "contactInfo": {
     "address": {
       "label": "所在地",
@@ -441,42 +277,6 @@
       "notice": "電話でのお問い合わせは、担当者から折り返しご連絡します。"
     }
   },
-  "valuesData": [
-    [
-      {
-        "ref": "01",
-        "name": "まずは行動",
-        "description": "思うだけなら誰でもできる。正解は後の人が判断することと割り切り、決めたらとにかく最善に向かって素早く行動すること。"
-      },
-      {
-        "ref": "02",
-        "name": "常に自問自答する",
-        "description": "幸せの形は常に変化する。本当の幸せを追求するためには常に「これがベストか？」を自分自身に問いかけ、思考停止せずに動き続かなければいけない。"
-      },
-      {
-        "ref": "03",
-        "name": "相手も自分も幸せになる",
-        "description": "幸せな人しか相手を幸せにできない。何かを犠牲にすることなく、自分も相手もwin-winになる行動を常に考え抜くこと。"
-      }
-    ],
-    [
-      {
-        "ref": "04",
-        "name": "意思表示ははっきりと",
-        "description": "どっちつかずな行動は無駄であり双方にメリットがない。何事も自分自身でしっかり決めて、全力で取り組むこと。"
-      },
-      {
-        "ref": "05",
-        "name": "柔軟性のあるサービス",
-        "description": "少しでも多くのステークホルダーに幸せになってもらう。そのためにあえて定型サービスを設けず、個々のタスクに合わせて最適なサービスを構築する。(例) WebAR 名刺や AI チャットボットを顧客要件に合わせ即時カスタマイズ"
-      },
-      {
-        "ref": "06",
-        "name": "自分の運命は自分で拓く",
-        "description": "成否に関わらず、自分の行動は自分で責任をとる。成果も反省も全て自分の行動の結果、笑って受け入れる。"
-      }
-    ]
-  ],
   "teamData": [
     {
       "id": "kousuke-terada",
@@ -486,23 +286,6 @@
       "description": "音大卒 → 楽器メーカー営業 → メガベンチャーで法人営業 → IT へ転身という異色の経歴を活かし、\"技術と言葉の橋渡し\" に挑戦しています。",
       "comingSoon": false,
       "link": "https://cor-jp.com/about"
-    },
-    {
-      "name": "Cloudia Sorano",
-      "image": "/assets/cloudia.avif",
-      "job": "AI アンバサダー",
-      "description": "福岡弁で技術ネタを発信する社内 AI。Zenn・X で 51 週連続 LT に挑戦中。",
-      "comingSoon": false,
-      "link": "https://x.com/Cloudia_Cor",
-      "zennLink": "https://zenn.dev/cloudia"
-    },
-    {
-      "name": "Nagisa Terada",
-      "image": "/assets/nagi.avif",
-      "job": "Staff",
-      "description": "美容学校卒業後、美容室に7年勤務。プログラミングを勉強後、IT業界に転職。苦手を可能にするため日々奮闘中。",
-      "comingSoon": false,
-      "link": "https://digital-studio-c5abe.web.app/"
     }
   ],
   "meta": {
@@ -523,10 +306,6 @@
     "contact": {
       "title": "Contact · Cor.inc",
       "description": "Contact our team to learn more about how we can help you."
-    },
-    "products": {
-      "title": "Products&Insights · Cor.inc",
-      "description": "Explore our products and insights page showcasing our innovative IT solutions and media outreach. This page offers detailed information about our product portfolio, development services, and strategic insights. Discover our cutting-edge technology solutions, read about our innovative approaches, and learn how we can help transform your digital presence. Ideal for businesses seeking comprehensive IT services and product solutions."
     },
     "privacy": {
       "title": "個人情報保護方針｜Cor.株式会社",
