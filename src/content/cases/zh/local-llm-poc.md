@@ -5,7 +5,7 @@ category: "local-llm"
 tags: ["本地LLM", "PoC", "安全AI", "AI基础设施"]
 publishedAt: 2026-07-02
 updatedAt: 2026-10-23
-summary: "存在机密数据而无法全部托付给云端AI，但企业自身又无法判断本地LLM是否真正可用于实际业务。本服务是一项为期3个月的PoC，旨在帮助您从这种状态中备齐用于判断是否正式上线的依据。"
+summary: "因为有机密数据，无法全部交给云端AI；但本地LLM能否真正用于业务，企业自己又无法判断。本服务是一项为期3个月的PoC，从这种状态出发，备齐判断是否正式上线的依据。"
 relatedSlugs: ["confidential-data-ai-assessment"]
 isDraft: false
 featured: false
