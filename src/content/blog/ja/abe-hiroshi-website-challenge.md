@@ -1,7 +1,9 @@
 ---
 title: "阿部寛のホームページに挑み続けたらすごいHPができた話"
 description: "「自称下り最速のホームページを持つ男」として、阿部寛のホームページに挑戦し続けた軌跡と技術的洞察"
+summary: "阿部寛さんのホームページに挑み続け、AstroとAlpine.js、AVIF画像、1年間のキャッシュを組み合わせたサイトを作った。Lighthouseのデスクトップでは、PerformanceとSEOが満点になった。速いは正義だが、使いやすいはもっと正義だ。"
 pubDate: 2024-01-20
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "engineering"
 tags: ["Astro", "Alpine.js", "AVIF", "WebPerformance", "PageSpeed"]
@@ -14,7 +16,7 @@ featured: true
 
 # 阿部寛のホームページに挑み続けたらすごいHPができた話
 
-「自称下り最速のホームページを持つ男」として、阿部寛さんのホームページに挑戦し続けた。その結果、単なる速度競争を超えた、真のハイパフォーマンスWebサイトが誕生したのだ。ちなみに阿部寛さんのサイトは今でも速い。敬意を表する。
+「自称下り最速のホームページを持つ男」として、阿部寛さんのホームページに挑み続けた。その結果、速さを競うだけでは終わらない、性能の高いWebサイトができた。ちなみに阿部寛さんのサイトは今でも速い。敬意を表する。
 
 ![開発者プロフィール画像](/images/blog/k-terada.avif)
 
@@ -22,47 +24,24 @@ featured: true
 
 ### Astro + Alpine.js の採用理由
 
-なぜこの組み合わせか？答えは簡単だ。「必要な時に必要な分だけ」という禅の精神を体現しているからだ。React？重い。Vue？まあまあ。でもAlpine.js？これが最軽量の答えだった。
-
-```astro
----
-// Astro Islands Architecture
-import Hero from '../components/Hero.astro';
-import ContactForm from '../components/ContactForm.vue';
----
-
-<Layout title="Ultra Fast Website">
-  <Hero />
-  <!-- 必要な部分のみJavaScriptを読み込み -->
-  <ContactForm client:load />
-</Layout>
-```
+この組み合わせにしたのは、JavaScriptを「必要な時に必要な分だけ」使えるからだ。Astroはビルドのときに不必要なJavaScriptをなるべく排除して、ページを軽くできる。とはいえ、画面遷移など多少のアニメーションがないと、会社のホームページとしては物足りない。そこで、Vue、React、AngularなどのSPAツールの超シンプル版であるAlpine.jsを使い、必要最低限のJavaScriptでアニメーションを実装した。
 
 ### 画像最適化戦略
 
-画像は現代Webの重い荷物だ。だから私は最新のAVIF形式を採用した。JPEGの半分のサイズで、画質は変わらない。魔法のようだが、これが技術の進歩というものだ。
-
-```html
-<!-- AVIF形式での画像配信 -->
-<picture>
-  <source srcset="hero-480w.avif 480w, hero-800w.avif 800w" type="image/avif">
-  <source srcset="hero-480w.webp 480w, hero-800w.webp 800w" type="image/webp">
-  <img src="hero-800w.jpg" alt="Hero image" loading="lazy">
-</picture>
-```
+画像は今のWebの重い荷物だ。だから僕は、新しい画像形式のAVIFを採用した。
 
 ## パフォーマンス最適化の結果
 
-ついにやった。全てのスコアで満点を叩き出したのだ：
+ついにやった。Lighthouseでは、デスクトップのPerformanceとSEOが満点になった。
 
-- **Lighthouse Score**: 100/100/100/100（完璧だ！）
-- **First Contentful Paint**: 0.3秒（瞬きする間もない）
-- **Largest Contentful Paint**: 0.5秒（コーヒーを一口飲む前に表示完了）
-- **Cumulative Layout Shift**: 0（ピクリとも動かない）
+- Lighthouse（デスクトップ）: Performance 100、Accessibility 99、Best Practices 93、SEO 100
+- Lighthouse（モバイル）: Performance 95、Accessibility 99、Best Practices 93、SEO 100
+- First Contentful Paint: デスクトップ0.5秒、モバイル1.9秒
+- Largest Contentful Paint: デスクトップ0.6秒、モバイル2.3秒
 
 ## Cache-Control戦略
 
-キャッシュは友達だ。1年間（31536000秒）のキャッシュ設定で、一度読み込んだ画像は二度と読み込まない。ユーザーのデータ通信料も節約できる。みんなハッピーだ。
+キャッシュは友達だ。1年間（31536000秒）のキャッシュ設定で、一度読み込んだ画像は1年間読み込み直さない。ユーザーのデータ通信料も節約できる。みんなハッピーだ。
 
 ```javascript
 // Firebase Hosting設定
@@ -81,6 +60,4 @@ import ContactForm from '../components/ContactForm.vue';
 }
 ```
 
-この挑戦を通じて、単なる「速さ」を超えた、ユーザー体験を重視したWebサイト設計の重要性を学んだ。結論：速いは正義だが、使いやすいはもっと正義だ。
-
-*高性能Webサイトの構築に興味がある方は、[お問い合わせ](/contact)から相談してほしい。阿部寛さんより速いサイトを一緒に作ろう（無理かもしれないが、挑戦する価値はある）。*
+この挑戦を通じて、速さだけでなく、ユーザー体験を重視してWebサイトを設計することが大事だと学んだ。速いは正義だが、使いやすいはもっと正義だ。
