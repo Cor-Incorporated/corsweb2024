@@ -53,7 +53,9 @@ describe('collectBlogLastmod', () => {
     const lastmod = collectBlogLastmod(path.resolve('src/content/blog'));
     expect(lastmod.size).toBeGreaterThanOrEqual(60);
     expect(lastmod.get('/blog/complete-markdown-guide/')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    // 全記事が同じ時刻（= ビルド時刻）にならないこと
-    expect(new Set(lastmod.values()).size).toBeGreaterThan(1);
+    // lastmod はビルド時刻ではなく frontmatter の日付（YYYY-MM-DD = UTC の 0 時）であること。
+    // 「全記事の値が同じでない」で確かめていたが、全記事の updatedDate が同じ日になると落ちた（2026-10-23）
+    const notCalendarDates = [...lastmod].filter(([, value]) => !value.endsWith('T00:00:00.000Z'));
+    expect(notCalendarDates).toEqual([]);
   });
 });
