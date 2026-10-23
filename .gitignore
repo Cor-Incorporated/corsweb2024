@@ -41,3 +41,6 @@ playwright-report/
 .harness-worktrees/
 .worktrees/
 .claude/
+
+# yomiyasu の検査の記録（.claude/skills/yomiyasu/scripts/yomiyasu_check.py が作る。原文と最終稿の全文が入る）
+.yomiyasu/

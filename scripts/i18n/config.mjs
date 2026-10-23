@@ -29,7 +29,7 @@ export const LANGUAGE_NAMES = Object.freeze({
  */
 export const COLLECTIONS = Object.freeze({
   blog: Object.freeze({
-    fields: Object.freeze(['title', 'description', 'image.alt']),
+    fields: Object.freeze(['title', 'description', 'summary', 'image.alt']),
     translateTags: false,
   }),
   cases: Object.freeze({
