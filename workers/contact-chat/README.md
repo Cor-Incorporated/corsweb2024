@@ -67,6 +67,8 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 
 ## デプロイ手順（初回）
 
+Node.js 22.12 以上で実行する（wrangler 4 は Node.js 22 以上、vitest 5 は 22.12 以上を求める）。
+
 ```bash
 cd workers/contact-chat
 npm install
@@ -79,14 +81,16 @@ npx wrangler secret put ANTHROPIC_API_KEY   # ロールバック用
 npx wrangler secret put RESEND_API_KEY      # Resend のAPIキー
 npx wrangler secret put TURNSTILE_SECRET    # 任意（Turnstile を使う場合のみ）
 
-# デプロイ（cor-jp.com/api/contact/* ルートに載る）
-npx wrangler deploy
+# デプロイ（cor-jp.com/api/contact/* ルートに載る）。--env="" は最上位の環境（本番）を明示する。
+# 付けなくても本番に出るが、wrangler 4 は [env.preview] があると --env の無い deploy に警告を出す。
+npx wrangler deploy --env=""
 ```
 
 検証:
 ```bash
 npm run typecheck   # tsc --noEmit
-npm run test        # vitest run
+npm run test        # vitest run（src/**/*.test.ts。vitest.config.ts）
+npm run knowledge:test  # node --test（scripts/sync-public-knowledge.test.mjs は node:test で書かれている）
 npx wrangler deploy --dry-run
 ```
 

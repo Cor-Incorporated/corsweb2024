@@ -1,6 +1,6 @@
 ---
-title: "已发布 Grift Team Beta 介绍页面（将于2026年10月下线）"
-description: "已发布用于团队处理估算依据的AI辅助工具——Grift Team Beta 的介绍页面。Grift Team Beta 将于2026年10月下线，Grift 的方向现已调整为从 git 历史中提取可验证事实的 CLI。"
+title: "已发布 Grift Team Beta 的介绍页面（已于2026年10月下架）"
+description: "已发布用于在团队中处理估算依据的 AI 辅助工具——Grift Team Beta 的介绍页面。Grift Team Beta 已于2026年10月下架。Grift 已调整方向，转变为从 Git 历史记录中提取可核实事实的 CLI 工具。"
 publishedAt: 2026-07-08
 category: "update"
 tags: ["Grift", "AI估算", "产品"]
@@ -9,7 +9,7 @@ source: "Grift"
 isDraft: false
 featured: false
 lang: "zh"
-translationSourceHash: "8e72e3395f7e3e154fd7ded27a5bd3d5cd7111cc5d67301dd63fe1d3576de005"
-translatedAt: "2026-10-20T01:57:31.494Z"
+translationSourceHash: "9d4f382f7b6bd6d7edc2936c1467809e0e30db05e9d9d857848af8f12c686d34"
+translatedAt: "2026-10-23T06:32:04.824Z"
 translationModel: "gemini-3.8-flash"
 ---

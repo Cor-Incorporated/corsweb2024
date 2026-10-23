@@ -1,82 +1,69 @@
 ---
-title: "Why AI and Contract Development Estimates Become Dependent on Individuals—How to Turn Estimation Rationale into a Company Asset"
-description: "We explain why contract development estimates vary from person to person, and how to create justifiable estimation rationale using GitHub track records, market rates, and man-hour breakdowns. We also introduce the concept of leveraging Grift."
+title: "Why AI and Contract Development Cost Estimation Becomes Dependent on Individuals: How to Turn the Basis for Estimates into Corporate Assets"
+description: "This article explains why contract development estimates vary from person to person and how to establish an explainable basis for estimates using GitHub track records, market rates, and man-hour breakdowns. It also introduces the concept of utilizing Grift."
+summary: "Contract development estimates become dependent on individuals because the necessary information is scattered across past projects, sales reps' memories, and individual team members' experience. By structuring project information and recording it with every estimate, that basis can be transformed into a corporate asset and reused for subsequent projects."
 pubDate: 2026-06-20
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "engineering"
 tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "en"
 featured: false
-updatedDate: 2026-10-20
 isDraft: false
-translationSourceHash: "33e2f7b40ac82ec99ff6797d980596694a83ea21ecae2c7aa80c23f0671935c1"
-translatedAt: "2026-10-20T02:20:25.011Z"
+translationSourceHash: "6597c07e3b67000a2e45a3ca7973f943d12f3ea6d4ec70e8c23de473f380a0d7"
+translatedAt: "2026-10-23T06:14:42.717Z"
 translationModel: "gemini-3.8-flash"
 ---
 
-Why does estimating in contract development become reliant on specific individuals? The reason is simple: the information needed for estimates is scattered across past projects, GitHub, work-hour logs, risks, the sales team's memory, and the personal experience of whoever is assigned to the task. Leaving this locked inside individuals' heads makes it impossible to maintain consistent proposal quality across a team.
+Why do estimates in contract development become reliant on specific individuals? The reason is simple: the information needed for estimation is scattered across past projects, GitHub, work-hour logs, risks, sales reps' memories, and the personal experience of the team members involved. As long as this information remains trapped in individuals' heads, the quality of a team's proposals cannot stay consistent.
 
 > **Update: October 20, 2026**
-> Grift ceased offering its estimation-support web application in September 2026 and has since pivoted to an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' Git history. The descriptions of Grift in this article reflect what was available at the time of publication. For consultations regarding estimates for contract development or AI development, we welcome inquiries through our [Contact](/contact) page under our AI contract development services.
+> Grift ceased offering its estimation-support web application in September 2026, and its direction has shifted to an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' git histories. The descriptions of Grift in this article reflect what was current at the time of publication. For consultations regarding contract development and AI development estimates, please reach out via [Contact Us](/contact) under our AI contract development services.
 
-## Turn to Grift to Eliminate Person-Dependent Estimation
+At Cor.Inc., we believe that an estimate is not just a calculation of an amount, but a foundation for building trust with clients. The question is not whether a quote is cheap or expensive, but whether you can explain *why* it costs that much. If you cannot answer that, business negotiations turn into mere price haggling.
 
-I believe an estimate is not merely a price calculation—it is the foundation of trust with a client. It is not about whether a price is cheap or expensive, but whether you can explain *why* it costs that amount. If you go silent here, the business meeting degenerates into a pure price negotiation.
+> **Objective Data Assumed in This Article**
+> - The Grift landing page at the time of publication stated that it cross-referenced GitHub track records with market rates, structured specifications through 5 to 10 AI-driven interview sessions, and generated comparison reports between market standards and the company's proposals.
+> - GitHub Octoverse 2025 noted that generative AI is becoming standard in software development, with AI, agents, and typed languages driving the largest development shift in over a decade.
+> - At the time of publication, Cor.'s track record page positioned Grift as an "in-house AI estimation and evaluation platform that generates explainable reference estimates from GitHub track records and market rates."
 
-Grift, developed by Cor.Inc., is an automated AI estimation tool that cross-references past GitHub performance with market rates to provide objective rationale for development estimates. It aims to structure specifications through 5 to 10 AI-driven interview steps and generate defensible, fully explained estimate reports.
+## Three Reasons Why Estimation Becomes Person-Dependent
 
-[Grift (AI Estimation)](https://griftai.org)
+- Past projects are hard to find, and even when a similar project exists, it lingers only in someone's memory.
+- The breakdown among frontend, backend, infrastructure, PM, and QA/testing is ambiguous, making it impossible to justify the basis for the hours.
+- Undefined specifications, third-party integrations, review iterations, and review delays on the client side are omitted from estimates, leaving risks unreflected in the pricing.
 
-> **Objective Data Referenced in This Article**
-> - The Grift landing page explains that it cross-references GitHub track records with market rates, structures specifications through 5 to 10 AI interviews, and generates comparison reports between market standards and your company's proposals.
-> - GitHub Octoverse 2025 notes that generative AI is becoming standard in development, with AI, agents, and typed languages driving the biggest shift in development practices seen in over a decade.
-> - The Cor. portfolio page positions Grift as an "in-house AI estimation and evaluation platform that generates defensible reference estimates from GitHub track records and market rates."
+In this state, a company cannot make proposals without relying on senior veterans. Even if orders increase, growth halts as soon as the personnel responsible for estimating run out of capacity.
 
-## 3 Reasons Estimates Become Person-Dependent
+## Transforming the Rationale into a Company Asset
 
-- Past projects are hard to search: Even when similar projects exist, they only live on in someone's memory.
-- Work-hour breakdowns cannot be explained: The breakdowns among frontend, backend, infrastructure, PM, and testing remain ambiguous.
-- Risks are not reflected in the price: Unfinalized specifications, third-party integrations, review cycles, and client-side confirmation delays are left out of the estimate.
+To turn estimates into corporate assets, information must be structured on a per-project basis. If you continuously document the project overview, functional requirements, non-functional requirements, work-hour breakdown, risks, similar projects, past code, and client-facing explanations every time you estimate, they can be reused for the next project.
 
-In this state, a company becomes unable to submit proposals unless a veteran engineer is present. Even if incoming orders increase, growth halts the moment the estimation staff hits a bottleneck.
+The role of AI is not to decide the price, but to organize scattered information and provide the material for humans to make informed decisions. The final judgment should always be made by humans.
 
-## How to Transform Rationale into a Corporate Asset
+## What We Aimed for with Grift
 
-To turn estimates into corporate assets, you must structure the information for each project: project overview, functional requirements, non-functional requirements, work-hour breakdown, risks, similar projects, past code, and explanatory notes for clients. If you document these each time you produce an estimate, you can reuse them on the next engagement.
+What Grift aimed to do at the time of publication was not to replace the person responsible for estimating, but to turn the rationale behind estimates into a company asset and create a state where quotes could be clearly explained to clients.
 
-The goal is not to have AI determine the final price. The role of AI is to organize scattered information and provide the materials humans need to make sound decisions. The final judgment should always be made by a human.
-
-## What We Aim to Achieve with Grift
-
-Grift does not aim to replace the people who prepare estimates. It aims to turn the rationale behind estimates into corporate assets and put teams in a position where they can explain their numbers clearly to clients.
-
-By assessing a team's development velocity from GitHub track records, cross-referencing it with market rates, and generating reports with work-hour breakdowns for each project, Grift enables contract development teams to say, "Given these conditions, this is the cost," instead of relying on gut feelings.
-
-## Turn to Grift to Eliminate Person-Dependent Estimation
-
-If you want to move away from relying solely on individual staff experience and turn contract development estimation into a company-wide proposal asset, consider adopting Grift. At Cor.Inc., we provide support through both AI estimation automation and AI contract development.
-
-[Grift (AI Estimation)](https://griftai.org)
+Specifically, the plan was to analyze a team's development velocity from their GitHub track record, compare it with market rates, and generate project-by-project work-hour breakdown reports. The goal was to enable contract teams to explain, "Given these conditions, this is the price," rather than relying on rough hunches.
 
 ## Frequently Asked Questions
 
 ### Q. Is Grift a tool that automatically finalizes estimate amounts?
 
-A. It does not automatically finalize official pricing. It is a tool designed to generate reference estimates and explanatory materials based on AI interviews, GitHub performance, and market rates.
+A. At the time of publication, Grift was not designed to automatically finalize binding quotes; rather, it was a tool for creating reference estimates and explanatory materials based on AI interviews, GitHub track records, and market rates. Grift ceased offering its estimation-support web application in September 2026, and is currently an open-source CLI that extracts verifiable facts from engineers' git histories.
 
 ### Q. What are the benefits of using it in a contract development team?
 
-A. It reduces estimate discrepancies among team members, enables the reuse of past projects and development track records, and makes it easier to explain pricing rationale to clients.
+A. The benefits highlighted at the time of publication were reducing variance in estimates across different individuals, reusing past projects and development track records, and making it easier to explain the basis of pricing to clients.
 
 ### Q. Can we leave estimation entirely to AI?
 
-A. While initial structuring and the generation of supporting documents can be left to AI, adjustments involving final pricing, risk assessments, and client relationships should be handled by humans.
+A. While initial organizing and the generation of supporting documentation can be left to AI, adjustments taking into account the final pricing, risk assessments, and the relationship with the client should be made by humans.
 
-Turn to Grift to eliminate person-dependent estimation.
+## References
 
-## Reference Materials
-
-- [Grift LP](https://griftai.org/) - Verified features including GitHub track record and market rate cross-referencing, 5 to 10 AI interviews, comparison reports, and current alpha-version market research.
-- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - Generative AI is becoming standard in development, with 80% of new developers using Copilot within one week. TypeScript has become the most widely used language on GitHub.
-- [Cor. Website: Track Record & Case Studies](https://cor-jp.com/works/) - Verified listings including Engineer Cafe Navigator, Grift, AI SaaS, legacy core database migrations, and architectural AI.
-- [Cor. Website: AI × CO-CREATION / Business Overview](https://cor-jp.com/) - Verified Cor.'s business domains, Grift, local LLMs/secure AI, AI-driven development, and co-creation messaging.
+- [Grift LP](https://griftai.org/) - Reviewed the landing page at the time of publication, confirming cross-referencing of GitHub track records with market rates, 5–10 AI-driven interview sessions, comparison reports, and alpha-stage market research at the time.
+- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - Generative AI is becoming standard in development; 80% of new developers use Copilot within one week. TypeScript has become the most widely used language on GitHub.
+- [Cor. Website: Track Record & Case Studies](https://cor-jp.com/works/) - Reviewed Engineer Cafe Navigator, Grift, AI SaaS, legacy core database migrations, architectural AI, and more.
+- [Cor. Website: AI × CO-CREATION / Business Overview](https://cor-jp.com/) - Reviewed Cor.'s business areas, Grift, local LLMs/secure AI, AI-driven development, and co-creation messaging.
