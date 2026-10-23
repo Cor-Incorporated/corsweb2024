@@ -469,10 +469,11 @@ describe('F3 変異: 片側だけ変えると両側の値を出して落ちる',
   });
 
   it('Zod にだけ必須項目を足す', () => {
-    const schema = blogFrontmatterSchema.extend({ summary: z.string() });
+    // config.yml に無い架空のキー（summary は 2026-10-23 に任意項目として両側へ足した）
+    const schema = blogFrontmatterSchema.extend({ subtitle: z.string() });
     const message = checkRequirements(loadConfig(), schema).join('\n');
-    expect(message).toContain('summary は Zod で必須だが config.yml では （フィールドなし）');
-    expect(message).toContain('Zod の必須項目 [category, description, pubDate, summary, title]');
+    expect(message).toContain('subtitle は Zod で必須だが config.yml では （フィールドなし）');
+    expect(message).toContain('Zod の必須項目 [category, description, pubDate, subtitle, title]');
   });
 
   it('Zod でだけ必須項目を任意にする', () => {

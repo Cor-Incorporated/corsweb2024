@@ -107,6 +107,11 @@ collections:
         label: 概要
         widget: text
         hint: 記事一覧・検索結果・SNS に出る説明文。1〜2 文で、改行は入れません。
+      - name: summary
+        label: 記事の要点
+        widget: text
+        required: false
+        hint: 本文の前の「この記事の要点」に出ます。結論を 2〜3 文で書きます（本文に書いていないことは書きません）。空のままなら出しません。
       - name: pubDate
         label: 公開日
         widget: datetime
@@ -132,6 +137,19 @@ collections:
           - { label: エンジニアリング, value: engineering }
           - { label: 創業, value: founder }
           - { label: ラボ, value: lab }
+      - name: ctaIntent
+        label: 記事の下で案内する相談
+        widget: select
+        required: false
+        hint: 空のままならカテゴリの既定（AI は機密データAI活用診断、エンジニアリングは受託開発、創業とラボは取材・登壇）を案内します（ADR-0020）。
+        options:
+          - { label: 機密データAI活用診断, value: confidential-ai-assessment }
+          - { label: ローカルLLM / AI基盤PoC, value: local-llm-poc }
+          - { label: Grift（テスト導入・CLI）, value: grift-team-beta }
+          - { label: Grift（旧・有料トライアル）, value: grift-paid-trial }
+          - { label: 見積監査（旧）, value: estimate-audit }
+          - { label: AI受託開発, value: contract-dev }
+          - { label: 取材・登壇・その他, value: press-speaking-other }
       - name: tags
         label: タグ
         widget: list

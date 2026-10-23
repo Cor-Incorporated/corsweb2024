@@ -10,6 +10,7 @@
 import { authorProfileUrl, findAuthor } from '../config/author';
 import { ORGANIZATION_ID, SITE_ORIGIN } from '../config/organization';
 import { blogPostPath } from './blog-paths';
+import type { ArticleCitation } from './remark-article-sources';
 import type { Locale } from './i18n';
 import type { JsonLd } from './structured-data';
 
@@ -82,6 +83,10 @@ export type BlogArticleInput = {
   pageUrl: string;
   /** 本文から数えた語数。本文が無い（テスト用ページ等）場合は出さない。 */
   wordCount?: number;
+  /** frontmatter の summary（本文の前の「この記事の要点」と同じ文）。Article.abstract に出す。 */
+  summary?: string;
+  /** 本文の最後の「参考資料」の節のリンク（utils/remark-article-sources.ts）。Article.citation に出す。 */
+  citations?: readonly ArticleCitation[];
 };
 
 export function buildBlogArticleJsonLd(input: BlogArticleInput): JsonLd {
@@ -110,6 +115,10 @@ export function buildBlogArticleJsonLd(input: BlogArticleInput): JsonLd {
     url: pageUrl,
     articleSection: category,
     ...(input.wordCount !== undefined && { wordCount: input.wordCount }),
+    ...(input.summary && { abstract: input.summary }),
+    ...(input.citations?.length && {
+      citation: input.citations.map((citation) => ({ '@type': 'CreativeWork', name: citation.name, url: citation.url })),
+    }),
     commentCount: 0,
     isAccessibleForFree: true,
     isFamilyFriendly: true,

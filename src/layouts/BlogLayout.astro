@@ -13,11 +13,15 @@ import BlogSeoMeta from '../components/blog/seo/BlogSeoMeta.astro';
 import BlogOgp from '../components/blog/seo/BlogOgp.astro';
 import BlogStructuredData from '../components/blog/seo/BlogStructuredData.astro';
 import KatexStyles from '../components/blog/KatexStyles.astro';
+import CloudiaLauncher from '../components/contact/CloudiaLauncher.astro';
+import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
+import type { ArticleCitation } from '../utils/remark-article-sources';
 import { getCollection, type CollectionEntry } from 'astro:content';
 
 type BlogPostData = {
   title: string;
   description: string;
+  summary?: string;
   pubDate: Date;
   updatedDate?: Date;
   author: string;
@@ -41,11 +45,13 @@ interface Props {
   prevPost?: BlogPost;
   // 本文に数式がある記事だけ KaTeX の CSS を読む（remarkPluginFrontmatter.hasMath）
   hasMath?: boolean;
+  // 本文の最後の「参考資料」の節のリンク（remarkPluginFrontmatter.citations）。Article.citation に出す
+  citations?: readonly ArticleCitation[];
 }
 
-const { post, hasMath = false } = Astro.props;
+const { post, hasMath = false, citations = [] } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
-const { title, description, pubDate, updatedDate, author, category, tags, image, ogImage } = post.data;
+const { title, description, summary, pubDate, updatedDate, author, category, tags, image, ogImage } = post.data;
 
 // Use SNS-compatible PNG OGP image if no custom ogImage is set. SVG routes remain available.
 const finalOgImage = ogImage || new URL(`/og/${post.slug}.png`, Astro.site).toString();
@@ -127,6 +133,8 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       tags={tags}
       image={image}
       wordCount={wordCount}
+      summary={summary}
+      citations={citations}
       currentLocale={currentLocale}
     />
     
@@ -469,6 +477,26 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
           height: 120px;
         }
       }
+
+      /* 参考資料の節（utils/remark-article-sources.ts が data 属性を付ける）。出典だと分かる欄にする */
+      .prose [data-article-sources] {
+        border-top: 1px solid #e7e5e4;
+        padding-top: 1.5rem;
+        font-size: 1.125rem;
+      }
+      .dark .prose [data-article-sources] {
+        border-top-color: #44403c;
+      }
+      .prose [data-article-sources-list] {
+        border-radius: 0.5rem;
+        background-color: #fafaf9;
+        padding: 1rem 1rem 1rem 2.25rem;
+        font-size: 0.9375rem;
+        line-height: 1.75;
+      }
+      .dark .prose [data-article-sources-list] {
+        background-color: #1c1917;
+      }
     </style>
 
     <Analytics />
@@ -479,6 +507,8 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       <slot />
     </main>
     <Footer />
+    <!-- 記事ページにも他のページと同じ Cloudia のランチャーを置く（ADR-0020 の 1） -->
+    {CLOUDIA_LAUNCHER_ENABLED && <CloudiaLauncher />}
     
     <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
     <AlpineInit />
