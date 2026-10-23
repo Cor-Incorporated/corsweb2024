@@ -1,0 +1,118 @@
+---
+// 記事の CTA ボックス（ADR-0020）。本文の下に 1 つだけ置く。相談の種類は frontmatter の ctaIntent、
+// 無ければカテゴリの既定値（config/blog-cta.ts）。リンクには intent と source（blog/<slug>）を付ける。
+// 2 つ目のボタンは会社紹介資料（申し込みなしで見られる。2026-10-20 の GMO 定例で、問い合わせより
+// 心理的な負担の小さい資料を入口にすることを決めた）。文言は ADR-0007 / ADR-0020 の 8 に従う（「無料」を使わない）。
+import { blogCtaSource, resolveBlogCtaIntent } from '../../config/blog-cta';
+import { COMPANY_DECK_URL, getContactUrl, type ContactIntent } from '../../config/site';
+import { getCurrentLocale, getTranslations, type Locale } from '../../utils/i18n';
+
+interface Props {
+  category: string;
+  ctaIntent?: ContactIntent;
+  /** 言語の接頭辞を除いた記事の slug */
+  slug: string;
+}
+
+type Copy = { heading: string; leads: Partial<Record<ContactIntent, string>>; defaultLead: string };
+
+const COPY: Record<Locale, Copy> = {
+  ja: {
+    heading: 'この記事の内容を、自社で進めたい方へ',
+    leads: {
+      'confidential-ai-assessment': '機密データAI活用診断のご相談を、AI受付「Cloudia」でお受けしています。',
+      'local-llm-poc': 'ローカルLLM／AI基盤PoCのご相談を、AI受付「Cloudia」でお受けしています。',
+      'grift-team-beta': '紹介会社さま・SES企業さま向けのGriftのテスト導入（PoC）のご相談を、AI受付「Cloudia」でお受けしています。',
+      'contract-dev': 'AI受託開発のご相談を、AI受付「Cloudia」でお受けしています。',
+      'press-speaking-other': '取材や登壇のご依頼、記事へのご質問を、AI受付「Cloudia」でお受けしています。',
+    },
+    defaultLead: 'ご相談を、AI受付「Cloudia」でお受けしています。',
+  },
+  en: {
+    heading: 'Want to put this into practice at your company?',
+    leads: {
+      'confidential-ai-assessment': 'Our AI reception "Cloudia" takes requests for a confidential-data AI assessment.',
+      'local-llm-poc': 'Our AI reception "Cloudia" takes requests for a local LLM / AI infrastructure PoC.',
+      'grift-team-beta': 'Our AI reception "Cloudia" takes requests from recruiting agencies and SES companies for a Grift trial (PoC).',
+      'contract-dev': 'Our AI reception "Cloudia" takes requests for contract AI development.',
+      'press-speaking-other': 'Our AI reception "Cloudia" takes interview and speaking requests and questions about this article.',
+    },
+    defaultLead: 'Our AI reception "Cloudia" takes your requests.',
+  },
+  zh: {
+    heading: '想在贵公司推进本文的内容？',
+    leads: {
+      'confidential-ai-assessment': '机密数据 AI 活用诊断的咨询，由 AI 接待「Cloudia」受理。',
+      'local-llm-poc': '本地 LLM／AI 基础设施 PoC 的咨询，由 AI 接待「Cloudia」受理。',
+      'grift-team-beta': '面向人才中介公司及 SES 企业的 Grift 试用（PoC）的咨询，由 AI 接待「Cloudia」受理。',
+      'contract-dev': 'AI 受托开发的咨询，由 AI 接待「Cloudia」受理。',
+      'press-speaking-other': '采访、演讲邀请以及对本文的提问，由 AI 接待「Cloudia」受理。',
+    },
+    defaultLead: '您的咨询由 AI 接待「Cloudia」受理。',
+  },
+  ko: {
+    heading: '이 글의 내용을 회사에서 진행하고 싶다면',
+    leads: {
+      'confidential-ai-assessment': '기밀 데이터 AI 활용 진단 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
+      'local-llm-poc': '로컬 LLM／AI 기반 PoC 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
+      'grift-team-beta': '인재 소개 회사・SES 기업을 위한 Grift 시범 도입(PoC) 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
+      'contract-dev': 'AI 수탁 개발 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
+      'press-speaking-other': '취재·강연 의뢰와 이 글에 대한 질문은 AI 접수 「Cloudia」에서 받고 있습니다.',
+    },
+    defaultLead: '상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
+  },
+  es: {
+    heading: '¿Quiere aplicar esto en su empresa?',
+    leads: {
+      'confidential-ai-assessment': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de diagnóstico de IA con datos confidenciales.',
+      'local-llm-poc': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de PoC de LLM local e infraestructura de IA.',
+      'grift-team-beta': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de agencias de selección y empresas SES para una prueba piloto (PoC) de Grift.',
+      'contract-dev': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de desarrollo de IA por encargo.',
+      'press-speaking-other': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de entrevistas, charlas y preguntas sobre este artículo.',
+    },
+    defaultLead: 'Nuestra recepción con IA «Cloudia» atiende sus consultas.',
+  },
+};
+
+const { category, ctaIntent, slug } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const t = getTranslations(locale);
+const copy = COPY[locale];
+const intent = resolveBlogCtaIntent(category, ctaIntent);
+const href = getContactUrl(locale, { intent, source: blogCtaSource(slug) });
+
+// ボタンの文言は実績ページの CTA（i18n の caseStudy.ctas。5 言語あり）と同じものを使う
+const PRIMARY_LABELS: Partial<Record<ContactIntent, string>> = {
+  'confidential-ai-assessment': t.caseStudy.ctas['confidential-ai'],
+  'local-llm-poc': t.caseStudy.ctas['local-llm'],
+  'grift-team-beta': t.caseStudy.ctas.grift,
+  'contract-dev': t.caseStudy.ctas['ai-contract'],
+};
+const primaryLabel = PRIMARY_LABELS[intent] ?? t.caseStudy.ctas.techCultureContact;
+---
+
+<section
+  class="rounded-lg border border-stone-200 bg-white p-6 dark:border-stone-700 dark:bg-stone-900 sm:p-8"
+  aria-labelledby="blog-cta-heading"
+  data-testid="blog-cta"
+  data-intent={intent}
+>
+  <h2 id="blog-cta-heading" class="text-xl font-bold text-stone-900 dark:text-stone-100">{copy.heading}</h2>
+  <p class="mt-3 text-base leading-8 text-stone-700 dark:text-stone-300">{copy.leads[intent] ?? copy.defaultLead}</p>
+  <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+    <a
+      href={href}
+      class="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[#2d4a6b] px-5 py-3 text-base font-medium text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b]"
+    >
+      {primaryLabel}
+    </a>
+    <a
+      href={COMPANY_DECK_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-stone-300 px-5 py-3 text-base font-medium text-stone-900 transition hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500 dark:border-stone-600 dark:text-stone-100 dark:hover:bg-stone-800"
+    >
+      {t.nextStep.about.materialsLabel}<span aria-hidden="true" class="ml-1">↗</span>
+    </a>
+  </div>
+</section>

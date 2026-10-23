@@ -67,6 +67,10 @@ export const KOUSUKE_TERADA: AuthorProfile = {
     'https://www.linkedin.com/in/kousuketerada/',
     'https://www.facebook.com/kousuke.terada.35',
     'https://qiita.com/terisuke',
+    // 代表本人の note と GitHub（2026-10-23 追加。note は代表が本人の記事と確認済み、GitHub は PR の作者の
+    // アカウント）。著者ボックスにもこの順で出す
+    'https://note.com/cor_instrument',
+    'https://github.com/terisuke',
   ],
 };
 
@@ -82,6 +86,23 @@ export function findAuthor(handle: string | undefined): AuthorProfile | undefine
 export function authorBio(author: AuthorProfile, locale: Locale): string | undefined {
   const members = getTranslations(locale).teamData as readonly { id?: string; description?: string }[];
   return members.find((member) => member.id === author.id)?.description;
+}
+
+/** 著者ボックスに出すリンク名（sameAs のホスト名から決める。未知のホストは出さない）。 */
+const SAME_AS_LABELS: readonly [RegExp, string][] = [
+  [/^https:\/\/(?:www\.)?x\.com\//, 'X'],
+  [/^https:\/\/note\.com\//, 'note'],
+  [/^https:\/\/qiita\.com\//, 'Qiita'],
+  [/^https:\/\/github\.com\//, 'GitHub'],
+  [/^https:\/\/(?:www\.)?linkedin\.com\//, 'LinkedIn'],
+  [/^https:\/\/(?:www\.)?facebook\.com\//, 'Facebook'],
+];
+
+export function authorLinks(author: AuthorProfile): { label: string; href: string }[] {
+  return author.sameAs.flatMap((href) => {
+    const label = SAME_AS_LABELS.find(([pattern]) => pattern.test(href))?.[1];
+    return label ? [{ label, href }] : [];
+  });
 }
 
 export function authorProfileUrl(author: AuthorProfile, locale: Locale): string {

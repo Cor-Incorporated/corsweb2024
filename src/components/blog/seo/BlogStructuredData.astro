@@ -7,6 +7,7 @@ import { safeJsonLd } from '../../../utils/json-ld';
 import { buildBlogArticleJsonLd, buildBlogBreadcrumbJsonLd } from '../../../utils/blog-structured-data';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../../../utils/structured-data';
 import { buildPersonJsonLd, findAuthor } from '../../../config/author';
+import type { ArticleCitation } from '../../../utils/remark-article-sources';
 
 interface Props {
   title: string;
@@ -21,6 +22,9 @@ interface Props {
   image?: { url?: string; alt?: string };
   // 本文から数えた語数（ja / zh は文字数）。本文が無いページでは undefined。
   wordCount?: number;
+  // 本文の前の「この記事の要点」（Article.abstract）と、参考資料の節のリンク（Article.citation）
+  summary?: string;
+  citations?: readonly ArticleCitation[];
   currentLocale: Locale;
 }
 
