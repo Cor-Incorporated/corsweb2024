@@ -382,3 +382,33 @@ describe('works / news / press keys required by every locale (#313)', () => {
     }
   });
 });
+
+// ADR-0022: 事業の柱は5本。トップ（services2026）・会社概要・FAQ・meta で同じ並び・同じ言い回しにする。
+// 柱の名前の正本は companyPage.business[].name。文中では小文字になる言語があるため大小は区別しない。
+describe('business pillars keep one order and wording (ADR-0022)', () => {
+  const pillarNames = (locale: Locale) =>
+    getTranslations(locale).companyPage.business.map((pillar) => pillar.name);
+
+  it.each(LOCALES)('locale %s names the services2026 items after the pillars, in order', (locale) => {
+    const names = getTranslations(locale).services2026.items.map((item) => item.name.split(/\s*[｜|]\s*/)[0]);
+    expect(names).toEqual(pillarNames(locale));
+  });
+
+  it.each(LOCALES)('locale %s lists every pillar in order in the FAQ, meta and company profile', (locale) => {
+    const t = getTranslations(locale);
+    const names = pillarNames(locale).map((name) => name.toLowerCase());
+    const texts = {
+      'faq.questions[0].answer': t.faq.questions[0].answer,
+      'meta.company.description': t.meta.company.description,
+      'companyPage.profile[4].value': t.companyPage.profile[4].value,
+    };
+    for (const [path, text] of Object.entries(texts)) {
+      // 文中に出てくる順に並べ直した柱の名前。抜け・言い換え・並びの違いは、正本との差として出る。
+      const lower = text.toLowerCase();
+      const inTextOrder = names
+        .filter((name) => lower.includes(name))
+        .sort((a, b) => lower.indexOf(a) - lower.indexOf(b));
+      expect(inTextOrder, `${locale} ${path}`).toEqual(names);
+    }
+  });
+});
