@@ -1,35 +1,35 @@
 ---
-title: "We have added a news page"
-description: "We have added a news page where announcements from Cor. Inc. and updates to publicly available information can be reviewed in one place."
+title: "News Page Added"
+description: "We have added a news page where you can check announcements and published updates from Cor.Inc. in one place."
 publishedAt: 2026-07-08
 category: "info"
-tags: ["Announcement", "Site update"]
-source: "Cor. Inc."
+tags: ["Announcements", "Site Updates"]
+source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "00558ce5b4904f71ed4516638e87c32ca98637910f2bab039f93a2dec6e6192e"
-translatedAt: "2026-09-28T06:09:16.046Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "44fd3050260ecca3838c0600c2bb225e4970ac7a876ab0bdead765880c6219db"
+translatedAt: "2026-10-23T06:31:52.918Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-## Announcements are now in one place
+## Centralizing Our News & Announcements
 
-We have added a news page to the official website of Cor. Inc.
+We have added a News page to the official Cor.Inc. website.
 
-Updates to publicly available information, announcements about our services, external coverage, and event participation — until now spread across the blog and works pages — can be reviewed from `/news`.
+Updates to public information, service announcements, media appearances, event participations, and other news—which were previously scattered across our blog and case studies pages—can now be accessed from `/news`.
 
-## What we publish
+## What We Will Post
 
-The news page mainly carries the following information.
+The News page will primarily feature the following types of information:
 
-- Updates to the official website and published materials
-- Announcements about our services and products
-- Coverage in external media, speaking engagements, and event participation
-- Selections and awards that we are able to disclose
+- Updates to our official website and publicly available materials
+- Announcements regarding our services and products
+- Information on external media coverage, speaking engagements, and event participations
+- Disclosable information on grant selections, awards, and recognitions
 
-## Editorial policy
+## Editorial & Operational Policy
 
-Japanese is the source of record for the content we publish, and we publish only information we can verify. We do not publish confidential information, unconfirmed plans, wording that could be mistaken for certifications we have not obtained, or client names we do not have permission to use.
+The Japanese text serves as the authoritative source for published content, and we will only disclose information that can be factually verified. We will not publish confidential information, unconfirmed plans, descriptions of certifications that could be misunderstood as already obtained, or client names without prior permission.
 
-We will continue to organize the work of Cor. Inc. in a form that is easy to review.
+We will continue to organize and share information so that you can easily stay updated on Cor.Inc.'s initiatives.

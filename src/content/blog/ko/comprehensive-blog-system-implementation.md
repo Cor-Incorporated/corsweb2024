@@ -1,42 +1,44 @@
 ---
-title: "Astro 4.8에서 블로그 시스템 완벽 구현 - AI 번역 및 E2E 테스트를 포함한 포괄적인 접근 방식"
-description: "Astro Content Collections을 기반으로 한 고성능 블로그 시스템 구현 기록. Google Gemini API를 이용한 AI 자동 번역, Playwright E2E 테스트, 속도 제한 기능 등 포괄적인 개발 과정을 설명"
+title: "Astro 4.8 기반 블로그 시스템 완전 구현 - AI 번역 및 E2E 테스트를 포함한 포괄적 접근 방식"
+description: "Astro Content Collections를 기반으로 한 고성능 블로그 시스템 구현 기록. Google Gemini API를 활용한 AI 자동 번역, Playwright E2E 테스트, 속도 제한(Rate Limiting) 기능을 포함한 포괄적인 개발 프로세스 해설"
+summary: "Astro 4.8.7의 Content Collections를 기반으로 Gemini API 자동 번역과 Playwright E2E 테스트를 갖춘 블로그 시스템을 구현했다. 빌드 시 타입 검증을 통해 메타데이터 오류를 방지할 수 있게 되었으며, 정적 사이트에서도 E2E 테스트가 필수적임을 실감했다."
 pubDate: 2025-06-22
+updatedDate: 2026-10-23
 category: "engineering"
 tags: ["Astro", "ブログシステム", "AI翻訳", "E2Eテスト", "TypeScript", "Google Gemini API", "Playwright", "レート制限"]
 author: "Terisuke"
 lang: "ko"
 featured: true
-translationSourceHash: "1b3935bc380f58ac78655e28b05d56636ec781d7d6341005c1e2506ead4416bd"
-translatedAt: "2026-09-28T06:09:16.016Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "8b54af12c168859d53d6138a17b5e56f908b6f0e2703998d15036aa7d61193fa"
+translatedAt: "2026-10-23T06:22:14.693Z"
+translationModel: "gemini-3.8-flash"
 ---
 
 ## 개요
 
-최근 개발에서 Astro 4.8.7을 기반으로 포괄적인 블로그 시스템을 구현했습니다. 이 시스템은 단순한 Markdown 표시뿐만 아니라 AI 자동 번역, E2E 테스트, 본격적인 운영을 염두에 둔 기능군을 포함하는 현대적인 기술 블로그 플랫폼입니다.
+최근 개발에서 Astro 4.8.7을 기반으로 한 포괄적인 블로그 시스템을 구현했다. 이 시스템은 Markdown을 표시하는 데 그치지 않고, AI 자동 번역, E2E 테스트, 그리고 본격적인 운영을 고려한 기능까지 갖춘 현대적인 기술 블로그 플랫폼이다.
 
-더 이상 WordPress에서 위젯과 씨름하는 시대는 끝났습니다. 이제 AI로 번역시키고, 테스트도 자동화해서, 개발자는 잠만 자면 됩니다 (농담).
+이제 WordPress에서 위젯과 씨름하던 시대는 끝났다. 앞으로는 AI에게 번역시키고, 테스트도 자동화하고, 엔지니어는 잠만 자면 된다(농담이다).
 
 ## 기술 스택
 
-### 핵심 기술
-- **Astro 4.8.7**: 아일랜드 아키텍처를 통한 고속 SSG
-- **TypeScript**: 타입 안전한 개발 환경
-- **Tailwind CSS**: 유틸리티 우선 스타일링
-- **Alpine.js 3.14.0**: 경량 프론트엔드 JavaScript
+### 코어 기술
+- Astro 4.8.7: 아일랜드 아키텍처를 통한 고속 SSG
+- TypeScript: 타입 안전한 개발 환경
+- Tailwind CSS: 유틸리티 퍼스트 스타일링
+- Alpine.js 3.14.0: 경량 프론트엔드 JavaScript
 
 ### 블로그 전용 기능
-- **Content Collections**: Astro의 타입 안전한 콘텐츠 관리
-- **Google Gemini API**: AI 자동 번역 엔진
-- **Playwright**: E2E 테스트 자동화
-- **remark-link-card-plus**: 리치 링크 카드 생성
+- Content Collections: Astro의 타입 안전한 콘텐츠 관리
+- Google Gemini API: AI 자동 번역 엔진
+- Playwright: E2E 테스트 자동화
+- remark-link-card-plus: 리치 링크 카드 생성
 
-## 구현의 핵심 아키텍처
+## 구현의 핵심이 되는 아키텍처
 
 ### 1. Content Collections 설계
 
-기존의 Markdown 파일 관리에서 Astro의 `Content Collections`를 채택했습니다. 더 이상 "어라? 이 frontmatter 작성법이 맞았나?" 하고 고민할 필요가 없습니다.
+기존의 Markdown 파일 관리에서 Astro의 `Content Collections`(으)로 전환했다. 이제 "어라? 이 frontmatter 작성 방식이 맞았나?"라며 고민하지 않는다.
 
 ```typescript
 // src/content/config.ts
@@ -54,14 +56,14 @@ const blogCollection = defineCollection({
 });
 ```
 
-**장점**:
+장점은 다음과 같다.
 - 빌드 시 타입 검증으로 메타데이터 오류 방지
 - Hot reloading으로 실시간 업데이트
 - 자동 스키마 유효성 검사
 
 ### 2. AI 번역 시스템 설계
 
-Google Gemini API를 활용한 자동 번역 시스템을 구축했습니다. 사람 번역가에게 의뢰하면 며칠이 걸릴 일을 AI는 몇 초 만에 끝냅니다. 게다가 불평도 하지 않습니다.
+Google Gemini API를 사용하여 자동 번역 시스템을 만들었다. 인간 번역가에게 의뢰하는 것보다 훨씬 빨리 끝난다. 게다가 불평도 하지 않는다.
 
 ```javascript
 // scripts/translate-blog.js
@@ -81,14 +83,14 @@ ${japaneseContent}`;
 }
 ```
 
-**특징**:
-- **속도 제한**: 분당 15회 요청의 보수적인 제한
-- **오류 처리**: 지수 백오프(Exponential backoff)를 통한 재시도 기능
-- **YAML 안전성**: frontmatter의 적절한 이스케이프 처리
+특징은 다음과 같다.
+- 속도 제한(Rate Limiting): 15요청/분의 보수적인 제한
+- 오류 처리: 지수 백오프를 통한 재시도 기능
+- YAML 안전성: frontmatter의 적절한 이스케이프 처리
 
-### 3. 속도 제한 시스템
+### 3. 속도 제한(Rate Limiting) 시스템
 
-API의 안정적인 운영을 위한 속도 제한 기능을 구현했습니다. Google로부터 "너, 요청 너무 많이 보내!"라고 혼나지 않도록 말이죠.
+API를 안정적으로 운영하기 위해 속도 제한 기능을 구현했다. Google에 "너, 요청 너무 많이 보내!"라며 혼나지 않기 위함이기도 하다.
 
 ```javascript
 // scripts/rate-limiter.js
@@ -115,14 +117,14 @@ class RateLimiter {
 
 ### 4. E2E 테스트 구현
 
-Playwright를 사용한 포괄적인 블로그 기능 테스트를 구현했습니다. "잘 돌아가니 됐어!"라는 식으로는 안 됩니다.
+Playwright를 사용하여 블로그 기능의 포괄적인 테스트를 구현했다. "작동하니까 됐어!"로는 안 되는 것이다.
 
 ```typescript
 // e2e/blog.spec.ts
 test.describe('Blog functionality', () => {
   test('should navigate to Japanese blog', async ({ page }) => {
     await page.goto('/blog/');
-    await expect(page.locator('h1')).toContainText('기술 블로그');
+    await expect(page.locator('h1')).toContainText('技術ブログ');
   });
 
   test('should display OGP image for blog posts', async ({ page }) => {
@@ -161,92 +163,85 @@ integrations: [
 ```
 
 ### 이미지 최적화
-- AVIF 형식 이미지 제공
-- WebP 폴백(Fallback)
-- 반응형 이미지 크기 (480w, 800w)
+- AVIF 형식으로 이미지 전송
+- WebP 폴백
+- 반응형 이미지 크기(480w, 800w)
 
 ## 과제와 해결책
 
-### 1. YAML Frontmatter 이스케이프 문제
+### 1. YAML Frontmatter의 이스케이프 문제
 
-**과제**: 번역된 제목이나 설명에 특수 문자가 포함될 경우 YAML 파싱 오류
+과제는 번역된 제목이나 설명문에 특수 문자가 포함되면 YAML 파싱 오류가 발생하는 것이었다.
 
-**해결책**:
+해결책으로 다음 함수를 통해 이스케이프한다.
 ```javascript
 function escapeYAMLString(str) {
   return str
-    .replace(/\\/g, "\\\\") // 백슬래시를 먼저 이스케이프
-    .replace(/"/g, '\\"');   // 큰따옴표 이스케이프
+    .replace(/\\/g, "\\\\") // バックスラッシュを最初にエスケープ
+    .replace(/"/g, '\\"');   // ダブルクォートをエスケープ
 }
 ```
 
 ### 2. API 속도 제한 대응
 
-**과제**: Gemini API 제한으로 인한 요청 실패
+과제는 Gemini API의 제한으로 인해 요청이 실패하는 것이었다.
 
-**해결책**: 지수 백오프와 지능적인 속도 제한
-- 1초 기반 지연
-- 최대 60초까지 단계적 지연
+해결책은 지수 백오프와 인텔리전트한 속도 제한이다.
+- 1초 기본 지연
+- 최대 60초까지의 단계적 지연
 - 요청 시간 추적을 통한 사전 제한
 
-### 3. E2E 테스트 안정성
+### 3. E2E 테스트의 안정성
 
-**과제**: 동적 콘텐츠로 인한 테스트 불안정성
+과제는 동적 콘텐츠로 인해 테스트가 불안정해지는 것이었다.
 
-**해결책**: `data-testid` 속성을 사용한 확실한 요소 식별
+해결책은 data-testid 속성을 사용하여 요소를 확실하게 식별하는 것이다.
 
-## 운영 흐름
+## 운영 플로우
 
-### 새 게시글 작성 프로세스
+### 새 글 포스팅 프로세스
 
-1. **일본어 기사 작성**: `/src/content/blog/ja/`에 Markdown 파일 생성
-2. **AI 번역**: `npm run translate src/content/blog/ja/article-name.md`
-3. **테스트 실행**: `npm run test:e2e`
-4. **빌드**: `npm run build`
-5. **배포**: Firebase Hosting으로 자동 배포
+1. 일본어 글 작성: `/src/content/blog/ja/`에 Markdown 파일 생성
+2. AI 번역: `npm run translate src/content/blog/ja/article-name.md`
+3. 테스트 실행: `npm run test:e2e`
+4. 빌드: `npm run build`
+5. 배포: Firebase Hosting으로 자동 배포
 
 ### 품질 보증
 
-- **타입 체크**: TypeScript를 통한 컴파일 시 체크
-- **스키마 검증**: Zod를 통한 콘텐츠 검증
-- **E2E 테스트**: Playwright를 통한 기능 테스트
+- 타입 체크: TypeScript를 통한 컴파일 시점 검사
+- 스키마 검증: Zod를 통한 콘텐츠 검증
+- E2E 테스트: Playwright를 통한 기능 테스트
 
 ## 배운 점
 
 ### 1. Content Collections의 위력
 
-기존의 파일 기반 관리와 비교했을 때, 타입 안전성과 개발 경험이 극적으로 향상되었습니다. 특히 스키마 변경 시 영향 범위가 명확해져 안전한 리팩토링이 가능해졌습니다.
+기존 파일 기반 관리와 비교해 타입 안전성과 개발 경험이 획기적으로 향상되었다. 특히 스키마를 변경했을 때의 영향 범위가 명확해져 안전하게 리팩터링할 수 있게 되었다.
 
-이제 TypeScript가 "타입이 다르잖아!"라고 쏘아주니, 런타임 오류에 덜덜 떨 필요도 없습니다. 최고입니다.
+이제 TypeScript가 "타입이 다르잖아!"라고 화를 내주므로 런타임 오류로 겁먹을 일도 없다. 최고다.
 
 ### 2. AI 번역의 실용성
 
-Google Gemini API의 번역 품질은 기술 기사에 있어 매우 높았으며, 사람의 미세 조정을 최소화할 수 있었습니다. 다만, 전문 용어의 일관성에 대해서는 지속적인 개선이 필요합니다.
+Google Gemini API의 번역 품질은 기술 문서에서 매우 높았으며, 수작업을 통한 미세 조정은 최소한으로 끝났다. 다만 전문 용어의 일관성에 대해서는 지속적인 개선이 필요하다.
 
-"npm"을 "엔피엠"이라고 번역했을 때는 웃음이 터졌습니다. 뭐, 틀린 건 아니지만요.
+"npm"을 "엔피엠"으로 번역했을 때는 웃음이 나왔다. 뭐, 틀린 말은 아니지만.
 
 ### 3. E2E 테스트의 중요성
 
-정적 사이트 생성기에서도 라우팅이나 메타데이터 생성 등 복잡한 기능에 대해서는 E2E 테스트가 필수적임을 실감했습니다.
+정적 사이트 생성기라도 라우팅이나 메타데이터 생성과 같은 복잡한 기능에는 E2E 테스트가 필수적임을 실감했다.
 
-"정적 사이트니 테스트 필요 없겠지"라고 생각했던 과거의 나를 때리고 싶습니다.
-
-## 성능 결과
-
-- **First Contentful Paint**: 0.8초
-- **Largest Contentful Paint**: 1.2초
-- **Cumulative Layout Shift**: 0.05
-- **총 번들 크기**: 45KB (gzip 압축 후)
+"정적 사이트니까 테스트는 필요 없겠지"라고 생각했던 과거의 나를 때려주고 싶다.
 
 ## 요약
 
-이 블로그 시스템 구현을 통해 현대적인 JAMstack 아키텍처에서 다음과 같은 중요성을 재확인할 수 있었습니다.
+이번 블로그 시스템 구현을 통해 현대적인 JAMstack 아키텍처에서는 다음 사항이 중요하다는 점을 확인할 수 있었다.
 
-1. **타입 안전성**: Content Collections를 통한 설계 시 오류 방지 (이제 런타임 오류로 울지 않겠습니다)
-2. **자동화**: AI 번역과 E2E 테스트를 통한 운영 효율화 (인간의 일을 빼앗아 갑니다)
-3. **성능**: 적극적인 최적화를 통한 고속화 (폭발적인 속도의 극치)
-4. **유지보수성**: 명확한 아키텍처를 통한 지속 가능한 개발 (미래의 나에게 친절함)
+1. 타입 안전성: Content Collections를 통한 설계 시점 오류 방지(더 이상 런타임 오류로 울지 않는다)
+2. 자동화: AI 번역과 E2E 테스트를 통한 운영 효율화(인간의 일자리를 빼앗아 간다)
+3. 성능: 적극적인 최적화를 통한 고속화(초고속의 정점)
+4. 유지보수성: 명확한 아키텍처를 통한 지속 가능한 개발(미래의 나에게 친절하다)
 
-기술 블로그 플랫폼으로서, 기사 작성부터 공개까지 완전 자동화를 실현하여 개발자가 본질적인 콘텐츠 제작에 집중할 수 있는 환경을 구축했습니다.
+기술 블로그 플랫폼으로서 글 작성부터 공개까지의 흐름을 자동화하여, 개발자가 콘텐츠 작성에만 집중할 수 있는 환경을 만들 수 있었다.
 
-즉, 이제 블로그 업데이트를 게을리할 변명을 할 수 없게 되었다는 뜻입니다. 훌륭한... 건가요?
+즉, 이제 블로그 업데이트를 게을리할 핑계가 사라졌다는 뜻이다. 훌륭한... 일인가?

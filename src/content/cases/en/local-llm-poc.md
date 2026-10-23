@@ -1,39 +1,40 @@
 ---
-title: "Local LLM / AI platform PoC — Putting the material for a decision in your hands"
-description: "A look inside the PoC service that spends three months assembling the material you need to decide on production, for work where confidential data cannot be sent to an external AI."
+title: "Local LLM / AI Infrastructure PoC — Providing the Data You Need to Decide"
+description: "An introduction to our 3-month PoC service, designed to gather the evidence needed to decide on production deployment for operations that cannot share confidential data with external AI."
 category: "local-llm"
-tags: ["Local LLM", "PoC", "Secure AI", "AI platform"]
+tags: ["Local LLM", "PoC", "Secure AI", "AI Infrastructure"]
 publishedAt: 2026-07-02
-summary: "You hold confidential data, so you cannot send everything to a cloud AI. Yet you cannot judge on your own whether a local LLM will really hold up in your work. This three-month PoC takes you from there to a point where you can decide on production."
+updatedAt: 2026-10-23
+summary: "You have confidential data and cannot send everything to cloud AI, yet you cannot determine on your own whether a local LLM is truly viable for your operations. This 3-month PoC takes you from that state to having the necessary materials to make a confident decision on production deployment."
 relatedSlugs: ["confidential-data-ai-assessment"]
 isDraft: false
 featured: false
 lang: "en"
-translationSourceHash: "33f83b15c265210a24ee60d462581cdc34b0e4631f22d4ae5397b9ee967f7307"
-translatedAt: "2026-09-28T06:09:16.031Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "5f1bbdd4df5bbb98d57051cee668a22c5ab5ce3245f823811446a21c119eacd3"
+translatedAt: "2026-10-23T06:27:30.021Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-## Challenge
+## Challenges
 
-There is work that involves confidential data, so sending everything to a cloud AI is out of the question. At the same time, whether a local LLM — one that runs on your own side without sending data outside the company — would really hold up in your business is not something you can judge alone. We hear this more and more often. A PoC also has a way of ending at the point where something has been built: you hear plenty of stories of a working prototype that never went on to production.
+Many businesses handle confidential data and cannot send everything to cloud-based AI. At the same time, companies often cannot determine on their own whether a local LLM—run on-premise without letting data leave the company—can truly be used for their actual operations. We receive an increasing number of consultations like this. Proof of Concept (PoC) projects also tend to end once built; it is common to hear of cases where a working prototype was created, but the project ultimately never moved forward to production.
 
-## Approach
+## Our Approach
 
-What Cor. Inc. aims for in a PoC is not a demo that runs, but a state in which the material for deciding whether to go to production is in place. We do not commit in advance to either cloud AI or a local LLM; we design on the premise that each will be used where it fits, according to the sensitivity of the information involved. We are consistent about not making the building itself the goal.
+What Cor. aims for in a PoC is not a "working demo," but "having all the necessary materials to decide whether to move to production." Rather than committing exclusively to either cloud AI or a local LLM, we design under the premise of using the right tool in the right place according to the confidentiality of the information handled. We strictly adhere to the stance that building something is never the goal in itself.
 
 ## Implementation
 
-Over three months, we work through the following.
+Over a three-month period, we proceed through the following phases:
 
-- Organizing the target operations
-- Designing how data is handled (input boundaries, access permissions, operation logs, human approval)
-- Building a test environment
-- Setting evaluation metrics and measuring against them
-- Deciding whether to go to production
+- Defining target operations
+- Designing data handling (input boundaries, access permissions, operation logs, human approval)
+- Building the test environment
+- Setting evaluation metrics and conducting measurements
+- Determining whether to proceed to production
 
-Where an assessment (the Confidential Data AI Assessment) has already organized this ground, we use it as the base and narrow the scope of the PoC accordingly.
+If findings have already been organized through an assessment (Confidential Data AI Utilization Assessment), we narrow down the scope of the PoC based on those results.
 
-## Results
+## Deliverables
 
-At the end of three months, the material for deciding whether to go to production is in your hands. If it goes well, you move on to production build-out and ongoing operation (quoted individually according to requirements). If not, we believe that deciding not to do it for now is also something worth taking away as a result of the PoC. Cor. Inc. carries out validation work on local LLMs continuously, and feeds what accumulates there back into how we design PoCs. The fee is from ¥3M over three months (varying with the problem and the scope). If this is on your mind, starting with the Confidential Data AI Assessment is one way in.
+At the end of three months, you will have the materials needed to decide whether to move forward with production. If results are favorable, we will proceed to production development and operation/maintenance (quoted individually based on requirements). If not, we believe that deciding "not to proceed at this time" is also a valuable takeaway as an outcome of the PoC. Cor. continuously validates local LLMs and applies these accumulated insights to the design of our PoC projects. Pricing starts from 3 million yen for 3 months (varying depending on challenges and scope).
