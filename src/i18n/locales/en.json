@@ -973,7 +973,7 @@
     "questions": [
       {
         "question": "What can we consult Cor.Inc. about?",
-        "answer": "We focus on local LLMs and secure AI, our own product Grift, and AI contract development and AI adoption support, and you can consult us end to end — from framing the problem through design, implementation, and operations. We are also developing hardware AI (smart glasses) and running initiatives in education and the local community."
+        "answer": "Our business has five pillars: Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community. For AI adoption and development, you can consult us end to end — from framing the problem through design, implementation, and operations. Some of our hardware AI and education & community work is still in preparation or planned."
       },
       {
         "question": "What is the first step in introducing AI?",
@@ -1186,7 +1186,7 @@
     },
     "company": {
       "title": "Company Profile | Cor.Inc.",
-      "description": "Company profile of Cor.Inc. (Fukuoka City): address, founding date, representative, business areas (local LLM & secure AI, Grift, hardware AI, AI contract development & adoption support, education & community), our information security efforts, and our selection as one of Fukuoka's 100 Representative Companies."
+      "description": "Company profile of Cor.Inc. (Fukuoka City): address, founding date, representative, business areas (Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, education & community), our information security efforts, and our selection as one of Fukuoka's 100 Representative Companies."
     }
   },
   "privacy": {
@@ -1578,7 +1578,7 @@
       },
       {
         "label": "Business",
-        "value": "Planning, requirements definition, development, and operation of AI solutions (local LLM & secure AI, our own product Grift, hardware AI, AI contract development & adoption support, and initiatives in education and the local community)"
+        "value": "Planning, requirements definition, development, and operation of AI solutions (Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community)"
       },
       {
         "label": "Service area",

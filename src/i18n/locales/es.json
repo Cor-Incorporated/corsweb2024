@@ -973,7 +973,7 @@
     "questions": [
       {
         "question": "¿Qué tipo de consultas podemos realizar a Cor.Inc.?",
-        "answer": "Nos centramos en LLM locales e IA segura, nuestro producto propio «Grift» y el desarrollo de IA a medida y el apoyo a su adopción, y puede consultarnos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación. También estamos desarrollando IA en hardware (gafas inteligentes) e impulsando iniciativas en educación y en la comunidad local."
+        "answer": "Nuestra actividad se apoya en cinco pilares: Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, y educación y comunidad. Para la adopción y el desarrollo de IA, puede consultarnos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación. En IA en hardware y en educación y comunidad, algunas iniciativas están en preparación o previstas."
       },
       {
         "question": "¿Cuál es el primer paso para introducir la IA?",
@@ -1186,7 +1186,7 @@
     },
     "company": {
       "title": "Perfil de la empresa | Cor.Inc.",
-      "description": "Perfil de Cor.Inc. (ciudad de Fukuoka): dirección, fundación, representante, actividades (LLM local e IA segura, Grift, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, educación y comunidad local), nuestras iniciativas de seguridad de la información y nuestra selección entre las «100 empresas representativas de Fukuoka»."
+      "description": "Perfil de Cor.Inc. (ciudad de Fukuoka): dirección, fundación, representante, actividades (Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, educación y comunidad), nuestras iniciativas de seguridad de la información y nuestra selección entre las «100 empresas representativas de Fukuoka»."
     }
   },
   "privacy": {
@@ -1578,7 +1578,7 @@
       },
       {
         "label": "Actividad",
-        "value": "Planificación, definición de requisitos, desarrollo y operación de soluciones de IA (LLM local e IA segura, nuestro producto propio «Grift», IA en hardware, desarrollo de IA a medida y apoyo a la adopción, e iniciativas en educación y en la comunidad local)"
+        "value": "Planificación, definición de requisitos, desarrollo y operación de soluciones de IA (Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, y educación y comunidad)"
       },
       {
         "label": "Cobertura",
