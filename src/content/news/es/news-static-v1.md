@@ -1,35 +1,35 @@
 ---
 title: "Hemos añadido una página de noticias"
-description: "Hemos añadido una página de noticias donde se pueden consultar en un mismo lugar los avisos de Cor. Inc. y las actualizaciones de la información pública."
+description: "Hemos añadido una página de noticias donde puede consultar de forma centralizada los anuncios y las actualizaciones de información pública de Cor.Inc."
 publishedAt: 2026-07-08
 category: "info"
-tags: ["Aviso", "Actualización del sitio"]
-source: "Cor. Inc."
+tags: ["Noticias", "Actualización del sitio"]
+source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "es"
-translationSourceHash: "00558ce5b4904f71ed4516638e87c32ca98637910f2bab039f93a2dec6e6192e"
-translatedAt: "2026-09-28T06:09:16.050Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "44fd3050260ecca3838c0600c2bb225e4970ac7a876ab0bdead765880c6219db"
+translatedAt: "2026-10-23T06:33:58.865Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-## Hemos reunido los avisos en un solo lugar
+## Lista de noticias y comunicados
 
-Hemos añadido una página de noticias al sitio oficial de Cor. Inc.
+Hemos añadido una página de noticias al sitio web oficial de Cor.Inc.
 
-Las actualizaciones de la información pública, los avisos sobre servicios, las menciones externas y la participación en eventos, hasta ahora repartidos entre el blog y la página de proyectos, pueden consultarse desde `/news`.
+Ahora es posible consultar desde `/news` la información que antes se encontraba dividida entre el blog y la página de casos de éxito, como las actualizaciones de información pública, los anuncios relacionados con nuestros servicios, las publicaciones en medios externos y la participación en eventos.
 
-## Qué publicamos
+## Contenido que se publicará
 
-En la página de noticias publicamos principalmente la siguiente información.
+En la página de noticias publicaremos principalmente la siguiente información:
 
-- Actualizaciones del sitio oficial y de los materiales públicos
+- Actualizaciones del sitio web oficial y de los materiales públicos
 - Avisos sobre servicios y productos
-- Menciones en medios externos, ponencias y participación en eventos
-- Selecciones y premios que se pueden hacer públicos
+- Información sobre apariciones en medios externos, conferencias y participación en eventos
+- Información sobre selecciones en convocatorias, premios, etc., que pueda hacerse pública
 
-## Criterios de publicación
+## Política operativa
 
-El japonés es la versión de referencia del contenido publicado y solo difundimos información que podemos verificar. No publicamos información confidencial, planes sin confirmar, expresiones que puedan confundirse con certificaciones ya obtenidas ni nombres de clientes sin su autorización.
+El contenido publicado tendrá como versión original y autorizada el texto en japonés, y solo se divulgará información que pueda verificarse de manera fehaciente. No se publicará información confidencial, planes sin confirmar, expresiones relativas a certificaciones que puedan inducir al error de considerarlas ya obtenidas, ni nombres de clientes sin la debida autorización.
 
-Seguiremos organizando la actividad de Cor. Inc. de una forma fácil de consultar.
+Seguiremos organizando las iniciativas de Cor.Inc. de una forma accesible y fácil de consultar.

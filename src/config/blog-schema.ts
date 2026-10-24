@@ -1,5 +1,6 @@
 import { z } from 'astro/zod';
 import { getCategoryIds } from './categories';
+import { CONTACT_INTENTS } from './site';
 
 /**
  * 空・空白だけを止める文字列。CMS（Sveltia）は下書きの間は必須項目が空でも保存できるので、ビルドでも止める
@@ -22,10 +23,17 @@ const requiredText = (label: string) =>
 export const blogFrontmatterSchema = z.object({
   title: requiredText('title（タイトル）'),
   description: requiredText('description（概要）'),
+  /**
+   * 記事の要点（2〜3 文）。本文の前の「この記事の要点」と Article.abstract に出す。
+   * 翻訳 CI が訳す（scripts/i18n/config.mjs の blog.fields）。
+   */
+  summary: z.string().trim().min(1).optional(),
   pubDate: z.coerce.date(),
   updatedDate: z.coerce.date().optional(),
   author: z.string().default('Terisuke'),
   category: z.enum(getCategoryIds() as [string, ...string[]]),
+  /** 本文の下の CTA ボックスで案内する相談の種類（ADR-0020）。省略時はカテゴリの既定値（config/blog-cta.ts）。 */
+  ctaIntent: z.enum(CONTACT_INTENTS).optional(),
   tags: z.array(z.string()).default([]),
   image: z
     .object({

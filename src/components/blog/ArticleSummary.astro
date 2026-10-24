@@ -1,0 +1,33 @@
+---
+// 記事の要点（frontmatter の summary）。本文の前に出し、Article.abstract と同じ文を使う。
+// 読み始める前に結論が分かるようにする（AI による要約・引用の対象にもなる）。summary が無い記事では出さない。
+import { getCurrentLocale, type Locale } from '../../utils/i18n';
+
+interface Props {
+  summary?: string;
+}
+
+const LABELS: Record<Locale, string> = {
+  ja: 'この記事の要点',
+  en: 'Key takeaways',
+  zh: '本文要点',
+  ko: '이 글의 요점',
+  es: 'Puntos clave',
+};
+
+const locale = getCurrentLocale(Astro.url);
+const summary = Astro.props.summary?.trim();
+---
+
+{
+  summary && (
+    <aside
+      class="mb-8 rounded-lg border-l-4 border-blue-600 bg-stone-50 px-5 py-4 dark:border-blue-400 dark:bg-stone-900"
+      aria-labelledby="article-summary-heading"
+      data-testid="article-summary"
+    >
+      <h2 id="article-summary-heading" class="text-sm font-semibold text-stone-900 dark:text-stone-100">{LABELS[locale]}</h2>
+      <p class="mt-2 text-base leading-8 text-stone-700 dark:text-stone-300">{summary}</p>
+    </aside>
+  )
+}

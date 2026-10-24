@@ -1,41 +1,43 @@
 ---
-title: "[Full 5-Language Support] A Furious 3-Hour Battle Report of Expanding a Blog from Just Japanese and English to Chinese, Korean, and Spanish"
-description: "The shocking truth that it was only 2 languages when it was supposed to be 5 languages. The complete record of rapidly implementing Chinese, Korean, and Spanish support with Claude Code."
+title: "[Full 5-Language Support] A Whirlwind 3-Hour Chronicle of Expanding a Japanese-English Blog to Chinese, Korean, and Spanish"
+description: "The shocking realization that our supposed 5-language support was actually just two languages. A complete record of blazing-fast implementation to support Chinese, Korean, and Spanish alongside Claude Code."
+summary: "On a site that was supposed to support five languages, only the blog was limited to Japanese and English. In about three hours alongside Claude Code, we built Chinese, Korean, and Spanish pages, translated eight existing articles using the Gemini API, and fixed build errors. You never truly know what \"supported\" means until you check for yourself."
 pubDate: 2025-09-25
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "engineering"
 tags: ["多言語化", "i18n", "Astro", "Claude Code", "自動化", "Gemini API"]
 image:
   url: "/images/blog/ko-404.avif"
-  alt: "韓国語ブログ404ページ"
+  alt: "Korean blog 404 page"
 lang: "en"
 featured: true
 isDraft: false
-translationSourceHash: "7586bfc2c8375645439c90fb49b1669b1cc49c8f3ac391a4d605e79a6bc1ecb6"
-translatedAt: "2026-09-27T15:04:04.302Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "772589688a81666ca3dff4dff9d0215ef52dad0a70360fe768f0873b4d940fc3"
+translatedAt: "2026-10-23T06:16:04.762Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-# [Fully 5-Language Support] A Frenzied 3-Hour Battle to Expand a Blog from English/Japanese to Chinese, Korean, and Spanish
+# [Full 5-Language Support] A Whirlwind 3-Hour Chronicle of Expanding a Japanese-English Blog to Chinese, Korean, and Spanish
 
-"Doesn't it say 'supports 5 languages' right there!"
+"Wait, doesn't it say 5 languages supported?!"
 
-It was a Thursday afternoon, and I was casually looking at the implementation of the Develop branch of the site. Just as I had requested from Cursor Agent, five flags were indeed lined up on the language switcher button. However, when I opened a blog page in Chinese...
+It was early Thursday afternoon when I was casually reviewing the implementation on the site's develop branch. Just as requested of Cursor Agent, five national flags were neatly lined up on the language switcher button. But then, I tried opening the blog page in Chinese.
 
-![A Chinese blog page displaying a 404 error](/images/blog/404.avif)
+![Chinese blog page showing a 404 error](/images/blog/404.avif)
 
-**404 Not Found.**
+**404 Not Found**.
 
-Upon investigation, a shocking truth was revealed.
+Upon digging in, a shocking truth came to light.
 
-## 5-Language Support That Was Actually 2-Language Support
+## "5-Language Support" That Was Actually 2-Language Support
 
 ```typescript
-// utils/i18n.ts indeed has translations for 5 languages...
+// utils/i18n.ts には確かに5言語の翻訳が...
 export type Locale = 'ja' | 'en' | 'zh' | 'ko' | 'es';
 ```
 
-Looking at the i18n configuration, it indeed supports 5 languages. The top page, the company profile, everything was translated properly. However...
+Looking at the i18n settings, it certainly appeared to support 5 languages. The home page, the company overview—everything was properly translated. But then I looked at the blog page directory.
 
 ```bash
 $ ls src/pages/*/blog/
@@ -52,43 +54,43 @@ src/pages/es/blog/:
 ls: src/pages/es/blog/: No such file or directory
 ```
 
-**Only English and Japanese were supported for the blog.**
+**Only the blog supported Japanese and English**.
 
 ![Checking the directory structure](/images/blog/keyboardclasher.avif)
 
-## High-Speed Implementation with Claude Code Begins
+## Kicking Off Rapid Implementation with Claude Code
 
-With no other choice, the remaining three languages had to be implemented. Fortunately, Claude Code was available. I immediately started the implementation.
+At this point, the only option was to implement the remaining three languages. Fortunately, I had Claude Code. Without hesitation, I began the implementation.
 
-### Step 1: Duplicate and Modify Blog Pages
+### Step 1: Duplicating and Modifying the Blog Pages
 
-First, I copied the English blog pages and modified them for each language.
+First, copy the English blog pages and modify them for each language.
 
 ```bash
-# Create directories for Chinese, Korean, and Spanish
+# 中国語、韓国語、スペイン語のディレクトリを作成
 for lang in zh ko es; do
   mkdir -p src/pages/$lang/blog/
   cp -r src/pages/en/blog/* src/pages/$lang/blog/
 done
 ```
 
-However, this alone wouldn't work. The language filters within each file needed to be corrected.
+However, this alone won't get it working. We need to update the language filters inside each file.
 
 ```typescript
-// Before modification (common to all files)
+// 修正前（全ファイル共通）
 const allPosts = await getCollection('blog', ({ data }) => {
   return data.lang === 'en' && !data.isDraft;
 });
 
-// After modification (e.g., for Chinese)
+// 修正後（例：中国語版）
 const allPosts = await getCollection('blog', ({ data }) => {
   return data.lang === 'zh' && !data.isDraft;
 });
 ```
 
-### Step 2: Create the Ultimate Translation Script
+### Step 2: Creating a Translation Script
 
-Manually translating 8 Japanese articles was not feasible. So, I created an automatic translation script using the Gemini API.
+Translating eight Japanese articles manually simply wasn't realistic. So, I wrote an automated translation script using the Gemini API.
 
 ```javascript
 // scripts/translate-blog-all-languages.js
@@ -102,23 +104,23 @@ const LANGUAGES = {
 async function translateToLanguage(inputFile, targetLang, body, frontmatter) {
   console.log(`📝 Translating to ${LANGUAGES[targetLang].name}...`);
 
-  // Translate title and description
+  // タイトルとdescriptionを翻訳
   const titleAndDescription = `Title: ${frontmatter.title}\nDescription: ${frontmatter.description}`;
   const translatedTitleDesc = await translateWithGemini(titleAndDescription, targetLang);
 
-  // Translate body
+  // 本文を翻訳
   const translatedBody = await translateWithGemini(body, targetLang);
 
-  // Save the file
+  // ファイルを保存
   saveTranslatedFile(targetLang, translatedContent);
 }
 ```
 
 https://github.com/Cor-Incorporated/corsweb2024/blob/52f7f174d7f2b32cd655b5d3c0e786cf137ab9fa/scripts/translate-blog-all-languages.js
 
-### Step 3: A Fierce Battle with Errors
+### Step 3: The Battle with Errors
 
-After running the translation script and eagerly checking the site...
+Having run the translation script, I set out in high spirits to verify the site.
 
 ```bash
 $ npm run build
@@ -128,38 +130,38 @@ $ npm run build
       ╵                ^
 ```
 
-**A storm of build errors.**
+**A storm of build errors**.
 
 ![A pile of error logs](/images/blog/naniittenda.avif)
 
-## Continuous Bug Fixing
+## A Succession of Bug Fixes
 
-### Problem 1: Mysterious Debug Code in ProductsTable.astro
+### Issue 1: Mysterious Debug Code in ProductsTable.astro
 
 ```javascript
-// Mysterious debug code that was unexpectedly present
+// なぜか入っていた謎のデバッグコード
 <script>
   console.log('Button text debug:', {
-    buttonTexts: {t.buttonTexts},  // ← This caused a syntax error
+    buttonTexts: {t.buttonTexts},  // ← これが構文エラー
     goTo: {t.buttonTexts?.goTo},
     itemName: {item.name}
   });
 </script>
 ```
 
-This was resolved by deleting this debug code.
+Resolved by removing this debug code.
 
-### Problem 2: Missing Language Support for CategoryBadge
+### Issue 2: Missing Language Support in CategoryBadge
 
 ```typescript
-// Before modification
+// 修正前
 const categoryLabels = {
   ja: { 'ai': 'AI', 'engineering': 'エンジニアリング', ... },
   en: { 'ai': 'AI', 'engineering': 'Engineering', ... },
-  // zh, ko, es were missing!
+  // zh, ko, es が存在しない！
 };
 
-// After modification
+// 修正後
 const categoryLabels = {
   ja: { ... },
   en: { ... },
@@ -169,36 +171,36 @@ const categoryLabels = {
 };
 ```
 
-### Problem 3: Post Card Links All Redirect to English
+### Issue 3: PostCard Links All Navigating to English
 
 ```typescript
-// Before modification
+// 修正前
 const postUrl = currentLocale === 'ja'
   ? `/blog/${cleanSlug}`
-  : `/en/blog/${cleanSlug}`;  // Even for other languages, it would redirect to /en/!
+  : `/en/blog/${cleanSlug}`;  // 他の言語でも/en/に飛んでしまう！
 
-// After modification
+// 修正後
 const postUrl = currentLocale === 'ja'
   ? `/blog/${cleanSlug}`
   : `/${currentLocale}/blog/${cleanSlug}`;
 ```
 
-### Problem 4: Translated But Title Remains in Japanese
+### Issue 4: Translated, but Titles Remained in Japanese
 
-This was the most troublesome. The translation script seemed to be working correctly, but the `title` and `description` in the frontmatter remained in Japanese...
+This was the trickiest one. While the translation script seemed to be running properly, the title and description in the frontmatter remained in Japanese.
 
 ```yaml
-# Even though it's a Chinese article...
+# 中国語の記事なのに...
 ---
-title: "【爆速15分】MCPサーバーでMCPサーバーを作る！"  # Japanese!
-description: "LT中止の絶望から生まれた奇跡..."  # Japanese!
+title: "【爆速15分】MCPサーバーでMCPサーバーを作る！"  # 日本語！
+description: "LT中止の絶望から生まれた奇跡..."  # 日本語！
 lang: "zh"
 ---
 
-# 【闪电15分钟】用MCP服务器构建MCP服务器！  # The body is in Chinese
+# 【闪电15分钟】用MCP服务器构建MCP服务器！  # 本文は中国語
 ```
 
-After investigating the cause, it was found that there was a bug in the parsing logic of the translation script. A separate script was created to fix this.
+Investigating the cause revealed a bug in the translation script's parsing logic. I addressed this by writing a separate correction script.
 
 ```javascript
 // scripts/fix-translated-frontmatter.cjs
@@ -206,79 +208,80 @@ function extractTitleFromBody(body) {
   const lines = body.split('\n');
   for (const line of lines) {
     if (line.startsWith('# ')) {
-      return line.substring(2).trim();  // Extract from the first heading in the body
+      return line.substring(2).trim();  // 本文の最初の見出しから抽出
     }
   }
   return null;
 }
 ```
 
-## Achievements of a Frenzied 3 Hours
+## The Results of a Whirlwind 3 Hours
 
-Approximately 3 hours after discovering the first error, all problems were finally resolved.
+Roughly three hours after discovering the initial error. At last, every issue was resolved.
 
-### Implemented Features List
+### List of Implemented Features
 
-- ✅ Created blog pages for Chinese, Korean, and Spanish
-- ✅ 5-language support for category pages
-- ✅ 5-language support for tag pages
-- ✅ 5-language support for RSS feeds
-- ✅ 5-language support for payment success/cancellation pages
-- ✅ Automatic translation of 8 existing articles x 3 languages = 24 articles
-- ✅ Resolved all TypeScript errors
-- ✅ Successful build (317 pages)
+- Creation of Chinese, Korean, and Spanish blog pages
+- 5-language support for category pages
+- 5-language support for tag pages
+- 5-language support for RSS feeds
+- 5-language support for checkout success/cancel pages
+- Automated translation of 8 existing articles × 3 languages = 24 articles
+- Elimination of all TypeScript errors
+- Successful build (317 pages)
 
 ![Completed Chinese blog](/images/blog/zh.avif)
 ![Completed Korean blog](/images/blog/ko.avif)
 ![Completed Spanish blog](/images/blog/es.avif)
 
+
 ### Translation Quality
 
-The translations by the Gemini API were of higher quality than expected.
+The translations generated by the Gemini API were higher quality than expected.
 
 ```text
-Japanese: 「いい感じにアレしとくアプリ」開発秘話
-Chinese: "随心所欲处理应用"开发秘辛
-Korean: '적당히 알아서 해주는 앱' 개발 비화
-Spanish: La historia detrás de la aplicación 'Hazlo bien y ya'
+日本語: 「いい感じにアレしとくアプリ」開発秘話
+中国語: "随心所欲处理应用"开发秘辛
+韓国語: '적당히 알아서 해주는 앱' 개발 비화
+スペイン語: La historia detrás de la aplicación 'Hazlo bien y ya'
 ```
 
-The translations accurately captured the nuances of each language and are natural.
+They resulted in natural translations that accurately capture the nuances of each language.
 
-## What I Learned
+## Lessons Learned
 
-### 1. The Definition of "Supports" is Vague
+### 1. The Definition of "Supported" Is Vague
 
-Even if it says "supports 5 languages," you can't know the extent of that support until you investigate. Cases where the top page is supported but the blog is not, like this one, seem surprisingly common.
+Even when something claims "5-language support," you won't know the actual extent of coverage until you check. Cases like this—where the top page is supported, but the blog is not—are probably more common than one might think.
 
-### 2. The Power of Collaboration with Claude Code
+### 2. The Power of Collaborating with Claude Code
 
-The fact that we were able to complete the implementation for 5 languages and 8 articles in 3 hours is largely due to Claude Code. It was particularly helpful in the following aspects:
+Having Claude Code was a huge factor in being able to complete the implementation of 5 languages × 8 articles in just three hours. It was especially helpful in the following areas:
 
-- Instantly identifying the cause of errors from error messages.
-- Learning correction patterns and applying similar corrections in bulk.
-- Efficiently implementing the logic for translation scripts.
+- Instantly pinpointing root causes from error messages
+- Learning fix patterns and applying identical fixes en masse
+- Efficiently implementing the translation script logic
 
-### 3. Automation Scripts are Justice
+### 3. Automation Scripts Are King
 
-If I had manually translated 24 articles, it probably would have taken a week. Even if it takes an hour to create an automation script, the return is far greater.
+Translating 24 articles by hand would likely have taken far longer. Even if it takes an hour to build an automation script, the return is well worth it.
 
-### 4. Errors are a Treasure Trove
+### 4. Errors Are a Goldmine
 
-The errors encountered this time were a great opportunity to discover potential issues in the system. The missing language support for CategoryBadge, in particular, would have eventually become a problem.
+The numerous errors encountered this time were great opportunities to uncover latent issues in the system. The missing language support in CategoryBadge, in particular, would inevitably have become a problem down the line.
 
-## Conclusion: Towards True Multilingual Support
+## Conclusion: Toward True Multilingual Support
 
-The shocking truth that the site, initially thought to have "5-language support," was actually "fake 5-language support." However, through 3 hours of battling with Claude Code, true 5-language support was achieved.
+The shocking revelation that a site initially thought to have "5-language support" was actually just "pseudo-5-language support." Yet through three hours of battle alongside Claude Code, we were able to achieve true 5-language support.
 
-Now, blog articles are displayed correctly in Chinese, Korean, and Spanish. No more 404 errors.
+Now, blog posts display properly in Chinese, Korean, and Spanish alike. No more 404 errors.
 
-This is true multilingual support.
+This is what real multilingual support looks like.
 
 ---
 
-*The implemented code is available on GitHub. The translation script should be usable in other Astro projects.*
+*The implemented code is available on GitHub. The translation script should also be usable in other Astro projects.*
 
 https://github.com/Cor-Incorporated/corsweb2024
 
-*The 3 hours spent battling with Claude Code was a frenzied yet fulfilling time.*
+*The three hours spent battling alongside Claude Code were intense, yet immensely fulfilling.*
