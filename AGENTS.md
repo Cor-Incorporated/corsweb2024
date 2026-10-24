@@ -73,6 +73,14 @@ touch public copy or articles.
 These rules come from ADRs; the ADR is the source of truth if this summary
 and the ADR disagree.
 
+- **Japanese text and the CEO's voice** — when you write or edit Japanese
+  text (pages, components, `src/i18n/locales/ja.json`, articles, PR descriptions,
+  commit messages), follow `.claude/skills/yomiyasu/SKILL.md` (nanaism/yomiyasu
+  v2.1.3, MIT, vendored unchanged) and `.claude/skills/cor-voice/SKILL.md`
+  (register and the CEO's way of writing). Not needed for reports after code
+  changes. Keep `.claude/skills/cor-voice/` identical to the copy in
+  Cor-Incorporated/griftai
+
 - **External expression guardrails** —
   `docs/adr/ADR-0007-external-expression-guardrails.md`, partly replaced by
   `docs/adr/ADR-0022-business-pillars-grift-cli.md`:
@@ -225,7 +233,8 @@ Comprehensive blog functionality with AI-powered translation, featuring:
 - **Monetization**: Stripe-powered tip/support functionality
 - **Performance**: Optimized with same caching strategies as main site
 
-Writing style: `docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above).
+Writing style: the cor-voice skill (`.claude/skills/cor-voice/SKILL.md`) and
+`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above).
 
 ### Content Structure
 
@@ -247,6 +256,14 @@ list in `cms/public/config.yml` mirrors this schema, and
 `src/config/__tests__/cms-config.test.ts` fails if only one side changes — update
 both together. The translation pipeline keeps a Zod mirror in
 `scripts/i18n/schema.mjs`, also linked by a test.
+
+Optional fields used by the post template: `summary` (2–3 sentences shown as
+「この記事の要点」 before the body and as `Article.abstract`; translated by CI)
+and `ctaIntent` (the consultation the CTA box under the body offers; defaults
+per category in `src/config/blog-cta.ts`, ADR-0020). Do not put sales CTAs in
+the body. Put sources in a last `## 参考資料` section as a list of links:
+`src/utils/remark-article-sources.ts` styles it and emits the links as
+`Article.citation`.
 
 News categories: `src/config/news-categories.ts`. Case categories:
 `caseCategories` in `src/content/config.ts`.
@@ -327,9 +344,13 @@ RSS: `src/pages/rss.xml.ts` and `src/pages/<lang>/rss.xml.ts` (blog),
 
 ### Blog Components
 
-- **AuthorBox.astro**: Author photo, name, title, bio and profile link for every
-  locale. Author facts live in `src/config/author.ts` (also used for the Person
-  JSON-LD referenced by `Article.author`); add new authors there
+- **AuthorBox.astro**: Author photo, name, title, bio, profile link, the
+  author's accounts (`sameAs`) and a short company profile (`companyPage.lead`)
+  for every locale. Author facts live in `src/config/author.ts` (also used for
+  the Person JSON-LD referenced by `Article.author`); add new authors there
+- **ArticleSummary.astro**: 「この記事の要点」 box from frontmatter `summary`
+- **BlogCta.astro**: The one CTA box under the body (ADR-0020): consultation
+  link with `intent` and `source=blog/<slug>`, plus the company deck
 - **BlogArchiveHeader.astro** / **BlogCategoryNav.astro**: List page header and
   category navigation
 - **CategoryBadge.astro**: Color-coded category badges with responsive design

@@ -3,6 +3,19 @@ name: H5 Admission
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, ready_for_review]
+  # 翻訳コミット（GITHUB_TOKEN の push）の後の pull_request の実行は承認待ちになるため、translate-content.yml の
+  # dispatch-check がここから同じ検査を起動する（2026-10-23）。PR の本文は H5_PR_NUMBER から gh で読む。
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: '検査する PR の番号（本文の H5 の記載を読む）'
+        required: true
+        type: string
+      base_ref:
+        description: 'PR の base ブランチ'
+        required: true
+        type: choice
+        options: [develop, main]
 
 # Required check name (branch protection): h5-admission
 # Structural path scope is enforced in scripts/h5-admission-check.sh (not by comment strings).
@@ -18,11 +31,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 手動・dispatch-check からの起動では、渡された PR の head と base が、起動したコミットとブランチに一致するときだけ
+      # 検査する（別の PR の本文で審査を通すことを防ぐ）
+      - name: Check that the PR matches the dispatched commit
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          BASE_REF: ${{ inputs.base_ref }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid,baseRefName -q '.headRefOid + " " + .baseRefName')"
+          head_sha="$(git rev-parse HEAD)"
+          if [ "$pr" != "$head_sha $BASE_REF" ]; then
+            echo "::error title=h5::PR #$PR_NUMBER（head と base: $pr）が、起動したコミットとブランチ（$head_sha $BASE_REF）と一致しません"
+            exit 1
+          fi
+
       - name: H5 three-point admission fee
         env:
-          H5_BASE_REF: origin/${{ github.base_ref }}
+          H5_BASE_REF: origin/${{ github.event_name == 'workflow_dispatch' && inputs.base_ref || github.base_ref }}
           H5_HEAD_REF: HEAD
-          H5_PR_NUMBER: ${{ github.event.pull_request.number }}
+          H5_PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
           # PR body is read from GITHUB_EVENT_PATH inside the script (no body expression in yml).
           GH_TOKEN: ${{ github.token }}
         run: |

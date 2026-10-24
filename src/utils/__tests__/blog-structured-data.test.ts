@@ -96,4 +96,20 @@ describe('buildBlogArticleJsonLd', () => {
     expect(buildBlogArticleJsonLd({ ...base, category: 'founder' })).not.toHaveProperty('wordCount');
     expect(buildBlogArticleJsonLd({ ...base, category: 'founder' })['@type']).toBe('BlogPosting');
   });
+
+  it('puts the summary in abstract and the sources in citation', () => {
+    const article = buildBlogArticleJsonLd({
+      ...base,
+      summary: '要点です。',
+      citations: [{ name: 'OWASP', url: 'https://owasp.org/' }],
+    });
+    expect(article.abstract).toBe('要点です。');
+    expect(article.citation).toEqual([{ '@type': 'CreativeWork', name: 'OWASP', url: 'https://owasp.org/' }]);
+  });
+
+  it('omits abstract and citation when the article has neither', () => {
+    const article = buildBlogArticleJsonLd({ ...base, citations: [] });
+    expect(article).not.toHaveProperty('abstract');
+    expect(article).not.toHaveProperty('citation');
+  });
 });

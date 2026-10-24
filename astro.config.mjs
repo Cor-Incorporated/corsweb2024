@@ -4,6 +4,7 @@ import compress from 'astro-compress';
 import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
 import { remarkHasMath } from './src/utils/remark-has-math';
+import { remarkArticleSources } from './src/utils/remark-article-sources';
 import { fileURLToPath } from 'node:url';
 import { includeInSitemap } from './src/config/indexing';
 import { collectBlogLastmod } from './src/config/sitemap';
@@ -36,6 +37,8 @@ export default defineConfig({
       }],
       // 数式の有無を remarkPluginFrontmatter.hasMath に記録（KaTeX CSS を数式記事だけで読むため）
       remarkHasMath,
+      // 最後の「参考資料」の節のリンクを remarkPluginFrontmatter.citations に記録（Article.citation に出す）
+      remarkArticleSources,
     ],
     rehypePlugins: [
       'rehype-slug',

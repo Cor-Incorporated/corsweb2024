@@ -1,87 +1,67 @@
 ---
-title: "The Story of How My Life Radically Changed After I Spoke at an LT Presentation Every Week for a Year"
-description: "The growth, learning, and life changes of a cliffhanger, inexperienced engineer-turned-manager through a weekly LT presentation challenge."
+title: "How Giving Lightning Talks Every Week for a Year Completely Transformed My Life"
+description: "The growth, lessons, and life changes gained by an on-the-edge founder and inexperienced engineer through the challenge of weekly lightning talks"
+summary: "I took on the challenge of giving a lightning talk every week for a year. Chasing deadlines, I learned technologies I knew nothing about from scratch and turned them into tangible results; slide preparation that used to take over three hours now takes under 30 minutes. Sticking with it gave me confidence, and now I cannot imagine my life without lightning talks."
 pubDate: 2024-01-25
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "founder"
 tags: ["LT", "成長", "コミュニティ", "起業", "エンジニア"]
 lang: "en"
 featured: true
-translationSourceHash: "325f48c7497ecead1646e12ca98fef0b2c3f57c2c331dad99a9bf5ee42a9738c"
-translatedAt: "2026-09-28T06:09:16.004Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "6770167dea331abd2899e3136f283419cee0995f96c63bdb05489c122f447e43"
+translatedAt: "2026-10-23T06:17:06.826Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-# My Life Radically Changed After Speaking at Weekly Lightning Talks for a Year
+# How Giving Lightning Talks Every Week for a Year Completely Transformed My Life
 
-As a "Clinging to the Edge Unexperienced Engineer Turned Entrepreneur," I challenged myself to participate in weekly Lightning Talks (LT) for a year. The changes this endeavor brought about far surpassed any improvement in my technical skills.
+As an "inexperienced engineer and entrepreneur on the brink," I challenged myself to give a lightning talk (LT) every week for a full year. The changes brought about by this challenge went far beyond just improving my technical skills.
 
-Honestly, at first, I was on the verge of tears thinking, "Am I really going to present again this week...?" But now, I've reached a point where I can't imagine life without LT presentations. It's amazing how much people can change.
+To be honest, at first, I felt like crying every time I thought, "Do I really have to speak again this week...?" Now, it has reached a point where I "can't imagine a life without LTs"—proof that people truly can change.
 
-## Background of the Challenge
+## Background Behind the Challenge
 
 ### Facing My ASD Traits
 
-I was diagnosed with Autism Spectrum Disorder (ASD) as an adult. Communication difficulties have always been a significant challenge in my life.
-
-However, precisely because of this, I decided to take on the activity I found most daunting: "speaking in front of people." If you avoid things you're bad at, you'll stay bad at them forever.
+As an adult, I was diagnosed with Autism Spectrum Disorder (ASD). Difficulties with communication have always been a challenge throughout my life.
 
 ### The Path to Entrepreneurship
 
-My journey has been a transformation from music to engineering, and then to entrepreneurship. Throughout this, I developed a strong desire for "communication without misunderstanding."
+My transition went from music to engineering, and then to becoming an entrepreneur. Along the way, my desire to realize "communication free of misunderstandings" grew stronger.
 
-Just four years ago, I had never written a line of code. But now, I'm not only running a company but also coding. Life is unpredictable.
+Having spent my earlier years in music, I had never written a single line of code until four years ago. Now, I write code while running a company. You never know where life will take you.
 
-## The Year's Trajectory
+Six months after leaving my job, the borrowed funds were gone in the blink of an eye. Even when attending entrepreneur events and engineer networking meetups, simply participating only increased the number of business cards I exchanged; it led to neither work nor meaningful connections. That was when I thought, "Right, I should be the one speaking."
 
-### First Quarter: Confronting Fear
+## The Journey Over One Year
 
-```markdown
-# Initial Challenges
-- Fear of public speaking
-- Insufficient ability to organize technical content
-- Seeking ways to engage with the community
-```
+### Q1: Facing the Fear
 
-### Second Quarter: Forming Habits
+My very first presentation was at an LT event held at an engineer café. I presented an app I had built as my programming school graduation project. My slides were clumsy, my voice was strained, and my hands were shaking. Even so, after finishing the roughly five-minute presentation, the room applauded, and someone asked, "How did you build that?" That was the moment I realized how rewarding putting yourself out there could be.
 
-Preparing for weekly LT talks became a part of my daily routine, creating a rhythm for my learning.
+### Q2: Forming the Habit
 
-I started experiencing a strange symptom: "feeling restless on Fridays." I call this LT dependency.
+Preparing for weekly LTs became part of my daily routine, creating a natural rhythm for learning. By booking speaking slots in advance, the power of deadlines forced me to produce: "I have to build something."
 
-### Third Quarter: Connecting with the Community
+### Q3: Connecting with Communities
 
-```javascript
-// Expansion of Community Activities
-const communityActivities = [
-  'Tech meetup presentations',
-  'Online community contributions',
-  'Mentoring junior developers',
-  'Open source contributions'
-];
-```
+I searched relentlessly for events where I could speak every week across connpass, Peatix, and Discord, both online and offline. With every new speaking opportunity, my connections within the community expanded as well.
 
-### Fourth Quarter: Transforming into a New Self
+### Q4: Transforming into a New Version of Myself
 
-By this point, I had become someone who couldn't live without LT presentations. This was truly the moment my life went off the rails (in a good way!).
+My body had reached a point where it could no longer survive without LTs. It was the exact moment my life was completely derailed in the best way possible.
 
-## Achieved Results
+## What I Gained
 
--   **Technical Skills**: My understanding deepened to a level where I could explain it (from "it works somehow" to "I can explain why it works").
--   **Communication Skills**: Acquired structured speaking methods (no more rambling presentations).
--   **Network**: Connected with engineers nationwide (gained a large number of LT peers).
--   **Confidence**: Overcame my fear of public speaking (nothing scares me anymore).
+- Even for technologies I knew nothing about, chased by deadlines, I began learning them from scratch and turning them into working deliverables.
+- Slide preparation, which initially took over three hours, became something I could finish in about 30 minutes by focusing on the key points.
+- The sheer act of persisting gave me confidence.
 
-## Elevating to Cor.Inc.'s Mission
+## The Connection to Cor.Inc.'s Mission
 
-This experience directly led to our company's mission: "Achieving 'communication without misunderstanding' through AI technology."
+This experience connects directly to our company's mission: "Realizing 'communication free of misunderstandings' through AI technology."
 
-This was the moment my personal challenges transformed into a passion for solving societal issues.
+It was the moment a personal struggle turned into a passion for solving a societal problem. When I realized, "If I'm struggling with this, aren't other people struggling with it too?", my sense of purpose as an entrepreneur was born.
 
-The realization that "if I'm struggling with this, others must be too" sparked my sense of purpose as an entrepreneur.
-
----
-
-I'm happy to discuss the value of taking on challenges in more detail. Please feel free to contact me through [Contact](/contact).
-
-To you who think, "LT presentations are impossible...", don't worry. Everyone feels that way at first. But after a year, you'll wonder, "How did I even live without LT presentations?" It's truly不思議 (fushigi - mysterious/amazing).
+To anyone thinking, "There's no way I could give an LT...", you'll be fine. Everyone feels that way at first.

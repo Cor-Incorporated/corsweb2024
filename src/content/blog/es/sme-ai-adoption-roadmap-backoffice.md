@@ -1,83 +1,70 @@
 ---
-title: "¿Por qué no avanza la adopción de la IA en las pymes? | Hoja de ruta realista a partir de los departamentos de asuntos generales y administración"
-description: "A partir de la tasa actual de adopción de IA del 20,4 % en las pequeñas y medianas empresas, explicamos cómo empezar a aprovechar la IA sin sobreesfuerzos desde los departamentos de asuntos generales y administración. Un artículo dirigido a empresas que se plantean dar el primer paso en el uso de la IA."
+title: "¿Por qué no avanza la adopción de la IA en las pymes? | Hoja de ruta realista comenzando por Asuntos Generales y Administración"
+description: "Partiendo de la tasa actual de adopción de la IA del 20,4% en las pymes, explicamos cómo comenzar a utilizar la IA sin sobreesfuerzos desde los departamentos de Asuntos Generales y Administración. Un artículo para empresas que se plantean dar su primer paso en el aprovechamiento de la IA."
+summary: "Para las pymes, es realista comenzar a implementar la IA en las tareas documentales de los departamentos de Asuntos Generales y Administración, en lugar de recurrir a sistemas de IA a gran escala. Al probarla en una tarea durante 90 días y recopilar el tiempo ahorrado y las correcciones, se pueden generar criterios de decisión para su adopción sin necesidad de adquirir un gran sistema."
 pubDate: 2026-06-18
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "ai"
 tags: ["AI導入", "中小企業", "DX", "バックオフィス"]
 lang: "es"
 featured: true
 isDraft: false
-translationSourceHash: "f772793d612f17a7d782ceeae2fed22a4f9e6c53c83a3991911a7b687eec6874"
-translatedAt: "2026-09-28T06:30:58.247Z"
+translationSourceHash: "4b8c1087f24fab9855473f5964880d8d87f43b43240028e06efafdf9e66e31e9"
+translatedAt: "2026-10-23T06:26:09.305Z"
 translationModel: "gemini-3.8-flash"
 ---
 
-# ¿Por qué no avanza la adopción de la IA en las pymes? | Hoja de ruta realista a partir de los departamentos de asuntos generales y administración
+# ¿Por qué no avanza la adopción de la IA en las pymes? | Hoja de ruta realista comenzando por Asuntos Generales y Administración
 
-**La adopción de la IA en las pymes: empezar por las "tareas documentales cotidianas" antes que por una automatización llamativa**
+**Para la adopción de la IA en las pymes: antes que una automatización llamativa, comience por las «tareas documentales diarias»**
 
-La adopción de la IA en las pymes no avanza tanto como se dice en las noticias. Aunque la tasa de adopción va en aumento, en muchas empresas existen barreras como «no sabemos para qué usarla», «no tenemos personal cualificado» o «nos preocupa si es seguro introducir la información». Por ello, el primer paso realista no consiste en implementar un sistema de IA a gran escala, sino en comenzar por las tareas documentales de los departamentos de administración y asuntos generales.
+La adopción de la inteligencia artificial en las pequeñas y medianas empresas no avanza al ritmo que sugieren las noticias. Aunque la tasa de adopción va en aumento, muchas empresas se enfrentan a barreras como «no saber en qué utilizarla», «la falta de personal cualificado» y «la inquietud sobre si es seguro introducir información». Precisamente por ello, el primer paso más realista no consiste en implementar un sistema de IA a gran escala, sino en comenzar por las tareas documentales de los departamentos de administración y asuntos generales.
 
-## Para la adopción de IA en pymes, acuda a Cor.Inc.
-
-Considero que, para las pymes, adoptar la IA no es «seguir una moda», sino una medida práctica frente a la escasez de mano de obra y la dependencia del personal individual en los procesos operativos. Incluso sin un departamento especializado como el de las grandes empresas, es posible comprobar su eficacia empezando por las actas de reuniones, contratos, presupuestos y atención a consultas que surgen a diario.
-
-Como empresa de IA originaria de Fukuoka, Cor.Inc. tiene el compromiso de apoyar la adopción de IA y DX en empresas regionales y organismos públicos de forma rápida y a bajo coste, contribuyendo a la innovación tecnológica y a la mejora de la productividad en las industrias locales.
-
-[Consultar sobre la adopción de IA para pymes](/contact)
+En Cor.Inc., consideramos que, para las pymes, la adopción de la IA no es «responder a una moda», sino una medida realista frente a la escasez de mano de obra y la dependencia del conocimiento individual en los procesos. Incluso sin contar con departamentos especializados como las grandes corporaciones, es posible comprobar su eficacia comenzando por las tareas cotidianas: actas de reuniones, contratos, presupuestos y atención de consultas.
 
 > **Datos objetivos en los que se basa este artículo**
-> - En la encuesta de marzo de 2026 de la Organización para las Pequeñas y Medianas Empresas (SMRJ), la tasa de adopción de IA en pymes fue del 20,4 %, y las que consideraban su adopción alcanzaban el 18,6 %.
-> - En la misma encuesta, entre las empresas que ya habían implementado IA, el departamento de administración y asuntos generales registró la tasa más alta por área funcional, con un 68,3 %.
-> - En las Tendencias de DX 2025 de la IPA, se resume que cuanto menor es el tamaño de la empresa en Japón, menor es el porcentaje de iniciativas con IA generativa, y en empresas de 100 empleados o menos, la suma de «interesadas pero sin planes» y «sin planes en el futuro» roza el 80 %.
+> - Según una encuesta de marzo de 2026 de la Organización de Pymes de Japón (SMRJ), la tasa de adopción de IA en las pymes fue del 20,4 %, y un 18,6 % estaba considerando su implementación.
+> - En la misma encuesta, por área de negocio entre las empresas que ya han adoptado IA, el departamento de administración y asuntos generales representó la mayor proporción, con un 68,3 %.
+> - El informe Tendencias DX 2025 de la IPA señala que, en Japón, cuanto menor es el tamaño de la empresa, menor es la tasa de iniciativas con IA generativa; en empresas de 100 empleados o menos, la suma de «interesadas pero sin planes» y «sin planes en el futuro» roza el 80 %.
 
 ## Por qué suele estancarse la adopción de la IA en las pymes
 
-La razón no es únicamente la dificultad técnica. Más bien, se debe en gran medida a que no se ha definido por qué tareas empezar, quién será la persona responsable o qué información se puede introducir en la IA.
+La razón no es únicamente la dificultad técnica. Más bien, se debe principalmente a que no se ha determinado por qué tareas comenzar, quién será el responsable o qué información está permitido ingresar en la IA.
 
-Si la adopción de la IA se plantea como una «reforma integral de la empresa», se vuelve una carga excesiva. Al principio, conviene acotarla a tareas donde el ahorro de tiempo sea fácil de visualizar y la gestión de la información resulte sencilla de organizar.
+Si la adopción de la IA se inicia como una «reforma integral de toda la empresa», se vuelve una carga pesada. Al principio, conviene acotar el enfoque a tareas en las que la reducción de tiempo sea evidente y la gestión de la información resulte fácil de organizar.
 
-## Razones para empezar por administración y asuntos generales
+## Por qué comenzar desde los departamentos de administración y asuntos generales
 
-En los departamentos de administración y asuntos generales se concentran tareas documentales altamente compatibles con la IA: redacción de actas de reuniones, búsqueda en normativas internas, revisión preliminar de contratos, respuestas a consultas, verificación de gastos y facturas, y elaboración de manuales.
+En los departamentos de administración y asuntos generales se concentran tareas documentales que presentan una gran compatibilidad con la IA: elaboración de actas, búsqueda en normativas internas, lectura preliminar de contratos, respuestas a consultas, verificación de gastos y facturas, y preparación de manuales.
 
-Aunque suponen una gran carga para el personal operativo, son tareas cuyos resultados son fáciles de medir. Tras implementar la IA, se puede cuantificar cuántos minutos se redujo la redacción de actas, cuántas consultas internas disminuyeron o con qué rapidez se inició la revisión de contratos.
+Aunque implican una carga de trabajo considerable para el personal operativo, son labores cuyos resultados resultan fáciles de medir. Es posible cuantificar en cuántos minutos se redujo la elaboración de actas gracias a la IA, cuántas consultas internas disminuyeron o con cuánta mayor rapidez se realizó la revisión inicial de un contrato.
 
 ## Hoja de ruta de 90 días
 
-- Semanas 1 a 2: Definir las tareas objetivo, la información que se permite introducir y las herramientas de IA que se utilizarán.
-- Semanas 3 a 4: Probar en una sola tarea, como actas de reuniones, FAQ internas o revisión preliminar de contratos.
-- Semanas 5 a 8: Recopilar registros de uso, tiempo ahorrado y puntos de corrección por parte del personal operativo.
-- Semanas 9 a 12: Clasificar qué tareas pueden resolverse con IA en la nube y cuáles deben evaluarse para LLM locales o entornos aislados.
+- Semanas 1 y 2: Definir las tareas objetivo, la información autorizada para su ingreso y las herramientas de IA a utilizar.
+- Semanas 3 y 4: Realizar pruebas piloto en una sola tarea, como actas de reuniones, preguntas frecuentes internas o lectura preliminar de contratos.
+- Semanas 5 a 8: Recopilar registros de uso, tiempos ahorrados y las correcciones señaladas por el personal operativo.
+- Semanas 9 a 12: Distinguir entre las tareas adecuadas para IA en la nube y aquellas en las que se debe considerar el uso de LLM locales o entornos aislados.
 
-Siguiendo este orden, es posible generar criterios de decisión para la adopción de la IA sin necesidad de adquirir forzosamente un gran sistema.
-
-## Para la adopción de IA en pymes, acuda a Cor.Inc.
-
-Para adoptar IA en una pyme, no es necesario realizar una gran inversión desde el principio. En Cor.Inc. diseñamos fases de adopción realistas, que abarcan desde tareas documentales en administración y asuntos generales, gestión del conocimiento interno y uso de datos confidenciales, hasta formación en IA.
-
-[Consultar sobre la adopción de IA para pymes](/contact)
+Siguiendo este orden, es posible generar criterios sólidos para decidir sobre la adopción de la IA sin necesidad de adquirir forzosamente un gran sistema. En Cor.Inc. diseñamos pasos de implementación realistas, que abarcan desde tareas documentales de administración y asuntos generales, gestión del conocimiento interno y uso de datos confidenciales, hasta capacitación en IA.
 
 ## Preguntas frecuentes
 
-### ¿Por qué tareas debería empezar una pyme a utilizar la IA?
+### P. ¿Por qué tareas debería empezar una pyme a utilizar la IA?
 
-Lo más realista es comenzar por tareas con un gran volumen de documentos y cuyos resultados sean fáciles de medir, tales como la elaboración de actas, FAQ internas, lectura preliminar de contratos, organización de presupuestos y atención a consultas.
+Lo más realista es comenzar por tareas con un gran volumen documental y cuyos resultados sean fáciles de medir, tales como la elaboración de actas, preguntas frecuentes internas, lectura preliminar de contratos, organización de presupuestos y atención de consultas.
 
-### ¿Es indispensable contar con personal especializado para adoptar la IA?
+### P. ¿Es imprescindible contar con personal especializado para adoptar la IA?
 
-No es indispensable para la validación inicial. Sin embargo, en la fase en la que se gestionen datos confidenciales o la integración con sistemas internos, será necesario un diseño que incluya a especialistas externos.
+No es imprescindible para la validación inicial. Sin embargo, en las etapas en las que se gestiona información confidencial o la integración con sistemas internos, se requiere un diseño que incluya a especialistas externos.
 
-### ¿Cómo se diferencian el uso de la IA en la nube y los LLM locales?
+### P. ¿Cómo se debe alternar entre la IA en la nube y los LLM locales?
 
-Para información pública o documentos generales se utiliza la IA en la nube; para secretos comerciales de clientes, datos personales o documentos internos, se evalúa el uso de LLM locales o entornos aprobados.
+La información pública y los documentos generales se gestionan con IA en la nube, mientras que para los secretos de clientes, datos personales, documentos internos y similares se evalúa el uso de LLM locales o entornos debidamente autorizados.
 
-**Para la adopción de IA en pymes, acuda a Cor.Inc.**
+## Materiales de referencia
 
-## Referencias
-
-
-- [Organización para las Pequeñas y Medianas Empresas (SMRJ): Encuesta sobre el estado de utilización de IA y afines en pymes (marzo de 2026)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf): tasa de adopción de IA en pymes del 20,4 %, consideración de adopción del 18,6 %, uso de IA generativa del 82,6 % entre las empresas que han implementado IA; administración y asuntos generales fue el área más común.
-- [IPA: Tendencias de DX 2025](https://www.ipa.go.jp/digital/chousa/dx-trend/tbl5kb0000001mn2-att/dx-trend-2025.pdf): Japón presenta un porcentaje inferior de iniciativas con IA generativa en comparación con EE. UU. y Alemania; a menor tamaño de empresa, menor es la proporción de iniciativas. Los desafíos radican en la gobernanza, la alfabetización y la exploración de casos de uso.
-- [Página web de Cor.: IA × CO-CREACIÓN / Descripción del negocio](https://cor-jp.com/): revisión de las áreas de negocio de Cor., Grift, LLM locales e IA segura, desarrollo impulsado por IA y mensajes de cocreación.
+- [Organización de Pymes de Japón (SMRJ): Encuesta sobre el uso y aprovechamiento de la IA en pymes (marzo de 2026)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - Tasa de adopción de IA en pymes del 20,4 %, consideración de adopción del 18,6 %, uso de IA generativa en empresas con IA adoptada del 82,6 %; el área con mayor adopción fue el departamento de administración y asuntos generales.
+- [IPA: Tendencias DX 2025](https://www.ipa.go.jp/digital/chousa/dx-trend/tbl5kb0000001mn2-att/dx-trend-2025.pdf) - La proporción de iniciativas de IA generativa en Japón es inferior a la de EE. UU. y Alemania, y disminuye cuanto menor es el tamaño de la empresa. Los desafíos radican en la gobernanza, la alfabetización digital y la exploración de casos de uso.
+- [Sitio web de Cor.: IA × CO-CREACIÓN / Resumen de negocio](https://cor-jp.com/) - Consulte las áreas de negocio de Cor., Grift, LLM locales e IA segura, desarrollo impulsado por IA y nuestro mensaje de co-creación.

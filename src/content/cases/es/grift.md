@@ -1,16 +1,16 @@
 ---
-title: "Grift — El currículum se puede exagerar. Las pruebas no. OSS para extraer hechos verificables a partir del historial de git"
-description: "Grift, un producto propio que extrae hechos verificables (valores de inspección) en lugar de puntuaciones a partir del historial de git de los ingenieros. Presentamos el diseño y el proceso por el cual cambiamos el rumbo desde una aplicación web de apoyo a presupuestos hacia una CLI de código abierto (OSS) y el apoyo a recomendaciones para agencias de contratación y SES."
+title: "Grift: el currículum se puede exagerar; las pruebas, no. Software de código abierto (OSS) que extrae hechos verificables del historial de git"
+description: "Grift es un producto propio que extrae hechos verificables (valores de inspección) del historial de git de los ingenieros, en lugar de asignar puntuaciones. Presentamos los antecedentes del cambio de rumbo —desde una aplicación web de apoyo a estimaciones hacia una CLI de código abierto (OSS) y el respaldo a recomendaciones para agencias de empleo y empresas de SES— y su diseño."
 category: "grift"
-tags: ["Grift", "OSS", "CLI", "git", "Agencias de contratación", "SES"]
+tags: ["Grift", "OSS", "CLI", "git", "Selección de personal", "SES"]
 publishedAt: 2026-06-30
-updatedAt: 2026-10-20
-summary: "Grift es un producto propio que extrae «hechos verificables» del historial de git de los ingenieros. Al no asignar puntuaciones ni clasificaciones y no utilizar IA (LLM) para la medición, cualquier persona que lo ejecute obtiene el mismo resultado y el receptor puede verificar los cálculos. La CLI está disponible públicamente como OSS bajo la licencia MIT."
+updatedAt: 2026-10-23
+summary: "Grift es un producto propio que extrae «hechos verificables» del historial de git de los ingenieros. No asigna puntuaciones ni clasificaciones. Al no utilizar IA (LLM) para la medición, produce el mismo resultado independientemente de quién lo ejecute, permitiendo que quien lo reciba pueda verificar los cálculos. La CLI está disponible como OSS bajo la licencia MIT."
 isDraft: false
 featured: true
 lang: "es"
-translationSourceHash: "50b777323f44c9fba4e13fe092c2a49e5ad8d2299c657eda38c22deedf720613"
-translatedAt: "2026-10-20T03:23:50.245Z"
+translationSourceHash: "534f5ca8a2ffcb8af979ccb72616c1a1a884f89720a7703d659b09456c5ca795"
+translatedAt: "2026-10-23T06:30:48.755Z"
 translationModel: "gemini-3.8-flash"
 ---
 
@@ -27,32 +27,32 @@ NDA・機密案件では具体名や数値をぼかし、frontmatter の securit
 
 ## El desafío
 
-Los comerciales de las agencias de contratación y de las empresas de SES (servicios de ingeniería de sistemas) deben explicar «por qué recomiendan a esta persona» al presentar un candidato a una empresa. Sin embargo, el material del que disponen suele limitarse al currículum y a las impresiones de una entrevista. Aunque ponga «5 años con Java», no se llega a apreciar la esencia real de su trabajo: qué tipo de modificaciones ha realizado ni cómo las ha ido verificando.
+Las agencias de contratación y los comerciales de SES (servicios de ingeniería de sistemas) deben explicar «por qué recomiendan a esta persona» al presentar candidatos a las empresas. Sin embargo, los únicos materiales de los que disponen son, en su mayoría, el currículum y las impresiones de la entrevista. Aunque ponga «5 años de experiencia en Java», eso no transmite el contenido real del trabajo: qué tipo de cambios implementó ni cómo los fue verificando.
 
-Por otro lado, el «volumen de actividad», como las contribuciones en GitHub o el número de commits, se ha vuelto fácil de inflar con IA generativa o agentes. La mera abundancia cuantitativa ya difícilmente sirve como base para una recomendación. Al mismo tiempo, resumirlo todo en una única puntuación borra qué se midió, en qué periodo y con qué muestra base, convirtiéndose en una mera herramienta de criba. Faltaba «material contrastable», tanto para quienes recomiendan como para quienes son recomendados.
+Por otro lado, el «volumen de actividad», como las contribuciones o el número de commits en GitHub, ahora se puede inflar con facilidad mediante IA generativa y agentes. La mera cantidad ya casi no sirve como fundamento para una recomendación. No obstante, si se sintetiza todo en una única puntuación, desaparece la información sobre qué se midió, en qué período y sobre qué muestra base, lo que termina utilizándose como una simple herramienta de descarte. Faltaban «materiales verificables», tanto para quienes recomiendan como para quienes son recomendados.
 
 ## Nuestro enfoque
 
-Grift comenzó en febrero de 2026 como una aplicación web concebida para respaldar las estimaciones en proyectos de desarrollo por encargo. Al buscar las bases para esas estimaciones, nos dimos cuenta de que el material más fidedigno era el propio historial de git acumulado por los desarrolladores. En agosto de 2026, aislamos la parte de medición en una herramienta de línea de comandos. En septiembre dejamos de ofrecer la antigua aplicación web y reorientamos el rumbo para dar soporte a los comerciales de agencias de contratación y SES.
+Grift comenzó en febrero de 2026 como una aplicación web concebida para respaldar las estimaciones en proyectos de desarrollo por encargo. Al buscar bases sólidas para dichas estimaciones, nos dimos cuenta de que el material más fidedigno era el propio historial de Git acumulado por los ingenieros. Por ello, en agosto de 2026 separamos la parte de medición para convertirla en una herramienta de línea de comandos. En septiembre dejamos de ofrecer la antigua aplicación web y reorientamos nuestra estrategia para dar soporte a los comerciales de agencias de contratación y empresas de SES.
 
 En el diseño, establecimos tres compromisos previos:
 
-- **No convertir en puntuación**: lo que se ofrece son valores de inspección; el juicio corresponde a las personas. No generamos puntuaciones compuestas, rankings, aprobados/suspensos ni niveles de clasificación, y las cifras siempre van acompañadas de su numerador y denominador.
-- **Mismos resultados en cada ejecución**: no usamos IA (LLM) para la medición. Con el mismo repositorio y la misma versión, cualquier persona que lo ejecute obtendrá exactamente los mismos valores numéricos.
-- **No se envía a ninguna parte**: funciona exclusivamente en el ordenador local. La propia persona decide si desea compartir los resultados y qué repositorios mostrar.
+- No convertirlo en una nota: Se proporcionan valores de inspección; las decisiones las toman las personas. No se generan puntuaciones compuestas, clasificaciones, aprobados/suspensos ni niveles; a cada cifra se le asigna siempre su numerador y su denominador.
+- El mismo resultado cada vez: No se utiliza IA (LLM) para la medición. Con el mismo repositorio y la misma versión, cualquiera que lo ejecute obtendrá exactamente los mismos valores.
+- No se envía a ninguna parte: Funciona únicamente en el ordenador local. La persona interesada decide si comparte los datos y qué repositorios muestra.
 
-Asimismo, definimos una norma de uso de siete principios —que incluye «no interpretar las ausencias de forma negativa», «no hacer cribas basándose únicamente en números» o «no medir a terceros sin su consentimiento»—, y establecimos que los usos que no la respeten no podrán denominarse con el nombre de la metodología (TEP: Technical Evidence Pipeline).
+Asimismo, establecimos un código de uso de 7 normas (como «no interpretar la ausencia como algo negativo», «no descartar basándose únicamente en cifras» y «no medir a terceros sin su consentimiento»), determinando que cualquier uso que no las respete no podrá denominarse con el nombre de la metodología (TEP: Technical Evidence Pipeline).
 
 ## Implementación
 
-Grift CLI extrae observaciones como las siguientes a partir únicamente del historial de git:
+Grift CLI extrae observaciones como las siguientes únicamente a partir del historial de Git:
 
-- **Distinción de autoría**: clasifica de quién es el trabajo en 11 categorías, entre ellas commits propios del autor, trabajo de otros, bots, artefactos generados o de terceros (vendors) e historiales heredados de bifurcaciones (forks).
-- **Tasa de desarrollo conjunto de pruebas**: porcentaje de commits en los que se modifican pruebas al mismo tiempo que el código de producción.
-- **Tasa de retrabajo y retoque**: proporción de revisiones o modificaciones repetidas sobre archivos tocados recientemente (es un registro de tendencias, no se utiliza para determinar aptitud).
-- **Contexto del repositorio**: días de trabajo efectivo, número de personas implicadas y cuota del autor principal, proporción de cambios integrados mediante revisión de código, entre otros.
+- Distinción de autoría: Clasifica de quién es el trabajo en 11 categorías, entre ellas commits propios de la persona, tareas de terceros, bots, artefactos generados o de proveedores e historiales heredados de bifurcaciones (forks).
+- Tasa de modificación conjunta de pruebas: Proporción de commits en los que se modificaron pruebas en el mismo commit que el código de producción.
+- Tasa de reelaboración y retoques: Proporción de trabajo rehecho o reexaminado sobre archivos modificados recientemente (se registra como tendencia, no se utiliza para evaluar aprobados/suspensos).
+- Contexto del repositorio: Días de trabajo real, número de personas involucradas y porcentaje de autoría del colaborador principal, proporción de cambios revisados, entre otros.
 
-Cuando la muestra base es inferior a 20, no se muestran porcentajes sino únicamente el número de casos. Aquello que no pudo observarse no se marca como «sin historial», sino como «no observado», indicando el motivo. `grift verify` recalcula el informe guardado bajo las mismas condiciones y devuelve coincidencia, discrepancia o no verificable, lo que permite al receptor comprobar si ha habido alteraciones o inconsistencias.
+Cuando la muestra base es inferior a 20, no se muestra un porcentaje sino únicamente el número de casos. Aquello que no se haya podido observar se indica como «no observado» con su motivo correspondiente, en lugar de «sin historial». `grift verify` recalcula el informe guardado bajo las mismas condiciones y devuelve coincidencia, discrepancia o imposibilidad de verificación, lo que permite a la parte receptora comprobar posibles alteraciones o inconsistencias.
 
 - Repositorio: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
 - Distribución: PyPI «grift-cli» (`pipx install grift-cli`, Python 3.11 o superior)
@@ -60,8 +60,8 @@ Cuando la muestra base es inferior a 20, no se muestran porcentajes sino únicam
 
 ## Resultados
 
-El 8 de septiembre de 2026 publicamos la versión v0.7.2 en PyPI. Las métricas se han validado con 117 repositorios públicos, y hemos publicado en GitHub tanto las comparaciones que permitieron establecer distinciones como las que todavía no lo han logrado (se trata de mediciones internas; no han sido auditadas por terceros).
+El 8 de septiembre de 2026 publicamos la versión v0.7.2 en PyPI. Las métricas se validaron en 117 repositorios públicos, y en GitHub compartimos abiertamente tanto las comparaciones que permitieron distinguir resultados como las que aún no lo han logrado (se trata de mediciones internas que no han sido auditadas por terceros).
 
-Actualmente estamos preparando pruebas de concepto (PoC) con agencias de contratación y empresas de SES para fundamentar los motivos de recomendación a partir de los registros ejecutados localmente por los propios candidatos. Tomando como base los resultados de estas pruebas de concepto, nuestro objetivo es lanzar la versión oficial en 2027. También presentamos Grift en [griftai.org](https://griftai.org).
+Actualmente, estamos preparando pruebas piloto (PoC) junto con agencias de empleo y empresas de SES para concretar los motivos de recomendación a partir de los registros que los propios candidatos ejecutan en sus equipos. A partir de los resultados de estas pruebas piloto, nuestro objetivo es comenzar a ofrecer la versión oficial en 2027. Grift también se presenta en [griftai.org](https://griftai.org).
 
-Asimismo, explicamos la filosofía detrás de Grift en sendos artículos en [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) y [note](https://note.com/cor_instrument/n/nd58ba0955317).
+La filosofía de Grift también se explica en nuestros artículos de [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) y [note](https://note.com/cor_instrument/n/nd58ba0955317).

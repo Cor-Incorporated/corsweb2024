@@ -8,19 +8,19 @@ source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "e6452f220cf924e85c5f88d7cc015158452f73eeddd64f8a5f421ed92bcd5cfa"
-translatedAt: "2026-10-20T01:57:19.694Z"
+translationSourceHash: "413bf167fe597944f216927f8d65d891302985864fd067813ed618f90103d8e1"
+translatedAt: "2026-10-23T06:31:46.384Z"
 translationModel: "gemini-3.8-flash"
 ---
 
-## Stage 2 Audit Completed
+## Completion of Stage 2 Audit
 
-On October 7, 2026, Cor.Inc. completed the Stage 2 audit for ISO/IEC 27001, the international standard for Information Security Management Systems (ISMS). No nonconformities were identified during the audit.
+On October 7, 2026, Cor.Inc. completed the Stage 2 audit for ISO/IEC 27001, the international standard for information security management systems (ISMS). There were no nonconformities identified during the audit.
 
-Registration of the certification is expected around December 2026. Until the registration is complete, we will not state that we are "certified," and we will provide another update once registration is finalized.
+Registration of the certification is expected around December 2026. Until the registration is complete, we will not state that we are "certified," and we will make another announcement once the registration is finalized.
 
-## Moving Forward
+## Future Initiatives
 
-We support the creation of AI environments that handle sensitive information that is difficult to pass to external AIs, such as contracts and customer data. We will continue to strengthen our internal systems to protect our customers' information.
+We support the creation of AI environments that handle information difficult to share with external AI, such as contracts and customer data. We will continue to strengthen our internal framework to protect our clients' information.
 
-Our information security initiatives are summarized in our [Security Policy](/security).
+Our initiatives regarding information security are summarized in our [Security Policy](/security).

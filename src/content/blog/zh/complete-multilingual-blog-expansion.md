@@ -1,41 +1,43 @@
 ---
-title: "【全五语种支持】从仅日英到支持中韩西的3小时激战记"
-description: "原以为支持五语种，实则只有两种的震撼事实。与 Claude Code 一起，飞速实现中文、韩文、西班牙语支持的全记录。"
+title: "【完全支持5种语言】将仅有日英双语的博客扩展至中韩西语的风暴般3小时实战纪实"
+description: "本以为支持5种语言，实际上却只有2种语言的惊人事实。与Claude Code携手极速实现中文、韩文、西班牙语支持的全程记录"
+summary: "本应支持5种语言的网站，却只有博客仅支持日英文。与Claude Code合作在约3小时内创建了中文、韩文、西班牙语页面，通过Gemini API翻译了现存的8篇文章，并修复了构建错误。所谓的“支持”，不实际查验是不会了解其真貌的。"
 pubDate: 2025-09-25
+updatedDate: 2026-10-23
 author: "Terisuke"
 category: "engineering"
 tags: ["多言語化", "i18n", "Astro", "Claude Code", "自動化", "Gemini API"]
 image:
   url: "/images/blog/ko-404.avif"
-  alt: "韓国語ブログ404ページ"
+  alt: "韩语博客404页面"
 lang: "zh"
 featured: true
 isDraft: false
-translationSourceHash: "7586bfc2c8375645439c90fb49b1669b1cc49c8f3ac391a4d605e79a6bc1ecb6"
-translatedAt: "2026-09-27T15:04:04.308Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "772589688a81666ca3dff4dff9d0215ef52dad0a70360fe768f0873b4d940fc3"
+translatedAt: "2026-10-23T06:19:02.485Z"
+translationModel: "gemini-3.8-flash"
 ---
 
-# 【完全五语支持】日英博客拓展至中韩西的史诗级三小时战记
+# 【完全支持5种语言】将仅有日英双语的博客扩展至中韩西语的风暴般3小时实战纪实
 
-“不是写着五语支持吗！”
+“不是写着支持5种语言吗！”
 
-周四午后，我随意地查看了一下网站的开发分支的实现情况。正如 Cursor Agent 所说，语言切换按钮确实并列着五面国旗。然而，当我用中文打开博客页面时……
+周四下午，我随意查看网站Develop分支的实现情况时发生了这一幕。正如向Cursor Agent要求的那样，语言切换按钮上确实排列着5面国旗。然而，当我尝试用中文打开博客页面时。
 
-![404错误显示的中文博客页面](/images/blog/404.avif)
+![显示404错误的中文博客页面](/images/blog/404.avif)
 
-**404 Not Found。**
+**404 Not Found**。
 
-调查后，我发现了一个令人震惊的事实。
+经过调查，发现了一个惊人的事实。
 
-## 名为五语支持的二语支持
+## 名为支持5种语言、实则仅支持2种语言
 
 ```typescript
-// utils/i18n.ts 中确实有五种语言的翻译……
+// utils/i18n.ts には確かに5言語の翻訳が...
 export type Locale = 'ja' | 'en' | 'zh' | 'ko' | 'es';
 ```
 
-从 i18n 的设置来看，确实支持五种语言。首页、公司介绍，所有内容都得到了妥善翻译。然而……
+从i18n的设置来看，确实支持5种语言。首页、公司简介全部都已妥善翻译。但是，当我查看博客页面的目录时。
 
 ```bash
 $ ls src/pages/*/blog/
@@ -52,43 +54,43 @@ src/pages/es/blog/:
 ls: src/pages/es/blog/: No such file or directory
 ```
 
-**只有博客支持日英。**
+**唯独博客只支持日文和英文**。
 
-![确认目录结构](/images/blog/keyboardclasher.avif)
+![确认目录结构的场景](/images/blog/keyboardclasher.avif)
 
-## 与 Claude Code 开启高速实现
+## 与Claude Code展开高速实现
 
-事已至此，只能实现剩下的三种语言了。幸运的是，有 Claude Code。我立即开始了实现。
+既然如此，只能将剩下的3种语言也实现出来了。幸运的是，有Claude Code在。我立刻开始了实现工作。
 
-### 步骤一：复制和修改博客页面
+### 步骤1：复制并修改博客页面
 
-首先，复制英語版博客页面，并针对每种语言进行修改。
+首先复制英文版的博客页面，并针对各语言进行修改。
 
 ```bash
-# 创建中文、韩文、西班牙文的目录
+# 中国語、韓国語、スペイン語のディレクトリを作成
 for lang in zh ko es; do
   mkdir -p src/pages/$lang/blog/
   cp -r src/pages/en/blog/* src/pages/$lang/blog/
 done
 ```
 
-但是，仅仅这样做还不够。还需要修改每个文件中的语言过滤器。
+但是，仅凭这些还无法运行。需要修改各个文件内的语言过滤器。
 
 ```typescript
-// 修改前（所有文件通用）
+// 修正前（全ファイル共通）
 const allPosts = await getCollection('blog', ({ data }) => {
   return data.lang === 'en' && !data.isDraft;
 });
 
-// 修改后（示例：中文版）
+// 修正後（例：中国語版）
 const allPosts = await getCollection('blog', ({ data }) => {
   return data.lang === 'zh' && !data.isDraft;
 });
 ```
 
-### 步骤二：创建最强的翻译脚本
+### 步骤2：编写翻译脚本
 
-手动翻译八篇日文文章是不现实的。于是，我创建了一个使用 Gemini API 的自动翻译脚本。
+手动翻译8篇日文文章并不现实。因此，我创建了一个使用Gemini API的自动翻译脚本。
 
 ```javascript
 // scripts/translate-blog-all-languages.js
@@ -102,23 +104,23 @@ const LANGUAGES = {
 async function translateToLanguage(inputFile, targetLang, body, frontmatter) {
   console.log(`📝 Translating to ${LANGUAGES[targetLang].name}...`);
 
-  // 翻译标题和description
+  // タイトルとdescriptionを翻訳
   const titleAndDescription = `Title: ${frontmatter.title}\nDescription: ${frontmatter.description}`;
   const translatedTitleDesc = await translateWithGemini(titleAndDescription, targetLang);
 
-  // 翻译正文
+  // 本文を翻訳
   const translatedBody = await translateWithGemini(body, targetLang);
 
-  // 保存文件
+  // ファイルを保存
   saveTranslatedFile(targetLang, translatedContent);
 }
 ```
 
 https://github.com/Cor-Incorporated/corsweb2024/blob/52f7f174d7f2b32cd655b5d3c0e786cf137ab9fa/scripts/translate-blog-all-languages.js
 
-### 步骤三：与错误殊死搏斗
+### 步骤3：与错误展开死战
 
-运行翻译脚本，兴致勃勃地检查网站后……
+运行翻译脚本后，我意气风发地准备确认网站。
 
 ```bash
 $ npm run build
@@ -128,38 +130,38 @@ $ npm run build
       ╵                ^
 ```
 
-**构建错误频发。**
+**迎来了构建错误的狂风暴雨**。
 
 ![堆积如山的错误日志](/images/blog/naniittenda.avif)
 
-## 连续修复 Bug
+## 接连不断的Bug修复
 
-### 问题一：ProductsTable.astro 中神秘的调试代码
+### 问题1：ProductsTable.astro中莫名其妙的调试代码
 
 ```javascript
-// 不知为何混入的神秘调试代码
+// なぜか入っていた謎のデバッグコード
 <script>
   console.log('Button text debug:', {
-    buttonTexts: {t.buttonTexts},  // ← 这里是语法错误
+    buttonTexts: {t.buttonTexts},  // ← これが構文エラー
     goTo: {t.buttonTexts?.goTo},
     itemName: {item.name}
   });
 </script>
 ```
 
-删除这段调试代码后解决。
+通过删除这行调试代码解决了问题。
 
-### 问题二：CategoryBadge 遗漏语言支持
+### 问题2：CategoryBadge遗漏了多语言支持
 
 ```typescript
-// 修改前
+// 修正前
 const categoryLabels = {
   ja: { 'ai': 'AI', 'engineering': 'エンジニアリング', ... },
   en: { 'ai': 'AI', 'engineering': 'Engineering', ... },
-  // zh, ko, es 不存在！
+  // zh, ko, es が存在しない！
 };
 
-// 修改后
+// 修正後
 const categoryLabels = {
   ja: { ... },
   en: { ... },
@@ -169,36 +171,36 @@ const categoryLabels = {
 };
 ```
 
-### 问题三：PostCard 的链接全部跳转到英文
+### 问题3：PostCard的链接全部跳转到了英文版
 
 ```typescript
-// 修改前
+// 修正前
 const postUrl = currentLocale === 'ja'
   ? `/blog/${cleanSlug}`
-  : `/en/blog/${cleanSlug}`;  // 其他语言也跳转到 /en/ 了！
+  : `/en/blog/${cleanSlug}`;  // 他の言語でも/en/に飛んでしまう！
 
-// 修改后
+// 修正後
 const postUrl = currentLocale === 'ja'
   ? `/blog/${cleanSlug}`
   : `/${currentLocale}/blog/${cleanSlug}`;
 ```
 
-### 问题四：翻译了但标题仍然是日文
+### 问题4：虽已翻译但标题依然是日文
 
-这是最棘手的问题。翻译脚本本应正常运行，但 frontmatter 的 title 和 description 却仍然是日文……
+这是最棘手的问题。翻译脚本本应正常运行，但frontmatter中的title和description却依然是日文。
 
 ```yaml
-# 明明是中文文章……
+# 中国語の記事なのに...
 ---
-title: "【爆速15分】MCP服务器でMCPサーバーを作る！"  # 日文！
-description: "LT中止の絶望から生まれた奇跡..."  # 日文！
+title: "【爆速15分】MCPサーバーでMCPサーバーを作る！"  # 日本語！
+description: "LT中止の絶望から生まれた奇跡..."  # 日本語！
 lang: "zh"
 ---
 
-# 【闪电15分钟】用MCP服务器构建MCP服务器！  # 正文是中文
+# 【闪电15分钟】用MCP服务器构建MCP服务器！  # 本文は中国語
 ```
 
-经过调查，发现翻译脚本的解析处理存在 bug。我另外创建了一个修复脚本来解决这个问题。
+调查原因后发现，翻译脚本的解析处理中存在Bug。于是另写了一个修复脚本来进行处理。
 
 ```javascript
 // scripts/fix-translated-frontmatter.cjs
@@ -206,80 +208,80 @@ function extractTitleFromBody(body) {
   const lines = body.split('\n');
   for (const line of lines) {
     if (line.startsWith('# ')) {
-      return line.substring(2).trim();  // 从正文的第一个标题提取
+      return line.substring(2).trim();  // 本文の最初の見出しから抽出
     }
   }
   return null;
 }
 ```
 
-## 史诗级三小时的成果
+## 激战3小时的成果
 
-从发现第一个错误开始，大约三小时后，我终于解决了所有问题。
+从最初发现错误起经过了约3小时。终于解决了所有问题。
 
-### 已实现的功能列表
+### 实现的功能一览
 
-- ✅ 创建中文、韩文、西班牙文的博客页面
-- ✅ 分类页面支持五种语言
-- ✅ 标签页面支持五种语言
-- ✅ RSS Feed 支持五种语言
-- ✅ 支付成功/取消页面支持五种语言
-- ✅ 现有8篇文章 × 3种语言 = 24篇文章的自动翻译
-- ✅ 解决所有 TypeScript 错误
-- ✅ 构建成功（317个页面）
+- 创建中文、韩文、西班牙文博客页面
+- 分类页面支持5种语言
+- 标签页面支持5种语言
+- RSS Feed支持5种语言
+- 支付成功/取消页面支持5种语言
+- 既有8篇文章×3种语言＝24篇文章的自动翻译
+- 解决所有TypeScript错误
+- 构建成功（317个页面）
 
-![完成的中文博客](/images/blog/zh.avif)
-![完成的韩文博客](/images/blog/ko.avif)
-![完成的西班牙文博客](/images/blog/es.avif)
+![制作完成的中文博客](/images/blog/zh.avif)
+![制作完成的韩文博客](/images/blog/ko.avif)
+![制作完成的西班牙文博客](/images/blog/es.avif)
 
 
 ### 翻译质量
 
-Gemini API 的翻译质量远超我的想象。
+Gemini API呈现的翻译质量超乎想象。
 
 ```text
-日文: 「いい感じにアレしとくアプリ」開発秘話
-中文: "随心所欲处理应用"开发秘辛
-韩文: '적당히 알아서 해주는 앱' 개발 비화
-西班牙文: La historia detrás de la aplicación 'Hazlo bien y ya'
+日本語: 「いい感じにアレしとくアプリ」開発秘話
+中国語: "随心所欲处理应用"开发秘辛
+韓国語: '적당히 알아서 해주는 앱' 개발 비화
+スペイン語: La historia detrás de la aplicación 'Hazlo bien y ya'
 ```
 
-翻译准确地捕捉了各种语言的细微差别，非常自然。
+准确捕捉了各语言的细微语感，是非常自然的翻译。
 
-## 学到的东西
+## 心得体会
 
-### 1. “支持”的定义模糊不清
+### 1. “支持”的定义是模糊的
 
-即使网站写着“五语支持”，实际支持到什么程度，需要实际去查验。像这次一样，首页支持但博客不支持的情况，可能比想象中更常见。
+即使宣称“支持5种语言”，实际上支持到了什么程度，不仔细调查也是无从得知的。像这次一样首页支持了但博客不支持的情况，意外地很可能发生。
 
-### 2. Claude Code 协作的威力
+### 2. 与Claude Code协同作战的威力
 
-能在三小时内完成五种语言 × 8篇文章的实现，Claude Code 的存在功不可没。特别是在以下方面提供了帮助：
+能在3小时内完成5种语言×8篇文章的实现，Claude Code的功劳功不可没。特别是在以下几点上给予了极大帮助。
 
-- 从错误信息中即时定位问题根源
-- 学习修正模式并批量应用同类修正
+- 从错误信息中瞬间定位原因
+- 学习修改模式并批量应用相同的修改
 - 高效实现翻译脚本的逻辑
 
-### 3. 自动化脚本是正义
+### 3. 自动化脚本就是正义
 
-如果手动翻译24篇文章，可能需要一周时间。即使花一个小时编写自动化脚本，其回报也远超于此。
+如果手动翻译24篇文章，恐怕要花上长得多的时间。即使花1小时去编写自动化脚本，带来的回报也远超于此。
 
-### 4. 错误是宝藏
+### 4. 错误是一座宝藏
 
-这次遇到的各种错误，是发现系统潜在问题的好机会。特别是 CategoryBadge 的语言支持遗漏，迟早会成为一个问题。
+这次遇到的众多错误，是发现系统潜在问题的好机会。特别是CategoryBadge遗漏多语言支持这一点，迟早都会变成问题。
 
 ## 总结：迈向真正的多语言支持
 
-当初以为“已支持五语”的网站，实际上是“假五语支持”。但是，通过与 Claude Code 并肩作战的三小时，我们实现了真正的五语支持。
+最初以为“已支持5种语言”的网站，实际上竟然是“伪5种语言支持”，这一事实令人震惊。但是，在与Claude Code并肩作战的3小时里，我们实现了真正的5语言支持。
 
-现在，无论是中文、韩文还是西班牙文，博客文章都能正常显示。404错误不再出现。
+现在，无论是中文、韩文还是西班牙文，都能正常显示博客文章。404错误再也不会出现了。
 
 这才是真正的多语言支持。
 
 ---
 
-*实现的开源代码已在 GitHub 上公开。翻译脚本应该也能用于其他 Astro 项目。*
+*实现的代码已在GitHub上公开。翻译脚本应该也可以用于其他Astro项目。*
 
 https://github.com/Cor-Incorporated/corsweb2024
 
-*与 Claude Code 并肩作战的三小时，是一段跌宕起伏却又充实的时间。*
+*与Claude Code并肩作战的3小时，既紧张激烈，又非常充实。*

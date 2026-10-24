@@ -119,7 +119,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 | `I18N_MAX_API_ATTEMPTS` | いいえ | `5` | 429 / 5xx / ネットワーク失敗時の試行回数（指数バックオフ、`retryDelay` も尊重） |
 | `I18N_MAX_VALIDATION_ATTEMPTS` | いいえ | `2` | 検証に落ちたときの再生成を含む試行回数 |
 | `I18N_REQUEST_TIMEOUT_MS` | いいえ | `180000` | 1 リクエストのタイムアウト |
-| `I18N_MAX_ITEMS` | いいえ | `20` | 1 回の `--write` で API 翻訳する件数（記事 × 言語）の上限（1〜10000）。超えたら何も変更せずに失敗する。全記事のバックフィル（workflow_dispatch）ではワークフローが引き上げる |
+| `I18N_MAX_ITEMS` | いいえ | `20` | 1 回の `--write` で API 翻訳する件数（記事 × 言語）の上限（1〜10000）。超えたら何も変更せずに失敗する。CI（PR とバックフィル）ではワークフローが `500` にする |
 | `I18N_MAX_PRUNE_RATIO` | いいえ | `0.25` | orphan を 1 回で削除してよい割合（コレクションの翻訳ファイル数に対して。0 より大きく 1 以下。最低でも記事 1 本分は許可） |
 
 モデル ID の根拠: <https://ai.google.dev/gemini-api/docs/models>（2026-09-27 確認）。`gemini-3.8-flash` は Stable の最新 Flash で、新規プロジェクトには「3.5 Flash-Lite or 3.8 Flash」が推奨されています（2.5 系は既存ユーザー限定）。公開記事なので品質優先で 3.8 Flash を既定にしています。
@@ -152,10 +152,10 @@ push ジョブがパッチを適用する条件（1 つでも外れたら何も�
 ### pull_request（`src/content/**`・`scripts/i18n/**`・このワークフローを変更した PR）
 
 1. **translate**（`GEMINI_API_KEY` があり、同一リポジトリの PR で、head が develop / main / master でないとき）
-   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ。1 回あたり `I18N_MAX_ITEMS=20` 件まで）
+   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ。1 回あたり `I18N_MAX_ITEMS=500` 件まで。全記事 × 4 言語より大きくしてあり、`required-check-dispatch.test.mjs` が照合する。2026-10-23 までは 20 件で、全記事を直す PR では手作業のバックフィルが要った）
    - 一部の記事が失敗しても成功分はパッチに含め、終了コードを translate-result に渡す
 2. **push**（パッチがあるとき）: 上の条件で検査して適用し、`github-actions[bot]` 名義でコミットして PR の head ブランチへ push（PR に新しいコミットが積まれていた場合は push せず、新しいコミットの実行に任せる）
-3. **dispatch-check**（GITHUB_TOKEN で push したとき）: i18n-check を新しいコミットに対して workflow_dispatch で再実行
+3. **dispatch-check**（GITHUB_TOKEN で push したとき）: 新しいコミットに対して、i18n-check と develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）を workflow_dispatch で起動する。workflow_dispatch は承認の対象外なので、承認の操作なしで merge できる（2026-10-23 から）。h5-admission は、渡された PR の head と base が起動したコミットとブランチに一致するときだけ検査する
 4. **translate-result**（一部が失敗したとき）: 赤にして知らせる
 5. **i18n-check**
    - push した場合: この実行の SHA はもう PR の HEAD ではないので、新しい HEAD 側の実行に検査を委ねて成功で終わる
@@ -165,10 +165,10 @@ push に使うトークン（既定は GITHUB_TOKEN）:
 
 | 方式 | 条件 | 翻訳コミット後の CI | 追加操作 | リスク |
 |---|---|---|---|---|
-| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックは「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。i18n-check だけは dispatch-check が即時に再実行する（実測: run 36329711063） | 書き込み権限者が PR の Checks で「Approve workflows to run」を押す。ボタンが出ない・押しても動かない場合は、人が空コミットを push して CI を起動する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
+| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックの pull_request の実行は「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。dispatch-check が i18n-check と必須チェックの 3 本を workflow_dispatch で起動する（2026-10-23 から。それまでは i18n-check だけ。実測: run 36329711063） | なし。dispatch-check の起動に失敗したとき（警告が出る）だけ、書き込み権限者が PR の Checks で「Approve workflows to run」を押すか、人が空コミットを push する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
 | TRANSLATION_BOT_TOKEN（任意） | secret が登録されている | 通常の `synchronize` として全 CI（required check 含む）が自動で再実行 | なし | 大きい: fine-grained PAT は有効期限まで、発行者の権限で使える（漏れると他のブランチへの push にも使える）。push ジョブ以外には渡さないが、書き込み権限者は PR でワークフローを変えれば読み出せる。使う場合は対象リポジトリをこの 1 つ・権限を Contents だけ・有効期限を短くする |
 
-承認ボタンが出ない場合の手順（空コミットで CI を起動する。PR のブランチで実行）:
+dispatch-check が起動に失敗し、承認ボタンも出ない場合の手順（空コミットで CI を起動する。PR のブランチで実行）:
 
 ```bash
 git pull --rebase                      # bot の翻訳コミットを取り込む
@@ -200,7 +200,7 @@ git push
   - develop: required checks は `h5-admission` / `Chromium visual text audit` / `verify`、承認 0 件、管理者にも適用、merge できるのは terisuke と cloudia-Cor だけ
   - main: required checks は `build_and_deploy` / `Chromium visual text audit` / `guard` / `h5-admission` / `verify`、承認 1 件、管理者にも適用、merge できるのは terisuke と cloudia-Cor だけ
   - 本ワークフローのジョブはどちらの required checks にも入っていない
-- develop にも required checks があるので、GITHUB_TOKEN 方式で翻訳コミットが積まれた PR は、承認（Approve workflows to run）か空コミットで required checks を動かすまで merge できません（6 章の push に使うトークン）。
+- develop にも required checks があるので、GITHUB_TOKEN 方式で翻訳コミットが積まれた PR では、dispatch-check が workflow_dispatch で起動した verify・Chromium visual text audit・h5-admission が新しいコミットの required checks になります。起動に失敗したときだけ、承認（Approve workflows to run）か空コミットで動かします（6 章の push に使うトークン）。required checks を変えたら、この節と `scripts/i18n/__tests__/required-check-dispatch.test.mjs` が読む上の一覧も直してください。
 
 ## 7. CEO が行う設定
 
@@ -269,9 +269,10 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | `push できませんでした` | 翻訳中に PR へ新しいコミットが積まれた | 新しいコミットの実行で処理し直されるので待つ |
 | translate-result が赤（`一部の翻訳・同期・削除が失敗または検証に通らず`） | 一部の記事が失敗した（成功分は push 済み） | translate ジョブの Translate ステップのログで記事と理由を確認し、上の各行に従う |
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
-| 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式 | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順。毎回の操作を無くしたい場合だけ、リスクを理解したうえで `TRANSLATION_BOT_TOKEN` を登録 |
-| `i18n-check の再実行（workflow_dispatch）を起動できませんでした` | dispatch-check の `gh workflow run` が失敗した（原因は同じステップのログに出る gh のエラー） | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順 |
-| `翻訳が必要な件数 N 件が上限 20 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる | 記事を分けて PR を出す。意図した一括翻訳なら workflow_dispatch の mode=translate（バックフィル）を使うか、手元で `I18N_MAX_ITEMS=100` のように上限を上げて実行 |
+| 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式で、pull_request の実行は承認待ちになる | 何もしない。dispatch-check が起動した workflow_dispatch の実行（verify・Chromium visual text audit・h5-admission・i18n-check）が同じコミットに結果を付ける。dispatch-check の警告が出たときだけ、下の行の対応 |
+| `翻訳コミットの検査を workflow_dispatch で起動できませんでした: …` | dispatch-check の `gh workflow run` が失敗した（原因は同じステップのログに出る gh のエラー） | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順 |
+| h5-admission（workflow_dispatch）が `PR #N（head と base: …）が、起動したコミットとブランチ（…）と一致しません` | 起動の後に PR へ新しいコミットが積まれた、または別の PR の番号を渡した | 新しいコミットの実行を待つ。手動で起動するときは、その PR の head ブランチで、PR の番号と base を渡す |
+| `翻訳が必要な件数 N 件が上限 500 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる（全記事 × 4 言語を超えることはないので、設定や記事の数の異常を疑う） | 記事を分けて PR を出す。意図した一括翻訳なら、上限を見直す PR（`required-check-dispatch.test.mjs` が全記事の件数と照合する）を出す |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
 | `--only と --since は同時に指定できません` など | 引数の誤り | `--help` を参照 |
 

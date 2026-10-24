@@ -31,16 +31,29 @@ export const CASE_CATEGORY_IDS = Object.freeze([
   'tech-culture',
 ]);
 
+// src/config/site.ts の CONTACT_INTENTS（ADR-0014 の 7 キー）
+export const CONTACT_INTENT_IDS = Object.freeze([
+  'confidential-ai-assessment',
+  'local-llm-poc',
+  'grift-team-beta',
+  'grift-paid-trial',
+  'estimate-audit',
+  'contract-dev',
+  'press-speaking-other',
+]);
+
 const LANG = z.enum(['ja', 'en', 'zh', 'ko', 'es']);
 
 const blogSchema = z.object({
   // 正本（src/config/blog-schema.ts）と同じ: 空・空白だけは不可
   title: z.string().trim().min(1),
   description: z.string().trim().min(1),
+  summary: z.string().trim().min(1).optional(),
   pubDate: z.coerce.date(),
   updatedDate: z.coerce.date().optional(),
   author: z.string().default('Terisuke'),
   category: z.enum([...BLOG_CATEGORY_IDS]),
+  ctaIntent: z.enum([...CONTACT_INTENT_IDS]).optional(),
   tags: z.array(z.string()).default([]),
   image: z.object({ url: z.string(), alt: z.string() }).optional(),
   ogImage: z.string().optional(),
