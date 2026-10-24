@@ -1,10 +1,11 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
 ---
 
 <Layout
-  title="법적 고지 (특정상거래법) | Cor.inc"
+  title={`법적 고지 (특정상거래법)｜${ORGANIZATION_NAMES.ko}`}
   description="일본 특정상거래법에 따라 요구되는 법적 공시. 판매자 정보, 결제 조건, 배송 및 반품 정책을 포함합니다."
 >
   <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
@@ -14,7 +15,7 @@ import Layout from '../../../layouts/Layout.astro';
     <table class="min-w-[42rem] table-auto border-collapse text-left">
       <caption class="sr-only">일본 특정상거래법에 따라 요구되는 판매자 정보</caption>
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
-        <tr><th class="py-4 pr-6 align-top font-medium">판매자</th><td class="py-4">Cor Inc. (Cor.inc)</td></tr>
+        <tr><th class="py-4 pr-6 align-top font-medium">판매자</th><td class="py-4">{`${ORGANIZATION_NAMES.ko} (${LEGAL_NAME})`}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">운영 책임자</th><td class="py-4">대표이사&nbsp;테라다&nbsp;코스케</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">주소</th><td class="py-4">텐진 파인 크레스트 719호<br />2-3-10 텐진, 츄오구<br />후쿠오카시, 후쿠오카현 810-0001, 일본</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">전화</th><td class="py-4">+81-70-8561-1659</td></tr>

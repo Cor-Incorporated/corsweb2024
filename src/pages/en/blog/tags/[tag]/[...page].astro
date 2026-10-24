@@ -7,6 +7,7 @@ import BlogArchiveHeader from '../../../../../components/blog/BlogArchiveHeader.
 import BlogCategoryNav from '../../../../../components/blog/BlogCategoryNav.astro';
 import PostCard from '../../../../../components/blog/PostCard.astro';
 import Layout from '../../../../../layouts/Layout.astro';
+import { ORGANIZATION_NAMES } from '../../../../../config/organization';
 
 interface Props {
   page: Page<CollectionEntry<'blog'>>;
@@ -38,7 +39,7 @@ export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
 };
 
 const { page, tag } = Astro.props as Props;
-const pageTitle = `"${tag}" Tag Articles | Blog | Cor.inc`;
+const pageTitle = `"${tag}" Tag Articles | Blog | ${ORGANIZATION_NAMES.en}`;
 const pageDescription = `Articles tagged with "${tag}", sorted from newest to oldest.`;
 const countLabel = page.total > page.size
   ? `Showing ${page.start + 1}-${page.end + 1} of ${page.total} articles`

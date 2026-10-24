@@ -1,11 +1,12 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { ORGANIZATION_NAMES } from '../../config/organization';
 
 ---
 
 <Layout
-  title="特定商取引法に基づく表記 | Cor.inc"
-  description="Cor株式会社（Cor.inc）の特定商取引法に基づくビジネス情報開示ページ。所在地・連絡先・支払方法などの法定事項を記載しています。"
+  title={`特定商取引法に基づく表記｜${ORGANIZATION_NAMES.ja}`}
+  description={`${ORGANIZATION_NAMES.ja}の特定商取引法に基づくビジネス情報開示ページ。所在地・連絡先・支払方法などの法定事項を記載しています。`}
 >
   <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
     <h1 class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">特定商取引法に基づく表記</h1>
@@ -13,7 +14,7 @@ import Layout from '../../layouts/Layout.astro';
     <div class="overflow-x-auto">
     <table class="min-w-[42rem] table-auto border-collapse text-left">
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
-        <tr><th class="py-4 pr-6 align-top font-medium">販売業者</th><td class="py-4">Cor株式会社（Cor.inc）</td></tr>
+        <tr><th class="py-4 pr-6 align-top font-medium">販売業者</th><td class="py-4">{ORGANIZATION_NAMES.ja}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">運営責任者</th><td class="py-4">代表取締役&nbsp;寺田&nbsp;康佑</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">所在地</th><td class="py-4">〒810-0001<br />福岡県福岡市中央区天神2丁目3-10<br />天神パインクレスト719号</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">電話番号</th><td class="py-4">070-8561-1659</td></tr>

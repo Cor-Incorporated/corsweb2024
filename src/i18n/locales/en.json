@@ -841,8 +841,7 @@
       "legal": "Legal Notice",
       "company": "Company Profile"
     },
-    "description": "Cor.Inc. is a Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — and we also help create opportunities for learning and community in the region.",
-    "copyright": "Cor.inc"
+    "description": "Cor.Inc. is a Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — and we also help create opportunities for learning and community in the region."
   },
   "features": {
     "title": "Features",
@@ -1123,7 +1122,7 @@
   ],
   "meta": {
     "404": {
-      "title": "Not found · Cor.inc",
+      "title": "Not found | Cor.Inc.",
       "description": "Page not found. Please check the URL in the address bar and try again."
     },
     "industryMedical": {
@@ -1153,20 +1152,16 @@
       "ogDescription": "A Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development, also creating opportunities for learning and community in the region. You can consult us even before your AI or system requirements are settled."
     },
     "about": {
-      "title": "About · Cor.inc",
+      "title": "About | Cor.Inc.",
       "description": "Cor.Inc. is a Fukuoka-based AI implementation company that works with you end to end — from framing the problem to design, implementation, and operations — built around local LLMs, our own product Grift, and AI contract development. Learn about our \"Kyousou\" approach and our implementation capabilities."
     },
     "contact": {
-      "title": "Contact · Cor.inc",
+      "title": "Contact | Cor.Inc.",
       "description": "Contact our team to learn more about how we can help you."
-    },
-    "products": {
-      "title": "Products&Insights · Cor.inc",
-      "description": "Explore our products and insights page showcasing our innovative IT solutions and media outreach. This page offers detailed information about our product portfolio, development services, and strategic insights. Discover our cutting-edge technology solutions, read about our innovative approaches, and learn how we can help transform your digital presence. Ideal for businesses seeking comprehensive IT services and product solutions."
     },
     "privacy": {
       "title": "Privacy policy | Cor.Inc.",
-      "description": "Cor.inc's privacy policy: the personal information we collect and our purposes of use, provision to third parties and outsourcing, overseas transfers, security control measures, requests for disclosure, and our contact point for inquiries."
+      "description": "Cor.Inc.'s privacy policy: the personal information we collect and our purposes of use, provision to third parties and outsourcing, overseas transfers, security control measures, requests for disclosure, and our contact point for inquiries."
     },
     "security": {
       "title": "Security | Cor.Inc.",
