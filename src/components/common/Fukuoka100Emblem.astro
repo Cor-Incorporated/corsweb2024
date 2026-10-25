@@ -24,10 +24,12 @@ interface Props extends astroHTML.JSX.HTMLAttributes {
   imgClass?: string;
   /** 外側 <a> に足すクラス（配置の調整用） */
   class?: string;
+  /** auto=ライトは通常版・ダークは白版 / light=常に通常版（白い枠の中に置くとき。白版だと見えなくなる） */
+  tone?: 'auto' | 'light';
 }
 
 // rest: data-reveal や style（--reveal-delay）など、配置側の演出属性をそのまま <a> に通す。
-const { variant = 'wide', imgClass = 'h-20 w-auto', class: className = '', ...rest } = Astro.props;
+const { variant = 'wide', imgClass = 'h-20 w-auto', class: className = '', tone = 'auto', ...rest } = Astro.props;
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -65,18 +67,20 @@ const src =
         height={src.h}
         loading="lazy"
         decoding="async"
-        class={`${imgClass} dark:hidden`}
+        class={tone === 'light' ? imgClass : `${imgClass} dark:hidden`}
       />
-      <img
-        src={src.dark}
-        alt=""
-        aria-hidden="true"
-        width={src.w}
-        height={src.h}
-        loading="lazy"
-        decoding="async"
-        class={`hidden ${imgClass} dark:block`}
-      />
+      {tone === 'auto' && (
+        <img
+          src={src.dark}
+          alt=""
+          aria-hidden="true"
+          width={src.w}
+          height={src.h}
+          loading="lazy"
+          decoding="async"
+          class={`hidden ${imgClass} dark:block`}
+        />
+      )}
     </a>
   )
 }
