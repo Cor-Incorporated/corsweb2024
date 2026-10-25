@@ -48,9 +48,10 @@ jobs:
           COMMIT: ${{ needs.push.outputs.commit }}
         run: |
           set -uo pipefail
+          # 承認待ちの実行は REST では status=completed / conclusion=action_required になる
           for i in $(seq 1 24); do
             ids="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
-              --jq '[.workflow_runs[] | select(.event == "pull_request" and .status == "action_required") | .id] | join(" ")')"
+              --jq '[.workflow_runs[] | select(.event == "pull_request" and .conclusion == "action_required") | .id] | join(" ")')"
             echo "try ${i}: action_required = [${ids}]"
             [ -n "$ids" ] && break
             sleep 5
@@ -59,7 +60,7 @@ jobs:
           gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
             --jq '.workflow_runs[] | "\(.id) \(.name) \(.event) \(.status) \(.conclusion)"'
           for id in $(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
-              --jq '.workflow_runs[] | select(.event == "pull_request" and .status == "action_required") | .id'); do
+              --jq '.workflow_runs[] | select(.event == "pull_request" and .conclusion == "action_required") | .id'); do
             echo "--- approve ${id}"
             gh api -X POST -i "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/approve" 2>&1 | head -20
             echo "exit=$?"
