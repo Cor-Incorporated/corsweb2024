@@ -30,6 +30,24 @@ describe('system instructions', () => {
   );
 });
 
+describe('system instructions — 代表の氏名', () => {
+  it.each([
+    ['en', 'Kousuke Terada'],
+    ['zh', '寺田 康佑'],
+    ['ko', '데라다 코스케'],
+    ['es', 'Kousuke Terada'],
+  ])('%s: 氏名のトークン ⟦F…⟧ の決まりと正式表記「%s」を伝える', (lang, official) => {
+    const body = bodySystemInstruction(lang);
+    expect(body).toContain(`stand for the founder's name, which will be inserted as "${official}"`);
+    expect(body).toContain(
+      `write the founder's full name anywhere else, write exactly "${official}"`
+    );
+    expect(body).toMatch(/⟦N0⟧ and ⟦F0⟧ stand for content that must not change/);
+    expect(body).not.toContain('Kosuke Terada');
+    expect(fieldsSystemInstruction(lang)).toContain(`"${official}"`);
+  });
+});
+
 describe('fieldsResponseSchema', () => {
   it('pins keys and the tag count', () => {
     expect(fieldsResponseSchema({ title: 'タ', tags: ['a', 'b'] })).toEqual({

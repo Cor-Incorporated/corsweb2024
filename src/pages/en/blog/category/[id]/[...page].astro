@@ -9,6 +9,7 @@ import PostCard from '../../../../../components/blog/PostCard.astro';
 import Layout from '../../../../../layouts/Layout.astro';
 import { getCurrentLocale } from '../../../../../utils/i18n';
 import { getCategoryLabel, getCategoryDescription } from '../../../../../config/categories';
+import { ORGANIZATION_NAMES } from '../../../../../config/organization';
 
 interface Props {
   page: Page<CollectionEntry<'blog'>>;
@@ -47,7 +48,7 @@ const id: string = (Astro.params.id as string | undefined) ?? categoryId ?? '';
 const currentLocale = getCurrentLocale(Astro.url);
 
 const categoryLabel = getCategoryLabel(id, currentLocale === 'ja' ? 'ja' : 'en');
-const pageTitle = `${categoryLabel} | Blog | Cor.inc`;
+const pageTitle = `${categoryLabel} | Blog | ${ORGANIZATION_NAMES.en}`;
 const categoryDesc = getCategoryDescription(id, currentLocale === 'ja' ? 'ja' : 'en');
 const pageDescription = categoryDesc || (currentLocale === 'ja'
   ? `${categoryLabel} に属するブログ記事一覧` : `Blog posts in ${categoryLabel}`);

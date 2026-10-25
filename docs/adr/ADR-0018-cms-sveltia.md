@@ -86,7 +86,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
 - 最初に cor-jp-web に作ったサイト `cor-jp-cms` は使わない（退役予定）。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
-- 翻訳 CI が GitHub Actions の標準トークンで push すると、後続のワークフローが起動しない（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019 の決定 6: 既定は GITHUB_TOKEN で push し、i18n-check だけ workflow_dispatch で再実行する。追加操作なしで全 CI を回すなら任意の TRANSLATION_BOT_TOKEN）。
+- 翻訳 CI が GitHub Actions の標準トークンで push すると、後続の pull_request の実行は承認待ちになる（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019 の決定 6: 既定は GITHUB_TOKEN で push し、翻訳コミットで承認待ちになった実行を approve-checks が同じトークンで承認する。2026-10-25 から。それまでは workflow_dispatch で再実行していたが、その結果は PR の必須チェックとして数えられなかった。任意の TRANSLATION_BOT_TOKEN を使えば、承認待ちにならずに全 CI が動く）。
 - ja 記事の削除や slug の変更で翻訳ファイルが孤立しないよう、翻訳 CI 側で追随する。
 - スキーマが `config.yml` と `src/content/config.ts` の二重管理になるため、照合テストで結ぶ。
 - Sveltia は 1.0 未満で、主な保守者が 1 人。版の固定と Decap への退避手順を維持する。

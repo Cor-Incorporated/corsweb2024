@@ -55,8 +55,12 @@ const WRITE_JOB_ALLOWLIST = {
     ],
     uses: ['actions/checkout', 'actions/download-artifact'],
   },
-  // [ は起動に失敗したワークフローがあったかを見るため（2026-10-23、必須チェックも起動するようにした）
-  'dispatch-check': { commands: ['[', 'echo', 'gh', 'set'], uses: [] },
+  // 翻訳コミットの承認待ちの実行を gh api で探して承認する（2026-10-25）。date / sleep は実行が作られるのを待つため、
+  // grep / read は gh の出力の行を読むため。gh には PR のコードもパッチも渡さない
+  'approve-checks': {
+    commands: [':', '[', 'break', 'continue', 'date', 'echo', 'exit', 'gh', 'grep', 'read', 'set', 'sleep'],
+    uses: [],
+  },
 };
 const hasWriteToken = (job) =>
   Object.values(job.permissions ?? {}).includes('write') ||
@@ -162,8 +166,9 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
     lines.forEach((l) => expect(l).toMatch(/@[0-9a-f]{40} # v\d+\.\d+\.\d+$/));
   });
 
-  it('dispatch-check は actions: write だけ、translate-result は権限なし', () => {
-    expect(workflow.jobs['dispatch-check']?.permissions).toEqual({ actions: 'write' });
+  it('approve-checks は actions: write と pull-requests: read だけ、translate-result は権限なし', () => {
+    // pull-requests: read は PR の今の head のコミットを読むため（2026-10-25、#409 のレビュー）
+    expect(workflow.jobs['approve-checks']?.permissions).toEqual({ actions: 'write', 'pull-requests': 'read' });
     expect(workflow.jobs['translate-result']?.permissions).toEqual({});
   });
 });

@@ -2,11 +2,13 @@
  * Gemini に渡すシステム指示と、frontmatter 翻訳用の JSON スキーマ。
  */
 import { KEEP_AS_IS, LANGUAGE_NAMES } from './config.mjs';
-import { organizationName } from './glossary.mjs';
+import { founderName, organizationName } from './glossary.mjs';
 
-// 社名はトークン ⟦N…⟧ で送り、翻訳後に正式表記へ置き換える（glossary.mjs）。モデルには文法のために名前を伝える。
+// 社名はトークン ⟦N…⟧、代表の氏名は ⟦F…⟧ で送り、翻訳後に正式表記へ置き換える（glossary.mjs）。
+// モデルには文法（冠詞・助詞）のために名前を伝える。
 function glossaryLines(lang) {
   const name = organizationName(lang);
+  const founder = founderName(lang);
   return [
     `- Keep these names exactly as written (do not translate or transliterate): ${KEEP_AS_IS.join(
       ', '
@@ -14,6 +16,9 @@ function glossaryLines(lang) {
     `- Tokens like ⟦N0⟧ stand for the company name, which will be inserted as "${name}". Output the token`,
     `  itself, never the name; choose articles and particles as if the token were "${name}".`,
     `- If you need to write the company's full name anywhere else, write exactly "${name}".`,
+    `- Tokens like ⟦F0⟧ stand for the founder's name, which will be inserted as "${founder}". Output the token`,
+    `  itself, never the name; choose articles and particles as if the token were "${founder}".`,
+    `- If you need to write the founder's full name anywhere else, write exactly "${founder}".`,
   ].join('\n');
 }
 
@@ -40,8 +45,8 @@ The user message is a Markdown document. Return ONLY the translated Markdown doc
 no preface, no notes, and do not wrap the output in a code fence.
 
 Placeholders:
-- Tokens like ⟦P12⟧, ⟦B3⟧ and ⟦N0⟧ stand for content that must not change (code, URLs, math, HTML, image
-  paths, the company name).
+- Tokens like ⟦P12⟧, ⟦B3⟧, ⟦N0⟧ and ⟦F0⟧ stand for content that must not change (code, URLs, math, HTML,
+  image paths, the company name, the founder's name).
 - Copy every token exactly once, character for character. Never translate, split, space out, reorder the
   characters of, duplicate or drop a token.
 - A line that contains only a ⟦B…⟧ token (optionally after ">" quote markers) must stay on its own line.

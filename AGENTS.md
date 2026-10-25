@@ -234,7 +234,11 @@ Comprehensive blog functionality with AI-powered translation, featuring:
 - **Performance**: Optimized with same caching strategies as main site
 
 Writing style: the cor-voice skill (`.claude/skills/cor-voice/SKILL.md`) and
-`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above).
+`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above). The story the
+whole site tells (the one-line spine, the five scenes, who narrates each kind of
+page, what each page is for and the shared closing line) is
+`docs/story-spine.md`, approved by the CEO on 2026-10-25: read it before
+rewriting any page, and keep every page within it.
 
 ### Content Structure
 
@@ -286,7 +290,10 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   each translation; statuses are missing / stale / untracked / meta-drift /
   orphan / invalid / source-error / ok
 - **Protection**: code blocks, inline code, URLs, link-card lines, math, HTML
-  and image paths are replaced by placeholders and restored exactly
+  and image paths are replaced by placeholders and restored exactly. The
+  company name and the founder's name become tokens too and come back as each
+  locale's official spelling (`scripts/i18n/glossary.mjs`, linked by tests to
+  `src/config/organization.ts` and `src/config/author.ts`)
 - **Validation**: heading / code block / link / image / table (rows and cells
   per row) parity, the order of link and image destinations per heading, table
   cell, list item and paragraph, untranslated-Japanese detection and a Zod

@@ -659,6 +659,8 @@
   "nav": {
     "home": "Inicio",
     "about": "Sobre Cor.Inc.",
+    "aboutMenu": "Nosotros",
+    "company": "Perfil de la empresa",
     "products": "Productos&Insights",
     "blog": "Blog",
     "contact": "Contacto",
@@ -841,8 +843,7 @@
       "legal": "Aviso Legal",
       "company": "Perfil de la empresa"
     },
-    "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región.",
-    "copyright": "Cor.inc"
+    "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región."
   },
   "features": {
     "title": "Características",
@@ -939,8 +940,83 @@
       }
     ],
     "founderTitle": "Historia del fundador",
-    "founderLead": "La experiencia formativa de nuestro fundador, Kousuke Terada, como músico le dejó una fuerte conciencia de «lo que las palabras por sí solas no logran transmitir». Más tarde, trabajando en ventas y en desarrollo, se dio cuenta de que para resolver problemas de negocio complejos primero hay que ponerlos en palabras y ordenarlos, y de que nuestro papel es llevar lo ordenado hasta la implementación y la operación. Esta forma de pensar conecta de manera natural con nuestras actividades actuales: Grift, que genera evidencias verificables; LLM locales adaptados al trabajo real; el desarrollo de IA a medida, y la creación de espacios de aprendizaje y comunidad en la región.",
-    "founderPlaceholder": "Los detalles de la historia del fundador están en preparación.",
+    "founderLead": "Fui trompetista. Después de trabajar en ventas en un fabricante de instrumentos musicales y en Recruit, fundé Cor.Inc. como ingeniero. Intento usar la tecnología para hacer llegar lo que las palabras solas no logran transmitir.",
+    "founderTimelineTitle": "Mi camino hasta hoy",
+    "founderTimeline": [
+      {
+        "when": "5 años",
+        "what": "Empecé con el piano, influido por mi madre, profesora de música de secundaria"
+      },
+      {
+        "when": "6.º de primaria",
+        "what": "Descubrí la trompeta en un concierto de una orquesta juvenil local. Mis abuelos me compraron una"
+      },
+      {
+        "when": "Secundaria y bachillerato",
+        "what": "Toqué la trompeta en la banda escolar y en la orquesta juvenil"
+      },
+      {
+        "when": "Invierno, 2.º de bachillerato",
+        "what": "Toqué un solo en un concierto de Navidad, con una sala de 2000 personas llena"
+      },
+      {
+        "when": "Universidad",
+        "what": "Estudié trompeta en una universidad de artes"
+      },
+      {
+        "when": "Tras graduarme",
+        "what": "Trabajé unos cuatro años en un fabricante de instrumentos musicales, promoviendo instrumentos y haciendo propuestas a escuelas, sin dejar de tocar"
+      },
+      {
+        "when": "28 años",
+        "what": "Me diagnosticaron TEA (trastorno del espectro autista)"
+      },
+      {
+        "when": "2020",
+        "what": "Perdí el trabajo de músico con la pandemia y entré en Recruit, vendiendo anuncios de empleo a empresas"
+      },
+      {
+        "when": "En Recruit",
+        "what": "Descubrí Python y el artículo de GPT-3. Propuse un conserje con IA al programa interno de nuevos negocios y me rechazaron en la primera ronda"
+      },
+      {
+        "when": "Antes de independizarme",
+        "what": "Volví a aprender programación en G's ACADEMY FUKUOKA"
+      },
+      {
+        "when": "Diciembre de 2023",
+        "what": "Di mi primera charla en un evento LT de Engineer Cafe. Ese mismo mes fundé Cor.Inc."
+      },
+      {
+        "when": "2024–2025",
+        "what": "Di una charla relámpago cada semana durante un año. En marzo de 2025 hablé en un encuentro sobre desarrollo impulsado por IA en Tokio"
+      },
+      {
+        "when": "2025",
+        "what": "Participé en la organización de eventos LT y de IA en Engineer Cafe"
+      },
+      {
+        "when": "2026",
+        "what": "Publiqué Grift CLI como código abierto (licencia MIT). Cor.Inc. fue seleccionada entre las 100 empresas representativas de Fukuoka 2026-2027 y en octubre completó la auditoría de fase 2 de ISO/IEC 27001"
+      },
+      {
+        "when": "Desde abril de 2027",
+        "what": "Está previsto que dé clases en una escuela profesional"
+      }
+    ],
+    "founderLinksTitle": "Dónde publico",
+    "founderStoryHeading": "Resulta que el extraterrestre era yo",
+    "founderStoryExcerpt": [
+      "En el jardín de infancia no lograba unirme a los bailes de grupo. Cuando me mandaban fuera, daba vueltas y vueltas por el patio en un triciclo.",
+      "En la ceremonia de ingreso a primaria, perseguí una mariposa que pasó delante de mí y salí así del gimnasio.",
+      "Una vez, para comprobar si una lupa de verdad podía encender fuego, la mantuve sobre un montón de hojas secas durante todo el recreo del almuerzo. Provoqué un pequeño incendio.",
+      "Para mí, todo tenía lógica. Quería hacer algo e iba hacia ello por el camino más rápido. Pero para los demás debía de ser un niño capaz de cualquier cosa.",
+      "En cuarto de primaria ya nadie me invitaba a jugar.",
+      "Así que devoré libros de psicología del comportamiento en la biblioteca. Las miradas, los gestos, las pausas. Formas de leer desde fuera los sentimientos que la gente no pone en palabras. En sexto incluso me confiaron ser delegado de clase.",
+      "Pero siempre estaba agotado. Leer las caras, elegir palabras que no rompieran el ambiente. Hablando así, las conversaciones terminaban sin que lo que yo pensaba llegara nunca a transmitirse.",
+      "¿No habría una forma más natural de que los sentimientos llegaran? Desde niño me lo he preguntado siempre."
+    ],
+    "founderStoryCta": "Leer el resto de la historia",
     "teamTitle": "Conoce a nuestro equipo",
     "teamBody": "Desde la articulación de desafíos hasta el diseño e implementación de infraestructura de IA segura y la construcción de marcos operativos. Miembros con experiencia distinta se enfrentan con honestidad a las inquietudes de clientes que no están familiarizados con la ingeniería, acompañándolos de principio a fin.",
     "founderYoutubeTitle": "Del fundador",
@@ -1123,7 +1199,7 @@
   ],
   "meta": {
     "404": {
-      "title": "No encontrado · Cor.inc",
+      "title": "No encontrado | Cor.Inc.",
       "description": "Página no encontrada. Por favor, verifica la URL en la barra de direcciones e inténtalo de nuevo."
     },
     "industryMedical": {
@@ -1153,16 +1229,12 @@
       "ogDescription": "Empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región. Puedes consultarnos aunque aún no tengas definidos los requisitos de IA o del sistema."
     },
     "about": {
-      "title": "Acerca de · Cor.inc",
+      "title": "Acerca de | Cor.Inc.",
       "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka que te acompaña de principio a fin —desde ordenar el problema hasta el diseño, la implementación y la operación—, centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida. Conoce nuestra actitud «Kyousou» y nuestra capacidad de implementación."
     },
     "contact": {
-      "title": "Contacto · Cor.inc",
+      "title": "Contacto | Cor.Inc.",
       "description": "Contacta con nuestro equipo para aprender más sobre cómo podemos ayudarte."
-    },
-    "products": {
-      "title": "Productos&Insights · Cor.inc",
-      "description": "Explora nuestra página de productos e insights que muestra nuestras soluciones IT innovadoras y alcance mediático. Esta página ofrece información detallada sobre nuestro portafolio de productos, servicios de desarrollo e insights estratégicos. Descubre nuestras soluciones tecnológicas de vanguardia, lee sobre nuestros enfoques innovadores y aprende cómo podemos ayudar a transformar tu presencia digital. Ideal para empresas que buscan servicios IT integrales y soluciones de productos."
     },
     "privacy": {
       "title": "Política de privacidad | Cor.Inc.",

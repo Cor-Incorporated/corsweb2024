@@ -1,7 +1,7 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
-import { SOCIAL_LINKS } from '../../config/organization';
+import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -114,8 +114,9 @@ const linkGroups = bottomLinks.map((group) => ({
             （ブログ・実績・セキュリティ等）から流入した人にも届く。掲載条件（クリック遷移・2027年
             7月末の掲載期限）はコンポーネント側で担保しているため、ここでは配置とサイズのみ。 */}
         <Fukuoka100Emblem imgClass="h-16 w-auto" class="px-5 sm:px-0" />
-        {/* 年は SSG(output:static) のためビルド時評価で焼き込まれる。年初の定期再ビルド、または #44(SSR化) 後のリクエスト時評価で自動更新される。 */}
-        <p class="text-sm text-primary-950/70 dark:text-primary-200/70">© {new Date().getFullYear()} {t.footer.copyright}</p>
+        {/* 年は SSG(output:static) のためビルド時評価で焼き込まれる。年初の定期再ビルド、または #44(SSR化) 後のリクエスト時評価で自動更新される。
+            著作権者は会社情報なので、各言語の正式な社名（ORGANIZATION_NAMES。ADR-0007）。検査: tests/build-output/company-name.test.ts */}
+        <p class="text-sm text-primary-950/70 dark:text-primary-200/70">© {new Date().getFullYear()} {ORGANIZATION_NAMES[currentLocale]}</p>
       </div>
 
       <!-- Bottom links -->
