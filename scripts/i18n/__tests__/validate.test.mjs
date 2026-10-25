@@ -389,7 +389,8 @@ describe('リンク・画像などの行き先の順序（ブロックごと。C
 
 // #339 Codex 最終レビュー P2-2: 3 列の表の行からセルを 1 つ落としても、行数（tableRows）は変わらないので通っていた。
 describe('表の各行のセルの数（Codex P2-2）', () => {
-  const source = '| 項目 | 説明 | 備考 |\n|---|---|---|\n| A | 高品質 | なし |\n| B | `a|b` と \\| | あり |';
+  const source =
+    '| 項目 | 説明 | 備考 |\n|---|---|---|\n| A | 高品質 | なし |\n| B | `a|b` と \\| | あり |';
   const { text, store: tableStore } = protect(source);
   const run = (output) =>
     checkBodyOutput({
@@ -407,14 +408,24 @@ describe('表の各行のセルの数（Codex P2-2）', () => {
   });
 
   it.each([
-    ['本文の行のセルを 1 つ落とした', (t) => t.replace('| A | lorem | lorem |', '| A | lorem |'), 3],
-    ['見出し行のセルを 1 つ落とした', (t) => t.replace(/^\| lorem \| lorem \| lorem \|$/m, '| lorem | lorem |'), 1],
+    [
+      '本文の行のセルを 1 つ落とした',
+      (t) => t.replace('| A | lorem | lorem |', '| A | lorem |'),
+      3,
+    ],
+    [
+      '見出し行のセルを 1 つ落とした',
+      (t) => t.replace(/^\| lorem \| lorem \| lorem \|$/m, '| lorem | lorem |'),
+      1,
+    ],
     ['区切り行の列を 1 つ落とした', (t) => t.replace('|---|---|---|', '|---|---|'), 2],
   ])('%s訳は落とす', (_name, mutate, row) => {
     const broken = mutate(translated);
     expect(broken).not.toBe(translated);
     const result = run(broken);
     expect(result.ok).toBe(false);
-    expect(result.errors.join('\n')).toContain(`表の ${row} 行目のセルの数が一致しません（ja 3 / 翻訳 2）`);
+    expect(result.errors.join('\n')).toContain(
+      `表の ${row} 行目のセルの数が一致しません（ja 3 / 翻訳 2）`
+    );
   });
 });

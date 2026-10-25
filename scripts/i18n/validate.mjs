@@ -230,7 +230,9 @@ function checkDestinationOrder(protectedText, output, store) {
   expected.forEach((ids, i) => {
     if (ids.join(' ') !== actual[i].join(' '))
       errors.push(
-        `リンク・画像などの行き先の順序が ja と一致しません（ブロック #${i + 1}: ja ${show(ids)} / 翻訳 ${show(actual[i])}）`
+        `リンク・画像などの行き先の順序が ja と一致しません（ブロック #${i + 1}: ja ${show(
+          ids
+        )} / 翻訳 ${show(actual[i])}）`
       );
   });
   return errors.slice(0, 3);
