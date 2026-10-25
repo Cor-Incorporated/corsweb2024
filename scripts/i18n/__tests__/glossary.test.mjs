@@ -169,6 +169,9 @@ describe('normalizeFounderNames（モデルが書いた表記ゆれを、同じ�
     ['en', 'Kousuke Terada stays', 'Kousuke Terada stays'],
     ['ko', '테라다 코스케는', '데라다 코스케는'],
     ['ko', '데라다코스케', '데라다 코스케'],
+    ['ko', '테라다 코우스케', '데라다 코스케'],
+    // 前にローマ字の名前がある「姓, 名」は書き換えない（2 人の名前が混ざる）。後ろの「名 姓」だけをそろえる
+    ['en', 'Nagisa Terada, Kosuke Terada', 'Nagisa Terada, Kousuke Terada'],
     ['zh', '寺田康佑', '寺田 康佑'],
     // ローマ字はローマ字のまま正式表記へ（ko / zh の訳でも、文字の種類をまたいで書き換えない）
     ['ko', 'Kosuke Terada', 'Kousuke Terada'],
@@ -177,12 +180,15 @@ describe('normalizeFounderNames（モデルが書いた表記ゆれを、同じ�
     expect(normalizeFounderNames(text, lang)).toBe(expected);
   });
 
-  it.each(['Kosuke Tanaka', 'Terada Nagisa', 'kousuketerada', 'Kousuke'])(
-    '別の人・名字だけ・ハンドルは触らない: %s',
-    (text) => {
-      expect(normalizeFounderNames(text, 'en')).toBe(text);
-    }
-  );
+  it.each([
+    'Kosuke Tanaka',
+    'Terada Nagisa',
+    'kousuketerada',
+    'Kousuke',
+    'Nagisa Terada, Kousuke Terada',
+  ])('別の人・名字だけ・ハンドルは触らない: %s', (text) => {
+    expect(normalizeFounderNames(text, 'en')).toBe(text);
+  });
 
   it('URL とトークンの中は触らない', () => {
     expect(

@@ -76,18 +76,22 @@ describe('代表の氏名は各言語の正式表記に決定的にそろう', (
     expect(body).toContain(`[${official}lorem](https://note.com/cor_instrument)`);
   });
 
-  it('氏名はモデルに渡さない（トークンで送る）。名字だけ・コードの中はそのまま', async () => {
-    const client = accidentClient('en');
-    const { text } = await translate('en', client);
-    const bodyRequest = client.calls.find((c) => !c.jsonSchema);
-    expect(bodyRequest.prompt).not.toContain('康佑');
-    expect(bodyRequest.prompt).not.toContain('コウスケ');
-    expect(bodyRequest.prompt).toMatch(/⟦F\d+⟧/);
-    expect(bodyRequest.prompt).toContain('寺田さん'); // 名字だけは氏名として扱わない
-    const fieldsRequest = client.calls.find((c) => c.jsonSchema);
-    expect(fieldsRequest.prompt).not.toContain('康佑');
-    expect(parseDocument(text).body).toContain('`寺田康佑`'); // コードは訳さない
-  });
+  // 訳の後のそろえ直しがあるので、訳文だけを見ると保護が無くても通ってしまう。モデルに届いた文で保護を確かめる
+  it.each(['en', 'es', 'zh', 'ko'])(
+    '%s: 氏名はモデルに渡さない（トークンで送る）。名字だけ・コードの中はそのまま',
+    async (lang) => {
+      const client = accidentClient(lang);
+      const { text } = await translate(lang, client);
+      const bodyRequest = client.calls.find((c) => !c.jsonSchema);
+      expect(bodyRequest.prompt).not.toContain('康佑');
+      expect(bodyRequest.prompt).not.toContain('コウスケ');
+      expect(bodyRequest.prompt).toMatch(/⟦F\d+⟧/);
+      expect(bodyRequest.prompt).toContain('寺田さん'); // 名字だけは氏名として扱わない
+      const fieldsRequest = client.calls.find((c) => c.jsonSchema);
+      expect(fieldsRequest.prompt).not.toContain('康佑');
+      expect(parseDocument(text).body).toContain('`寺田康佑`'); // コードは訳さない
+    }
+  );
 
   it.each([
     ['en', ' Kosuke Terada lorem', 'Kousuke Terada lorem'],
@@ -102,6 +106,20 @@ describe('代表の氏名は各言語の正式表記に決定的にそろう', (
       });
       const body = parseDocument((await translate(lang, client)).text).body;
       expect(body).toContain(expected);
+    }
+  );
+
+  it.each([
+    ['en', 'Kosuke Terada', 'Kousuke Terada'],
+    ['ko', '테라다 코스케', '데라다 코스케'],
+  ])(
+    '%s: frontmatter でモデルが自分で書いた表記ゆれ（%s）も正式表記にそろえる',
+    async (lang, written, official) => {
+      const client = createMockClient({
+        mutateFields: (o) => ({ ...o, title: `${o.title} ${written}` }),
+      });
+      const { data } = await translate(lang, client);
+      expect(data.title).toBe(`lorem${official}lorem ${official}`);
     }
   );
 

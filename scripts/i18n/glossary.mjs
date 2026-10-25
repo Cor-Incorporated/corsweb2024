@@ -102,17 +102,19 @@ export function founderName(lang) {
  * ja 側に現れる代表の氏名（漢字とカタカナ。間の空白・中黒は 1 つまで）。名字だけ・名前だけは、別の人
  * （社員の寺田など）の場合があるので扱わない。ローマ字はモデルにそのまま渡し、訳の後で normalizeFounderNames がそろえる。
  */
-export const SOURCE_FOUNDER_PATTERN = /寺田[ 　]?康佑|テラダ[ 　・]?コウスケ/g;
+export const SOURCE_FOUNDER_PATTERN = /寺田[ \u3000]?康佑|テラダ[ \u3000・]?コウスケ/g;
 
-// 訳に現れうる表記ゆれ。名前は Kousuke / Kosuke / Kōsuke / Kôsuke / Kohsuke、並びは「名 姓」「姓 名」「姓, 名」
+// 訳に現れうる表記ゆれ。名前は Kousuke / Kosuke / Kōsuke / Kôsuke / Kohsuke、並びは「名 姓」「姓 名」「姓, 名」。
+// 「姓 名」「姓, 名」は、前にローマ字の名前があるときは扱わない（「Nagisa Terada, Kousuke Terada」の
+// 「Terada, Kousuke」を書き換えると 2 人の名前が混ざる。#406 レビュー）
 const GIVEN_LATIN = String.raw`K(?:ou|oh|o|ō|ô)suke`;
 const LATIN_FOUNDER_RE = new RegExp(
-  String.raw`(?<![A-Za-z])(?:${GIVEN_LATIN}[  ]Terada|Terada,?[  ]${GIVEN_LATIN})(?![A-Za-z])`,
+  String.raw`(?<![A-Za-z])(?:${GIVEN_LATIN}[ \u00a0]Terada|(?<![A-Z][a-z]+[ \u00a0])Terada,?[ \u00a0]${GIVEN_LATIN})(?![A-Za-z])`,
   'g'
 );
-// 데라다 / 테라다、코스케 / 고스케（間の空白は無くてもよい）。韓国語は名前の直後に助詞が続くので後ろは区切らない
-const HANGUL_FOUNDER_RE = /[데테]라다 ?[코고]스케/g;
-const KANJI_FOUNDER_RE = /寺田[ 　]?康佑/g;
+// 데라다 / 테라다、코스케 / 코우스케 / 고스케（間の空白は無くてもよい）。韓国語は名前の直後に助詞が続くので後ろは区切らない
+const HANGUL_FOUNDER_RE = /[데테]라다 ?[코고]우?스케/g;
+const KANJI_FOUNDER_RE = /寺田[ \u3000]?康佑/g;
 const isLatin = (text) => /^[A-Za-z]/.test(text);
 
 /**
@@ -131,7 +133,10 @@ export function normalizeFounderNames(text, lang) {
   );
 }
 
-/** モデルの出力にある社名と代表の氏名の表記ゆれを、まとめて正式表記にそろえる（validate.mjs が使う）。 */
+/**
+ * モデルの出力にある社名と代表の氏名の表記ゆれを、まとめて正式表記にそろえる（validate.mjs が使う）。
+ * 復元の前（名前がトークンのまま）に呼ぶ。トークンから戻した正式表記は、この書き換えの対象にならない。
+ */
 export function normalizeNames(text, lang) {
   return normalizeFounderNames(normalizeOrganizationNames(text, lang), lang);
 }
