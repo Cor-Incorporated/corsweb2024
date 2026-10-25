@@ -1,21 +1,25 @@
 /**
  * Markdown の「訳してはいけない部分」をプレースホルダで保護し、翻訳後に完全復元する。
  *
- * 保護するもの（ブロック = 1 行の ⟦Bn⟧、インライン = ⟦Pn⟧、社名 = ⟦Nn⟧）:
+ * 保護するもの（ブロック = 1 行の ⟦Bn⟧、インライン = ⟦Pn⟧、社名 = ⟦Nn⟧、代表の氏名 = ⟦Fn⟧）:
  *   ブロック: フェンスコード（``` / ~~~）、$ 数式、HTML ブロック・コメント、
  *             URL だけの行（remark-link-card-plus のリンクカード）、参照リンク定義
  *   インライン: インラインコード、$ 数式、<autolink>、インライン HTML、
  *             リンク・画像の宛先（テキスト / alt / "title" は訳す）、参照ラベル、脚注、{#id}、裸 URL
- *   社名: 「Cor.株式会社」とその表記ゆれ（glossary.mjs）。復元時に翻訳先言語の正式表記へ置き換える
+ *   名前: 社名「Cor.株式会社」と代表の氏名「寺田康佑」、その表記ゆれ（glossary.mjs の NAME_TOKENS）。
+ *         復元時に翻訳先言語の正式表記へ置き換える
  *
  * analyze() は同じ走査で構造メトリクス（見出し数・コードブロック・リンク・画像…）を数える。
  * 翻訳の前後を同じ関数で数えるので、保護と検証の判定がずれない。
  */
-import { endsWithPeriod, organizationName, SOURCE_NAME_PATTERN } from './glossary.mjs';
+import { endsWithPeriod, NAME_TOKENS, officialNameFor } from './glossary.mjs';
 import { normalizeNewlines } from './util.mjs';
 
-export const TOKEN_RE = /⟦([PBN])(\d+)⟧/g;
-export const TOKEN_ANY_RE = /⟦[PBN]\d+⟧/g;
+// トークンの接頭辞: P（インライン）・B（ブロック）と、名前の表（N = 社名、F = 代表の氏名）
+const TOKEN_PREFIXES = `PB${NAME_TOKENS.map((entry) => entry.prefix).join('')}`;
+export const TOKEN_RE = new RegExp(`⟦([${TOKEN_PREFIXES}])(\\d+)⟧`, 'g');
+export const TOKEN_ANY_RE = new RegExp(`⟦[${TOKEN_PREFIXES}]\\d+⟧`, 'g');
+const HAS_TOKEN_RE = new RegExp(`⟦[${TOKEN_PREFIXES}]\\d+⟧`);
 const ORG_TOKEN_PERIOD_RE = /(⟦N(\d+)⟧)\.(?!\.)/g;
 const BLOCK_LINE_RE = /^((?:[ \t]*>)*[ \t]*)⟦B(\d+)⟧[ \t]*$/;
 const QUOTE_PREFIX_RE = /^((?:[ \t]*>)*[ \t]*)/;
@@ -209,8 +213,11 @@ function protectInline(line, put) {
     const { core, tail } = splitUrlTail(url);
     return /^https?:\/\/[A-Za-z0-9]/.test(core) ? put('bare-url')(core) + tail : url;
   });
-  // 社名は最後に置き換える（コード・URL などの中にあるものは先にトークン化されているので触らない）
-  return s.replace(SOURCE_NAME_PATTERN, put('org-name', 'N'));
+  // 名前（社名・代表の氏名）は最後に置き換える（コード・URL などの中にあるものは先にトークン化されているので触らない）
+  return NAME_TOKENS.reduce(
+    (text, { kind, prefix, pattern }) => text.replace(pattern, put(kind, prefix)),
+    s
+  );
 }
 
 // ---- 保護と復元 ---------------------------------------------------------------
@@ -245,14 +252,15 @@ export function protect(markdown) {
 }
 
 /**
- * トークン（入れ子を含む）を元の文字列に戻す。lang を渡すと、社名（org-name）は元の表記ではなく
- * その言語の正式表記にする（翻訳結果の復元）。lang なしは完全な往復（構造の比較・テスト用）。
+ * トークン（入れ子を含む）を元の文字列に戻す。lang を渡すと、名前（社名 org-name・代表の氏名 founder-name）は
+ * 元の表記ではなくその言語の正式表記にする（翻訳結果の復元）。lang なしは完全な往復（構造の比較・テスト用）。
  */
 export function expandTokens(text, store, lang) {
   const valueOf = (token, kind, n) => {
     const entry = store.get(`${kind}${n}`);
     if (!entry) return token;
-    return entry.kind === 'org-name' && lang ? organizationName(lang) : entry.original;
+    const official = lang ? officialNameFor(entry.kind, lang) : undefined;
+    return official ?? entry.original;
   };
   // 正式表記が「.」で終わる言語（en / es の Cor.Inc.）では、社名トークンの直後の文末の「.」を重ねない
   // （「⟦N0⟧.」→「Cor.Inc.」。省略記号の「...」は残す）。#339 最終レビュー LOW-2
@@ -262,7 +270,7 @@ export function expandTokens(text, store, lang) {
           store.get(`N${n}`)?.kind === 'org-name' ? token : match
         )
       : text;
-  for (let depth = 0; depth < 32 && /⟦[PBN]\d+⟧/.test(current); depth += 1) {
+  for (let depth = 0; depth < 32 && HAS_TOKEN_RE.test(current); depth += 1) {
     current = current.replace(TOKEN_RE, valueOf);
   }
   return current;
