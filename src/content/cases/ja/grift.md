@@ -4,7 +4,7 @@ description: 'エンジニアのgit履歴から、点数ではなく確かめら
 category: 'grift'
 tags: ['Grift', 'OSS', 'CLI', 'git', '人材紹介', 'SES']
 publishedAt: 2026-06-30
-updatedAt: 2026-10-23
+updatedAt: 2026-10-25
 summary: 'Griftはエンジニアのgit履歴から「確かめられる事実」を取り出す自社プロダクトです。点数や順位はつけません。計測にAI（LLM）を使わないため、誰が実行しても同じ結果になり、受け取った側が検算できます。CLIはMITライセンスのOSSとして公開しています。'
 isDraft: false
 featured: true
@@ -20,6 +20,7 @@ lang: 'ja'
   ## 成果      — 結果・効果（数値があれば具体的に。NDA案件は抽象化し securityNote を設定）
 NDA・機密案件では具体名や数値をぼかし、frontmatter の securityNote を有効化してください。
 2026-10-20: 見積支援Webアプリ時代の本文を、CLI への方針転換後の内容に書き換えた（ADR-0022）。
+2026-10-25: 観測の層を report-v2（作業領域・変更リズム・検証の形・役割）と grift project / align まで広げ、サイトの訳語と CLI の語の対応表を置いた。
 -->
 
 ## 課題
@@ -49,7 +50,28 @@ Grift CLIはgit履歴だけから次のような観測を取り出します。
 - 手戻り率・磨き直し: 直近に触ったファイルのやり直しや再接触の割合（傾向の記録であり、合否には使わない）
 - リポジトリの文脈: 実働日数、関わった人数と最多作成者の占有率、レビュー経由の割合など
 
+v0.6で加わった`report-v2`では、1人のエンジニアの仕事の形を見る層が増えています。いずれも分子と分母付きで、職種や能力の判定ではありません。
+
+- 作業領域（`surface_profile`）: test / docs / CI/CD / platform / data / observability / frontend / backend / config / 生成・ベンダー / その他の11区分で、どの領域の変更が何件あったか
+- 変更リズム（`change_rhythm`）: 直近180日のうち変更を提出した日数と、提出の間隔（中央値と90パーセンタイル、2日以内に続いた割合、30日以上空いた割合）。労働時間や意欲ではありません
+- 検証の形（`verification_profile`）: テストを触ったコミットの割合と、その種類（unit / integration / e2e / contract / 不明）、fixのコミットにテストが伴った割合
+- 役割の4次元（`role_profile`）: domain / work_type / time / process_positionの4つだけで、1つの職種に畳みません。本人の同意が記録されたidentityがあるときだけ出します
+
+案件側との照らし合わせも、順位をつけない形で行います。案件側は`grift project`で求める領域・検証・リズム・入力を宣言し、`grift align`が候補者の観測と軸ごとに並べます。並びは重なり（overlap）・範囲外（outside_declared_range）・0件（observed_zero）・未観測（not_observed）・要求なし（not_declared）の5通りだけで、総合点・順位・合否は計算しません。`--team`でチーム単位に見るときは、要求を満たす人数だけを出し、3名未満では個人が特定されるため集計しません。
+
 母数が20未満のときは率を出さずに件数だけを示し、観測できなかったものは「実績なし」ではなく理由付きの「未観測」として出します。`grift verify` は保存したレポートを同じ条件で計算し直し、一致・不一致・検証不能を返すため、受け取った側が書き換えや食い違いを確かめられます。
+
+手法の名前はTEP（Technical Evidence Pipeline）です。このページとgriftai.orgで使っている言い方と、CLIが出力に書く語は次のように対応します。
+
+| サイトの言い方 | CLIの語 |
+|---|---|
+| 検査値 | observed value（`kind: observed`。値と単位と分母が付く） |
+| テスト併修率 | test co-change |
+| 手戻り率 | corrective rework |
+| 磨き直し | path retouch |
+| 定着率 | survival（`--survival`を指定したときだけ） |
+| リポジトリの文脈 | context profile |
+| 作業領域・変更リズム・検証の形 | surface_profile / change_rhythm / verification_profile |
 
 - リポジトリ: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
 - 配布: PyPI「grift-cli」（`pipx install grift-cli`、Python 3.11以上）
@@ -58,6 +80,8 @@ Grift CLIはgit履歴だけから次のような観測を取り出します。
 ## 成果
 
 2026年9月8日に、PyPIでv0.7.2を公開しました。指標は公開されている117のリポジトリで検証し、区別できた比較と、まだ区別できていない比較の両方をGitHubで公開しています（社内での測定で、第三者による監査は受けていません）。
+
+2026年10月25日に、サイトの文言とCLIの出力を1行ずつ突き合わせました。複数人の一覧（`actor-index`）が、注記では「順位ではない」と書きながらコミット数の多い順に並んでいたため、次の版（0.8）では並びをIDの辞書順に変えます。コミット数の値は残します。経緯と、0.8系に課す5つの受入条件は[ブログ記事](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)に書きました。
 
 いまは、候補者本人が手元で実行した記録をもとに推薦の理由を具体的にするテスト導入（PoC）の準備を、紹介会社さま・SES企業さまと進めています。正式版についてはテスト導入の結果をふまえて2027年の提供開始を目指しています。Griftは [griftai.org](https://griftai.org) でも紹介しています。
 
