@@ -236,7 +236,11 @@ Comprehensive blog functionality with AI-powered translation, featuring:
 - **Performance**: Optimized with same caching strategies as main site
 
 Writing style: the cor-voice skill (`.claude/skills/cor-voice/SKILL.md`) and
-`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above).
+`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above). The story the
+whole site tells (the one-line spine, the five scenes, who narrates each kind of
+page, what each page is for and the shared closing line) is
+`docs/story-spine.md`, approved by the CEO on 2026-10-25: read it before
+rewriting any page, and keep every page within it.
 
 ### Content Structure
 
@@ -288,7 +292,10 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   each translation; statuses are missing / stale / untracked / meta-drift /
   orphan / invalid / source-error / ok
 - **Protection**: code blocks, inline code, URLs, link-card lines, math, HTML
-  and image paths are replaced by placeholders and restored exactly
+  and image paths are replaced by placeholders and restored exactly. The
+  company name and the founder's name become tokens too and come back as each
+  locale's official spelling (`scripts/i18n/glossary.mjs`, linked by tests to
+  `src/config/organization.ts` and `src/config/author.ts`)
 - **Validation**: heading / code block / link / image / table (rows and cells
   per row) parity, the order of link and image destinations per heading, table
   cell, list item and paragraph, untranslated-Japanese detection and a Zod
@@ -509,3 +516,10 @@ PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key_here
 FounderNote, TeamIntro). Its text lives in the `aboutPage` keys of
 `src/i18n/locales/*.json`. Company facts (legal name, IDs, social links) come
 from `src/config/organization.ts`; author facts from `src/config/author.ts`.
+
+The founder section (`FounderNote.astro`, `#founder-story`) shows the
+founder's profile, a timeline and the opening scene of the founder's story.
+The full story is the blog post `src/content/blog/ja/founder-story.md`; About
+and the top page link to it through `src/utils/founder-story.ts`, which falls
+back to the ja post when a locale has no translation yet. The story and every
+page follow the narrative in `docs/story-spine.md`.

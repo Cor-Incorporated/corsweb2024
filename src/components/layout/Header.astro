@@ -55,20 +55,27 @@ const serviceLinks = [
   },
 ];
 
+// 会社のことが分かるページ。パソコンでは「Cor.について」のプルダウンにまとめる（ADR-0011 の改訂、2026-10-24）。
 // /works・/news・/news/press は [lang] ルートで全言語に存在する（#313）。/industries も同様。
+const aboutLinks = [
+  { name: t.nav.about, href: getLocalizedUrl('/about', currentLocale), isExternal: false },
+  { name: t.nav.company, href: getLocalizedUrl('/company', currentLocale), isExternal: false },
+  { name: t.nav.security, href: getLocalizedUrl('/security', currentLocale), isExternal: false },
+  { name: t.nav.news, href: getLocalizedUrl('/news', currentLocale), isExternal: false },
+  { name: nav.press || 'プレスリリース', href: getLocalizedUrl('/news/press', currentLocale), isExternal: false },
+];
+
+// スマホのメニュー（全ページ）。パソコンのヘッダーと同じ順に並べ、そのあとに業種別を置く。
 const baseLinks = [
   { name: t.nav.home, href: getLocalizedUrl('/', currentLocale), isExternal: false },
   { name: t.nav.works, href: getLocalizedUrl('/works', currentLocale), isExternal: false },
-  { name: t.nav.news, href: getLocalizedUrl('/news', currentLocale), isExternal: false },
-  { name: nav.press || 'プレスリリース', href: getLocalizedUrl('/news/press', currentLocale), isExternal: false },
+  { name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isExternal: false },
+  ...aboutLinks,
   {
     name: nav.industries || '業種別',
     href: getLocalizedUrl('/industries/medical', currentLocale),
     isExternal: false,
   },
-  { name: t.nav.security, href: getLocalizedUrl('/security', currentLocale), isExternal: false },
-  { name: t.nav.about, href: getLocalizedUrl('/about', currentLocale), isExternal: false },
-  { name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isExternal: false },
   {
     name: nav.consult || t.nav.contact,
     href: getContactUrl(currentLocale, { source: 'header' }),
@@ -98,21 +105,27 @@ const isCurrentSection = (href: string) => {
   return currentPath === normalizedHref || (normalizedHref !== '/' && currentPath.startsWith(`${normalizedHref}/`));
 };
 
-const quickLinks = [
-  { name: t.nav.works, href: getLocalizedUrl('/works', currentLocale) },
-  { name: t.nav.news, href: getLocalizedUrl('/news', currentLocale) },
-  { name: nav.press || 'プレスリリース', href: getLocalizedUrl('/news/press', currentLocale) },
-  { name: t.nav.security, href: getLocalizedUrl('/security', currentLocale) },
-  {
-    name: nav.consult || t.nav.contact,
-    href: getContactUrl(currentLocale, { source: 'header-quick' }),
-  },
-].map((link) => ({
-  ...link,
-  isActive: isCurrentSection(link.href),
-}));
-
 const servicesLabel = nav.services || 'サービス';
+
+// パソコンのヘッダーの並び（ADR-0011 の改訂、2026-10-24）: サービス ▾ / 実績 / ブログ / Cor.について ▾ / お問い合わせ。
+// それまではブログと About がスマホのメニューにしかなかった（代表の指摘）。
+type DesktopEntry =
+  // highlight: 中のページを開いているとき、プルダウンのボタンを現在地として光らせるか。
+  // サービスの中身は相談の種類つきのお問い合わせなので光らせない（お問い合わせのページで二重に光るため）。
+  | { kind: 'menu'; label: string; items: typeof serviceLinks; highlight: boolean; isActive: boolean }
+  | { kind: 'link'; name: string; href: string; isActive: boolean };
+const desktopEntries: DesktopEntry[] = [
+  { kind: 'menu', label: servicesLabel, items: serviceLinks, highlight: false, isActive: false },
+  { kind: 'link', name: t.nav.works, href: getLocalizedUrl('/works', currentLocale), isActive: false },
+  { kind: 'link', name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isActive: false },
+  { kind: 'menu', label: t.nav.aboutMenu, items: aboutLinks, highlight: true, isActive: false },
+  { kind: 'link', name: nav.consult || t.nav.contact, href: getContactUrl(currentLocale, { source: 'header-quick' }), isActive: false },
+];
+const desktopNav = desktopEntries.map((entry): DesktopEntry =>
+  entry.kind === 'menu'
+    ? { ...entry, isActive: entry.highlight && entry.items.some((item) => !item.isExternal && isCurrentSection(item.href)) }
+    : { ...entry, isActive: isCurrentSection(entry.href) },
+);
 
 // 言語切替（プルダウン）: 各言語の遷移先URLを現在パスから算出し、一覧から直接選べるようにする。
 const localeOrder = ['ja', 'en', 'zh', 'ko', 'es'] as const;
@@ -145,7 +158,7 @@ const langOptions = localeOrder.map((loc) => ({
 ---
 
 <header
-  x-data="{ open: false, servicesOpen: false }"
+  x-data="{ open: false }"
   class="relative z-40 bg-primary-50 transition dark:bg-primary-950"
   :class="{ 'bg-primary-500/10 dark:bg-primary-400/10': open, 'bg-primary-50 dark:bg-primary-950': !(open) }"
 >
@@ -164,74 +177,76 @@ const langOptions = localeOrder.map((loc) => ({
     </div>
 
     <nav class="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="主要ページ">
-      {/* サービス ドロップダウン（診断 / PoC / 受託 / Grift） */}
-      <div
-        class="relative"
-        @keydown.escape="servicesOpen = false"
-        @click.outside="servicesOpen = false"
-      >
-        <button
-          type="button"
-          @click="servicesOpen = !servicesOpen"
-          aria-expanded="false"
-          :aria-expanded="servicesOpen.toString()"
-          aria-haspopup="true"
-          class="inline-flex items-center gap-1 rounded-full px-2.5 py-2 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-950 dark:text-primary-200 dark:hover:bg-primary-400/10 dark:focus-visible:ring-primary-200 xl:px-4"
-        >
-          {servicesLabel}
-          <svg
-            class="h-4 w-4 transition"
-            :class="{ 'rotate-180': servicesOpen }"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M12 15L7 10H17L12 15Z"></path>
-          </svg>
-        </button>
-        <ul
-          x-cloak
-          x-show="servicesOpen"
-          x-transition:enter="transition ease-out duration-150"
-          x-transition:enter-start="opacity-0 -translate-y-1"
-          x-transition:enter-end="opacity-100 translate-y-0"
-          x-transition:leave="transition ease-in duration-100"
-          x-transition:leave-start="opacity-100 translate-y-0"
-          x-transition:leave-end="opacity-0 -translate-y-1"
-          class="absolute left-1/2 z-50 mt-2 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-primary-900/10 bg-primary-50 py-1 shadow-lg dark:border-primary-300/10 dark:bg-primary-950"
-        >
-          {
-            serviceLinks.map((link) => (
-              <li>
-                <a
-                  href={link.href}
-                  target={link.isExternal ? '_blank' : undefined}
-                  rel={link.isExternal ? 'noopener noreferrer' : undefined}
-                  class="flex items-center px-4 py-3 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
-                >
-                  {link.name}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </div>
       {
-        quickLinks.map((link) => (
-          <a
-            href={link.href}
-            aria-current={link.isActive ? 'page' : undefined}
-            class:list={[
-              'rounded-full px-2.5 py-2 text-sm font-medium transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-950 dark:hover:bg-primary-400/10 dark:focus-visible:ring-primary-200 xl:px-4',
-              link.isActive
-                ? 'bg-primary-500/10 text-[#2d4a6b] dark:bg-primary-400/10 dark:text-primary-100'
-                : 'text-primary-950 dark:text-primary-200',
-            ]}
-          >
-            {link.name}
-          </a>
-        ))
+        desktopNav.map((entry) =>
+          entry.kind === 'menu' ? (
+            <div class="relative" x-data="{ menuOpen: false }" @keydown.escape="menuOpen = false" @click.outside="menuOpen = false">
+              <button
+                type="button"
+                @click="menuOpen = !menuOpen"
+                aria-expanded="false"
+                :aria-expanded="menuOpen.toString()"
+                aria-haspopup="true"
+                class:list={[
+                  'inline-flex items-center gap-1 rounded-full px-2.5 py-2 text-sm font-medium transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-950 dark:hover:bg-primary-400/10 dark:focus-visible:ring-primary-200 xl:px-4',
+                  entry.isActive
+                    ? 'bg-primary-500/10 text-[#2d4a6b] dark:bg-primary-400/10 dark:text-primary-100'
+                    : 'text-primary-950 dark:text-primary-200',
+                ]}
+              >
+                {entry.label}
+                <svg
+                  class="h-4 w-4 transition"
+                  :class="{ 'rotate-180': menuOpen }"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M12 15L7 10H17L12 15Z" />
+                </svg>
+              </button>
+              <ul
+                x-cloak
+                x-show="menuOpen"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1"
+                class="absolute left-1/2 z-50 mt-2 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-primary-900/10 bg-primary-50 py-1 shadow-lg dark:border-primary-300/10 dark:bg-primary-950"
+              >
+                {entry.items.map((link) => (
+                  <li>
+                    <a
+                      href={link.href}
+                      target={link.isExternal ? '_blank' : undefined}
+                      rel={link.isExternal ? 'noopener noreferrer' : undefined}
+                      aria-current={entry.highlight && !link.isExternal && isCurrentSection(link.href) ? 'page' : undefined}
+                      class="flex items-center px-4 py-3 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
+                    >
+                      {link.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <a
+              href={entry.href}
+              aria-current={entry.isActive ? 'page' : undefined}
+              class:list={[
+                'rounded-full px-2.5 py-2 text-sm font-medium transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-950 dark:hover:bg-primary-400/10 dark:focus-visible:ring-primary-200 xl:px-4',
+                entry.isActive
+                  ? 'bg-primary-500/10 text-[#2d4a6b] dark:bg-primary-400/10 dark:text-primary-100'
+                  : 'text-primary-950 dark:text-primary-200',
+              ]}
+            >
+              {entry.name}
+            </a>
+          ),
+        )
       }
     </nav>
 

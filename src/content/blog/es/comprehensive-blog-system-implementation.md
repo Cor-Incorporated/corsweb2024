@@ -1,42 +1,44 @@
 ---
-title: "Implementación completa del sistema de blogs en Astro 4.8 - Un enfoque integral con traducción automática por IA y pruebas E2E"
-description: "Registro de la implementación de un sistema de blogs de alto rendimiento basado en Astro Content Collections. Se detalla el proceso de desarrollo integral, que incluye traducción automática por IA con la API Google Gemini, pruebas E2E con Playwright y funcionalidad de limitación de velocidad."
+title: "Implementación completa de un sistema de blog en Astro 4.8: un enfoque integral que incluye traducción por IA y pruebas E2E"
+description: "Registro de implementación de un sistema de blog de alto rendimiento basado en Astro Content Collections. Se explica el proceso de desarrollo integral, incluida la traducción automática por IA con la API de Google Gemini, pruebas E2E con Playwright y funciones de limitación de tasa."
+summary: "Implementamos un sistema de blog basado en Content Collections de Astro 4.8.7, equipado con traducción automática mediante la API de Gemini y pruebas E2E con Playwright. La validación de tipos durante la compilación permite evitar errores en los metadatos, y comprobamos que las pruebas E2E son indispensables incluso en sitios estáticos."
 pubDate: 2025-06-22
+updatedDate: 2026-10-23
 category: "engineering"
 tags: ["Astro", "ブログシステム", "AI翻訳", "E2Eテスト", "TypeScript", "Google Gemini API", "Playwright", "レート制限"]
 author: "Terisuke"
 lang: "es"
 featured: true
-translationSourceHash: "1b3935bc380f58ac78655e28b05d56636ec781d7d6341005c1e2506ead4416bd"
-translatedAt: "2026-09-28T06:09:16.024Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "8b54af12c168859d53d6138a17b5e56f908b6f0e2703998d15036aa7d61193fa"
+translatedAt: "2026-10-23T06:25:16.926Z"
+translationModel: "gemini-3.8-flash"
 ---
 
 ## Resumen
 
-En el desarrollo reciente, hemos implementado un sistema de blog integral basado en Astro 4.8.7. Esta plataforma de blog tecnológico moderna no solo muestra contenido en formato Markdown, sino que también incluye funciones como traducción automática con IA, pruebas E2E (End-to-End) y un conjunto de funcionalidades preparadas para un uso en producción.
+En un desarrollo reciente, implementamos un sistema de blog integral basado en Astro 4.8.7. No se trata solo de un sistema para mostrar Markdown, sino de una moderna plataforma de blog técnico equipada con traducción automática mediante IA, pruebas E2E y funciones diseñadas para una operación a gran escala.
 
-Se acabó la época de pelearse con los widgets de WordPress. Ahora, puedes dejar que la IA se encargue de las traducciones, automatizar las pruebas y los ingenieros podrán dormir tranquilos (es broma).
+La era de pelear con widgets en WordPress ha terminado. A partir de ahora, dejamos que la IA traduzca, automatizamos las pruebas y los ingenieros podemos simplemente dormir (es broma).
 
-## Stack Tecnológico
+## Stack tecnológico
 
-### Tecnologías Principales
-- **Astro 4.8.7**: SSG (Static Site Generator) de alta velocidad con arquitectura de islas.
-- **TypeScript**: Entorno de desarrollo seguro por tipos.
-- **Tailwind CSS**: Estilizado basado en la utilidad (utility-first).
-- **Alpine.js 3.14.0**: JavaScript ligero para front-end.
+### Tecnologías centrales
+- Astro 4.8.7: SSG de alta velocidad mediante arquitectura en islas (Islands Architecture)
+- TypeScript: entorno de desarrollo con tipado seguro
+- Tailwind CSS: estilizado utility-first
+- Alpine.js 3.14.0: JavaScript ligero para frontend
 
-### Funcionalidades Específicas del Blog
-- **Content Collections**: Gestión de contenido seguro por tipos en Astro.
-- **Google Gemini API**: Motor de traducción automática con IA.
-- **Playwright**: Automatización de pruebas E2E.
-- **remark-link-card-plus**: Generación de tarjetas de enlace enriquecidas.
+### Funciones dedicadas al blog
+- Content Collections: gestión de contenidos con tipado seguro de Astro
+- API de Google Gemini: motor de traducción automática con IA
+- Playwright: automatización de pruebas E2E
+- remark-link-card-plus: generación de link cards enriquecidas
 
-## Arquitectura Central de Implementación
+## Arquitectura central de la implementación
 
 ### 1. Diseño de Content Collections
 
-Hemos adoptado `Content Collections` de Astro, alejándonos de la gestión tradicional de archivos Markdown. Ya no tendrás que preguntarte: "¿Estaba escribiendo el frontmatter de esta manera correcta?".
+Pasamos de la gestión tradicional de archivos Markdown al `Content Collections` de Astro. Ya no hay que preocuparse pensando: "¿Habré escrito bien este frontmatter?".
 
 ```typescript
 // src/content/config.ts
@@ -54,14 +56,14 @@ const blogCollection = defineCollection({
 });
 ```
 
-**Ventajas**:
-- Prevención de errores de metadatos mediante validación de tipos en tiempo de compilación.
-- Actualización en tiempo real con Hot Reloading.
-- Validación automática del esquema.
+Las ventajas son las siguientes:
+- Prevención de errores de metadatos mediante la verificación de tipos en tiempo de compilación
+- Actualizaciones en tiempo real con Hot Reloading
+- Validación automática de esquemas
 
-### 2. Diseño del Sistema de Traducción con IA
+### 2. Diseño del sistema de traducción con IA
 
-Hemos construido un sistema de traducción automática utilizando la API de Google Gemini. Lo que tardaría días con traductores humanos, la IA lo hace en segundos. Y encima, no se queja.
+Creamos un sistema de traducción automática utilizando la API de Google Gemini. Termina mucho más rápido que encargárselo a traductores humanos. Y, además, no se queja.
 
 ```javascript
 // scripts/translate-blog.js
@@ -71,8 +73,8 @@ const model = genAI.getGenerativeModel({
 });
 
 async function translateBlogPost(japaneseContent) {
-  const prompt = `Traduce la siguiente entrada de blog en japonés a inglés. 
-  Traduce los términos técnicos apropiadamente y haz que sea inglés legible:
+  const prompt = `Translate the following Japanese blog post to English. 
+  Translate technical terms appropriately and make it readable English:
 
 ${japaneseContent}`;
 
@@ -81,14 +83,14 @@ ${japaneseContent}`;
 }
 ```
 
-**Características**:
-- **Limitación de Tasa (Rate Limiting)**: Un límite conservador de 15 peticiones por minuto.
-- **Manejo de Errores**: Reintentos con retroceso exponencial (exponential backoff).
-- **Seguridad YAML**: Escapado adecuado del frontmatter.
+Las características son las siguientes:
+- Límite de tasa (Rate Limiting): límite conservador de 15 solicitudes/minuto
+- Manejo de errores: función de reintento mediante retroceso exponencial (exponential backoff)
+- Seguridad en YAML: procesamiento adecuado de escape para el frontmatter
 
-### 3. Sistema de Limitación de Tasa
+### 3. Sistema de límite de tasa (Rate Limiting)
 
-Hemos implementado una función de limitación de tasa para garantizar la estabilidad de las operaciones de la API. Para evitar que Google nos diga: "¡Estás enviando demasiadas peticiones!".
+Para operar la API de forma estable, implementamos una función de límite de tasa. También sirve para que Google no se enfade diciendo: "¡Estás enviando demasiadas solicitudes!".
 
 ```javascript
 // scripts/rate-limiter.js
@@ -113,19 +115,19 @@ class RateLimiter {
 }
 ```
 
-### 4. Implementación de Pruebas E2E
+### 4. Implementación de pruebas E2E
 
-Hemos implementado pruebas exhaustivas de las funcionalidades del blog utilizando Playwright. No basta con decir "está funcionando bien".
+Utilizando Playwright, implementamos pruebas integrales para las funciones del blog. La actitud de "¡funciona, así que todo bien!" no basta.
 
 ```typescript
 // e2e/blog.spec.ts
-test.describe('Funcionalidad del Blog', () => {
-  test('debería navegar al blog en japonés', async ({ page }) => {
+test.describe('Blog functionality', () => {
+  test('should navigate to Japanese blog', async ({ page }) => {
     await page.goto('/blog/');
-    await expect(page.locator('h1')).toContainText('技術ブログ'); // Blog Técnico
+    await expect(page.locator('h1')).toContainText('技術ブログ');
   });
 
-  test('debería mostrar la imagen OGP para las entradas del blog', async ({ page }) => {
+  test('should display OGP image for blog posts', async ({ page }) => {
     await page.goto('/blog/');
     const firstPost = page.locator('[data-testid="blog-post"]').first();
     await firstPost.click();
@@ -136,9 +138,9 @@ test.describe('Funcionalidad del Blog', () => {
 });
 ```
 
-## Optimización de Rendimiento
+## Optimización del rendimiento
 
-### Configuración de Compresión y Optimización
+### Configuración de compresión y optimización
 
 ```javascript
 // astro.config.mjs
@@ -160,93 +162,86 @@ integrations: [
 ]
 ```
 
-### Optimización de Imágenes
-- Entrega de imágenes en formato AVIF.
-- Fallback a WebP.
-- Tamaños de imagen responsivos (480w, 800w).
+### Optimización de imágenes
+- Distribución de imágenes en formato AVIF
+- Fallback a WebP
+- Tamaños de imagen responsivos (480w, 800w)
 
-## Desafíos y Soluciones
+## Desafíos y soluciones
 
-### 1. Problema de Escapado en YAML Frontmatter
+### 1. Problema de escape en YAML Frontmatter
 
-**Desafío**: Errores de análisis de YAML cuando los títulos o descripciones traducidas contienen caracteres especiales.
+El desafío residía en que, si los títulos o descripciones traducidos contenían caracteres especiales, se producía un error de análisis sintáctico (parse error) en YAML.
 
-**Solución**:
+Como solución, se escapan con la siguiente función:
 ```javascript
 function escapeYAMLString(str) {
   return str
-    .replace(/\\/g, "\\\\") // Escapa primero las barras invertidas
-    .replace(/"/g, '\\"');   // Escapa las comillas dobles
+    .replace(/\\/g, "\\\\") // バックスラッシュを最初にエスケープ
+    .replace(/"/g, '\\"');   // ダブルクォートをエスケープ
 }
 ```
 
-### 2. Manejo de la Limitación de Tasa de la API
+### 2. Respuesta a los límites de tasa de la API
 
-**Desafío**: Fallos en las peticiones debido a las limitaciones de la API de Gemini.
+El desafío era que las solicitudes fallaban debido a los límites de la API de Gemini.
 
-**Solución**: Retroceso exponencial y limitación de tasa inteligente.
-- Retraso basado en segundos.
-- Retraso gradual hasta un máximo de 60 segundos.
-- Limitación proactiva rastreando los tiempos de las peticiones.
+La solución fue el retroceso exponencial y un límite de tasa inteligente:
+- Retardo base de 1 segundo
+- Retardo progresivo de hasta 60 segundos
+- Limitación preventiva mediante el seguimiento del registro temporal de solicitudes
 
-### 3. Estabilidad de las Pruebas E2E
+### 3. Estabilidad de las pruebas E2E
 
-**Desafío**: Inestabilidad de las pruebas debido a contenido dinámico.
+El desafío consistía en que el contenido dinámico provocaba inestabilidad en las pruebas (flakiness).
 
-**Solución**: Identificación fiable de elementos utilizando el atributo `data-testid`.
+La solución fue identificar los elementos de forma certera utilizando el atributo data-testid.
 
-## Flujo de Operación
+## Flujo de operaciones
 
-### Proceso de Publicación de Nuevos Artículos
+### Proceso de publicación de un nuevo artículo
 
-1. **Creación de Artículo en Japonés**: Crear archivo Markdown en `/src/content/blog/ja/`.
-2. **Traducción con IA**: Ejecutar `npm run translate src/content/blog/ja/nombre-del-articulo.md`.
-3. **Ejecución de Pruebas**: Ejecutar `npm run test:e2e`.
-4. **Compilación**: Ejecutar `npm run build`.
-5. **Despliegue**: Despliegue automático en Firebase Hosting.
+1. Creación del artículo en japonés: crear el archivo Markdown en `/src/content/blog/ja/`
+2. Traducción con IA: `npm run translate src/content/blog/ja/article-name.md`
+3. Ejecución de pruebas: `npm run test:e2e`
+4. Compilación (build): `npm run build`
+5. Despliegue: despliegue automático a Firebase Hosting
 
-### Garantía de Calidad
+### Aseguramiento de la calidad
 
-- **Comprobación de Tipos**: Verificación en tiempo de compilación con TypeScript.
-- **Validación de Esquema**: Verificación de contenido con Zod.
-- **Pruebas E2E**: Pruebas funcionales con Playwright.
+- Comprobación de tipos: verificación en tiempo de compilación mediante TypeScript
+- Validación de esquemas: verificación de contenidos mediante Zod
+- Pruebas E2E: pruebas funcionales mediante Playwright
 
-## Lecciones Aprendidas
+## Lecciones aprendidas
 
-### 1. El Poder de Content Collections
+### 1. El poder de Content Collections
 
-En comparación con la gestión tradicional basada en archivos, la seguridad por tipos y la experiencia de desarrollo han mejorado drásticamente. En particular, la posibilidad de refactorizar de forma segura al tener claro el alcance de los cambios en el esquema.
+En comparación con la gestión tradicional basada en archivos, la seguridad de tipos y la experiencia de desarrollo mejoraron drásticamente. En particular, como el alcance del impacto al cambiar un esquema quedó claramente definido, ahora es posible refactorizar con total seguridad.
 
-Ahora TypeScript nos avisa con "¡el tipo es incorrecto!", por lo que ya no nos asustamos con errores en tiempo de ejecución. Es genial.
+Ahora TypeScript nos regaña con un "¡el tipo no coincide!", por lo que ya no tenemos que asustarnos por errores en tiempo de ejecución. Es fantástico.
 
-### 2. La Practicidad de la Traducción con IA
+### 2. Utilidad práctica de la traducción con IA
 
-La calidad de las traducciones de la API de Google Gemini es muy alta para artículos técnicos, lo que ha minimizado la necesidad de ajustes manuales. Sin embargo, la coherencia de los términos técnicos requiere una mejora continua.
+La calidad de traducción de la API de Google Gemini en artículos técnicos fue sumamente alta, y los retoques manuales fueron mínimos. No obstante, se requiere una mejora continua en la coherencia de la terminología técnica.
 
-Me hizo gracia cuando "npm" se tradujo como "en-pi-em". Bueno, no está del todo mal.
+Me dio risa cuando tradujo "npm" como "エヌピーエム" (enuepiemu). Bueno, equivocado no estaba.
 
-### 3. La Importancia de las Pruebas E2E
+### 3. La importancia de las pruebas E2E
 
-Hemos comprobado que, incluso con generadores de sitios estáticos, las pruebas E2E son esenciales para funciones complejas como el enrutamiento y la generación de metadatos.
+Comprobé que, incluso en un generador de sitios estáticos, las pruebas E2E son indispensables para funciones complejas como el enrutamiento o la generación de metadatos.
 
-Me daría ganas de golpear a mi yo del pasado que pensaba: "Los sitios estáticos no necesitan pruebas, ¿verdad?".
-
-## Resultados de Rendimiento
-
-- **First Contentful Paint (FCP)**: 0.8 segundos.
-- **Largest Contentful Paint (LCP)**: 1.2 segundos.
-- **Cumulative Layout Shift (CLS)**: 0.05.
-- **Tamaño total del bundle**: 45 KB (después de compresión gzip).
+Me gustaría darle un golpe a mi yo del pasado, que pensaba: "Como es un sitio estático, no necesita pruebas, ¿verdad?".
 
 ## Conclusión
 
-A través de la implementación de este sistema de blog, hemos confirmado la importancia de la arquitectura JAMstack moderna en los siguientes aspectos:
+A través de la implementación de este sistema de blog, pudimos confirmar que los siguientes puntos son fundamentales en una arquitectura JAMstack moderna:
 
-1. **Seguridad por Tipos**: Prevención de errores en tiempo de diseño gracias a Content Collections (no volveremos a llorar por errores en tiempo de ejecución).
-2. **Automatización**: Eficiencia operativa mejorada mediante traducción con IA y pruebas E2E (robando el trabajo de los humanos).
-3. **Rendimiento**: Alta velocidad gracias a la optimización proactiva (el culmen de la velocidad).
-4. **Mantenibilidad**: Desarrollo sostenible gracias a una arquitectura clara (amable con nuestro yo futuro).
+1. Seguridad de tipos: prevención de errores en tiempo de diseño gracias a Content Collections (se acabaron las lágrimas por errores en tiempo de ejecución)
+2. Automatización: eficiencia operativa mediante traducción con IA y pruebas E2E (arrebatándole el trabajo a los humanos)
+3. Rendimiento: mayor velocidad gracias a optimizaciones proactivas (la cúspide de la velocidad extrema)
+4. Mantenibilidad: desarrollo sostenible gracias a una arquitectura clara (amable con nuestro yo del futuro)
 
-Como plataforma de blog tecnológico, hemos logrado la automatización completa desde la redacción hasta la publicación de artículos, creando un entorno en el que los desarrolladores pueden centrarse en la creación de contenido esencial.
+Como plataforma de blog técnico, automatizamos el flujo que va desde la redacción del artículo hasta su publicación, creando un entorno en el que los desarrolladores pueden concentrarse en crear el contenido de los artículos.
 
-En otras palabras, ahora ya no tenemos excusas para no actualizar el blog. ¿Es eso maravilloso...?
+En otras palabras, esto significa que nos hemos quedado sin excusas para no actualizar el blog. Es maravilloso... ¿o no?

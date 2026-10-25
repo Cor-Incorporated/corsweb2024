@@ -1,5 +1,6 @@
 ---
-import { KOUSUKE_TERADA } from '../../config/author';
+import { KOUSUKE_TERADA, authorLinks } from '../../config/author';
+import { getFounderStoryLink } from '../../utils/founder-story';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import RandomPlayer from '../youtube/RandomPlayer.astro';
 
@@ -8,23 +9,92 @@ const t = getTranslations(locale);
 // ブログの著者ボックスと Person.url がこの節（#founder-story）を指すため、代表の肩書と氏名を表示する。
 // 値は著者の正本（config/author.ts）から読む（i18n に同じ値を重ねない）。
 const founderByline = `${KOUSUKE_TERADA.jobTitles[locale]} ${KOUSUKE_TERADA.names[locale]}`;
+const founderLinks = authorLinks(KOUSUKE_TERADA);
+// プロフィールと物語の冒頭はここに、物語の全文はブログの founder の記事に置く（docs/story-spine.md、2026-10-25）。
+const story = await getFounderStoryLink(locale);
 ---
 
 <section id="founder-story" class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex max-w-3xl flex-col gap-6">
-      <h2 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl">
-        {t.aboutPage.founderTitle}
-      </h2>
-      <p class="text-base font-medium text-primary-950 dark:text-primary-200" data-testid="founder-byline">
-        {founderByline}
-      </p>
-      <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
-        {t.aboutPage.founderLead}
-      </p>
+    <h2 class="type-heading max-w-3xl text-3xl font-medium tracking-tight sm:text-4xl">
+      {t.aboutPage.founderTitle}
+    </h2>
+
+    <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-16">
+      <div class="flex flex-col gap-5 self-start rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10" data-testid="founder-profile">
+        <img
+          src={KOUSUKE_TERADA.image}
+          alt={KOUSUKE_TERADA.names[locale]}
+          width="1024"
+          height="1024"
+          loading="lazy"
+          decoding="async"
+          class="h-40 w-40 rounded-2xl object-cover"
+        />
+        <p class="text-base font-medium text-primary-950 dark:text-primary-200" data-testid="founder-byline">
+          {founderByline}
+        </p>
+        <p class="type-copy text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80">
+          {t.aboutPage.founderLead}
+        </p>
+        <div class="flex flex-col gap-2">
+          <p class="text-sm font-medium text-primary-950/60 dark:text-primary-200/60">{t.aboutPage.founderLinksTitle}</p>
+          <ul class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {
+              founderLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer me"
+                    class="font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-6">
+        <h3 class="type-heading text-2xl font-medium tracking-tight">{t.aboutPage.founderTimelineTitle}</h3>
+        <ol class="flex flex-col divide-y divide-primary-900/10 dark:divide-primary-300/10" data-testid="founder-timeline">
+          {
+            t.aboutPage.founderTimeline.map((item) => (
+              <li class="flex flex-col gap-1 py-3 sm:flex-row sm:gap-6">
+                <span class="shrink-0 text-sm font-medium text-primary-600 dark:text-primary-400 sm:w-40">{item.when}</span>
+                <span class="type-copy text-base text-primary-950/80 dark:text-primary-200/80">{item.what}</span>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
     </div>
 
-    <div class="mt-12 flex max-w-4xl flex-col gap-6">
+    <article class="mt-16 flex max-w-3xl flex-col gap-5" data-testid="founder-story-excerpt">
+      <p class="text-sm font-medium tracking-wide text-primary-600 dark:text-primary-400">{story.title}</p>
+      <h3 class="type-heading text-2xl font-medium tracking-tight sm:text-3xl">{t.aboutPage.founderStoryHeading}</h3>
+      {
+        t.aboutPage.founderStoryExcerpt.map((paragraph) => (
+          <p class="type-copy text-lg leading-relaxed text-primary-950/80 dark:text-primary-200/80">{paragraph}</p>
+        ))
+      }
+      <p class="flex items-center gap-1 text-base">
+        <a
+          href={story.href}
+          hreflang={story.locale}
+          class="font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+          data-testid="founder-story-link"
+        >
+          {t.aboutPage.founderStoryCta}
+        </a>
+        <span aria-hidden="true" class="text-primary-600 dark:text-primary-400">→</span>
+      </p>
+    </article>
+
+    <div class="mt-16 flex max-w-4xl flex-col gap-6">
       <h3 class="type-heading text-2xl font-medium tracking-tight sm:text-3xl">
         {t.aboutPage.founderYoutubeTitle}
       </h3>

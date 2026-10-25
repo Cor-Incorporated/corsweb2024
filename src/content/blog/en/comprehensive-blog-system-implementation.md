@@ -1,42 +1,44 @@
 ---
-title: "Full Implementation of a Blog System in Astro 4.8 - A Comprehensive Approach Including AI Translation and E2E Testing"
-description: "A record of the implementation of a high-performance blog system based on Astro Content Collections. Explains the comprehensive development process, including AI automatic translation using the Google Gemini API, Playwright E2E testing, and rate limiting features."
+title: "Complete Blog System Implementation with Astro 4.8: A Comprehensive Approach Including AI Translation and E2E Testing"
+description: "An implementation record of a high-performance blog system built on Astro Content Collections. Explains the comprehensive development process, including automated AI translation with the Google Gemini API, Playwright E2E testing, and rate limiting features."
+summary: "We implemented a blog system built on Astro 4.8.7's Content Collections, equipped with automated translation via the Gemini API and E2E testing with Playwright. Build-time type verification now prevents metadata errors, and we realized that E2E testing is essential even for static sites."
 pubDate: 2025-06-22
+updatedDate: 2026-10-23
 category: "engineering"
 tags: ["Astro", "ブログシステム", "AI翻訳", "E2Eテスト", "TypeScript", "Google Gemini API", "Playwright", "レート制限"]
 author: "Terisuke"
 lang: "en"
 featured: true
-translationSourceHash: "1b3935bc380f58ac78655e28b05d56636ec781d7d6341005c1e2506ead4416bd"
-translatedAt: "2026-09-28T06:09:16.002Z"
-translationModel: "adopted-legacy"
+translationSourceHash: "8b54af12c168859d53d6138a17b5e56f908b6f0e2703998d15036aa7d61193fa"
+translatedAt: "2026-10-23T06:16:06.051Z"
+translationModel: "gemini-3.8-flash"
 ---
 
 ## Overview
 
-In a recent development, we've implemented a comprehensive blog system built on Astro 4.8.7. This system is a modern technical blog platform, encompassing not just Markdown display but also features like AI auto-translation, E2E testing, and functionalities geared towards full-scale operation.
+In our recent development, we implemented a comprehensive blog system built on Astro 4.8.7. This system is a modern technical blog platform that not only displays Markdown, but also comes fully equipped with features designed for production operations, including AI automatic translation and E2E testing.
 
-The era of wrestling with WordPress widgets is over. Now, you can let AI translate, automate tests, and engineers can just sleep (just kidding).
+The days of wrestling with widgets in WordPress are over. From now on, we can let AI handle translations, automate testing, and engineers can just sleep all day (just kidding).
 
-## Technical Stack
+## Tech Stack
 
 ### Core Technologies
-- **Astro 4.8.7**: High-speed SSG with Island Architecture
-- **TypeScript**: Type-safe development environment
-- **Tailwind CSS**: Utility-first styling
-- **Alpine.js 3.14.0**: Lightweight frontend JavaScript
+- Astro 4.8.7: Fast SSG powered by Island Architecture
+- TypeScript: Type-safe development environment
+- Tailwind CSS: Utility-first styling
+- Alpine.js 3.14.0: Lightweight front-end JavaScript
 
 ### Blog-Specific Features
-- **Content Collections**: Astro's type-safe content management
-- **Google Gemini API**: AI auto-translation engine
-- **Playwright**: E2E test automation
-- **remark-link-card-plus**: Rich link card generation
+- Content Collections: Astro's type-safe content management
+- Google Gemini API: AI automated translation engine
+- Playwright: E2E test automation
+- remark-link-card-plus: Rich link card generation
 
 ## Core Implementation Architecture
 
 ### 1. Content Collections Design
 
-We adopted Astro's `Content Collections` for managing Markdown files, moving away from conventional methods. No more "Wait, was this frontmatter format correct?":
+We switched from traditional Markdown file management to Astro's `Content Collections`. No more worrying about "Wait, is this the right way to write frontmatter?"
 
 ```typescript
 // src/content/config.ts
@@ -54,14 +56,14 @@ const blogCollection = defineCollection({
 });
 ```
 
-**Advantages**:
-- Prevents metadata errors through build-time type validation.
-- Real-time updates with hot reloading.
-- Automatic schema validation.
+The advantages are as follows:
+- Build-time type verification prevents metadata errors
+- Real-time updates with hot reloading
+- Automatic schema validation
 
 ### 2. AI Translation System Design
 
-We built an automatic translation system utilizing the Google Gemini API. What used to take days for human translators can now be done in seconds by AI, and without complaints:
+We built an automated translation system using the Google Gemini API. It finishes much faster than asking human translators. Plus, it never complains.
 
 ```javascript
 // scripts/translate-blog.js
@@ -81,14 +83,14 @@ ${japaneseContent}`;
 }
 ```
 
-**Features**:
-- **Rate Limiting**: A conservative limit of 15 requests per minute.
-- **Error Handling**: Retry functionality with exponential backoff.
-- **YAML Safety**: Proper escaping of frontmatter.
+The features are as follows:
+- Rate limiting: A conservative limit of 15 requests/minute
+- Error handling: Retry functionality using exponential backoff
+- YAML safety: Proper escaping of frontmatter
 
 ### 3. Rate Limiting System
 
-We implemented a rate limiting function for stable API operation. This ensures we don't get yelled at by Google for sending too many requests:
+To ensure stable API operations, we implemented a rate limiting feature. This is also to keep Google from getting mad and telling us, "Hey, you're sending too many requests!"
 
 ```javascript
 // scripts/rate-limiter.js
@@ -115,7 +117,7 @@ class RateLimiter {
 
 ### 4. E2E Test Implementation
 
-We've implemented comprehensive tests for blog functionalities using Playwright. Just saying "it works" isn't good enough anymore:
+Using Playwright, we implemented comprehensive tests for the blog features. Just saying "It looks like it works, so it's fine!" simply won't cut it.
 
 ```typescript
 // e2e/blog.spec.ts
@@ -161,92 +163,85 @@ integrations: [
 ```
 
 ### Image Optimization
-- Image delivery in AVIF format.
-- WebP fallback.
-- Responsive image sizes (480w, 800w).
+- Image delivery in AVIF format
+- WebP fallback
+- Responsive image sizes (480w, 800w)
 
 ## Challenges and Solutions
 
 ### 1. YAML Frontmatter Escaping Issue
 
-**Challenge**: YAML parsing errors when translated titles or descriptions contain special characters.
+The challenge was that special characters contained in translated titles or descriptions resulted in YAML parsing errors.
 
-**Solution**:
+As a solution, we escape them using the following function:
 ```javascript
 function escapeYAMLString(str) {
   return str
-    .replace(/\\/g, "\\\\") // Escape backslashes first
-    .replace(/"/g, '\\"');   // Escape double quotes
+    .replace(/\\/g, "\\\\") // バックスラッシュを最初にエスケープ
+    .replace(/"/g, '\\"');   // ダブルクォートをエスケープ
 }
 ```
 
-### 2. API Rate Limit Handling
+### 2. Handling API Rate Limits
 
-**Challenge**: Request failures due to Gemini API limits.
+The challenge was that requests were failing due to Gemini API limits.
 
-**Solution**: Exponential backoff and intelligent rate limiting.
-- 1-second based delay.
-- Gradual delays up to a maximum of 60 seconds.
-- Pre-emptive limiting by tracking request times.
+The solution is exponential backoff and intelligent rate limiting:
+- 1-second base delay
+- Progressive delay up to a maximum of 60 seconds
+- Proactive limiting by tracking request timestamps
 
 ### 3. E2E Test Stability
 
-**Challenge**: Test instability due to dynamic content.
+The challenge was that tests became flaky due to dynamic content.
 
-**Solution**: Reliable element identification using `data-testid` attributes.
+The solution is to reliably identify elements using data-testid attributes.
 
-## Operational Flow
+## Operational Workflow
 
-### New Article Posting Process
+### New Article Publishing Process
 
-1. **Create Japanese Article**: Create a Markdown file in `/src/content/blog/ja/`.
-2. **AI Translation**: `npm run translate src/content/blog/ja/article-name.md`
-3. **Run Tests**: `npm run test:e2e`
-4. **Build**: `npm run build`
-5. **Deploy**: Automatic deployment to Firebase Hosting.
+1. Create Japanese article: Create a Markdown file in `/src/content/blog/ja/`
+2. AI translation: `npm run translate src/content/blog/ja/article-name.md`
+3. Run tests: `npm run test:e2e`
+4. Build: `npm run build`
+5. Deploy: Automatic deployment to Firebase Hosting
 
 ### Quality Assurance
 
-- **Type Checking**: Compile-time checks with TypeScript.
-- **Schema Validation**: Content validation with Zod.
-- **E2E Tests**: Functional tests with Playwright.
+- Type checking: Compile-time checks with TypeScript
+- Schema verification: Content validation with Zod
+- E2E testing: Functional testing with Playwright
 
 ## Lessons Learned
 
 ### 1. The Power of Content Collections
 
-Compared to traditional file-based management, type safety and developer experience have dramatically improved. Notably, the clear scope of impact when changing schemas allows for safe refactoring.
+Compared to traditional file-based management, type safety and the developer experience improved dramatically. In particular, the scope of impact when changing a schema became clear, enabling safe refactoring.
 
-Now that TypeScript shouts "Type mismatch!", we don't have to fear runtime errors. It's the best.
+Now TypeScript gets mad at us with "The types don't match!", so there's no need to freak out over runtime errors. It's fantastic.
 
-### 2. Practicality of AI Translation
+### 2. The Practicality of AI Translation
 
-The translation quality of the Google Gemini API for technical articles is very high, minimizing the need for manual adjustments. However, consistency in technical terms requires ongoing improvement.
+The translation quality of the Google Gemini API was extremely high for technical articles, requiring minimal manual tweaking. However, continuous improvement is needed for consistency in technical terminology.
 
-I chuckled when "npm" was translated to "en-pee-em". Well, it's not wrong.
+It cracked me up when "npm" got translated into Japanese as "エヌピーエム" (E-nu-pii-e-mu). Well, technically it's not wrong.
 
-### 3. Importance of E2E Testing
+### 3. The Importance of E2E Testing
 
-We've realized that for complex functionalities like routing and metadata generation, E2E tests are indispensable, even for static site generators.
+We realized that even for a static site generator, E2E testing is indispensable for complex features like routing and metadata generation.
 
-I want to punch my past self for thinking "Static sites don't need tests."
+I want to kick the past version of myself who thought, "It's a static site, so we don't need tests, right?"
 
-## Performance Results
+## Summary
 
-- **First Contentful Paint**: 0.8 seconds
-- **Largest Contentful Paint**: 1.2 seconds
-- **Cumulative Layout Shift**: 0.05
-- **Total Bundle Size**: 45KB (after gzip compression)
+Through the implementation of this blog system, we confirmed that the following points are crucial in a modern JAMstack architecture:
 
-## Conclusion
+1. Type safety: Preventing design-time errors with Content Collections (no more crying over runtime errors)
+2. Automation: Operational efficiency through AI translation and E2E testing (taking away humans' jobs)
+3. Performance: Speed enhancements through aggressive optimization (the pinnacle of blazing-fast speed)
+4. Maintainability: Sustainable development through a clear architecture (kind to our future selves)
 
-Through the implementation of this blog system, we've confirmed the importance of the following in modern JAMstack architecture:
+As a technical blog platform, we automated the flow from article writing to publication, creating an environment where developers can focus on crafting the content of their articles.
 
-1. **Type Safety**: Design-time error prevention with Content Collections (no more crying over runtime errors).
-2. **Automation**: Operational efficiency through AI translation and E2E testing (taking away human jobs).
-3. **Performance**: High-speed optimization through aggressive tuning (peak speed).
-4. **Maintainability**: Sustainable development with a clear architecture (kind to our future selves).
-
-As a technical blog platform, we've achieved complete automation from article writing to publication, creating an environment where developers can focus on essential content creation.
-
-In other words, we now have no excuse for slacking off on blog updates. Is that... wonderful?
+In other words, this means we no longer have any excuses to slack off on updating the blog. Wonderful... or is it?

@@ -1,6 +1,7 @@
 import rss from '@astrojs/rss';
 import type { APIContext } from 'astro';
 import { getCollection } from 'astro:content';
+import { ORGANIZATION_NAMES } from '../../config/organization';
 
 export async function GET(context: APIContext) {
   // Get English blog posts from Content Collections
@@ -32,7 +33,7 @@ export async function GET(context: APIContext) {
       <generator>Astro</generator>
       <webMaster>contact@cor-jp.com (Terisuke)</webMaster>
       <managingEditor>contact@cor-jp.com (Terisuke)</managingEditor>
-      <copyright>Copyright ${new Date().getFullYear()} Cor.inc</copyright>
+      <copyright>Copyright ${new Date().getFullYear()} ${ORGANIZATION_NAMES.en}</copyright>
       <category>Technology</category>
       <category>AI</category>
       <category>Engineering</category>

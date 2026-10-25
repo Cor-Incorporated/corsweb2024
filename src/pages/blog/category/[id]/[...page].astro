@@ -9,6 +9,7 @@ import PostCard from '../../../../components/blog/PostCard.astro';
 import { BLOG_CATEGORIES, getCategoryDescription, getCategoryLabel } from '../../../../config/categories';
 import Layout from '../../../../layouts/Layout.astro';
 import { getCurrentLocale } from '../../../../utils/i18n';
+import { ORGANIZATION_NAMES } from '../../../../config/organization';
 
 interface Props {
   page: Page<CollectionEntry<'blog'>>;
@@ -48,7 +49,7 @@ const isKnownCategory = BLOG_CATEGORIES.some(cat => cat.id === id);
 const categoryLabel = isKnownCategory 
   ? getCategoryLabel(id, currentLocale === 'ja' ? 'ja' : 'en')
   : (currentLocale === 'ja' ? 'カテゴリーが見つかりません' : 'Category Not Found');
-const pageTitle = `${categoryLabel} | Blog | Cor.inc`;
+const pageTitle = `${categoryLabel}｜ブログ｜${ORGANIZATION_NAMES.ja}`;
 const categoryDesc = getCategoryDescription(id, currentLocale === 'ja' ? 'ja' : 'en');
 const pageDescription = categoryDesc || (currentLocale === 'ja'
   ? `${categoryLabel} に属するブログ記事一覧` : `Blog posts in ${categoryLabel}`);
