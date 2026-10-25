@@ -1007,13 +1007,13 @@
     },
     "home": {
       "title": "Cor.Inc. | Empresa de implementación de IA en Fukuoka (LLM local, Grift, desarrollo de IA a medida)",
-      "description": "Cor.Inc., empresa de implementación de IA en Fukuoka. Nos centramos en LLM locales e IA segura que no sacan los datos confidenciales al exterior, en «Grift», nuestro producto propio para generar evidencias verificables, y en el desarrollo de IA a medida desde el diseño hasta la operación; también impulsamos la IA en hardware e iniciativas en educación y en la comunidad local. Cuando conviene, proponemos incluso «aún no construirlo».",
+      "description": "Cor.Inc., empresa de implementación de IA en Fukuoka. Nuestra actividad se apoya en cinco pilares: Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, y educación y comunidad. Te acompañamos desde el diseño hasta la operación para que uses la IA sin sacar los datos confidenciales al exterior. Cuando conviene, proponemos incluso «aún no construirlo».",
       "ogTitle": "IA para el día a día, lista para usar con tranquilidad. | Cor.Inc.",
-      "ogDescription": "Empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región. Puedes consultarnos aunque aún no tengas definidos los requisitos de IA o del sistema."
+      "ogDescription": "Empresa de implementación de IA de Fukuoka que se apoya en cinco pilares: Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, y educación y comunidad. Puedes consultarnos aunque aún no tengas definidos los requisitos de IA o del sistema."
     },
     "about": {
       "title": "Acerca de | Cor.Inc.",
-      "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka que te acompaña de principio a fin —desde ordenar el problema hasta el diseño, la implementación y la operación—, centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida. Conoce nuestra actitud «Kyousou» y nuestra capacidad de implementación."
+      "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka. Nuestra actividad se apoya en cinco pilares: Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, y educación y comunidad. Te acompañamos de principio a fin, desde ordenar el problema hasta el diseño, la implementación y la operación. Conoce nuestra actitud «Kyousou» y nuestra capacidad de implementación."
     },
     "contact": {
       "title": "Contacto | Cor.Inc.",
@@ -1033,7 +1033,7 @@
     },
     "works": {
       "title": "Proyectos | Cor.Inc.",
-      "description": "Proyectos de Cor.Inc.: casos en los que resolvimos los retos de negocio de nuestros clientes a lo largo del problema, el diseño, la implementación y la operación. Con foco en LLM locales, desarrollo de IA a medida y Grift, te acompañamos desde el diseño de la información previo al uso de la IA."
+      "description": "Proyectos de Cor.Inc.: casos en los que resolvimos retos de negocio en los ámbitos de Grift, LLM local e IA segura, y desarrollo de IA a medida y apoyo a la adopción, presentados a lo largo del problema, el diseño, la implementación y la operación. Te acompañamos desde el diseño de la información previo al uso de la IA."
     },
     "press": {
       "title": "Notas de prensa | Cor.Inc.",
@@ -1411,7 +1411,7 @@
   "companyPage": {
     "kicker": "Company",
     "title": "Perfil de la empresa",
-    "lead": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nos centramos en LLM locales que no sacan los datos confidenciales al exterior, en «Grift», nuestro producto propio para generar evidencias verificables, y en el desarrollo a medida desde el diseño hasta la operación; también impulsamos espacios de aprendizaje y comunidad en la región.",
+    "lead": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nuestra actividad se apoya en cinco pilares: Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, y educación y comunidad. Grift es nuestro producto propio que extrae hechos verificables del historial de git de los ingenieros. En IA en hardware y en educación y comunidad, algunas iniciativas están en preparación o previstas.",
     "asOf": "A 20 de octubre de 2026",
     "profileTitle": "Información básica",
     "profile": [
