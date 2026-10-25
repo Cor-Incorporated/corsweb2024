@@ -153,15 +153,16 @@ push ジョブがパッチを適用する条件（1 つでも外れたら何も�
 
 ### pull_request（`src/content/**`・`scripts/i18n/**`・このワークフローを変更した PR）
 
-1. **translate**（`GEMINI_API_KEY` があり、同一リポジトリの PR で、head が develop / main / master でないとき）
+1. **translate**（`GEMINI_API_KEY` があり、同一リポジトリの PR で、head が develop / main / master でなく、翻訳コミット〔`github-actions[bot]` の push〕の実行でないとき。翻訳コミットの実行は approve-checks が承認するので、そこで訳すと「翻訳 → push → 承認」が人の手を通らずに繰り返されうる）
    - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ。1 回あたり `I18N_MAX_ITEMS=500` 件まで。全記事 × 4 言語より大きくしてあり、`required-check-approval.test.mjs` が照合する。2026-10-23 までは 20 件で、全記事を直す PR では手作業のバックフィルが要った）
    - 一部の記事が失敗しても成功分はパッチに含め、終了コードを translate-result に渡す
 2. **push**（パッチがあるとき）: 上の条件で検査して適用し、`github-actions[bot]` 名義でコミットして PR の head ブランチへ push（PR に新しいコミットが積まれていた場合は push せず、新しいコミットの実行に任せる）
 3. **approve-checks**（GITHUB_TOKEN で push したとき）: 翻訳コミットで承認待ち（`action_required`）になった pull_request の実行を、同じ GITHUB_TOKEN で承認する。人が承認しなくても、必須チェックがそろって merge できる（2026-10-25 から）
-   - 先に、develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）の実行が作られるのを 3 分まで待つ。base が develop / main 以外の PR では h5-admission.yml だけを待つ
-   - 承認するのは、翻訳コミットとこの PR の head ブランチの、pull_request の実行だけ
-   - このワークフロー（translate-content.yml。i18n-check を含む）の実行は最後に承認する。承認した実行が同じ concurrency グループにある翻訳前のコミットの実行を取り消すので、その実行は「取り消し」で終わることがある
-   - 承認に失敗したとき、実行が 3 分待っても作られないときは赤になる（下の「承認の手順」で人が承認する）
+   - 先に、develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）とこのワークフローの実行が作られるのを 3 分まで待つ。base が develop / main 以外の PR では、h5-admission.yml とこのワークフローだけを待つ
+   - 承認するのは、翻訳コミット（head_sha が一致するもの）・pull_request のイベント・このリポジトリ・この PR の head ブランチの実行だけ。API の問い合わせの条件に加えて、返ってきた一覧でも同じ条件を照合する。別のコミット・別のイベント・fork・別のブランチの実行は承認しない
+   - 人が PR に新しいコミットを積んでいたら承認しない（古いコミットの実行を承認すると、同じ concurrency グループの新しいコミットの実行を取り消すため）
+   - このワークフロー（translate-content.yml。i18n-check を含む）の実行は最後に承認する。承認した実行が同じ concurrency グループにある翻訳前のコミットの実行を取り消すので、その実行は「取り消し」で終わることがある。translate-result は先に終わらせる
+   - 承認の API の失敗、一覧の取得の失敗、承認したあとも承認待ちのままの必須チェック、3 分待っても作られない実行は、どれも赤になる（下の「承認の手順」で人が承認する）
 4. **translate-result**（一部が失敗したとき）: 赤にして知らせる
 5. **i18n-check**
    - push した場合: この実行の SHA はもう PR の HEAD ではないので、新しい HEAD 側の実行に検査を委ねて成功で終わる
@@ -299,8 +300,9 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | translate-result が赤（`一部の翻訳・同期・削除が失敗または検証に通らず`） | 一部の記事が失敗した（成功分は push 済み） | translate ジョブの Translate ステップのログで記事と理由を確認し、上の各行に従う |
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
 | 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式で、pull_request の実行は承認待ちになる | 何もしない。approve-checks が数秒から 3 分で承認する。approve-checks が赤のときだけ、下の行の対応 |
-| `承認できなかった実行があります（run: …）。PR #N の Checks で…` | approve-checks の承認の API が失敗した（原因は同じステップのログに出る gh のエラー） | 6 章の「承認の手順」で人が承認する |
-| `翻訳コミット … の pull_request の実行が、3 分待っても作られませんでした: …` | 必須チェックのワークフローの実行が作られなかった（ワークフローが無効、またはそのワークフローの `on:` の条件が変わった） | `gh run list -R Cor-Incorporated/corsweb2024 --commit <翻訳コミットの SHA>` で、作られた実行を確かめる。承認待ちがあれば 6 章の「承認の手順」。ワークフローの `on:` を変えたなら、`REQUIRED_WORKFLOWS` と 6 章の一覧を見直す |
+| `承認できなかった実行があります（run: …）。PR #N の Checks で…` | approve-checks の承認の API が失敗した（括弧の中は run の ID。原因は同じステップのログに出る gh のエラー）、または承認したあとも必須チェックの実行が承認待ちのまま（括弧の中はワークフローのパス） | 6 章の「承認の手順」で人が承認する |
+| `翻訳コミット … の pull_request の実行が、3 分待っても作られませんでした: …` | 必須チェックのワークフローかこのワークフローの実行が作られなかった（ワークフローが無効、またはそのワークフローの `on:` の条件が変わった） | 6 章の「承認の手順」の `gh run list`（承認待ちの一覧）で確かめ、承認待ちがあれば同じ手順で承認する。`--status action_required` を外すと、作られた実行がすべて出る。ワークフローの `on:` を変えたなら、`REQUIRED_WORKFLOWS` と 6 章の一覧を見直す |
+| `PR #N に新しいコミット（…）が積まれたので、翻訳コミット … の実行は承認しません` | approve-checks が承認する前に、人が PR に新しいコミットを push した | 何もしない。新しいコミットの実行が、翻訳と検査をやり直す |
 | 翻訳前のコミットの「Translate content (i18n)」が「取り消し」 | approve-checks が最後に承認した、翻訳コミットの同じワークフローの実行が、concurrency で取り消した | 何もしない。i18n-check は翻訳コミットの実行で動く |
 | `翻訳が必要な件数 N 件が上限 500 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる（全記事 × 4 言語を超えることはないので、設定や記事の数の異常を疑う） | 記事を分けて PR を出す。意図した一括翻訳なら、上限を見直す PR（`required-check-approval.test.mjs` が全記事の件数と照合する）を出す |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
