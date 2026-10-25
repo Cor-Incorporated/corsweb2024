@@ -1,6 +1,6 @@
 # ADR-0019 コンテンツの多言語化は ja を正本とし、他言語は CI が Gemini で差分翻訳・検証して専有する
 
-## ステータス: Accepted (2026-09-28)（Proposed 2026-09-27。既存記事の初回移行を develop で実施した: PR #353・#354）
+## ステータス: Accepted (2026-09-28)（Proposed 2026-09-27。既存記事の初回移行を develop で実施した: PR #353・#354。2026-10-25 に決定 6 の、翻訳コミット後の CI の動かし方を改めた）
 
 ## 背景
 - CEO 決定: ブログ・ニュース・実績の全記事を 5 言語（ja / en / zh / ko / es）で出す。以前 Gemini を手動で呼んでいたスクリプトを活かし、自動翻訳にする。CMS は Sveltia CMS（Git ベース）を採用予定で、CMS は ja だけを編集する。
@@ -22,10 +22,10 @@
 6. **CI（`.github/workflows/translate-content.yml`）は、書き込みトークンと信頼しないコードを同じジョブに置かない**:
    - `translate`（contents: read、`GEMINI_API_KEY`）が PR head のコードを `npm ci --ignore-scripts` で動かして翻訳し、結果を `git diff --binary --no-renames` のパッチとして artifact に渡す（ja の改名は、旧 slug の翻訳の削除と新 slug の翻訳の追加になる）。
    - `push`（contents: write）は npm もリポジトリのコードも実行せず、パッチの変更パス（`src/content/<collection>/{en,zh,ko,es}/*.md` だけ）とファイル種別（通常ファイルだけ）・大きさ・削除件数（翻訳ファイル数 × 25%、最低 4 件）を検査してから適用し、stage された内容を 1 行ずつ照合して（追加・変更・削除だけ、mode 100644 だけ、同じ許可パスだけ、追加・変更した `.md` は NUL を含まず 1 行目が厳密に `---`）から、hooks を無効にして commit / push する。
-   - `dispatch-check`（actions: write だけ）が GITHUB_TOKEN で push したときに i18n-check を再実行する。`i18n-check` は push した場合は新しい HEAD 側の実行に検査を委ねる。統合ブランチ（develop / main / master）が head の PR には push しない。
+   - `approve-checks`（actions: write だけ）は、GITHUB_TOKEN で push したとき、翻訳コミットで承認待ちになった pull_request の実行を同じ GITHUB_TOKEN で承認する（2026-10-25 から。それまでの `dispatch-check` は、必須チェックを workflow_dispatch で起動し直していたが、その結果は PR の必須チェックとして数えられなかった。代替案を参照）。承認するのは、翻訳コミット（head_sha が一致するもの）・pull_request のイベント・このリポジトリ・PR の head ブランチの実行だけで、このワークフロー自身の実行は最後に承認する。人が新しいコミットを積んでいたら承認しない。翻訳コミットの実行では translate を動かさない（承認 → 翻訳 → push → 承認が人の手を通らずに繰り返されるのを防ぐ）。`i18n-check` は push した場合は新しい HEAD 側の実行に検査を委ねる。統合ブランチ（develop / main / master）が head の PR には push しない。
    - push トークンは既定で `GITHUB_TOKEN`。`TRANSLATION_BOT_TOKEN`（fine-grained PAT / GitHub App）は任意とし、登録すると push 後の CI が承認なしで再実行されるが、有効期間と権限が GITHUB_TOKEN より広い（漏えい時の影響が大きい）ことを運用文書に明記する。
    - `workflow_dispatch`: 既存記事のバックフィル（`chore/i18n-backfill-<日付>`）と既存翻訳の採用（`chore/i18n-adopt-<日付>`）も同じ 2 段で、ブランチの push まで。PR は人が作る。
-   - 1 回の翻訳件数は `I18N_MAX_ITEMS`（PR は 20、バックフィルは 500）まで。
+   - 1 回の翻訳件数は `I18N_MAX_ITEMS`（PR もバックフィルも 500。2026-10-23 までは PR が 20）まで。
 7. **社名は決定的に扱う**（ADR-0007）: 「Cor.株式会社」とその表記ゆれは翻訳前に保護トークンにしてモデルに渡さず、翻訳後に翻訳先言語の正式表記（ja / zh `Cor.株式会社`、ko `Cor.주식회사`、en / es `Cor.Inc.`）へ置き換える。モデルが書いた表記ゆれも正式表記にそろえる。用語集 `scripts/i18n/glossary.mjs` の正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）で、両者はリンクテストで照合する（正本が無い間は skip）。代表の氏名も同じ扱いにする（ja / zh `寺田 康佑`、ko `데라다 코스케`、en / es `Kousuke Terada`。正本は `src/config/author.ts` の `KOUSUKE_TERADA.names` で、リンクテスト `founder-link.test.mjs` で照合する）。PR #405 の訳で旧表記が出たため、2026-10-25 に足した。
 8. **frontmatter の慣習は既存翻訳に合わせる**: blog の tags は訳さない（タグページの言語切替が同一文字列前提）、cases / news の tags と news の `source` は訳す。
 
@@ -35,6 +35,7 @@
 - UI 文言（ADR-0006）とコンテンツで「正本は 1 つ、他は派生物」という同じ原則を適用でき、編集者の運用が単純になる（ja だけを見ればよい）。
 - 翻訳ジョブは PR のコードと npm 依存（install script を含む）を動かすため、同じジョブに書き込みトークンがあると、`.git/hooks` の仕込みやランナー上のプロセスからトークンが漏れうる（PR #339 レビュー H1）。ジョブを分けて、書き込むジョブではコードを一切実行しない形にすれば、漏れうるのは読み取り専用の GITHUB_TOKEN と `GEMINI_API_KEY` に限られる。
 - `GITHUB_TOKEN` による push は後続の CI を通常起動しない（PR 更新時は承認待ちの実行になる。GitHub Docs「Triggering a workflow from a workflow」。本リポジトリでも 2026-09-27 に実測: 翻訳コミット後の run 36329708078 が action_required）。追加操作なしで回すには別トークンが必要だが、PAT / App トークンはジョブ終了後も有効で権限も広いため、既定にはせず任意とした。
+- 承認待ちの実行は承認の API（`POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve`）を `actions: write` の GITHUB_TOKEN で呼べば動く（2026-10-25、使い捨ての PR #407 で実測: HTTP 201 が返り、実行が動き出した。run 40153178620）。承認して動くのは、PR の元の実行と同じワークフローだけで、翻訳コミットは push ジョブが翻訳ディレクトリの `.md` だけだと照合済み。別トークンを持たずに、人の操作を無くせる。
 
 ## 影響
 - 翻訳ファイルに `translationSourceHash` / `translatedAt` / `translationModel` が増える。`src/content/config.ts` の `z.object` は未知キーを捨てるため、ビルド・型に影響しない（2026-09-27、既存 72 翻訳に付与した状態で `npm run build` 成功を確認）。
@@ -54,4 +55,5 @@
 - **翻訳管理 SaaS / 人手翻訳**: 品質は高いが、記事ごとの費用とリードタイムが「ja を書けば揃う」要件に合わない。重要ページのみ人手で整え `--adopt` で取り込む運用は併用可能。
 - **状態を別ファイル（マニフェスト）で管理**: 翻訳ファイルと状態の二重管理になり、片方だけ更新される事故が起きうる。来歴を翻訳ファイル自身の frontmatter に持たせる方式を採用。
 - **翻訳と push を 1 つのジョブで行う（当初案）**: 実装は簡単だが、書き込みトークンと信頼しないコード（PR の scripts/i18n、npm の install script）が同じジョブに同居する。H1 の指摘により却下し、翻訳（読み取りのみ）と push（コードを実行しない）に分けた。
-- **ボットトークン（PAT / GitHub App）を既定にする**: push 後の CI（`h5-admission` など workflow_dispatch を持たない required check を含む）が承認なしで再実行される利点はあるが、トークンの有効期間・権限が広く、漏えい時の影響が大きい。既定は GITHUB_TOKEN（承認 1 回、または人の空コミット）とし、ボットトークンは運用者がリスクを理解して選ぶ任意設定にした。
+- **ボットトークン（PAT / GitHub App）を既定にする**: push 後の CI（required check を含む）が承認なしで再実行される利点はあるが、トークンの有効期間・権限が広く、漏えい時の影響が大きい。既定は GITHUB_TOKEN（承認待ちの実行は approve-checks が承認する）とし、ボットトークンは運用者がリスクを理解して選ぶ任意設定にした。
+- **必須チェックを workflow_dispatch で起動し直す（2026-10-23〜10-25 の `dispatch-check`）**: workflow_dispatch は GITHUB_TOKEN からでも承認なしで動くが、その実行のチェックは PR の必須チェックとして数えられない（GitHub Docs「Troubleshooting required status checks」: PR で評価されるのは push・pull_request・pull_request_review・pull_request_target・deployment・deployment_status の実行のチェックだけ）。PR #405 の翻訳コミット 6952b08 では、dispatch した verify・Chromium visual text audit・h5-admission・i18n-check はすべて success だったが、コミットの `statusCheckRollup` に入ったのは pull_request の実行だけで、PR は BLOCKED のままだった。人が承認するまで merge できなかったため、承認の API で承認する方式に置き換えた。

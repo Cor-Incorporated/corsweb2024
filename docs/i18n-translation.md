@@ -136,7 +136,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 |---|---|---|---|
 | `translate` | contents: read | `npm ci --ignore-scripts`（npm キャッシュなし）→ `translate-content.mjs` → 変更をパッチにして artifact（保存 1 日）へ | `GEMINI_API_KEY` |
 | `push` | contents: write | パッチの検査 → `git apply` → hooks を無効にして commit / push。npm もリポジトリのコードも実行しない | `TRANSLATION_BOT_TOKEN`（登録したときだけ） |
-| `dispatch-check` | actions: write | GITHUB_TOKEN で push したとき、i18n-check を workflow_dispatch で再実行する（checkout もしない） | なし |
+| `approve-checks` | actions: write | GITHUB_TOKEN で push したとき、翻訳コミットで承認待ちになった pull_request の実行を承認する。checkout もせず、リポジトリのコードも動かさない | なし |
 | `translate-result` | なし | 翻訳・同期・削除の一部が失敗したとき赤にする（成功分は push 済み） | なし |
 | `i18n-check` | contents: read | `scripts/i18n` の単体テストと `--check` | なし |
 
@@ -153,11 +153,16 @@ push ジョブがパッチを適用する条件（1 つでも外れたら何も�
 
 ### pull_request（`src/content/**`・`scripts/i18n/**`・このワークフローを変更した PR）
 
-1. **translate**（`GEMINI_API_KEY` があり、同一リポジトリの PR で、head が develop / main / master でないとき）
-   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ。1 回あたり `I18N_MAX_ITEMS=500` 件まで。全記事 × 4 言語より大きくしてあり、`required-check-dispatch.test.mjs` が照合する。2026-10-23 までは 20 件で、全記事を直す PR では手作業のバックフィルが要った）
+1. **translate**（`GEMINI_API_KEY` があり、同一リポジトリの PR で、head が develop / main / master でなく、翻訳コミット〔`github-actions[bot]` の push〕の実行でないとき。翻訳コミットの実行は approve-checks が承認するので、そこで訳すと「翻訳 → push → 承認」が人の手を通らずに繰り返されうる）
+   - `--write --since <base>` で **PR で変更された記事だけ**を翻訳・同期・削除（削除は PR で ja を削除した記事の、来歴つき翻訳だけ。1 回あたり `I18N_MAX_ITEMS=500` 件まで。全記事 × 4 言語より大きくしてあり、`required-check-approval.test.mjs` が照合する。2026-10-23 までは 20 件で、全記事を直す PR では手作業のバックフィルが要った）
    - 一部の記事が失敗しても成功分はパッチに含め、終了コードを translate-result に渡す
 2. **push**（パッチがあるとき）: 上の条件で検査して適用し、`github-actions[bot]` 名義でコミットして PR の head ブランチへ push（PR に新しいコミットが積まれていた場合は push せず、新しいコミットの実行に任せる）
-3. **dispatch-check**（GITHUB_TOKEN で push したとき）: 新しいコミットに対して、i18n-check と develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）を workflow_dispatch で起動する。workflow_dispatch は承認の対象外なので、承認の操作なしで merge できる（2026-10-23 から）。h5-admission は、渡された PR の head と base が起動したコミットとブランチに一致するときだけ検査する
+3. **approve-checks**（GITHUB_TOKEN で push したとき）: 翻訳コミットで承認待ち（`action_required`）になった pull_request の実行を、同じ GITHUB_TOKEN で承認する。人が承認しなくても、必須チェックがそろって merge できる（2026-10-25 から）
+   - 先に、develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）とこのワークフローの実行が作られるのを 3 分まで待つ。base が develop / main 以外の PR では、h5-admission.yml とこのワークフローだけを待つ
+   - 承認するのは、翻訳コミット（head_sha が一致するもの）・pull_request のイベント・このリポジトリ・この PR の head ブランチの実行だけ。API の問い合わせの条件に加えて、返ってきた一覧でも同じ条件を照合する。別のコミット・別のイベント・fork・別のブランチの実行は承認しない
+   - 人が PR に新しいコミットを積んでいたら承認しない（古いコミットの実行を承認すると、同じ concurrency グループの新しいコミットの実行を取り消すため）
+   - このワークフロー（translate-content.yml。i18n-check を含む）の実行は最後に承認する。承認した実行が同じ concurrency グループにある翻訳前のコミットの実行を取り消すので、その実行は「取り消し」で終わることがある。translate-result は先に終わらせる
+   - 承認の API の失敗、一覧の取得の失敗、承認したあとも承認待ちのままの必須チェック、3 分待っても作られない実行は、どれも赤になる（下の「承認の手順」で人が承認する）
 4. **translate-result**（一部が失敗したとき）: 赤にして知らせる
 5. **i18n-check**
    - push した場合: この実行の SHA はもう PR の HEAD ではないので、新しい HEAD 側の実行に検査を委ねて成功で終わる
@@ -167,10 +172,28 @@ push に使うトークン（既定は GITHUB_TOKEN）:
 
 | 方式 | 条件 | 翻訳コミット後の CI | 追加操作 | リスク |
 |---|---|---|---|---|
-| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックの pull_request の実行は「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。dispatch-check が i18n-check と必須チェックの 3 本を workflow_dispatch で起動する（2026-10-23 から。それまでは i18n-check だけ。実測: run 36329711063） | なし。dispatch-check の起動に失敗したとき（警告が出る）だけ、書き込み権限者が PR の Checks で「Approve workflows to run」を押すか、人が空コミットを push する（下の手順） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write）に限られる |
+| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックの pull_request の実行は「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。approve-checks がそれを承認する（2026-10-25 から） | なし。approve-checks が赤のときだけ、書き込み権限者が承認する（下の「承認の手順」） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write、approve-checks では actions: write）に限られる |
 | TRANSLATION_BOT_TOKEN（任意） | secret が登録されている | 通常の `synchronize` として全 CI（required check 含む）が自動で再実行 | なし | 大きい: fine-grained PAT は有効期限まで、発行者の権限で使える（漏れると他のブランチへの push にも使える）。push ジョブ以外には渡さないが、書き込み権限者は PR でワークフローを変えれば読み出せる。使う場合は対象リポジトリをこの 1 つ・権限を Contents だけ・有効期限を短くする |
 
-dispatch-check が起動に失敗し、承認ボタンも出ない場合の手順（空コミットで CI を起動する。PR のブランチで実行）:
+承認の手順（approve-checks が赤のとき。書き込み権限者が承認する）:
+
+- ブラウザ: PR の Checks で「Approve workflows to run」を押す
+- 端末: 下の `pr=` に、approve-checks のエラーの「PR #N」の N を入れる。PR のブランチを checkout しているなら `pr="$(gh pr view --json number -q .number)"` でもよい
+
+```bash
+pr=""   # approve-checks のエラーの「PR #N」の N
+sha="$(gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json headRefOid -q .headRefOid)"
+# 承認待ちの実行の一覧（空なら、承認待ちの実行はもう無い）
+gh run list -R Cor-Incorporated/corsweb2024 --commit "$sha" --status action_required --json databaseId,workflowName -q '.[] | "\(.databaseId) \(.workflowName)"'
+# すべて承認する
+for id in $(gh run list -R Cor-Incorporated/corsweb2024 --commit "$sha" --status action_required --json databaseId -q '.[].databaseId'); do
+  gh api -X POST "repos/Cor-Incorporated/corsweb2024/actions/runs/$id/approve" > /dev/null && echo "承認: run $id"
+done
+# 15 分ほどで CLEAN になる（Chromium visual text audit が 13 分ほどかかる）
+gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json mergeStateStatus -q .mergeStateStatus
+```
+
+`gh api` が `HTTP 403` を返すときは、実行した人に書き込み権限がありません。承認しても動かないときは、PR のブランチで空コミットを push します（人の push は承認待ちにならない）:
 
 ```bash
 git pull --rebase                      # bot の翻訳コミットを取り込む
@@ -178,7 +201,11 @@ git commit --allow-empty -m "chore: CI を再実行"
 git push
 ```
 
-根拠: GitHub Docs「Triggering a workflow from a workflow」— GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になり、`workflow_dispatch` / `repository_dispatch` は例外として実行される（2026-09-27 確認）。本リポジトリでも、GITHUB_TOKEN で翻訳コミットを push した後の `pull_request` の実行（run 36329708078）が `action_required` になることを 2026-09-27 に確認した。
+根拠（2026-10-25 確認）:
+
+- GitHub Docs「Triggering a workflow from a workflow」: GITHUB_TOKEN による PR 更新で作られる `pull_request` の実行は approval-required になる。`workflow_dispatch` / `repository_dispatch` は例外として実行される。本リポジトリでも、GITHUB_TOKEN で翻訳コミットを push した後の `pull_request` の実行（run 36329708078）が `action_required` になることを 2026-09-27 に確かめた
+- GitHub Docs「Troubleshooting required status checks」: PR の必須チェックとして数えられるのは、`push`・`pull_request`・`pull_request_review`・`pull_request_target`・`deployment`・`deployment_status` の実行のチェックだけ。`workflow_dispatch` の実行のチェックは、head のコミットで success でも PR の checks に出ず、必須チェックも満たさない。2026-10-23 から 10-25 まで使った dispatch-check（必須チェックを workflow_dispatch で起動し直す方式）はこのため効かなかった。PR #405 の翻訳コミット 6952b08 では、dispatch した verify・Chromium visual text audit・h5-admission・i18n-check はすべて success だったが、コミットの `statusCheckRollup` に入ったのは pull_request の実行だけで、PR は BLOCKED のままだった
+- 承認の API（`POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve`）は、GitHub App のインストールトークンでも `actions: write` で呼べる（GitHub Docs「Permissions required for GitHub Apps」）。GITHUB_TOKEN で呼ぶと HTTP 201 が返り、承認待ちだった実行が動き出すことを、使い捨ての PR #407 で確かめた（run 40153178620）
 
 ### workflow_dispatch（Actions タブ → Translate content (i18n) → Run workflow、または `gh workflow run`）
 
@@ -191,7 +218,7 @@ git push
 | `langs` | いいえ | 空（全部） | `en,zh,ko,es` のカンマ区切り |
 | `only` | いいえ | 空（全記事） | `slug` または `collection/slug` のカンマ区切り |
 | `retranslate_untracked` | いいえ | `false` | `untracked` も再翻訳する（mode=translate のみ） |
-| `since` | いいえ | 空 | 自動再実行用。通常は空のまま |
+| `since` | いいえ | 空 | mode=check のとき、この SHA からの差分に含まれる記事だけを検査する。通常は空のまま |
 
 ブランチ名が同日に既に存在する場合は `-<run_id>` が付きます。PR は Actions では作れない設定（`can_approve_pull_request_reviews: false`）なので、ジョブの Summary に出る compare URL から人が PR を作成してください。
 
@@ -202,7 +229,8 @@ git push
   - develop: required checks は `h5-admission` / `Chromium visual text audit` / `verify`、承認 0 件、管理者にも適用、merge できるのは terisuke と cloudia-Cor だけ
   - main: required checks は `build_and_deploy` / `Chromium visual text audit` / `guard` / `h5-admission` / `verify`、承認 1 件、管理者にも適用、merge できるのは terisuke と cloudia-Cor だけ
   - 本ワークフローのジョブはどちらの required checks にも入っていない
-- develop にも required checks があるので、GITHUB_TOKEN 方式で翻訳コミットが積まれた PR では、dispatch-check が workflow_dispatch で起動した verify・Chromium visual text audit・h5-admission が新しいコミットの required checks になります。起動に失敗したときだけ、承認（Approve workflows to run）か空コミットで動かします（6 章の push に使うトークン）。required checks を変えたら、この節と `scripts/i18n/__tests__/required-check-dispatch.test.mjs` が読む上の一覧も直してください。
+  - 2026-10-25 にも測り直し、required checks と承認の件数は同じだった
+- develop にも required checks があるので、GITHUB_TOKEN 方式で翻訳コミットが積まれた PR では、approve-checks が承認した pull_request の実行の verify・Chromium visual text audit・h5-admission が、新しいコミットの required checks になります。approve-checks が赤のときだけ、人が承認します（6 章の「承認の手順」）。workflow_dispatch で起動し直した実行の結果は、required checks として数えられません。required checks を変えたら、この節の一覧と、approve-checks の `REQUIRED_WORKFLOWS` を両方直してください（`scripts/i18n/__tests__/required-check-approval.test.mjs` が照合します）。
 
 ## 7. CEO が行う設定
 
@@ -271,10 +299,12 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | `push できませんでした` | 翻訳中に PR へ新しいコミットが積まれた | 新しいコミットの実行で処理し直されるので待つ |
 | translate-result が赤（`一部の翻訳・同期・削除が失敗または検証に通らず`） | 一部の記事が失敗した（成功分は push 済み） | translate ジョブの Translate ステップのログで記事と理由を確認し、上の各行に従う |
 | `自己検査に失敗しました` | 書き込み内容と判定ロジックの食い違い | バグ。開発者に連絡（何も書き込まれていない） |
-| 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式で、pull_request の実行は承認待ちになる | 何もしない。dispatch-check が起動した workflow_dispatch の実行（verify・Chromium visual text audit・h5-admission・i18n-check）が同じコミットに結果を付ける。dispatch-check の警告が出たときだけ、下の行の対応 |
-| `翻訳コミットの検査を workflow_dispatch で起動できませんでした: …` | dispatch-check の `gh workflow run` が失敗した（原因は同じステップのログに出る gh のエラー） | PR の Checks で「Approve workflows to run」を押す。出ない・動かない場合は 6 章の空コミット手順 |
-| h5-admission（workflow_dispatch）が `PR #N（head と base: …）が、起動したコミットとブランチ（…）と一致しません` | 起動の後に PR へ新しいコミットが積まれた、または別の PR の番号を渡した | 新しいコミットの実行を待つ。手動で起動するときは、その PR の head ブランチで、PR の番号と base を渡す |
-| `翻訳が必要な件数 N 件が上限 500 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる（全記事 × 4 言語を超えることはないので、設定や記事の数の異常を疑う） | 記事を分けて PR を出す。意図した一括翻訳なら、上限を見直す PR（`required-check-dispatch.test.mjs` が全記事の件数と照合する）を出す |
+| 翻訳コミット後、PR のチェックが「承認待ち」 | GITHUB_TOKEN 方式で、pull_request の実行は承認待ちになる | 何もしない。approve-checks が数秒から 3 分で承認する。approve-checks が赤のときだけ、下の行の対応 |
+| `承認できなかった実行があります（run: …）。PR #N の Checks で…` | approve-checks の承認の API が失敗した（括弧の中は run の ID。原因は同じステップのログに出る gh のエラー）、または承認したあとも必須チェックの実行が承認待ちのまま（括弧の中はワークフローのパス） | 6 章の「承認の手順」で人が承認する |
+| `翻訳コミット … の pull_request の実行が、3 分待っても作られませんでした: …` | 必須チェックのワークフローかこのワークフローの実行が作られなかった（ワークフローが無効、またはそのワークフローの `on:` の条件が変わった） | 6 章の「承認の手順」の `gh run list`（承認待ちの一覧）で確かめ、承認待ちがあれば同じ手順で承認する。`--status action_required` を外すと、作られた実行がすべて出る。ワークフローの `on:` を変えたなら、`REQUIRED_WORKFLOWS` と 6 章の一覧を見直す |
+| `PR #N に新しいコミット（…）が積まれたので、翻訳コミット … の実行は承認しません` | approve-checks が承認する前に、人が PR に新しいコミットを push した | 何もしない。新しいコミットの実行が、翻訳と検査をやり直す |
+| 翻訳前のコミットの「Translate content (i18n)」が「取り消し」（approve-checks のジョブも「取り消し」になることがある） | approve-checks が最後に承認した、翻訳コミットの同じワークフローの実行が、concurrency で取り消した | 何もしない。approve-checks のログに「承認待ちの実行を承認しました」が出ていれば、承認は済んでいる。i18n-check は翻訳コミットの実行で動く |
+| `翻訳が必要な件数 N 件が上限 500 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる（全記事 × 4 言語を超えることはないので、設定や記事の数の異常を疑う） | 記事を分けて PR を出す。意図した一括翻訳なら、上限を見直す PR（`required-check-approval.test.mjs` が全記事の件数と照合する）を出す |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |
 | `--only と --since は同時に指定できません` など | 引数の誤り | `--help` を参照 |
 
@@ -286,7 +316,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 |---|---|---|---|
 | ワークフロー全体（翻訳・push・i18n-check） | `gh workflow disable translate-content.yml -R Cor-Incorporated/corsweb2024` | PR で翻訳も検査も走らなくなる（CMS の PR の通知〔`cms-pr-status.yml`〕は「翻訳: 確かめられていません」と書く） | `gh workflow enable translate-content.yml -R Cor-Incorporated/corsweb2024` |
 | 翻訳（Gemini API の呼び出し）だけ | `gh secret delete GEMINI_API_KEY -R Cor-Incorporated/corsweb2024` | translate ジョブは「未設定のためスキップ」になり、i18n-check は動き続ける（翻訳の欠けは赤で見える） | 7 章の手順でキーを登録し直す |
-| bot トークンでの push だけ | `gh secret delete TRANSLATION_BOT_TOKEN -R Cor-Incorporated/corsweb2024` | GITHUB_TOKEN での push に戻る（6 章の承認操作が必要になる） | 7 章の手順で登録し直す |
+| bot トークンでの push だけ | `gh secret delete TRANSLATION_BOT_TOKEN -R Cor-Incorporated/corsweb2024` | GITHUB_TOKEN での push に戻る（翻訳コミット後の実行は approve-checks が承認する） | 7 章の手順で登録し直す |
 | 実行中の 1 回 | `gh run list --workflow translate-content.yml -R Cor-Incorporated/corsweb2024` で ID を確認し `gh run cancel <ID> -R Cor-Incorporated/corsweb2024` | その実行だけ止まる（push 前なら何も書かれない） | PR に push し直すと再実行される |
 
 ### bot が PR にコミットしたあと

@@ -11,21 +11,24 @@ name: Translate content (i18n)
 #                    ファイル種別・大きさ・削除件数を検査してから適用し、stage された内容を行ごとに照合して
 #                    （追加・変更・削除だけ、mode 100644 だけ、許可パスだけ、.md は NUL なしで 1 行目が ---）から、
 #                    hooks を無効にして commit / push する。
-#   dispatch-check   actions: write だけ。GITHUB_TOKEN で push したとき、i18n-check と develop / main の必須チェック
-#                    （verify・Chromium visual text audit・h5-admission）を workflow_dispatch で起動する。
+#   approve-checks   actions: write だけ。GITHUB_TOKEN で push したとき、翻訳コミットで承認待ちになった pull_request の
+#                    実行（必須チェックの verify・Chromium visual text audit・h5-admission と i18n-check を含む）を承認する。
 #   i18n-check       contents: read。単体テストと --check（キー不要）。
 #   translate-result 権限なし。翻訳の一部が失敗・検証落ちしたとき、成功分を push したうえで赤にする。
 #
 # ■ pull_request（ja を編集した PR）
-#   translate は GEMINI_API_KEY があり、同一リポジトリの PR で、head が develop / main / master でないときだけ、
-#   PR で変更された記事を `--write --since <base>` で処理する（1 回あたり I18N_MAX_ITEMS=500 件まで。
+#   translate は GEMINI_API_KEY があり、同一リポジトリの PR で、head が develop / main / master でなく、
+#   翻訳コミット（github-actions[bot] の push）の実行でないときだけ、PR で変更された記事を `--write --since <base>` で処理する（1 回あたり I18N_MAX_ITEMS=500 件まで。
 #   2026-10-23 に全記事を推敲したとき、20 件の上限で PR ごとの翻訳が止まり、手作業のバックフィルが要った。
 #   代表の依頼で、全記事（今は 31 本 × 4 言語 = 124 件）を 1 回で訳せるようバックフィルと同じ値にした）。
 #   i18n-check は translate / push の後に走る。push した場合は新しい HEAD 側の実行に検査を委ねて成功で終える。
 #   push に使うトークン:
 #     - 既定: GITHUB_TOKEN。GITHUB_TOKEN による PR 更新で作られる pull_request の実行は「承認待ち」になる
-#       （GitHub Docs。本リポジトリでも実測: run 36329708078 が action_required）。workflow_dispatch は例外なので、
-#       dispatch-check が i18n-check と必須チェックの 3 本を翻訳コミットの上で起動し、承認の操作を要らなくする。
+#       （GitHub Docs。本リポジトリでも実測: run 36329708078 が action_required）。approve-checks がそれを同じ
+#       GITHUB_TOKEN で承認し、人の承認の操作を要らなくする。workflow_dispatch で起動し直す方式は使えない:
+#       PR の必須チェックとして数えられるのは pull_request などの実行のチェックだけで、workflow_dispatch の実行の
+#       チェックは success でも数えられない（GitHub Docs「Troubleshooting required status checks」。2026-10-25 に
+#       PR #405 で実測: dispatch した 4 本はすべて success だったが、PR は BLOCKED のままだった）。
 #     - 任意: secrets.TRANSLATION_BOT_TOKEN（fine-grained PAT / GitHub App）。push が通常の synchronize を起こし
 #       全 CI が再実行されるが、GITHUB_TOKEN より権限・有効期間が広い。リスクは docs/i18n-translation.md 6 章。
 #
@@ -33,7 +36,7 @@ name: Translate content (i18n)
 #   mode=translate … 既存記事のバックフィル（I18N_MAX_ITEMS=500）。chore/i18n-backfill-<YYYYMMDD> を push するまで。
 #   mode=adopt     … 来歴の無い既存翻訳を採用（API 不要）。chore/i18n-adopt-<YYYYMMDD> を push するまで。
 #                    どちらも PR は人が作る（リポジトリ設定で Actions による PR 作成は無効）。
-#   mode=check     … 検査だけ（GITHUB_TOKEN 方式の自動再実行にも使う）。
+#   mode=check     … 検査だけ。
 
 on:
   pull_request:
@@ -65,7 +68,7 @@ on:
         type: boolean
         default: false
       since:
-        description: '（自動再実行用）この SHA からの差分に含まれる記事だけを検査する。通常は空'
+        description: 'この SHA からの差分に含まれる記事だけを検査する（mode=check のとき。通常は空）'
         type: string
         default: ''
 
@@ -96,9 +99,12 @@ jobs:
     name: translate
     # 統合ブランチ（develop→main のリリース PR 等）には CI から直接 push しない（PR 経由の原則）。
     # そこで翻訳の欠けが見つかった場合は i18n-check が赤になり、workflow_dispatch のバックフィルで直す。
+    # 翻訳コミット（github-actions[bot] の push）の実行では訳さない。approve-checks がその実行を承認するので、
+    # 訳すと「翻訳 → push → 承認」が人の手を通らずに繰り返されうる（i18n-check はその実行でも動く）
     if: >-
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository &&
+       github.actor != 'github-actions[bot]' &&
        !contains(fromJSON('["develop","main","master"]'), github.event.pull_request.head.ref)) ||
       (github.event_name == 'workflow_dispatch' && inputs.mode != 'check')
     runs-on: ubuntu-latest
@@ -374,40 +380,106 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  dispatch-check:
-    name: dispatch-check
-    needs: push
+  approve-checks:
+    name: approve-checks
+    # translate-result も待つ: このジョブが最後に承認する実行は、同じ concurrency グループのこの実行を取り消すので、
+    # translate-result がまだ終わっていないと、一部の翻訳の失敗が知らされない
+    needs: [push, translate-result]
     if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.push.outputs.pushed == 'true' && needs.push.outputs.via == 'github_token' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
-      actions: write # 検査のワークフローを workflow_dispatch で起動するだけ（checkout もしない）
+      actions: write # 翻訳コミットの承認待ちの実行を承認するだけ（checkout もせず、リポジトリのコードも動かさない）
     env:
+      COMMIT: ${{ needs.push.outputs.commit }}
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
-      BASE_SHA: ${{ github.event.pull_request.base.sha }}
       BASE_REF: ${{ github.event.pull_request.base.ref }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      # develop / main の必須チェック（verify・Chromium visual text audit・h5-admission）を出すワークフロー。
+      # docs/i18n-translation.md 6 章の一覧と scripts/i18n/__tests__/required-check-approval.test.mjs が照合する。
+      REQUIRED_WORKFLOWS: >-
+        .github/workflows/ci.yml
+        .github/workflows/visual-text.yml
+        .github/workflows/h5-admission.yml
     steps:
-      # GITHUB_TOKEN の push で作られる pull_request の実行は承認待ちになるが、workflow_dispatch は例外として動く。
-      # 翻訳コミットの上で必須チェック（develop / main の verify・Chromium visual text audit・h5-admission）と
-      # i18n-check を起動し、承認の操作なしで merge できるようにする（2026-10-23、代表の依頼）。
-      # 起動するワークフローの一覧は scripts/i18n/__tests__/required-check-dispatch.test.mjs が必須チェックと照合する。
-      - name: Run the checks on the translation commit
+      # GITHUB_TOKEN の push で作られる pull_request の実行は承認待ち（REST では status=completed、
+      # conclusion=action_required）になる。それを同じ GITHUB_TOKEN で承認する（2026-10-25 に実測: approve API は
+      # HTTP 201 を返し、実行が動き出した）。承認するのは、この翻訳コミット（head_sha）、このリポジトリのこの PR の
+      # head ブランチ、pull_request の実行だけ。翻訳コミットは push ジョブが翻訳ディレクトリの .md だけだと照合済み
+      # なので、承認して動くのは、PR の元の実行と同じワークフローだけ。
+      - name: Approve the pull_request runs of the translation commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          api="repos/${GITHUB_REPOSITORY}/actions/runs"
+          self_path='.github/workflows/translate-content.yml'
+          # この翻訳コミットの pull_request の実行を「ID ワークフローのパス 結論」の行で返す。問い合わせの条件に加えて
+          # jq でも同じ条件を照合し、別のコミット・別のイベント・別のリポジトリ（fork）・別のブランチの実行は返さない
+          runs() {
+            gh api "${api}?head_sha=${COMMIT}&event=pull_request&per_page=100" --jq '.workflow_runs[]
+              | select(.head_sha == env.COMMIT and .event == "pull_request" and .head_branch == env.HEAD_REF
+                  and .head_repository.full_name == env.GITHUB_REPOSITORY)
+              | "\(.id) \(.path) \(.conclusion // "-")"'
+          }
+          # 待つのは必須チェックの 3 本とこのワークフロー。base が develop / main 以外の PR では ci.yml と
+          # visual-text.yml が動かないので、h5-admission.yml とこのワークフローだけを待つ
+          wait_for="$REQUIRED_WORKFLOWS"
+          if [ "$BASE_REF" != develop ] && [ "$BASE_REF" != main ]; then wait_for='.github/workflows/h5-admission.yml'; fi
+          wait_for="${wait_for} ${self_path}"
+          # 実行は push の数秒後に作られる。待つワークフローの実行が出そろうまで、3 分まで待つ。
+          # listed="$(runs)" のように代入で受ける（here-string の中の $(…) は、失敗しても set -e で止まらない）
+          deadline=$(( $(date +%s) + 180 ))
+          while :; do
+            listed="$(runs)"
+            missing=''
+            for wf in $wait_for; do
+              grep -qF " ${wf} " <<< "$listed" || missing="${missing} ${wf}"
+            done
+            [ -z "$missing" ] && break
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error title=i18n::翻訳コミット ${COMMIT} の pull_request の実行が、3 分待っても作られませんでした:${missing}（docs/i18n-translation.md 6 章）"
+              exit 1
+            fi
+            sleep 5
+          done
+          sleep 5 # 同じ push で作られるほかのワークフロー（deploy.yml など）の実行も待つ
+          listed="$(runs)"
+          # 人が PR に新しいコミットを積んでいたら承認しない。古いコミットの実行を承認すると、同じ concurrency
+          # グループの新しいコミットの実行（verify など）を取り消してしまう
+          latest="$(gh api "${api}?branch=${HEAD_REF}&event=pull_request&per_page=1" --jq '.workflow_runs[0].head_sha')"
+          if [ "$latest" != "$COMMIT" ]; then
+            echo "::notice title=i18n::PR #${PR_NUMBER} に新しいコミット（${latest}）が積まれたので、翻訳コミット ${COMMIT} の実行は承認しません"
+            exit 0
+          fi
+          # このワークフローの実行は最後に承認する。承認した実行は、同じ concurrency グループのこの実行を取り消す。
+          # 先に承認すると、ほかの実行を承認する前にこのジョブが止まる
+          approved=''
           failed=''
-          gh workflow run translate-content.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
-            -f mode=check -f since="$BASE_SHA" || failed="$failed translate-content.yml"
-          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" || failed="$failed ci.yml"
-          gh workflow run visual-text.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" || failed="$failed visual-text.yml"
-          gh workflow run h5-admission.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF" \
-            -f pr_number="$PR_NUMBER" -f base_ref="$BASE_REF" || failed="$failed h5-admission.yml"
+          self=''
+          while read -r id path conclusion; do
+            [ "$conclusion" = action_required ] || continue
+            if [ "$path" = "$self_path" ]; then self="$id"; continue; fi
+            if gh api -X POST "${api}/${id}/approve" > /dev/null < /dev/null; then
+              approved="${approved} ${id}"
+            else
+              failed="${failed} ${id}"
+            fi
+          done <<< "$listed"
+          # 承認したあとも承認待ちのままの必須チェックの実行があれば、赤にして人に知らせる
+          listed="$(runs)"
+          for wf in $wait_for; do
+            [ "$wf" = "$self_path" ] && continue
+            if grep -qF " ${wf} action_required" <<< "$listed"; then failed="${failed} ${wf}"; fi
+          done
           if [ -n "$failed" ]; then
-            echo "::warning title=i18n::翻訳コミットの検査を workflow_dispatch で起動できませんでした:$failed（原因は直前の gh のエラー）。新しいコミットの PR チェックを承認するか、空コミットを push して動かしてください（docs/i18n-translation.md 6 章）"
-          else
-            echo "::notice title=i18n::GITHUB_TOKEN で push し、翻訳コミットの検査（i18n-check と必須チェック 3 本）を workflow_dispatch で起動しました"
+            echo "::error title=i18n::承認できなかった実行があります（run:${failed}）。PR #${PR_NUMBER} の Checks で「Approve workflows to run」を押すか、docs/i18n-translation.md 6 章の手順で承認してください"
+            exit 1
+          fi
+          echo "::notice title=i18n::翻訳コミット ${COMMIT} の承認待ちの実行を承認しました（run:${approved:- なし}${self:+、最後に ${self}}）"
+          if [ -n "$self" ] && ! gh api -X POST "${api}/${self}/approve" > /dev/null; then
+            echo "::error title=i18n::i18n-check の実行（run ${self}）を承認できませんでした。PR #${PR_NUMBER} の Checks で「Approve workflows to run」を押してください"
+            exit 1
           fi
 
   translate-result:
