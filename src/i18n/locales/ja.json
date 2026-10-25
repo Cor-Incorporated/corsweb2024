@@ -219,8 +219,7 @@
       "legal": "特商法表記",
       "company": "会社概要"
     },
-    "description": "Cor.株式会社は、ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む福岡のAI実装会社です。",
-    "copyright": "Cor.inc"
+    "description": "Cor.株式会社は、ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む福岡のAI実装会社です。"
   },
   "features": {
     "title": "Features",
@@ -507,8 +506,8 @@
   ],
   "meta": {
     "404": {
-      "title": "Not found · Cor.inc",
-      "description": "Page not found. Please check the URL in the address bar and try again."
+      "title": "ページが見つかりません｜Cor.株式会社",
+      "description": "ページが見つかりません。URLを確かめて、もう一度お試しください。"
     },
     "home": {
       "title": "Cor.株式会社｜福岡のAI実装会社（ローカルLLM・Grift・AI受託開発）",
@@ -517,16 +516,12 @@
       "ogDescription": "ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む福岡のAI実装会社。AIやシステムの要件が固まっていない段階から相談できます。"
     },
     "about": {
-      "title": "About | Cor.inc",
+      "title": "Cor.株式会社について",
       "description": "Cor.株式会社は、ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、課題の整理から設計・実装・運用まで一気通貫で伴走する福岡のAI実装会社です。「きょうそう」の姿勢と実装力について。"
     },
     "contact": {
-      "title": "Contact · Cor.inc",
-      "description": "Contact our team to learn more about how we can help you."
-    },
-    "products": {
-      "title": "Products&Insights · Cor.inc",
-      "description": "Explore our products and insights page showcasing our innovative IT solutions and media outreach. This page offers detailed information about our product portfolio, development services, and strategic insights. Discover our cutting-edge technology solutions, read about our innovative approaches, and learn how we can help transform your digital presence. Ideal for businesses seeking comprehensive IT services and product solutions."
+      "title": "お問い合わせ｜Cor.株式会社",
+      "description": "Cor.株式会社へのお問い合わせ。業務の「進まない」をお聞かせください。内容を確認のうえ、原則3営業日以内に担当者よりご連絡します。"
     },
     "privacy": {
       "title": "個人情報保護方針｜Cor.株式会社",

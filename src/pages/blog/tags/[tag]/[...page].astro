@@ -7,6 +7,7 @@ import BlogArchiveHeader from '../../../../components/blog/BlogArchiveHeader.ast
 import BlogCategoryNav from '../../../../components/blog/BlogCategoryNav.astro';
 import PostCard from '../../../../components/blog/PostCard.astro';
 import Layout from '../../../../layouts/Layout.astro';
+import { ORGANIZATION_NAMES } from '../../../../config/organization';
 
 interface Props {
   page: Page<CollectionEntry<'blog'>>;
@@ -38,7 +39,7 @@ export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
 };
 
 const { page, tag } = Astro.props as Props;
-const pageTitle = `「${tag}」タグの記事 | Blog | Cor.inc`;
+const pageTitle = `「${tag}」タグの記事｜ブログ｜${ORGANIZATION_NAMES.ja}`;
 const pageDescription = `「${tag}」に関する記事を、新しい順にまとめています。`;
 const countLabel = page.total > page.size
   ? `${page.total}記事中 ${page.start + 1}-${page.end + 1}記事を表示`

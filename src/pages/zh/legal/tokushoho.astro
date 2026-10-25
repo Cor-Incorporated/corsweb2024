@@ -1,10 +1,11 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { ORGANIZATION_NAMES } from '../../../config/organization';
 
 ---
 
 <Layout
-  title="法律声明（特定商业交易法）| Cor.inc"
+  title={`法律声明（特定商业交易法）｜${ORGANIZATION_NAMES.zh}`}
   description="根据日本特定商业交易法要求的法律披露。包括卖方信息、付款条件、交付和退货政策。"
 >
   <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
@@ -14,7 +15,7 @@ import Layout from '../../../layouts/Layout.astro';
     <table class="min-w-[42rem] table-auto border-collapse text-left">
       <caption class="sr-only">根据日本特定商业交易法要求的卖方信息</caption>
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
-        <tr><th class="py-4 pr-6 align-top font-medium">卖方</th><td class="py-4">Cor Inc. (Cor.inc)</td></tr>
+        <tr><th class="py-4 pr-6 align-top font-medium">卖方</th><td class="py-4">{ORGANIZATION_NAMES.zh}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">运营负责人</th><td class="py-4">首席执行官&nbsp;寺田&nbsp;康佑</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">地址</th><td class="py-4">天神派恩克雷斯特719号<br />2-3-10天神，中央区<br />福冈市，福冈县810-0001，日本</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">电话</th><td class="py-4">+81-70-8561-1659</td></tr>

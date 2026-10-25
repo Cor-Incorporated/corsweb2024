@@ -841,8 +841,7 @@
       "legal": "Aviso Legal",
       "company": "Perfil de la empresa"
     },
-    "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región.",
-    "copyright": "Cor.inc"
+    "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región."
   },
   "features": {
     "title": "Características",
@@ -1123,7 +1122,7 @@
   ],
   "meta": {
     "404": {
-      "title": "No encontrado · Cor.inc",
+      "title": "No encontrado | Cor.Inc.",
       "description": "Página no encontrada. Por favor, verifica la URL en la barra de direcciones e inténtalo de nuevo."
     },
     "industryMedical": {
@@ -1153,16 +1152,12 @@
       "ogDescription": "Empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región. Puedes consultarnos aunque aún no tengas definidos los requisitos de IA o del sistema."
     },
     "about": {
-      "title": "Acerca de · Cor.inc",
+      "title": "Acerca de | Cor.Inc.",
       "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka que te acompaña de principio a fin —desde ordenar el problema hasta el diseño, la implementación y la operación—, centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida. Conoce nuestra actitud «Kyousou» y nuestra capacidad de implementación."
     },
     "contact": {
-      "title": "Contacto · Cor.inc",
+      "title": "Contacto | Cor.Inc.",
       "description": "Contacta con nuestro equipo para aprender más sobre cómo podemos ayudarte."
-    },
-    "products": {
-      "title": "Productos&Insights · Cor.inc",
-      "description": "Explora nuestra página de productos e insights que muestra nuestras soluciones IT innovadoras y alcance mediático. Esta página ofrece información detallada sobre nuestro portafolio de productos, servicios de desarrollo e insights estratégicos. Descubre nuestras soluciones tecnológicas de vanguardia, lee sobre nuestros enfoques innovadores y aprende cómo podemos ayudar a transformar tu presencia digital. Ideal para empresas que buscan servicios IT integrales y soluciones de productos."
     },
     "privacy": {
       "title": "Política de privacidad | Cor.Inc.",

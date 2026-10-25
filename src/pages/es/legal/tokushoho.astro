@@ -1,10 +1,11 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
 ---
 
 <Layout
-  title="Aviso Legal (Ley de Transacciones Comerciales Específicas) | Cor.inc"
+  title={`Aviso Legal (Ley de Transacciones Comerciales Específicas) | ${ORGANIZATION_NAMES.es}`}
   description="Divulgaciones legales requeridas bajo la Ley de Transacciones Comerciales Específicas de Japón. Incluye información del vendedor, términos de pago, entrega y políticas de devolución."
 >
   <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
@@ -14,7 +15,7 @@ import Layout from '../../../layouts/Layout.astro';
     <table class="min-w-[42rem] table-auto border-collapse text-left">
       <caption class="sr-only">Información del vendedor requerida bajo la Ley de Transacciones Comerciales Específicas de Japón</caption>
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
-        <tr><th class="py-4 pr-6 align-top font-medium">Vendedor</th><td class="py-4">Cor Inc. (Cor.inc)</td></tr>
+        <tr><th class="py-4 pr-6 align-top font-medium">Vendedor</th><td class="py-4">{`${ORGANIZATION_NAMES.es} (${LEGAL_NAME})`}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">Gerente de Operaciones</th><td class="py-4">CEO&nbsp;Kousuke&nbsp;Terada</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">Dirección</th><td class="py-4">Tenjin Pine Crest&nbsp;719,<br />2-3-10 Tenjin, Chuo-ku,<br />Fukuoka-shi, Fukuoka 810-0001, Japón</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">Teléfono</th><td class="py-4">+81-70-8561-1659</td></tr>
