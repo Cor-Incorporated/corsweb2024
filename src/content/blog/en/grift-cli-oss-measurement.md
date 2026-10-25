@@ -1,7 +1,7 @@
 ---
-title: "What happens when you run a score-free tool on real OSS? Measuring four repositories with Grift CLI 0.8.0"
-description: "We measured four OSS projects—click, flask, httpx, and commander.js—using the upcoming version of Grift CLI (0.8.0). Sharing the exact commands and outputs, we describe what was visible, what remained unseen, and how misinterpreting the numbers can lead you astray. We make no comparisons regarding the superiority of one repository over another."
-summary: "Measuring four OSS projects with the upcoming version of Grift CLI (0.8.0), all observations finished within 2.5 seconds, and every item matched the recalculations from grift verify. While workspace scope, change intervals, and verification structures produce concrete values, areas like reviews, issue tracking, and individual experience remain unobserved—accompanied by stated reasons. Because values depend on path rules and observation windows, repositories cannot be compared side by side to determine superiority."
+title: "Years on a Resume Don't Show How Someone Actually Works. We Evaluated 4 Real OSS Projects with Grift, Which Doesn't Score People."
+description: "Years of experience or person-months on a resume alone do not reveal how a person actually works. Written for recruitment agencies, SES sales representatives, and engineers, this article explains why Cor. created Grift—a tool that assigns neither scores nor rankings—how it differs from MBTI, and what we could and could not see by evaluating 4 real OSS projects."
+summary: "Grift derives work tendencies and the underlying count of evidence directly from records of changes preserved in git. Unlike MBTI, where individuals answer questions to determine their type, Grift's evidence is based on actual records rather than self-reporting, yielding the exact same values no matter who counts them from the same history. Evaluating 4 real OSS projects revealed differences in work domains and commit intervals; however, it could not capture the quality of code reviews, meetings, or experience for which the individual did not give consent. Numbers must be read alongside their denominators and rules, and making the final judgment remains up to humans."
 pubDate: 2026-10-25
 author: "Terisuke"
 category: "engineering"
@@ -10,39 +10,162 @@ tags: ["Grift", "OSS", "CLI", "git", "実測"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "1a6743e05b9509c026319d50ed64815235cd876ba8f948088f196f9f7252180d"
-translatedAt: "2026-10-25T14:26:36.806Z"
+translationSourceHash: "ef859896fc1d4aa3ef654f35a97cd16672a5019bbb963d9ae3a20559c1fa9303"
+translatedAt: "2026-10-25T15:06:29.737Z"
 translationModel: "gemini-3.8-flash"
 ---
 
-Grift CLI promises to extract verifiable facts from git history without assigning scores or rankings. So what happens when you run it against actual open-source software? On October 25, 2026, Cor. measured four OSS projects using the upcoming version (0.8.0).
+Even if a résumé says "Python: 5 years," it does not tell you what kind of work the person actually did over those five years.
 
-This article presents the procedure and output as they are. We do not compare the superiority or inferiority of the repositories. Differences in values are described as differences in repository characteristics. What we decided to fix in 0.8 is documented in an article published on the same day: "[How to Enforce 'No Scores, No Rankings' in Implementation](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)".
+Years of experience or person-months serve as rough indicators of the volume of work. However, they do not show how someone works: Do they write tests to verify behavior as they go? Do they keep documentation organized? Do they ship small, frequent changes?
 
-## What Is Not Included in This Article
+Recruiting agents and SES sales representatives often find themselves unable to articulate the rationale behind their recommendations. At Cor., we believe one reason lies in this gap.
 
-A repo report also includes a list of people involved in that repository. Not a single person-level metric is included in this article. Publishing them would mean ranking real contributors with numbers and publicly displaying observations without their consent. `grift actor`, `--actors`, and `--top` were not used either.
+## Why We Do Not Assign Scores
 
-As of October 25, 2026, 0.8.0 has not been released on PyPI. The public version is 0.7.2, and 0.8.0 is being prepared for release.
+Grift is our in-house product built to bridge this gap. From records left in git (a system that records software changes one by one), it extracts work tendencies alongside the counts that serve as the supporting evidence. It produces neither scores nor rankings.
 
-## Measured Environment and Targets
+When our CEO, Kousuke Terada, worked in recruitment advertising sales at Recruit, he experienced the frustration of words failing to convey reality. Regarding Grift, he writes: "You can pad a résumé. You can't pad evidence."
 
-- grift 0.8.0 (definition version `tep-v0.8.0-2026-10-25`). We installed the unreleased source (`87076c8` from the development repository) locally
-- For comparison, we also ran the public version 0.7.2 on the same four projects
+What happens when you reduce things to a score? When you compress different types of records into a single number, what was counted—and what could not be counted—vanishes. And once a score exists, those with higher numbers appear to be better people. Line them up, and you have a ranking.
+
+What we want to do with Grift is not to rank people. It is to connect individuals with projects that match their work tendencies. To that end, we present only verifiable facts. Making the judgment is up to human beings.
+
+## Differences from MBTI
+
+Hearing that we do not rank people, some might think of MBTI.
+
+In MBTI, respondents answer questions themselves, yielding 16 types based on combinations of four preferences. The Myers & Briggs Foundation states that all types are valuable and that the assessment was not designed for hiring purposes.
+
+Grift asks no questions. It does not assign type names. Nor is it a tool for personality assessment. It counts records left in git, outputting tendencies along with the counts that substantiate them.
+
+The difference becomes clearer when viewed through the challenges faced by sales professionals.
+
+You do not know how far you can trust self-reported résumés: MBTI results, like résumés, are derived from the individual's own answers. Grift’s evidence comes from records. Given the same records, anyone will arrive at the exact same numbers.
+
+Years of experience and person-months do not reveal how someone works: Grift reports, in counts, which areas they have touched (tests, documentation, core programs, etc.), at what intervals they submit changes, and whether bug-fix changes include tests.
+
+However, things not left in records cannot be shown. Contributions in meetings, the quality of code reviews, and unpublished work remain invisible. Furthermore, without the individual's consent, personal experience and roles are not displayed.
+
+## The TEP Process
+
+Grift calls the process of extracting facts from records TEP (Technical Evidence Pipeline). It consists of four stages:
+
+1. Read git records. No AI speculation is used.
+2. Count according to fixed rules. For example, distinguish tests from documentation based on file paths and names.
+3. Attach denominators and the reasons for uncounted items to the measured values.
+4. Enable anyone to recount using the exact same procedure.
+
+In Grift, we call this fourth step—recounting—verification. A detailed explanation of TEP can be found on the [TEP page](https://griftai.org/tep) on Grift's website.
+
+## Testing with Real-World OSS
+
+Can this procedure truly reveal work tendencies? On October 25, 2026, we verified this using the upcoming version (0.8.0) of the Grift CLI (a command-line Grift tool). As of that date, 0.8.0 was still being prepared for release.
+
+To avoid measuring real people without their consent, we measured open-source software (OSS) whose source code is public, at the repository level (the place where a single software project's records are kept). Not a single person-specific number is included in this article.
+
+We measured four repositories with differing characteristics:
+
+- click: A Python library (a component used by other programs) for building command-line tools
+- flask: A Python library for building web services
+- httpx: A Python library for web communications
+- commander.js: A JavaScript library for building command-line tools
+
+## What We Observed
+
+For all four, both measurement and verification finished in under 2.5 seconds. The verification results matched across all items for all four repositories.
+
+Differences in repository characteristics also became apparent.
+
+In click, there were 187 changes in the 180 days leading up to the final date of the record. The median interval between changes was about 2 hours. Changes occurred steadily at short intervals.
+
+In flask, 1,841 changes touched documentation, which was more than those touching core programs (1,765 changes).
+
+In httpx, 575 out of 1,335 changes included test files.
+
+In commander.js, the core JavaScript files were not counted under "core programs" and fell into "other" instead. This is a gap in Grift's rules. The extension (the trailing part of a file name) counted as core programs did not include JavaScript's `.js`.
+
+## Misreading Numbers
+
+What we realized through measurement was how easily numbers can be misread when presented on their own. Here are five examples.
+
+### Number of Changes
+
+A repository with a high number of changes is not necessarily a better repository. Flask had 3,674 changes, while httpx had 1,335. In terms of history length, flask spanned 5,976 days and httpx spanned 2,517 days. Change counts vary depending on the length of history and whether changes are merged in batches.
+
+### Documentation Changes
+
+A high number of documentation changes does not mean a team is enthusiastic about writing documentation. For click, roughly 40% of the changes counted as documentation touched only the changelog file. In repositories where the changelog is updated with every single change, the count of documentation changes increases.
+
+### Fix Changes
+
+The fact that changes starting with "fix" in their subject line do not include tests does not mean the authors do not write tests. Recounting changes starting with "fix" in flask revealed that 198 out of 407 were changes strictly to documentation or configuration files, with subjects such as "fix typo."
+
+### Few Changes
+
+A low number of changes does not mean development has stalled. For httpx, there were only 11 changes within the 180-day observation window, resulting in an interval marked as "unobserved" (could not be measured). What we measured was a local clone retrieved on September 2, not its current state.
+
+### Active Days
+
+Active days (the number of days on which changes occurred) can be inflated depending on how changes are split. We created two small repositories for testing and added the exact same five lines. Adding them all at once resulted in 2 active days, whereas splitting them across 5 days—adding one line per day—resulted in 6 active days (both include the initial commit). The contents are identical.
+
+Grift does not adjust this number. Instead, it places a note next to the number: "Increases by placing 1 small commit daily; decreases by grouping the same changes into 1 day."
+
+## What Remained Unseen
+
+Grift labels things that could not be measured as "unobserved." "Unobserved" means "could not be measured," not "there was no track record." Across the four repositories, the following could not be seen:
+
+- Reviews and issue tracking: Unobserved because records such as GitHub data were not provided
+- Individual experience and roles: Unobserved because individual consent was not given
+- Whether changes were made by the internal team: All marked as "could not be determined" because internal email addresses were not defined
+
+We will also share what did not go well. As mentioned earlier, commander.js's core code falling into "other" was a gap in our rules. Additionally, in an article published on the same day, we noted that "the co-modification rate of tests (the proportion of changes where tests are updated alongside core code) also rises with superficial test edits." In 0.8.0, this caveat does not yet appear next to the numbers. The only note added was the single sentence regarding active days.
+
+## What We Fixed in 0.8.0
+
+In 0.7.2 (the current public release), the list of contributors to a repository was sorted in descending order of changes. This could be interpreted as showing the person at the top as the "top performer." In 0.8.0, they are sorted by ID (a designated identifier for each individual).
+
+We compared the lists between 0.7.2 and 0.8.0 across the four repositories. We looked only at the sorting order, ignoring names and counts. In 0.7.2, the top entry across all four was the person with the most changes. In 0.8.0, that same person appeared at line 120 out of 467 for click, line 280 out of 870 for flask, line 232 out of 258 for httpx, and line 15 out of 203 for commander.js.
+
+If the 0.8.0 list is resorted by commit count, it fails verification. Other values remained identical between 0.7.2 and 0.8.0.
+
+## Comparing with Project Requirements
+
+When matching with projects, the requirements expected by the project are written down in advance. In Grift, we call this a declaration. It is presented alongside what was observed from git (observations) in a separate column, and no pass/fail verdict is issued.
+
+As a test, we declared a hypothetical small project: "Python library maintenance." The declaration specified: at least 12 active days within 180 days, a median change interval within 7 days, experience touching core programs and tests, the presence of unit tests, and the inspection of GitHub and other records.
+
+Applying this to click places the observed "62 days" right next to the declared "12 days or more." Because records like GitHub were not provided, that section remains unobserved.
+
+Even after laying them side by side, the misinterpretations described in the previous section persist. Having 0 "core programs" for commander.js is due to a rule gap, and the interval for httpx is unobserved due to insufficient records. How to interpret these aligned values is left to human judgment.
+
+Grift can also be used to compare an individual engineer's records against project requirements. In that case, only records with the individual's consent are used. Because that involves measuring real individuals, we did not test it in this article.
+
+## Conclusion
+
+Git records provide evidence to verify claims made on a résumé. Yet, there is work that never leaves a trace in records.
+
+What Grift outputs are tendencies, the counts that substantiate them, and the reasons for what could not be seen. What conclusions to draw from them is for the reader to decide.
+
+## Supporting Data
+
+To allow engineers to verify the numbers locally, here are the conditions and values measured:
+
+- grift 0.8.0 (definition version `tep-v0.8.0-2026-10-25`). Unreleased source (`87076c8` in the development repository) installed locally
+- For comparison, the public release 0.7.2 was run against the same four repositories
 - Apple M4 Max, macOS 26.7.1, Python 3.12.9, git 2.54.0
+- The targets were the four local repositories cloned on September 2, 2026, and not updated since
 
-The targets are four local repositories that have not been updated since being cloned on September 2, 2026. They were measured in that state without re-cloning.
+The SHAs (identifiers assigned to each commit) of the measured commits (records of a single change) and their dates are as follows:
 
-| Repository | Character | Measured HEAD | HEAD Date |
-|---|---|---|---|
-| [pallets/click](https://github.com/pallets/click) | Python CLI library | `36baa15ff831b939a22bc527cd76ce653ef6f66d` | 2026-08-26 |
-| [pallets/flask](https://github.com/pallets/flask) | Python web framework | `d318b683471101618febed18996405ad26462110` | 2026-08-16 |
-| [encode/httpx](https://github.com/encode/httpx) | Python HTTP client | `b5addb64f0161ff6bfe94c124ef76f6a1fba5254` | 2026-02-23 |
-| [tj/commander.js](https://github.com/tj/commander.js) | JavaScript CLI library | `ba6d13ddb4243e5913367734f8c159089ffe7834` | 2026-05-29 |
+```text
+pallets/click    36baa15ff831b939a22bc527cd76ce653ef6f66d  2026-08-26
+pallets/flask    d318b683471101618febed18996405ad26462110  2026-08-16
+encode/httpx     b5addb64f0161ff6bfe94c124ef76f6a1fba5254  2026-02-23
+tj/commander.js  ba6d13ddb4243e5913367734f8c159089ffe7834  2026-05-29
+```
 
-## Executed Commands
-
-To allow reproducing the same values locally, the commands are shown using click as an example.
+Here are the commands, using click as an example:
 
 ```bash
 git clone https://github.com/pallets/click
@@ -51,120 +174,65 @@ grift repo click --format both --out out/click
 grift verify out/click/report.json --repo click
 ```
 
-`grift repo` observes the entire repository and writes `report.json` and `report.md`. `grift verify` recalculates using the conditions recorded in the report and compares all items. Even on a freshly cloned click aligned to this SHA, the results were identical to those obtained locally, except for the execution timestamp (`analyzed_at`).
+`grift repo` completed in under 2.5 seconds for all four, and `grift verify` was `VERIFIED` for all four. A newly cloned copy of click produced identical results, except for the execution timestamps. The observed values listed here were also identical when run on the same source code using the public release 0.7.2.
 
-We also measured using the public version 0.7.2 (the version installed via `pipx install grift-cli`) with the same source code, and the observed values published in this article were identical to those of 0.8.0. What changed in 0.8.0 are the sorting order of the people list and the explanatory notes. We will verify the differences in a later section.
+| Repository | Human commits / merges / bots |
+|---|---|
+| click | 2,000 / 1,131 / 200 |
+| flask | 3,674 / 1,691 / 191 |
+| httpx | 1,335 / 41 / 147 |
+| commander.js | 1,095 / 284 / 138 |
 
-## Observation Results of the Four Projects
+Human commits exclude merges (records incorporating changes from another branch). Changes by bots (automated programs submitting changes) are excluded.
 
-| Item | click | flask | httpx | commander.js |
-|---|---|---|---|---|
-| `grift repo` Execution Time | 1.57 s | 2.32 s | 1.16 s | 1.14 s |
-| `grift verify` Result | VERIFIED (1.62 s) | VERIFIED (2.40 s) | VERIFIED (1.33 s) | VERIFIED (1.28 s) |
-| Human commits (excluding merges) | 2,000 | 3,674 | 1,335 | 1,095 |
-| Merge commits | 1,131 | 1,691 | 41 | 284 |
-| Excluded bot commits | 200 | 191 | 147 | 138 |
-| Surface denominator (human commits with resolved paths) | 1,999 | 3,673 | 1,333 | 1,094 |
-| Surface: test | 562 | 627 | 575 | 286 |
-| Surface: docs | 1,024 | 1,841 | 501 | 468 |
-| Surface: backend | 1,158 | 1,765 | 874 | 0 |
-| Surface: other | 309 | 575 | 112 | 530 |
-| Cadence counting window (180 days) | 2026-02-27 to 2026-08-26 | 2026-02-17 to 2026-08-16 | 2025-08-27 to 2026-02-23 | 2025-11-30 to 2026-05-29 |
-| Commits in window / Active days | 187 commits / 62 days | 32 commits / 19 days | 11 commits / 8 days | 22 commits / 18 days |
-| Cadence median / p90 | 0.08 days / 3.36 days | 0.80 days / 15.60 days | Not observed (insufficient sample size) | 2.88 days / 17.89 days |
-| Commits including tests | 562 / 2,000 | 627 / 3,674 | 575 / 1,335 | 286 / 1,095 |
-| Commits with a fix subject that also touched tests | 80 / 249 | 58 / 408 | 46 / 114 | 30 / 106 |
-| Test types (determined by path) | unit: 555, unknown: 23 | unit: 484, unknown: 204 | unit: 554, unknown: 101 | unknown: 286 |
-| Origin | All non-bot commits are unresolved | Same | Same | Same |
-| Unobserved (not_observed) items | 23 | 23 | 27 | 23 |
+Work areas (`surface_profile`) are classified by file paths and extensions, and commits are counted for each category. Because a single commit can touch multiple categories, the sum exceeds the denominator.
 
-Because a single commit may match multiple classifications, the sum of surface counts exceeds the denominator.
-
-Reading this table horizontally cannot determine which repository is better. The reason is explained in the following "Misreading the Numbers" section.
-
-## What Could Not Be Seen
-
-"Unobserved" (not_observed) means "could not be measured"; it does not mean "there was no track record." The report documents the reason for each unobserved item. The reasons for the 23 items common across all four projects are as follows. Multiple input fields that yielded the same reason are consolidated into a single row.
-
-| Unobserved Item | Reason (reason) | Required for Observation |
+| Repository | Denominator | test / docs / backend / other |
 |---|---|---|
-| Reviews, issue tracking, events, and their cadences | `forge_export_not_provided`, `tracker_export_not_provided` | Forge and tracker export files (`--forge-export`, `--tracker-export`) |
-| Experience, roles, library context | `consenting_actor_required` | Consented identity of the individual |
-| Relationship with upstream, inheritance from templates | `no_upstream_lineage`, `parent_repo_not_provided`, `template_not_provided` | Path to parent repository or template |
-| Period containing 80% of internal commits | `no_tenant_commits` | Identity defining internal email addresses |
-| Survival rate | `survival_scan_disabled` | `--survival` (time-consuming) |
-| Post-work event declarations | `outcome_declaration_not_provided` | `--outcome-declaration` |
-| Line-level rework | `deferred_to_v0.6` | Not produced in 0.8.0 |
+| click | 1,999 | 562 / 1,024 / 1,158 / 309 |
+| flask | 3,673 | 627 / 1,841 / 1,765 / 575 |
+| httpx | 1,333 | 575 / 501 / 874 / 112 |
+| commander.js | 1,094 | 286 / 468 / 0 / 530 |
 
-For httpx, four cadence-related items (median, p90, share within 2 days, share at 30 days or more) were added to this list. The reason is `insufficient_population`. There were 11 commits within the window, falling short of the 20-commit threshold required to calculate ratios. The reason for line-level rework remains the name from the 0.6 era (`deferred_to_v0.6`) even in 0.8.0.
+Change intervals (`change_rhythm`) are counted over the 180 days leading up to the observation date, set as the date of HEAD. The observation dates correspond to the dates shown to the right of the SHAs above.
 
-The fact that all origins were categorized as unresolved is another thing that could not be seen. Origin is classified when either an identity.toml defining internal email addresses or a fork parent is provided. When measuring OSS as-is, neither is provided, so every non-bot commit ends up as "could not be determined." In the same table, items such as `tenant_unique` are 0, but this means "there were no matching instances." It has a different meaning from unresolved.
-
-## Misreading the Numbers
-
-### Commit Counts
-
-Commit counts vary depending on the length of history and how changes are incorporated. flask has 3,674 human commits, while httpx has 1,335. This difference is not a matter of good or bad. The number of days since the initial commit is 5,976 days for flask and 2,517 days for httpx. flask had 1,691 merge commits, while httpx had 41. Even for the same change, the count changes depending on whether it is merged in bulk or incorporated as individual commits.
-
-### Surface Names
-
-Surface names are the names of path rules. commander.js had 0 backend commits and 530 other commits. This is because the files in `.js`, which constitute the core of commander.js, are not covered by the backend rules. The backend rules are determined by directories such as `api/` and `services/`, and file extensions such as `.py`, `.go`, and `.rs`.
-
-Conversely, the reason click has 1,158 backend commits is that all files in `.py` fall under backend. click is not a server program. The report itself states, "This is an observation of work surfaces based on paths and extensions."
-
-### Docs Count
-
-A high docs count does not necessarily mean a strong dedication to documentation. The docs rules look for file extensions such as `.md` and `.rst` and directories such as `docs/`. In repositories where a changelog file is appended with every change, the docs count increases.
-
-In click, recounting the breakdown of commits classified as docs directly from git log using the same rules reveals that out of 1,025 commits, 414 touched only the changelog (`CHANGES.rst`) as far as docs files were concerned. This breakdown is an approximate recount done locally, not an output of grift. The report notes for click that "docs-related surfaces show a relatively high tendency," rating its strength as weak and certainty as directional.
-
-### Fix Subject Lines
-
-"Commits with a fix subject that also touched tests" refers to commits whose subjects start with strings like `fix`, `bug`, or `revert` and also modified test files. In flask, this was 58 out of 408 commits.
-
-Recounting flask's git log using the same rules showed that out of 407 commits with a fix subject, 198 modified only docs or configuration files. Their subject lines were things like "fix typo" or link corrections. Because nearly half of the "fixes" do not involve tests, interpreting this value as "not writing tests even when fixing bugs" is incorrect.
-
-### Cadence Counting Window
-
-Cadence is counted within a 180-day window from the observation date. If the observation date is not specified with `--as-of`, the date of the HEAD commit becomes the observation date (`window_basis=legacy_head_date`). Consequently, the windows for the four repositories all cover different time periods.
-
-The httpx window (2025-08-27 to 2026-02-23) contained only 11 commits, and the cadence value was marked as unobserved. Interpreting this as "development has stalled" is also incorrect. What was measured was the local checkout, not the current state of upstream.
-
-### Active Days
-
-Finally, we verified this by creating two small test repositories. Both add the exact same 5-line file after an initial commit. One committed the 5 lines in a single commit, while the other committed them 1 line at a time across 5 separate days.
-
-| Construction Method | Commits (including initial) | Final Tree | Active Days |
-|---|---|---|---|
-| 5 lines committed in 1 commit | 2 | `880a82d` | 2 days |
-| 1 line committed per day across 5 days | 6 | `880a82d` | 6 days |
-
-Even though the content is identical, the active days end up as 2 days and 6 days. Version 0.8.0 does not adjust this number. Instead, next to the value, it includes the statement: "Increases if a small commit is made every day; decreases if the same changes are consolidated into a single day."
-
-## What Was Fixed in 0.8.0
-
-As described in the article published on the same day, 0.8.0 changed the sort order of the people list and disclosed how active days can be inflated. We compared the output of 0.7.2 and 0.8.0 for the people list (`actor_directory`) in the repo reports across the same four projects. We looked only at the sort order, not names or counts.
-
-| Item | 0.7.2 | 0.8.0 |
+| Repository | commits / Active days | Median interval / p90 |
 |---|---|---|
-| Row sorting | Descending commit count for all 4 | Ordered by actor_id for all 4 |
-| Is top row the person with most commits? | Yes, for all 4 | No, for all 4 |
-| Row position of person with most commits | Row 1 for all 4 | click: row 120 (of 467), flask: row 280 (of 870), httpx: row 232 (of 258), commander.js: row 15 (of 203) |
-| Statement on inflating active days | None | Present in `activity.limitations` and `change_rhythm.limitations` |
+| click | 187 / 62 days | 0.08 days / 3.36 days |
+| flask | 32 / 19 days | 0.80 days / 15.60 days |
+| httpx | 11 / 8 days | Unobserved |
+| commander.js | 22 / 18 days | 2.88 days / 17.89 days |
 
-The Markdown heading in 0.7.2 was "actor List (Not a Quality Ranking)", but the rows were sorted by commit count in descending order. In 0.8.0, under the same heading, it states: "Rows are ordered by actor_id (not by commit count). Row position has no significance."
+The reason httpx was unobserved is `insufficient_population`. The 11 commits within the window fell short of the 20-commit minimum threshold required to calculate the rate.
 
-When the rows of the 0.8.0 output were resorted by commit count in descending order and passed to `grift verify`, it failed with `MISMATCH: 1 field(s) differ` (`actor_directory.actors`) and exit code 1. A resorted list fails verification.
+Testing patterns (`verification_profile`) count commits touching test directories.
 
-Other values have not changed. Values for surfaces, validation formats, origins, and denominators were identical between 0.7.2 and 0.8.0 across all four projects. The only difference in cadence was that the explanatory notes (limitations) increased from 3 sentences to 4 sentences. When a report saved under 0.7.2 is passed to 0.8.0's `grift verify`, it results in `CANNOT_VERIFY` because the definition version is `tep-v0.7.2-2026-09-07`, differing from the current version.
+| Repository | Commits including tests | Commits with fix subject also modifying tests |
+|---|---|---|
+| click | 562 / 2,000 | 80 / 249 |
+| flask | 627 / 3,674 | 58 / 408 |
+| httpx | 575 / 1,335 | 46 / 114 |
+| commander.js | 286 / 1,095 | 30 / 106 |
 
-We also checked whether tampering with values could be detected. In the click report, when the value for the combination of fixes and tests (`fix_with_test_pairing`) was modified from 0.3213 to 0.9 and passed to `grift verify`, it stopped with exit code 1, citing both values with `report=0.9 recomputed=0.3213`.
+Regarding test types, click had unit: 555, unknown: 23; flask had unit: 484, unknown: 204; httpx had unit: 554, unknown: 101; and commander.js had unknown: 286.
 
-On the other hand, some things are not yet included. In condition 4 of the article published on the same day, we noted that the co-modification rate for tests could also be boosted by formal 1-line changes to test files. In the 0.8.0 repo report, this path is not yet stated next to the metric. In 0.8.0, only the single sentence regarding active days was placed next to the numbers.
+Unobserved items numbered 23 for click, flask, and commander.js, and 27 for httpx. The main reasons are:
 
-## Aligning with Project Declarations
+- `forge_export_not_provided`, `tracker_export_not_provided`: Reviews, issue tracking, events
+- `consenting_actor_required`: Experience, roles, library context
+- `no_upstream_lineage`, `parent_repo_not_provided`, `template_not_provided`: Relationship with upstream, inheritance from templates
+- `no_tenant_commits`: Time window containing 80% of internal commits
+- `survival_scan_disabled`: Retention rate
+- `outcome_declaration_not_provided`: Declarations of post-work outcomes
+- `deferred_to_v0.6`: Line-level rework (retains the name from 0.6 even in 0.8.0)
 
-`grift project` juxtaposes the requirements written by the project side (declarations) and the operational patterns observed from git (observations) in separate sections. We declared a hypothetical small project, "Python Library Maintenance," and ran it against the four repositories.
+For provenance (`origin`), all non-bot commits across all four repositories were `unresolved`. This is because neither identity.toml defining internal email addresses nor fork parents were provided.
+
+The breakdowns of documentation commits in click and fix commits in flask are not Grift outputs. They are rough estimates recalculated locally by applying the same rules to git log. For click, 414 out of 1,025 commits touched only `CHANGES.rst` as documentation. For flask, 198 out of 407 commits with a fix subject modified only documentation or configuration files.
+
+Regarding contributor list sorting (`actor_directory`), resorting the lines in 0.8.0 by commit count and running `grift verify` resulted in exit code 1 with `MISMATCH: 1 field(s) differ`. Verifying a report saved under 0.7.2 with 0.8.0 results in `CANNOT_VERIFY` due to differing definition versions. The cautionary note on active days appears in `activity.limitations` and `change_rhythm.limitations` in 0.8.0, but was absent in 0.7.2.
+
+The following files were used for project declarations:
 
 ```toml
 schema_version = "tep-project-v1"
@@ -189,34 +257,19 @@ required = ["git", "forge"]
 grift project click --requirements python-lib-maintenance.toml --format both --out project/click
 ```
 
-The output is divided into two sections, "Project Declarations" and "Observed Metrics," with no pass/fail judgment. The undeclared cadence p90 becomes `not_declared`, and the report notes: "Not specified by project side. Not a deficiency." Even if the declaration requests a forge, because no forge export was provided, reviews on the observation side remain unobserved. For click, the comparison appeared as follows:
-
-| Axis | Declaration | click Observation |
-|---|---|---|
-| Active days in 180 days | 12 days or more | 62 days (187 commits in window) |
-| Median cadence | 7 days or fewer | 0.08 days |
-| Cadence p90 | Not declared (not_declared) | 3.36 days |
-| Surface | backend, test | backend: 1,158 commits, test: 562 commits |
-| Test type | unit | unit: 555 commits |
-| Input | git, forge | git only (forge is unobserved) |
-
-The other three projects are arranged in the same manner. Even after alignment, the misreadings discussed in the previous section remain intact. The reason backend is 0 for commander.js is that `.js` is not in the rules, and httpx's median cadence is unobserved due to an insufficient sample size in the window.
-
-Matching declarations against observations on each axis is handled by `grift align`, which outputs one of five statuses: overlap, out of range, zero count, unobserved, or no requirement. However, `grift align` takes candidate observations as input. Because that would involve measuring real individuals, it was not executed in this article.
-
-## Conclusion
-
-For all four projects, results were generated within 2.5 seconds and matched verification. However, every metric will be misinterpreted unless read alongside its denominator, observation window, and path rules. What could be seen and what could not be seen are documented with explicit reasons by the report itself.
-
-You can verify this on your own repositories using the same commands. What judgments to draw from the resulting metrics is up to the reader.
+The output is divided into two sections: "Project Declarations" and "Observed Metrics." Undeclared items were marked as `not_declared` (not stated by the project; not a deficiency). Matching declarations against observations across axes is handled by `grift align`, categorized into five outcomes: overlap, out of bounds, 0 occurrences, unobserved, and no requirement.
 
 ## References
 
-- [grift-cli (GitHub, MIT)](https://github.com/Cor-Incorporated/grift-cli) - CLI source code. Public release is 0.7.2; 0.8.0 is in preparation
+- [grift-cli (GitHub, MIT)](https://github.com/Cor-Incorporated/grift-cli) - CLI source code. Public release is 0.7.2; 0.8.0 is being prepared for release
 - [Grift](https://griftai.org) - Product website
-- [Reading grift Reports (metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - Plain-language guide to each metric
-- [TEP Usage Norms (norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - Not interpreting absence as negative; prohibition of weighting and scoring conversions
-- [How to Enforce 'No Scores, No Rankings' in Implementation (Cor.Inc. Blog, October 25, 2026)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - The five conditions established in 0.8
+- [TEP Page (Grift)](https://griftai.org/tep) - Detailed explanation of TEP
+- [How to Read Grift Reports (metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - Plain-language guide to each metric
+- [TEP Norms (norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - Do not interpret absence negatively; prohibition of weighting and conversion
+- [How to Enforce "No Scores, No Rankings" in Implementation (Cor.Inc. Blog, Oct 25, 2026)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - Five conditions established in 0.8
+- [I Founded a Company to Make "Ah, I Was Understood" an Everyday Experience (Cor.Inc. Blog)](https://cor-jp.com/blog/founder-story/) - CEO story and the thinking behind Grift's inception
+- [Ethical Use of the MBTI (The Myers & Briggs Foundation)](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - MBTI usage rules (voluntary nature, not for hiring)
+- [MBTI Basics (The Myers & Briggs Foundation)](https://www.myersbriggs.org/my-mbti-personality-type/mbti-basics/) - Four preferences and 16 types
 - [pallets/click](https://github.com/pallets/click) - Measured OSS (HEAD `36baa15`)
 - [pallets/flask](https://github.com/pallets/flask) - Measured OSS (HEAD `d318b68`)
 - [encode/httpx](https://github.com/encode/httpx) - Measured OSS (HEAD `b5addb6`)
