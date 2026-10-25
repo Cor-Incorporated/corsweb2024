@@ -7,6 +7,6 @@ tags: ["お知らせ", "福岡"]
 externalUrl: "https://madeinlocal.jp/category/companies/fukuoka062"
 source: "Made In Local"
 isDraft: false
-featured: false
+featured: true
 lang: "ja"
 ---
