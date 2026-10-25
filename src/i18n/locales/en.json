@@ -940,8 +940,83 @@
       }
     ],
     "founderTitle": "Founder's Story",
-    "founderLead": "Our founder Kousuke Terada's formative experience as a musician left him with a strong awareness of \"what words alone cannot convey.\" Working later in sales and development, he realized that solving complex business problems first requires putting them into words and organizing them — and that our role is to carry what has been organized all the way through implementation and operation. This thinking leads naturally to our current work: Grift, which produces verifiable evidence; local LLMs that fit real work; AI contract development; and creating opportunities for learning and community in the region.",
-    "founderPlaceholder": "The details of the founder's story are being prepared.",
+    "founderLead": "I'm a former trumpet player. After working in sales at a musical instrument maker and at Recruit, I founded Cor.Inc. as an engineer. I'm trying to use technology to carry what words alone can't.",
+    "founderTimelineTitle": "My path so far",
+    "founderTimeline": [
+      {
+        "when": "Age 5",
+        "what": "Started the piano, inspired by my mother, a junior high school music teacher"
+      },
+      {
+        "when": "6th grade",
+        "what": "Discovered the trumpet at a local junior orchestra concert. My grandparents bought me one"
+      },
+      {
+        "when": "Junior and senior high",
+        "what": "Played the trumpet in the school band and the junior orchestra"
+      },
+      {
+        "when": "Winter, 11th grade",
+        "what": "Played a solo at a Christmas concert in a sold-out 2,000-seat hall"
+      },
+      {
+        "when": "University",
+        "what": "Studied the trumpet at a university of the arts"
+      },
+      {
+        "when": "After graduating",
+        "what": "Worked for about four years at a musical instrument maker, promoting instruments and making proposals to schools, while still performing"
+      },
+      {
+        "when": "Age 28",
+        "what": "Diagnosed with ASD (autism spectrum disorder)"
+      },
+      {
+        "when": "2020",
+        "what": "Lost my performing work in the pandemic and joined Recruit, selling job advertising to businesses"
+      },
+      {
+        "when": "At Recruit",
+        "what": "Discovered Python and the GPT-3 paper. Proposed an AI concierge to the company's new-business program and was turned down in the first round"
+      },
+      {
+        "when": "Before going independent",
+        "what": "Relearned programming at G's ACADEMY FUKUOKA"
+      },
+      {
+        "when": "December 2023",
+        "what": "Gave my first talk at an LT event at Engineer Cafe. Founded Cor.Inc. the same month"
+      },
+      {
+        "when": "2024–2025",
+        "what": "Gave a lightning talk every week for a year. In March 2025, spoke at an AI-driven development meetup in Tokyo"
+      },
+      {
+        "when": "2025",
+        "what": "Helped plan LT and AI events at Engineer Cafe"
+      },
+      {
+        "when": "2026",
+        "what": "Released Grift CLI as open source (MIT License). Cor.Inc. was selected for Fukuoka's 100 Representative Companies 2026-2027 and completed the ISO/IEC 27001 stage 2 audit in October"
+      },
+      {
+        "when": "From April 2027",
+        "what": "Scheduled to teach at a vocational school"
+      }
+    ],
+    "founderLinksTitle": "Where I write and post",
+    "founderStoryHeading": "Turns out, I was the alien",
+    "founderStoryExcerpt": [
+      "In kindergarten, I couldn't join in the group dances. When they sent me outside, I rode a tricycle around and around the yard.",
+      "At my elementary school entrance ceremony, I chased a butterfly that flew past me, right out of the gym.",
+      "Once, wanting to know whether a magnifying glass could really start a fire, I held one over a pile of fallen leaves for the whole lunch break. It started a small fire.",
+      "In my head, all of it made sense. I wanted to do something, and I went at it the fastest way I knew. But to everyone else, I must have been a kid who might do anything.",
+      "By fourth grade, no one invited me to play anymore.",
+      "So I devoured books on behavioral psychology at the library. Where people look, how they move, when they pause. Ways to read, from the outside, the feelings people don't put into words. By sixth grade, I was even trusted to be class president.",
+      "But I was always exhausted. Reading faces, choosing words that wouldn't spoil the mood. Talking that way, conversations ended without what I really thought ever getting across.",
+      "Wasn't there a more natural way for feelings to get through? I had been asking that since I was a child."
+    ],
+    "founderStoryCta": "Read the rest of the story",
     "teamTitle": "Meet our team",
     "teamBody": "From articulating challenges to designing and implementing secure AI infrastructure, to building operational frameworks. Members with distinct expertise engage honestly with the concerns of customers who are not familiar with engineering, supporting them end-to-end.",
     "founderYoutubeTitle": "From the Founder",
