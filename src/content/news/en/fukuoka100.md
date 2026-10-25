@@ -7,7 +7,7 @@ tags: ["News", "Fukuoka"]
 externalUrl: "https://madeinlocal.jp/category/companies/fukuoka062"
 source: "Made In Local"
 isDraft: false
-featured: false
+featured: true
 lang: "en"
 translationSourceHash: "d1a1c1cfbfbb3f9083367c8fa84b6d0ebbb3674c72b6b380c7a21ca35a99ba91"
 translatedAt: "2026-10-25T02:33:39.955Z"
