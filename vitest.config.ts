@@ -10,6 +10,8 @@ export default defineConfig({
       'scripts/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
     ],
     exclude: ['node_modules', 'dist', '.astro'],
+    // テストのたびに event loop を 1 回まわし、同期のテストが続いても vitest の RPC が時間切れにならないようにする
+    setupFiles: ['./vitest.setup.mjs'],
     globals: true,
     coverage: {
       provider: 'v8',
