@@ -659,6 +659,8 @@
   "nav": {
     "home": "홈",
     "about": "Cor.주식회사에 대하여",
+    "aboutMenu": "회사 소개",
+    "company": "회사 개요",
     "products": "제품&인사이트",
     "blog": "블로그",
     "contact": "문의",

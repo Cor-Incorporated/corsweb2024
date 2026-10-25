@@ -659,6 +659,8 @@
   "nav": {
     "home": "Home",
     "about": "About Cor.Inc.",
+    "aboutMenu": "About",
+    "company": "Company Profile",
     "products": "Products&Insights",
     "blog": "Blog",
     "contact": "Contact",
