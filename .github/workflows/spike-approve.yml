@@ -1,0 +1,69 @@
+name: Spike approve (throwaway)
+
+# 使い捨ての検証用。GITHUB_TOKEN で PR に push したあとの承認待ち（action_required）の
+# pull_request の実行を、同じ GITHUB_TOKEN（actions: write）で承認できるかを確かめる。
+# base が chore/spike-approve-base の PR だけで動く。検証後に PR を閉じてブランチを消す。
+on:
+  pull_request:
+    branches: ['chore/spike-approve-base']
+
+permissions: {}
+
+jobs:
+  push:
+    # GITHUB_TOKEN の push で作られた実行（actor = github-actions[bot]）では何もしない（ループ防止）
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      commit: ${{ steps.push.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - id: push
+        env:
+          TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q --allow-empty -m "chore: spike の空コミット（GITHUB_TOKEN）"
+          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${HEAD_REF}"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  approve:
+    needs: push
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ needs.push.outputs.commit }}
+        run: |
+          set -uo pipefail
+          for i in $(seq 1 24); do
+            ids="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
+              --jq '[.workflow_runs[] | select(.event == "pull_request" and .status == "action_required") | .id] | join(" ")')"
+            echo "try ${i}: action_required = [${ids}]"
+            [ -n "$ids" ] && break
+            sleep 5
+          done
+          sleep 15
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
+            --jq '.workflow_runs[] | "\(.id) \(.name) \(.event) \(.status) \(.conclusion)"'
+          for id in $(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
+              --jq '.workflow_runs[] | select(.event == "pull_request" and .status == "action_required") | .id'); do
+            echo "--- approve ${id}"
+            gh api -X POST -i "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/approve" 2>&1 | head -20
+            echo "exit=$?"
+          done
+          sleep 20
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${COMMIT}&per_page=100" \
+            --jq '.workflow_runs[] | "\(.id) \(.name) \(.event) \(.status) \(.conclusion) triggering=\(.triggering_actor.login)"'
