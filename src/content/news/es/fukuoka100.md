@@ -1,6 +1,6 @@
 ---
-title: "Seleccionados para las \"100 Empresas Representativas de Fukuoka 2026-2027\" y presentados en una página especial"
-description: "Cor.Inc. ha sido seleccionada entre las \"100 Empresas Representativas de Fukuoka 2026-2027\" de Made In Local y ha sido presentada en una página especial."
+title: "Seleccionada en las «100 empresas representativas de Fukuoka 2026-2027» y presentada en la página especial"
+description: "Cor.Inc. ha sido seleccionada en las «100 empresas representativas de Fukuoka 2026-2027» de Made In Local y se presenta en la página especial (Este es un cambio para la verificación de la CI de traducción. Este PR no se fusionará)."
 publishedAt: 2026-10-20
 category: "award"
 tags: ["Noticias", "Fukuoka"]
@@ -9,7 +9,7 @@ source: "Made In Local"
 isDraft: false
 featured: false
 lang: "es"
-translationSourceHash: "52bf5f657ba32420243aa2915cfdc83051527fb18e5922a73468a9f56a3a3d18"
-translatedAt: "2026-10-20T01:58:25.513Z"
+translationSourceHash: "d1a1c1cfbfbb3f9083367c8fa84b6d0ebbb3674c72b6b380c7a21ca35a99ba91"
+translatedAt: "2026-10-25T02:33:57.920Z"
 translationModel: "gemini-3.8-flash"
 ---
