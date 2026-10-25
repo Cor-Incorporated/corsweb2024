@@ -4,12 +4,13 @@
  * 流れ: ja frontmatter の翻訳対象フィールドを JSON で翻訳 → 本文を保護して翻訳 → 検証 →
  * frontmatter を組み立て（翻訳対象以外は ja からコピー、lang と来歴を設定）→ Zod ミラーで検証。
  * どこかで検証に落ちたら例外（呼び出し側はファイルを書かない）。
- * 社名は本文・frontmatter とも保護トークン ⟦N…⟧ で送り、翻訳先言語の正式表記で戻す（glossary.mjs）。
+ * 社名と代表の氏名は本文・frontmatter とも保護トークン（⟦N…⟧ / ⟦F…⟧）で送り、翻訳先言語の正式表記で戻す
+ * （glossary.mjs の NAME_TOKENS）。
  * ja で title と本文の最初の H1 が同じ文言なら、訳文の H1 も訳した title にそろえる（alignTitleHeading）。
  */
 import { COLLECTIONS, META_KEYS } from './config.mjs';
 import { bodyCore, composeDocument } from './frontmatter.mjs';
-import { SOURCE_NAME_PATTERN } from './glossary.mjs';
+import { NAME_TOKENS } from './glossary.mjs';
 import { computeSourceHash } from './hash.mjs';
 import { expandTokens, protect, ProtectionError, segment } from './markdown.mjs';
 import { bodySystemInstruction, fieldsResponseSchema, fieldsSystemInstruction } from './prompt.mjs';
@@ -42,7 +43,7 @@ export function fieldsPayload(collection, data) {
 }
 
 /**
- * frontmatter の翻訳ペイロードの社名を保護トークン ⟦N…⟧ に置き換える（本文の protect() と同じ扱い）。
+ * frontmatter の翻訳ペイロードの名前（社名・代表の氏名）を保護トークンに置き換える（本文の protect() と同じ表・同じ順）。
  * @returns {{ payload: Record<string, string | string[]>, store: Map<string, { kind: string, original: string }> }}
  */
 export function protectPayloadNames(payload) {
@@ -53,11 +54,15 @@ export function protectPayloadNames(payload) {
         'frontmatter に予約文字 ⟦ ⟧ が含まれているため安全に保護できません'
       );
     }
-    return text.replace(SOURCE_NAME_PATTERN, (original) => {
-      const id = `N${store.size}`;
-      store.set(id, { kind: 'org-name', original });
-      return `⟦${id}⟧`;
-    });
+    return NAME_TOKENS.reduce(
+      (current, { kind, prefix, pattern }) =>
+        current.replace(pattern, (original) => {
+          const id = `${prefix}${store.size}`;
+          store.set(id, { kind, original });
+          return `⟦${id}⟧`;
+        }),
+      text
+    );
   };
   const protectedPayload = Object.fromEntries(
     Object.entries(payload).map(([key, value]) => [
@@ -68,7 +73,7 @@ export function protectPayloadNames(payload) {
   return { payload: protectedPayload, store };
 }
 
-/** 翻訳済みペイロードの社名トークンを、翻訳先言語の正式表記に戻す。 */
+/** 翻訳済みペイロードの名前のトークンを、翻訳先言語の正式表記に戻す。 */
 export function restorePayloadNames(value, store, lang) {
   const restoreText = (text) => expandTokens(text, store, lang);
   return Object.fromEntries(
