@@ -91,7 +91,7 @@ export function previewUrlOf(checkRun, prNumber) {
 /**
  * i18n-check のうち、PR のイベント（pull_request）で動いた実行の最新のもの。check run の check_suite と workflow run の
  * check_suite_id で、どのイベントの実行かを決める。手で動かす mode=check は言語や記事を絞れるので、PR 全体・全言語の検査とは
- * 限らない（Codex のレビュー）。翻訳 CI が起こす再検査（dispatch-check）も使わない（承認したあとの pull_request の実行が同じ検査をする）
+ * 限らない（Codex のレビュー）。翻訳コミットの i18n-check は、translate-content.yml の approve-checks が承認した pull_request の実行が行う
  */
 function translationRunOf(checkRuns, workflowRuns) {
   const suites = new Set(workflowRuns.filter((run) => run.event === 'pull_request').map((run) => run.check_suite_id));
