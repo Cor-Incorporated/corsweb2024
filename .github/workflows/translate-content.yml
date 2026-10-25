@@ -390,6 +390,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       actions: write # 翻訳コミットの承認待ちの実行を承認するだけ（checkout もせず、リポジトリのコードも動かさない）
+      pull-requests: read # PR の今の head のコミットを読む（人が新しいコミットを積んだかを見る）
     env:
       COMMIT: ${{ needs.push.outputs.commit }}
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
@@ -423,7 +424,10 @@ jobs:
               | "\(.id) \(.path) \(.conclusion // "-")"'
           }
           # 待つのは必須チェックの 3 本とこのワークフロー。base が develop / main 以外の PR では ci.yml と
-          # visual-text.yml が動かないので、h5-admission.yml とこのワークフローだけを待つ
+          # visual-text.yml が動かないので、h5-admission.yml とこのワークフローだけを待つ。
+          # base が main でも、main だけの必須チェック（build_and_deploy・guard）は待たない。main 宛ての PR は head が
+          # develop でなければ guard が落とし、head が develop なら translate が動かないので、翻訳コミットは積まれない
+          # （積まれても、承認待ちの実行はワークフローを問わずすべて承認する）
           wait_for="$REQUIRED_WORKFLOWS"
           if [ "$BASE_REF" != develop ] && [ "$BASE_REF" != main ]; then wait_for='.github/workflows/h5-admission.yml'; fi
           wait_for="${wait_for} ${self_path}"
@@ -446,8 +450,14 @@ jobs:
           sleep 5 # 同じ push で作られるほかのワークフロー（deploy.yml など）の実行も待つ
           listed="$(runs)"
           # 人が PR に新しいコミットを積んでいたら承認しない。古いコミットの実行を承認すると、同じ concurrency
-          # グループの新しいコミットの実行（verify など）を取り消してしまう
-          latest="$(gh api "${api}?branch=${HEAD_REF}&event=pull_request&per_page=1" --jq '.workflow_runs[0].head_sha')"
+          # グループの新しいコミットの実行（verify など）を取り消してしまう。PR の今の head は PR の番号で読む
+          # （ブランチ名で実行を探すと、同じ名前のブランチを持つ fork の PR の実行を拾い、名前に + # & % があると
+          # 問い合わせが壊れる。2026-10-25、#409 のレビュー）。取れなければ赤にする
+          latest="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha // empty')"
+          if [ -z "$latest" ]; then
+            echo "::error title=i18n::PR #${PR_NUMBER} の head のコミットを取得できませんでした。docs/i18n-translation.md 6 章の手順で承認してください"
+            exit 1
+          fi
           if [ "$latest" != "$COMMIT" ]; then
             echo "::notice title=i18n::PR #${PR_NUMBER} に新しいコミット（${latest}）が積まれたので、翻訳コミット ${COMMIT} の実行は承認しません"
             exit 0

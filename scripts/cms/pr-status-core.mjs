@@ -73,7 +73,8 @@ export const latestByName = (checkRuns) => latestBy(checkRuns, (run) => run.name
 /**
  * 見ているワークフローの run を、ワークフロー × イベントごとに新しいものだけ残す。
  * PR の本文を編集すると H5 Admission が同じコミットで走り直し、古い action_required の run が残るため。
- * イベントは分ける（翻訳 CI が workflow_dispatch で起こす i18n-check の run が、pull_request の承認待ちを隠さないように）
+ * イベントは分ける（手で動かす mode=check などの workflow_dispatch の run が、pull_request の承認待ちを隠さないように。
+ * 翻訳 CI は 2026-10-25 から workflow_dispatch を起こさず、承認待ちの pull_request の run を approve-checks が承認する）
  */
 export const latestWatchedRuns = (workflowRuns) => [
   ...latestBy(

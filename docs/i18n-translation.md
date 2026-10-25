@@ -136,7 +136,7 @@ node scripts/i18n/translate-content.mjs --check --since origin/develop          
 |---|---|---|---|
 | `translate` | contents: read | `npm ci --ignore-scripts`（npm キャッシュなし）→ `translate-content.mjs` → 変更をパッチにして artifact（保存 1 日）へ | `GEMINI_API_KEY` |
 | `push` | contents: write | パッチの検査 → `git apply` → hooks を無効にして commit / push。npm もリポジトリのコードも実行しない | `TRANSLATION_BOT_TOKEN`（登録したときだけ） |
-| `approve-checks` | actions: write | GITHUB_TOKEN で push したとき、翻訳コミットで承認待ちになった pull_request の実行を承認する。checkout もせず、リポジトリのコードも動かさない | なし |
+| `approve-checks` | actions: write、pull-requests: read | GITHUB_TOKEN で push したとき、翻訳コミットで承認待ちになった pull_request の実行を承認する。checkout もせず、リポジトリのコードも動かさない（pull-requests: read は PR の今の head のコミットを読むため） | なし |
 | `translate-result` | なし | 翻訳・同期・削除の一部が失敗したとき赤にする（成功分は push 済み） | なし |
 | `i18n-check` | contents: read | `scripts/i18n` の単体テストと `--check` | なし |
 
@@ -158,9 +158,9 @@ push ジョブがパッチを適用する条件（1 つでも外れたら何も�
    - 一部の記事が失敗しても成功分はパッチに含め、終了コードを translate-result に渡す
 2. **push**（パッチがあるとき）: 上の条件で検査して適用し、`github-actions[bot]` 名義でコミットして PR の head ブランチへ push（PR に新しいコミットが積まれていた場合は push せず、新しいコミットの実行に任せる）
 3. **approve-checks**（GITHUB_TOKEN で push したとき）: 翻訳コミットで承認待ち（`action_required`）になった pull_request の実行を、同じ GITHUB_TOKEN で承認する。人が承認しなくても、必須チェックがそろって merge できる（2026-10-25 から）
-   - 先に、develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）とこのワークフローの実行が作られるのを 3 分まで待つ。base が develop / main 以外の PR では、h5-admission.yml とこのワークフローだけを待つ
+   - 先に、develop の必須チェックを出す 3 本（`ci.yml` の verify、`visual-text.yml` の Chromium visual text audit、`h5-admission.yml` の h5-admission）とこのワークフローの実行が作られるのを 3 分まで待つ。base が develop / main 以外の PR では、h5-admission.yml とこのワークフローだけを待つ。base が main でも、main だけの必須チェック（build_and_deploy・guard）は待たない。main 宛ての PR は、head が develop でなければ guard が落とし、head が develop なら translate が動かないので、翻訳コミットは積まれない
    - 承認するのは、翻訳コミット（head_sha が一致するもの）・pull_request のイベント・このリポジトリ・この PR の head ブランチの実行だけ。API の問い合わせの条件に加えて、返ってきた一覧でも同じ条件を照合する。別のコミット・別のイベント・fork・別のブランチの実行は承認しない
-   - 人が PR に新しいコミットを積んでいたら承認しない（古いコミットの実行を承認すると、同じ concurrency グループの新しいコミットの実行を取り消すため）
+   - 人が PR に新しいコミットを積んでいたら承認しない（古いコミットの実行を承認すると、同じ concurrency グループの新しいコミットの実行を取り消すため）。PR の今の head は PR の番号（`pulls/<番号>`）で読み、取れなければ赤になる。ブランチ名では探さない（同じ名前のブランチを持つ fork の PR の実行を拾い、名前に `+` `#` `&` `%` があると問い合わせが壊れるため。2026-10-25、#409 のレビュー）
    - このワークフロー（translate-content.yml。i18n-check を含む）の実行は最後に承認する。承認した実行が同じ concurrency グループにある翻訳前のコミットの実行を取り消すので、その実行は「取り消し」で終わることがある。translate-result は先に終わらせる
    - 承認の API の失敗、一覧の取得の失敗、承認したあとも承認待ちのままの必須チェック、3 分待っても作られない実行は、どれも赤になる（下の「承認の手順」で人が承認する）
 4. **translate-result**（一部が失敗したとき）: 赤にして知らせる
@@ -172,7 +172,7 @@ push に使うトークン（既定は GITHUB_TOKEN）:
 
 | 方式 | 条件 | 翻訳コミット後の CI | 追加操作 | リスク |
 |---|---|---|---|---|
-| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックの pull_request の実行は「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。approve-checks がそれを承認する（2026-10-25 から） | なし。approve-checks が赤のときだけ、書き込み権限者が承認する（下の「承認の手順」） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write、approve-checks では actions: write）に限られる |
+| **GITHUB_TOKEN（既定）** | `TRANSLATION_BOT_TOKEN` が無い | PR の各チェックの pull_request の実行は「承認待ち」（`action_required`）になる（**実測**: PR #344 の翻訳コミット後の実行 run 36329708078）。approve-checks がそれを承認する（2026-10-25 から） | なし。approve-checks が赤のときだけ、書き込み権限者が承認する（下の「承認の手順」） | 小さい: そのジョブの間だけ有効で、このリポジトリの宣言した権限（contents: write、approve-checks では actions: write と pull-requests: read）に限られる |
 | TRANSLATION_BOT_TOKEN（任意） | secret が登録されている | 通常の `synchronize` として全 CI（required check 含む）が自動で再実行 | なし | 大きい: fine-grained PAT は有効期限まで、発行者の権限で使える（漏れると他のブランチへの push にも使える）。push ジョブ以外には渡さないが、書き込み権限者は PR でワークフローを変えれば読み出せる。使う場合は対象リポジトリをこの 1 つ・権限を Contents だけ・有効期限を短くする |
 
 承認の手順（approve-checks が赤のとき。書き込み権限者が承認する）:
@@ -303,6 +303,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | `承認できなかった実行があります（run: …）。PR #N の Checks で…` | approve-checks の承認の API が失敗した（括弧の中は run の ID。原因は同じステップのログに出る gh のエラー）、または承認したあとも必須チェックの実行が承認待ちのまま（括弧の中はワークフローのパス） | 6 章の「承認の手順」で人が承認する |
 | `翻訳コミット … の pull_request の実行が、3 分待っても作られませんでした: …` | 必須チェックのワークフローかこのワークフローの実行が作られなかった（ワークフローが無効、またはそのワークフローの `on:` の条件が変わった） | 6 章の「承認の手順」の `gh run list`（承認待ちの一覧）で確かめ、承認待ちがあれば同じ手順で承認する。`--status action_required` を外すと、作られた実行がすべて出る。ワークフローの `on:` を変えたなら、`REQUIRED_WORKFLOWS` と 6 章の一覧を見直す |
 | `PR #N に新しいコミット（…）が積まれたので、翻訳コミット … の実行は承認しません` | approve-checks が承認する前に、人が PR に新しいコミットを push した | 何もしない。新しいコミットの実行が、翻訳と検査をやり直す |
+| `PR #N の head のコミットを取得できませんでした` | approve-checks が PR の情報（`pulls/<番号>`）を読めなかった（GitHub の障害や、ジョブの権限を変えたときなど。原因は同じステップのログに出る gh のエラー） | 6 章の「承認の手順」で人が承認する |
 | 翻訳前のコミットの「Translate content (i18n)」が「取り消し」（approve-checks のジョブも「取り消し」になることがある） | approve-checks が最後に承認した、翻訳コミットの同じワークフローの実行が、concurrency で取り消した | 何もしない。approve-checks のログに「承認待ちの実行を承認しました」が出ていれば、承認は済んでいる。i18n-check は翻訳コミットの実行で動く |
 | `翻訳が必要な件数 N 件が上限 500 件（I18N_MAX_ITEMS）を超えたため、何も変更せずに中止しました` | 1 つの PR・1 回の実行で翻訳する記事が多すぎる（全記事 × 4 言語を超えることはないので、設定や記事の数の異常を疑う） | 記事を分けて PR を出す。意図した一括翻訳なら、上限を見直す PR（`required-check-approval.test.mjs` が全記事の件数と照合する）を出す |
 | `--only に該当する記事がありません: blog/xxx` | slug の打ち間違い、または `--collections` / `--langs` と矛盾 | `ls src/content/<collection>/ja` でファイル名（拡張子なし）を確認 |

@@ -166,8 +166,9 @@ describe('H1: 書き込みトークンと信頼しないコードを同じジョ
     lines.forEach((l) => expect(l).toMatch(/@[0-9a-f]{40} # v\d+\.\d+\.\d+$/));
   });
 
-  it('approve-checks は actions: write だけ、translate-result は権限なし', () => {
-    expect(workflow.jobs['approve-checks']?.permissions).toEqual({ actions: 'write' });
+  it('approve-checks は actions: write と pull-requests: read だけ、translate-result は権限なし', () => {
+    // pull-requests: read は PR の今の head のコミットを読むため（2026-10-25、#409 のレビュー）
+    expect(workflow.jobs['approve-checks']?.permissions).toEqual({ actions: 'write', 'pull-requests': 'read' });
     expect(workflow.jobs['translate-result']?.permissions).toEqual({});
   });
 });

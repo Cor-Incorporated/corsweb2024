@@ -126,9 +126,10 @@ const run = (id, workflow, conclusion, overrides = {}) => ({
   ...overrides,
 });
 
-// GET の問い合わせの URL を記録し、--jq の式を jq でフィクスチャに当てる。フィクスチャは、承認の前は呼ばれた回数目の
-// 一覧（最後のものを使い続ける）、承認の後は after.json、PR の head ブランチの最新の実行の問い合わせ（branch=）は
-// latest.json。FAIL_GET_AT 回目の GET は失敗する。POST の approve は ID を記録し、FAIL_IDS の ID なら失敗する。
+// GET の問い合わせの URL を記録し、--jq の式を jq でフィクスチャに当てる。フィクスチャは、実行の一覧（head_sha= の
+// 問い合わせ）なら承認の前は呼ばれた回数目の一覧（最後のものを使い続ける）、承認の後は after.json。PR の問い合わせ
+// （pulls/）は pull.json、ブランチ名での実行の問い合わせ（branch=）は latest.json。実行の一覧の FAIL_LIST_AT 回目
+// （ほかの問い合わせは数えない）は失敗する。POST の approve は ID を記録し、FAIL_IDS の ID なら失敗する。
 // sleep は待たず、date +%s は呼ぶたびに 60 秒進む
 const FAKE_GH = `#!/usr/bin/env bash
 set -euo pipefail
@@ -140,19 +141,21 @@ if [ "$1 $2 $3" = "api -X POST" ]; then
 fi
 [ "$1 $3" = "api --jq" ] || { echo "unexpected gh call: $*" >&2; exit 2; }
 echo "$2" >> "$WORK/gets"
-n="$(wc -l < "$WORK/gets" | tr -d ' ')"
-[ "$n" != "\${FAIL_GET_AT:-}" ] || { echo "HTTP 502: Bad Gateway" >&2; exit 1; }
 case "$2" in
+  */pulls/*) fixture="$WORK/pull.json" ;;
   *branch=*) fixture="$WORK/latest.json" ;;
-  *)
+  *head_sha=*)
+    echo "$2" >> "$WORK/lists"
+    k="$(wc -l < "$WORK/lists" | tr -d ' ')"
+    [ "$k" != "\${FAIL_LIST_AT:-}" ] || { echo "HTTP 502: Bad Gateway" >&2; exit 1; }
     if [ -f "$WORK/approved" ]; then
       fixture="$WORK/after.json"
     else
-      k="$(grep -vc 'branch=' "$WORK/gets")"
       [ "$k" -le "$FIXTURES" ] || k="$FIXTURES"
       fixture="$WORK/runs-$k.json"
     fi
     ;;
+  *) echo "unexpected gh api URL: $2" >&2; exit 2 ;;
 esac
 jq -r "$4" "$fixture"
 `;
@@ -187,9 +190,13 @@ function runBash(script, env) {
 /**
  * fixtures（承認の前の GET の回数目ごとの実行の一覧）で approve-checks を動かし、終了コード・出力・承認した ID・
  * GET の URL を返す。after（承認の後の一覧）を省くと、最後の一覧の承認待ちのうち FAIL_IDS 以外を、承認済み
- * （conclusion なし）にしたものにする
+ * （conclusion なし）にしたものにする。prHeadSha は PR の今の head（null なら取れない）、branchRuns はブランチ名で
+ * 問い合わせたときの実行（省くと、このリポジトリの prHeadSha の実行 1 本）
  */
-async function runApprove(fixtures, { baseRef = 'develop', failIds = [], failGetAt = '', latestSha = COMMIT, after } = {}) {
+async function runApprove(
+  fixtures,
+  { baseRef = 'develop', failIds = [], failListAt = '', prHeadSha = COMMIT, branchRuns, after } = {}
+) {
   work = await mkdtemp(path.join(os.tmpdir(), 'i18n-approve-'));
   const bin = path.join(work, 'bin');
   await mkdir(bin);
@@ -204,13 +211,14 @@ async function runApprove(fixtures, { baseRef = 'develop', failIds = [], failGet
     r.conclusion === 'action_required' && !failIds.includes(r.id) ? { ...r, conclusion: null } : r
   );
   await write('after.json', after ?? approvedAfter);
-  await write('latest.json', [{ head_sha: latestSha }]);
+  await write('latest.json', branchRuns ?? [{ head_sha: prHeadSha, head_repository: { full_name: REPOSITORY } }]);
+  await writeFile(path.join(work, 'pull.json'), JSON.stringify({ number: 999, head: { sha: prHeadSha } }));
   const result = await runBash(approveScript, {
     PATH: `${bin}:${process.env.PATH}`,
     WORK: work,
     FIXTURES: String(fixtures.length),
     FAIL_IDS: failIds.join(' '),
-    FAIL_GET_AT: String(failGetAt),
+    FAIL_LIST_AT: String(failListAt),
     GITHUB_REPOSITORY: REPOSITORY,
     GH_TOKEN: 'test-token',
     ...approveJob.env,
@@ -246,9 +254,9 @@ describe('approve-checks のスクリプト（偽の gh で実行）', () => {
     expect(out).toContain(`翻訳コミット ${COMMIT} の承認待ちの実行を承認しました（run: 2 3 4 5、最後に 1）`);
   });
 
-  it('実行の一覧は、翻訳コミットの head_sha と pull_request で問い合わせる', async () => {
+  it('実行の一覧は翻訳コミットの head_sha と pull_request で、PR の head は PR の番号で問い合わせる', async () => {
     const { gets } = await runApprove([ALL_PENDING]);
-    const lists = gets.filter((url) => !url.includes('branch='));
+    const lists = gets.filter((url) => url.includes('/actions/runs?'));
     expect(lists.length).toBeGreaterThan(0);
     for (const url of lists) {
       expect({ url, headSha: url.includes(`head_sha=${COMMIT}`), event: url.includes('event=pull_request') }).toEqual({
@@ -257,9 +265,8 @@ describe('approve-checks のスクリプト（偽の gh で実行）', () => {
         event: true,
       });
     }
-    expect(gets.filter((url) => url.includes('branch='))).toEqual([
-      expect.stringContaining(`branch=${HEAD_REF}&event=pull_request`),
-    ]);
+    // ブランチ名では問い合わせない（同じ名前のブランチを持つ fork の PR の実行を拾い、名前に + # & % があると壊れる）
+    expect(gets.filter((url) => !url.includes('/actions/runs?'))).toEqual([`repos/${REPOSITORY}/pulls/999`]);
   });
 
   // 陰性テスト: 問い合わせの条件が外れて、ほかの実行が一覧に混ざっても、翻訳コミットの実行だけを承認する
@@ -317,10 +324,19 @@ describe('approve-checks のスクリプト（偽の gh で実行）', () => {
     expect(out).toContain('承認できなかった実行があります（run: 3 .github/workflows/visual-text.yml）。PR #999 の Checks');
   });
 
-  it('承認する前の一覧の取得に失敗したら、何も承認せずに赤になる', async () => {
-    // 1 回目は待つ間の一覧、2 回目は承認に使う一覧
-    const { status, approved } = await runApprove([ALL_PENDING], { failGetAt: 2 });
+  it('承認に使う一覧の取得に失敗したら、その場で赤になり、何も承認しない', async () => {
+    // 実行の一覧の 1 回目は待つ間、2 回目は承認に使う一覧（PR の head の問い合わせは数えない）。その場で止まるので、
+    // 承認したあとの再確認（「承認できなかった実行があります」）には進まない
+    const { status, out, approved } = await runApprove([ALL_PENDING], { failListAt: 2 });
     expect({ failed: status !== 0, approved }).toEqual({ failed: true, approved: [] });
+    expect(out).toContain('HTTP 502');
+    expect(out).not.toContain('承認できなかった実行があります');
+  });
+
+  it('このワークフローの実行の承認に失敗したら赤になる', async () => {
+    const { status, out, approved } = await runApprove([ALL_PENDING], { failIds: [1] });
+    expect({ status, approved }).toEqual({ status: 1, approved: [2, 3, 4, 5, 1] });
+    expect(out).toContain('i18n-check の実行（run 1）を承認できませんでした');
   });
 
   it('承認の API が成功しても実行が承認待ちのままなら赤になり、このワークフローの実行は承認しない', async () => {
@@ -332,9 +348,23 @@ describe('approve-checks のスクリプト（偽の gh で実行）', () => {
   });
 
   it('PR に人が新しいコミットを積んでいたら、何も承認しない', async () => {
-    const { status, out, approved } = await runApprove([ALL_PENDING], { latestSha: OTHER_COMMIT });
+    const { status, out, approved } = await runApprove([ALL_PENDING], { prHeadSha: OTHER_COMMIT });
     expect({ status, approved }).toEqual({ status: 0, approved: [] });
     expect(out).toContain(`PR #999 に新しいコミット（${OTHER_COMMIT}）が積まれたので`);
+  });
+
+  // #409 のレビューの MEDIUM: ブランチ名で実行を探すと、同じ名前のブランチを持つ fork の PR の実行が最新に見える
+  it('同じ名前のブランチを持つ fork の PR の実行があっても、PR の head が翻訳コミットなら承認する', async () => {
+    const branchRuns = [{ head_sha: OTHER_COMMIT, head_repository: { full_name: 'someone/fork' } }];
+    const { status, approved } = await runApprove([ALL_PENDING], { branchRuns });
+    expect({ status, approved }).toEqual({ status: 0, approved: [2, 3, 4, 5, 1] });
+  });
+
+  // #409 のレビューの MEDIUM: 問い合わせの結果が空のとき、何も承認せずに緑で終わっていた
+  it('PR の head のコミットが取れなければ、何も承認せずに赤になる', async () => {
+    const { status, out, approved } = await runApprove([ALL_PENDING], { prHeadSha: null, branchRuns: [] });
+    expect({ status, approved }).toEqual({ status: 1, approved: [] });
+    expect(out).toContain('PR #999 の head のコミットを取得できませんでした');
   });
 });
 
