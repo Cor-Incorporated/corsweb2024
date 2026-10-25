@@ -311,17 +311,17 @@ describe('checkFieldsOutput — 社名トークン ⟦N…⟧', () => {
     [
       'token dropped',
       { title: 'Turn to Cor. Inc.', source: '⟦N1⟧' },
-      /title: プレースホルダ（社名）が一致しません/,
+      /title: プレースホルダ（社名・代表の氏名）が一致しません/,
     ],
     [
       'token duplicated',
       { title: '⟦N0⟧ ⟦N0⟧', source: '⟦N1⟧' },
-      /title: プレースホルダ（社名）が一致しません/,
+      /title: プレースホルダ（社名・代表の氏名）が一致しません/,
     ],
     [
       'token moved to another field',
       { title: 'Turn to ⟦N1⟧', source: '⟦N0⟧' },
-      /プレースホルダ（社名）が一致しません/,
+      /プレースホルダ（社名・代表の氏名）が一致しません/,
     ],
     ['broken token', { title: 'Turn to ⟦N0', source: '⟦N1⟧' }, /予約文字 ⟦ ⟧ が混入/],
   ])('rejects: %s', (_name, value, pattern) => {

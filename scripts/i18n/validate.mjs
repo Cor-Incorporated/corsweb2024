@@ -9,7 +9,7 @@
  * - 未翻訳検出: 日本語（かな・漢字）が残りすぎていないか
  * - 社名: モデルが書いた表記ゆれを翻訳先言語の正式表記にそろえ、社名トークンを正式表記で戻す（glossary.mjs）
  */
-import { normalizeOrganizationNames } from './glossary.mjs';
+import { normalizeNames } from './glossary.mjs';
 import {
   analyze,
   isBlockTokenLine,
@@ -189,7 +189,7 @@ export function checkBodyOutput({ output, finishReason, protectedText, store, so
   if (ratio > MAX_JAPANESE_RATIO.body)
     errors.push(`日本語が残っています（割合 ${ratio.toFixed(2)}）`);
   if (errors.length > 0) return { ok: false, errors };
-  const restored = restore(normalizeOrganizationNames(text, lang), store, lang);
+  const restored = restore(normalizeNames(text, lang), store, lang);
   const structural = compareStructure(sourceCore, restored);
   if (structural.length > 0) return { ok: false, errors: structural };
   const order = checkDestinationOrder(protectedText, text, store);
@@ -246,9 +246,10 @@ function fieldValueErrors(key, source, translated) {
   const errors = [];
   if (!source.includes('\n') && translated.trim().includes('\n'))
     errors.push(`${key}: 改行が混入しています`);
-  // 社名トークン（⟦N…⟧）は入力と同じものが同じ回数だけ残っていること。それ以外の ⟦ ⟧ は混入扱い。
+  // 名前のトークン（社名 ⟦N…⟧・代表の氏名 ⟦F…⟧）は入力と同じものが同じ回数だけ残っていること。
+  // それ以外の ⟦ ⟧ は混入扱い。
   if (multisetDiff(tokenIds(source), tokenIds(translated)).length > 0)
-    errors.push(`${key}: プレースホルダ（社名）が一致しません`);
+    errors.push(`${key}: プレースホルダ（社名・代表の氏名）が一致しません`);
   if (/[⟦⟧]/.test(translated.replace(TOKEN_ANY_RE, '')))
     errors.push(`${key}: 予約文字 ⟦ ⟧ が混入しています`);
   const diff = multisetDiff(
@@ -309,7 +310,7 @@ export function checkFieldsOutput({ output, finishReason, input, lang }) {
   const ratio = japaneseRatio(joined, lang);
   if (ratio > MAX_JAPANESE_RATIO.fields)
     return { ok: false, errors: [`日本語が残っています（割合 ${ratio.toFixed(2)}）`] };
-  const finish = (text) => normalizeOrganizationNames(text.trim(), lang);
+  const finish = (text) => normalizeNames(text.trim(), lang);
   const value = Object.fromEntries(
     expectedKeys.map((k) => [
       k,
