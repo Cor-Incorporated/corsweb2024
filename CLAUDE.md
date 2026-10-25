@@ -236,7 +236,11 @@ Comprehensive blog functionality with AI-powered translation, featuring:
 - **Performance**: Optimized with same caching strategies as main site
 
 Writing style: the cor-voice skill (`.claude/skills/cor-voice/SKILL.md`) and
-`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above).
+`docs/blog-style-guide.md`. Wording rules: ADR-0007 (see above). The story the
+whole site tells (the one-line spine, the five scenes, who narrates each kind of
+page, what each page is for and the shared closing line) is
+`docs/story-spine.md`, approved by the CEO on 2026-10-25: read it before
+rewriting any page, and keep every page within it.
 
 ### Content Structure
 
