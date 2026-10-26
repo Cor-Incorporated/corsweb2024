@@ -9,7 +9,7 @@
  *   トークンの欠落・重複は既存のプレースホルダ検証（validate.mjs）で落とす。
  *
  * 社名と違うところ:
- *   - Grift の記事でだけ固定する（翻訳する部分のどこかに「Grift」が出る記事。「作業領域」「検査値」などは
+ *   - Grift の記事でだけ固定する（ja の tags に「Grift」がある記事。isGriftArticle。「作業領域」「検査値」などは
  *     一般の言葉でもあり、ほかの記事では別の意味で使いうるため）
  *   - モデルが自分で書いた訳語はそろえない（言い換えに際限が無い。代わりにトークンが全部残ることを検証で確かめる）
  *   - 記事に出る用語と、その正式表記は、来歴のハッシュ（hash.mjs の translatableSource）に入る。表の値を変えると、
@@ -110,15 +110,21 @@ export function griftTermForm(ja, lang) {
 
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// 語の後に続くと、別の語の一部になる文字（「検証の形式」「作業領域内」など）。どの語にも効かせる
+const COMPOUND_NEXT = '\\p{Script=Han}\\p{Script=Katakana}ー';
+// 動詞としても使う語だけ、活用した形（「磨き直した」「磨き直して」「磨き直します」）も外す。
+// 「作業領域までを見る」「検査値または」のように、ほかの語の後の「た」「て」「ま」は用語のまま
+const VERB_ENDINGS = Object.freeze({ 磨き直し: 'たてま' });
+
 /**
- * ja 側に現れる Grift の用語。長い語から順に試す。語の後に漢字・カタカナが続く場合（「検証の形式」など、
- * 別の語の一部）と、「磨き直した」「磨き直して」「磨き直します」のような動詞の活用は用語として扱わない。
+ * ja 側に現れる Grift の用語。長い語から順に試す。語の後に漢字・カタカナが続く場合（別の語の一部）と、
+ * 「磨き直し」の動詞の活用（VERB_ENDINGS）は用語として扱わない。
  */
 export const SOURCE_GRIFT_TERM_PATTERN = new RegExp(
   `(?:${[...TERM_BY_JA.keys()]
     .sort((a, b) => b.length - a.length)
-    .map(escapeRegExp)
-    .join('|')})(?![\\p{Script=Han}\\p{Script=Katakana}ーたてま])`,
+    .map((ja) => `${escapeRegExp(ja)}(?![${COMPOUND_NEXT}${VERB_ENDINGS[ja] ?? ''}])`)
+    .join('|')})`,
   'gu'
 );
 
@@ -129,24 +135,35 @@ export const GRIFT_TERM_TOKEN = Object.freeze({
   pattern: SOURCE_GRIFT_TERM_PATTERN,
 });
 
-/** 用語を固定する記事か（Grift の記事）。訳すフィールドと本文のどれかに「Grift」が出る記事。 */
-const GRIFT_DOCUMENT_RE = /Grift/;
+/** Grift の記事に付ける ja の tag。 */
+export const GRIFT_ARTICLE_TAG = 'Grift';
+
+/**
+ * 用語を固定する記事か（Grift の記事）。ja の frontmatter の tags に「Grift」（完全一致）がある記事。
+ * 本文に「Grift」が出るかでは決めない（記事の末尾の事業の一覧など、Grift の記事でなくても「Grift」は出る）。
+ * @param {{ tags?: unknown }} data ja の frontmatter
+ */
+export function isGriftArticle(data) {
+  return Array.isArray(data?.tags) && data.tags.some((tag) => String(tag) === GRIFT_ARTICLE_TAG);
+}
 
 /**
  * 記事に出る Grift の用語（表の順）。Grift の記事でなければ空。
+ * @param {{ tags?: unknown }} data ja の frontmatter（isGriftArticle で判定する）
  * @param {{ fields: Record<string, string>, tags?: string[], body: string }} source
  *   hash.mjs の translatableSource と同じ形（訳すフィールド・訳す tags・本文）
+ * data.tags は Grift の記事かどうかを決めるだけで、用語を探すのは source（tags を訳すコレクションでは source.tags も）。
  */
-export function griftTermsIn(source) {
+export function griftTermsIn(data, source) {
+  if (!isGriftArticle(data)) return [];
   const texts = [...Object.values(source.fields), ...(source.tags ?? []), source.body];
-  if (!texts.some((text) => GRIFT_DOCUMENT_RE.test(text))) return [];
   const found = new Set(texts.flatMap((text) => text.match(SOURCE_GRIFT_TERM_PATTERN) ?? []));
   return GRIFT_TERMS.filter((term) => found.has(term.ja));
 }
 
 /** 来歴のハッシュに入れる値: 記事に出る用語の id と、ja と各言語の正式表記。用語が無ければ null。 */
-export function griftTermFingerprint(source) {
-  const terms = griftTermsIn(source);
+export function griftTermFingerprint(data, source) {
+  const terms = griftTermsIn(data, source);
   if (terms.length === 0) return null;
   return terms.map((term) => [
     term.id,

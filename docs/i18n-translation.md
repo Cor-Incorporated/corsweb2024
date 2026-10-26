@@ -87,7 +87,7 @@ API に送る前に、訳してはいけない部分をプレースホルダ（`
 
 用語集は [`scripts/i18n/glossary.mjs`](../scripts/i18n/glossary.mjs)。正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）で、同じ値にしてあります。両者は `scripts/i18n/__tests__/organization-link.test.mjs` が照合します（片方だけ変えると両側の値を出して落ちる。正本がまだ無い間は理由を出して skip し、#335 がマージされた時点から強制される）。代表の氏名は `src/config/author.ts` の `KOUSUKE_TERADA.names` が正本で、`scripts/i18n/__tests__/founder-link.test.mjs` が照合します。`names` は片方だけ変えると両側の値を出して落ち、`alternateNames` に別表記を足したときは、用語集がその表記を扱えないと落ちます。
 
-Grift の用語: Grift の記事（訳す frontmatter か本文のどこかに「Grift」が出る記事）では、Grift の用語も `⟦G0⟧` にしてモデルに渡さず、翻訳後に**翻訳先言語の正式表記**に置き換えます。モデルには、どのトークンがどの語になるかだけを伝えます（冠詞・助詞を選ぶため）。2026-10-26 に「定着率」を「コードの新しさ」に改めたとき、翻訳 CI が en を「Code freshness」と訳し、grift-cli の英語の文書（Code recency）とずれたため足しました（同じ「テスト併修率」も、en で記事ごとに 3 通りに訳されていた）。
+Grift の用語: Grift の記事（ja の frontmatter の `tags` に「Grift」がある記事）では、Grift の用語も `⟦G0⟧` にしてモデルに渡さず、翻訳後に**翻訳先言語の正式表記**に置き換えます。モデルには、どのトークンがどの語になるかだけを伝えます（冠詞・助詞を選ぶため）。2026-10-26 に「定着率」を「コードの新しさ」に改めたとき、翻訳 CI が en を「Code freshness」と訳し、grift-cli の英語の文書（Code recency）とずれたため足しました（同じ「テスト併修率」も、en で記事ごとに 3 通りに訳されていた）。
 
 | ja（正本: griftai の `src/config/tep.ts`） | en（正本: grift-cli の docs） | es | ko | zh |
 |---|---|---|---|---|
@@ -102,7 +102,8 @@ Grift の用語: Grift の記事（訳す frontmatter か本文のどこかに�
 
 - en は grift-cli の英語の語です（`docs/en/metrics-guide.md` の表の Site term と survival の節、`docs/metrics-guide.md` の対応表の CLI の語）。en / es は文の途中の形で持ち、行の頭・表のセルの頭・文末の句読点の後（en はコロンの後も）でだけ 1 文字目を大文字にします。大文字で持つ語（Code recency）は文の途中でも大文字のままです
 - es / ko / zh には正本がありません。事例ページ（`cases/grift`）の対応表と本文の訳（2026-10-26 時点の翻訳 CI の訳）を固定しました。「コードの新しさ」の ko「코드의 신선도」・zh「代码新鲜度」は freshness の意味で、「定着率」を改めたときに退けた読みなので固定せず、（未決）として en の表記を使います
-- Grift の記事以外では固定しません（「作業領域」「検査値」などは一般の言葉としても使うため）。「検証の形式」のように後ろに漢字・カタカナが続くものと、「磨き直した」「磨き直して」などの動詞も用語として扱いません
+- Grift の記事以外では固定しません（「作業領域」「検査値」などは一般の言葉としても使うため）。Grift の記事かどうかは `tags` で決め、本文に「Grift」が出るかでは決めません（記事の末尾の事業の一覧で Grift に触れるだけの記事まで当たるため。2026-10-27 に改めた）。Grift の記事を書くときは `tags` に「Grift」を付けてください（完全一致で、大文字・小文字も区別します。「grift」「Grift CLI」は当たりません）。`grift-terms-link.test.mjs` は、タイトルに「Grift」がある記事に tag が無いときと、tag が無いのに「Grift」と用語が両方出る記事があるときに落ちます。後者が一般の意味で用語を使う記事なら、テストの `UNTAGGED_WITH_TERMS` に理由と一緒に足してください
+- 「検証の形式」「作業領域内」のように後ろに漢字・カタカナが続くものは、どの語も用語として扱いません。「磨き直した」「磨き直して」「磨き直します」のような動詞の活用は「磨き直し」でだけ外します（「作業領域までを見る」「検査値または」の「作業領域」「検査値」は用語のまま）
 - モデルが自分で書いた訳語はそろえません（言い換えに際限が無いため）。トークンが全部・1 回ずつ残っていることを検証で確かめます
 - 用語の表は [`scripts/i18n/grift-terms.mjs`](../scripts/i18n/grift-terms.mjs)。`scripts/i18n/__tests__/grift-terms-link.test.mjs` が、griftai の `tep.ts` と grift-cli の docs（別のリポジトリなので、値と出典の path・commit をテストに写してある）、事例ページの「サイトの言い方 | CLIの語」の表と照合します。正本が変わったら、テストの値と commit を写し直し、表も直します
 - 表の値を変えると、その用語を含む記事の訳が `stale` になります（2 章）。PR の i18n-check は PR で変わった記事しか見ないので、表だけを変えた PR では気づけません。表を変えた PR では、下の手順で訳を付け直し、できた翻訳コミットをその PR に入れてください
