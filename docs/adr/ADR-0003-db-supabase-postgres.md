@@ -4,6 +4,8 @@
 
 旧ステータス: Accepted (2026-06-13)。前提の StudioCMS（ADR-0001）が導入されず、コードからの Supabase 利用は 0 件。静的 Astro の継続（ADR-0017）と Git ベースの CMS（ADR-0018）により DB は不要になった。以下は当時の記録。
 
+2026-10-26: このために作った Supabase のプロジェクト（`corsweb-cms`）と、GCP `cor-jp-web` の Secret Manager に残っていた接続情報 12 件を削除した（代表の承認、バックアップなし。プロジェクトにはデータも外部からの利用も無かった）。
+
 ## 背景
 - StudioCMS（ADR-0001）は DB ストレージとして **libsql / postgresql / mysql の複数方言に対応**しており、`db.dialect` で選択する（StudioCMS 公式ドキュメント `config-reference` で確認済）。CMS コンテンツ（ブログ・お知らせ）の永続化に DB が必要。
 - 本番ランタイムは Firebase App Hosting（GCP `cor-jp-web`）＋Astro SSR（ADR-0002）。
