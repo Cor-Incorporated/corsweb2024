@@ -47,7 +47,7 @@
 |---|---|
 | `confidential-ai-assessment` | 機密データAI活用診断 |
 | `local-llm-poc` | ローカルLLM / セキュアAI PoC |
-| `grift-team-beta` | Grift の相談（2026-10 以降は CLI・紹介会社向け試行。キー名は据え置き、ADR-0022） |
+| `grift-team-beta` | Grift の相談（2026-10 以降は CLI・紹介会社向けのテスト導入。2026-10-26 から自社開発企業の採用担当も含む。キー名は据え置き、ADR-0022） |
 | `grift-paid-trial` | Grift Paid Trial（2026-10 に取り下げ。LP からは送られない） |
 | `estimate-audit` | Estimate Audit（2026-10 に取り下げ。LP からは送られない） |
 | `press-speaking-other` | 取材・登壇・その他 |

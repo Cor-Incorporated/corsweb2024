@@ -502,3 +502,41 @@ describe('industry pages share one support heading and intro, and the 伴走 wor
     expect(helping, 'ja hero.subtitle still says お手伝いします').toEqual([]);
   });
 });
+
+// ADR-0022 の改訂（2026-10-26）: Grift の対象は「人材紹介会社・SES の営業」と「自社開発企業の採用担当」。
+// Grift の対象を書く文は、5 言語とも採用担当を含める。Grift の利用規範（grift-cli の docs/norms.md）は
+// 順位・合否を出す利用を非準拠にしているので、ja の文に「合否」「選考」を書かない。
+describe('Grift copy names both audiences (ADR-0022 revision 2026-10-26)', () => {
+  const IN_HOUSE_HIRING: Record<Locale, string> = {
+    ja: '自社開発企業',
+    en: 'build their own software',
+    zh: '自主开发软件的企业',
+    ko: '자체 개발 기업',
+    es: 'desarrollan su propio software',
+  };
+  const griftAudienceTexts = (locale: Locale) => {
+    const t = getTranslations(locale);
+    return {
+      'faq.questions[6].answer': t.faq.questions[6].answer,
+      'griftBridge.description': t.griftBridge.description,
+      'griftBridge.note': t.griftBridge.note,
+      'services2026.items[0].description': t.services2026.items[0].description,
+      'works.items[0].description': t.works.items[0].description,
+      'companyPage.business[0].status': t.companyPage.business[0].status,
+    };
+  };
+
+  it.each(LOCALES)('locale %s mentions in-house hiring teams wherever it names the Grift audience', (locale) => {
+    const missing = Object.entries(griftAudienceTexts(locale))
+      .filter(([, text]) => !text.includes(IN_HOUSE_HIRING[locale]))
+      .map(([path]) => path);
+    expect(missing, `${locale} Grift audience without "${IN_HOUSE_HIRING[locale]}"`).toEqual([]);
+  });
+
+  it('does not offer Grift for pass/fail screening in ja', () => {
+    const offending = Object.entries(griftAudienceTexts('ja'))
+      .filter(([, text]) => /合否|選考/.test(text))
+      .map(([path]) => path);
+    expect(offending, 'ja Grift copy mentions 合否 or 選考').toEqual([]);
+  });
+});
