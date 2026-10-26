@@ -1,0 +1,45 @@
+---
+import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+// 以前は 3 列の表で、スマホ幅ではテーマの列が細く折り返して長かった。業種の名前をリンクにした一覧にする（#414）。
+---
+
+<section class="py-16 sm:py-24">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-8 sm:gap-12">
+      <div class="flex max-w-3xl flex-col gap-3 sm:gap-4" data-reveal>
+        <p
+          class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
+        >
+          {t.homeIndustries.eyebrow}
+        </p>
+        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
+          {t.homeIndustries.title}
+        </h2>
+        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
+          {t.homeIndustries.description}
+        </p>
+      </div>
+      <ul class="border-t border-primary-900/20 dark:border-primary-300/20" data-reveal style="--reveal-delay:0.15s">
+        {
+          t.homeIndustries.rows.map((row) => (
+            <li class="group relative grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 border-b border-primary-900/10 py-4 dark:border-primary-300/10 sm:grid-cols-[12rem_1fr_auto] sm:items-baseline">
+              <a
+                href={getLocalizedUrl(row.link, currentLocale)}
+                class="font-medium after:absolute after:inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 group-hover:underline group-hover:underline-offset-4"
+              >
+                {row.industry}
+              </a>
+              <span aria-hidden="true" class="text-[#2d4a6b] transition group-hover:translate-x-0.5 dark:text-[#7ba3cc] sm:order-last">→</span>
+              <p class="col-span-2 text-sm text-primary-950/70 dark:text-primary-200/70 sm:col-span-1 sm:text-base">
+                {row.theme}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
