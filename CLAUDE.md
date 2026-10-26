@@ -62,6 +62,13 @@ What CI runs (`.github/workflows/`):
 - `grift-cli-release-watch.yml` (daily, on `main` only): compares the Grift
   CLI version in `src/config/grift-cli-release.json` with PyPI and opens an
   Issue when they differ (ADR-0023)
+- `cleanup-preview-channel.yml`: deletes a PR's Firebase preview channel when
+  the PR is closed (preview channels are capped)
+- `cms-pr-status.yml`: comments on PRs opened by the CMS (`cms/` branches)
+  whether the translations arrived and the checks passed
+- `claude.yml` (Claude Code on @claude mentions in issues and PRs) and
+  `claude-code-review.yml` (manual only since 2026-08-16, until its
+  credentials exist)
 
 `check:links` and `blog:check` are not run by CI — run them yourself when you
 touch public copy or articles.
@@ -187,7 +194,9 @@ There are two separate mechanisms. Do not mix them up.
   `contact-edge` (`/contact/chat/` → Cloudia Pages), `sveltia-cms-auth`
 - `services/vertex-gateway/` — Cloud Run gateway to Vertex AI Gemini for Cloudia
 - `e2e/` — Playwright specs; `tests/build-output/` — dist tests
-- `docs/` — ADRs, i18n guide, CMS guide, blog style guide
+- `docs/` — ADRs, i18n guide, CMS guide, blog style guide, the site's story
+  (`story-spine.md`) and the contact-channel research behind ADR-0025
+  (`contact-channels-research-2026-10.md`)
 
 Pages use a consistent pattern:
 

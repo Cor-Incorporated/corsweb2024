@@ -1,6 +1,12 @@
 # ADR-0014 intent 正本の 7 キー化と intent ルーティング
 
-## ステータス: Accepted (2026-07-11)
+## ステータス: Accepted (2026-07-11) / 改訂 2026-10-27（キーの意味と処理を今に合わせた）
+
+2026-10-27 の改訂: キーは 7 つのまま変えない（古いリンクや外から来る intent も受け付けるため）。意味と処理は次のように読み替える。下の表とルーティング原則は、2026-07 の決定の記録として残す。
+
+- `grift-team-beta`: Grift（OSS の Grift CLI と、人材紹介会社・SES の営業や自社開発企業の採用担当に向けたテスト導入）の相談（ADR-0022）
+- `grift-paid-trial`・`estimate-audit`: 2026-10 に取り下げた商品。サイトと Cloudia の選択肢からは送らない（griftai ADR-0005 の決定 5、cloudia#33）。届いたときは、ほかのキーと同じく人間が対応する
+- `contract-dev`: AI・システム開発の依頼（受託開発）。自動ハンドオフの先だった旧 Grift のテナントは構想ごと取り下げたので、ほかのキーと同じく contact-chat → メール通知（人間対応）にする。`AUTO_HANDOFF_INTENTS`（`src/config/site.ts`・`workers/contact-chat/src/types.ts`）は定義とテストだけが残り、読むコードは無い
 
 ## 背景
 - ADR-0010 で intent 正本 6 キーを定義した。
