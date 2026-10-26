@@ -134,7 +134,7 @@ gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main
 
 | # | 項目 | 値 | 状態 |
 |---|---|---|---|
-| 1 | GCP / Firebase プロジェクト | `cor-jp-cms-admin`（プロジェクト番号 `60287323048`、組織 cor-jp.com `460639040363`） | 済 |
+| 1 | GCP / Firebase プロジェクト | `cor-jp-cms-admin`（組織 cor-jp.com） | 済 |
 | 2 | Hosting サイト | `cor-jp-cms-admin`（既定サイト）→ https://cor-jp-cms-admin.web.app/ 。配信のたびにプレビューチャネル `candidate`（1 時間で失効）も使う | 済 |
 | 3 | 有効な API | firebasehosting、iam、iamcredentials、sts | 済 |
 | 4 | 配信用サービスアカウント | `cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com`（ロールは `roles/firebasehosting.admin` だけ。**JSON 鍵なし**） | 済 |
@@ -142,7 +142,7 @@ gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main
 | 6 | プロバイダの issuer / audience | issuer `https://token.actions.githubusercontent.com`。allowedAudiences は空（既定の audience = プロバイダの完全な名前） | 済 |
 | 7 | プロバイダの条件（attribute-condition） | `assertion.repository_id=='799991752' && assertion.repository_owner_id=='233881863' && assertion.ref=='refs/heads/main' && assertion.job_workflow_ref=='Cor-Incorporated/corsweb2024/.github/workflows/deploy-cms.yml@refs/heads/main' && assertion.environment=='cms-production' && assertion.event_name in ['push', 'workflow_dispatch']` | 済 |
 | 8 | サービスアカウントの利用許可 | `roles/iam.workloadIdentityUser` を `principal://iam.googleapis.com/projects/60287323048/locations/global/workloadIdentityPools/github/subject/repo:Cor-Incorporated/corsweb2024:environment:cms-production` の 1 つだけに付与（OIDC の sub は既定の形式: `use_default: true`） | 済 |
-| 9 | 公開サイトの SA に権限が無いこと | `cor-jp-cms-admin` の祖先（プロジェクトと組織 460639040363）の IAM のメンバー 39 件に、cor-jp-web の SA は 0 件（継承による権限も無い） | 済 |
+| 9 | 公開サイトの SA に権限が無いこと | `cor-jp-cms-admin` の祖先（プロジェクトと組織 cor-jp.com）の IAM のメンバー 39 件に、cor-jp-web の SA は 0 件（継承による権限も無い） | 済 |
 | 10 | GitHub Environment | `cms-production`。deployment branch policy は custom で `main`（branch）だけ。secret は入れない | 済 |
 | 11 | リポジトリ変数 | `CMS_DEPLOY_ENABLED` = `true`（2026-09-27T17:14:23Z） | 済 |
 | 12 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 3 本（`h5-admission`・`Chromium visual text audit`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |

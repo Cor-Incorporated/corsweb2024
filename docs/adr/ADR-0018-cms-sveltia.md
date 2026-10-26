@@ -1,6 +1,6 @@
 # ADR-0018 CMS を Sveltia CMS（Git ベース・静的管理画面・PR レビュー）にする
 
-## ステータス: Proposed (2026-09-27)
+## ステータス: Accepted (2026-10-27)（Proposed 2026-09-27。CMS は #342・#359・#361 で稼働しているので、代表が承認）
 
 置換: ADR-0001（StudioCMS）、ADR-0008（読みもの AI 支援ワークフロー）、ADR-0009 のうち yomimono の Worker・UI 部分（news / cases のコレクション定義と OGP の PNG 化は存続）
 
