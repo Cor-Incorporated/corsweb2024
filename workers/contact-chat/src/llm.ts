@@ -97,7 +97,7 @@ const INTENT_LABELS: Record<ContactIntent, string> = {
   'confidential-ai-assessment': 'Confidential-data AI assessment consultation',
   'local-llm-poc': 'Local LLM / secure AI PoC consultation',
   // intent キーは契約（ADR-0014）のまま。2026-10 以降は Grift（CLI・紹介会社向けテスト導入）全般の相談（ADR-0022）。
-  'grift-team-beta': 'Grift inquiry (Grift CLI, or a trial for recruiting/SES agencies), sent from griftai.org',
+  'grift-team-beta': 'Grift inquiry (Grift CLI, or a trial for recruiting/SES agencies)',
   'grift-paid-trial': 'Grift Paid Trial product inquiry',
   'estimate-audit': 'Estimate Audit service inquiry',
   'contract-dev': 'Contract software development inquiry (受託開発)',

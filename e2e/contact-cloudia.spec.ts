@@ -114,12 +114,58 @@ test.describe('Cloudia contact routing', () => {
     await expect(openButton).toHaveAttribute('aria-expanded', 'false');
     await expect(panel).toHaveAttribute('aria-hidden', 'true');
     await expect(openButton).toBeFocused();
+    await expect(openButton).toHaveText('Cloudiaに相談する');
 
     await openButton.click();
     await page.keyboard.press('Escape');
     await expect(panel).toHaveAttribute('aria-hidden', 'true');
     await expect(openButton).toBeFocused();
+    await expect(openButton).toHaveText('Cloudiaに相談する');
   });
+
+  // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押すと何が起きるか分からない。
+  // 開いている間は「Cloudiaを閉じる」と表示し（× ボタンの「閉じる」とは名前を分ける）、押せば閉じてラベルが戻ることを固定する。
+  test('turns the launcher button into a close button while the panel is open', async ({ page }) => {
+    await page.goto('/contact/');
+
+    const openButton = page.locator('#cloudia-launcher-open');
+    const panel = page.locator('#cloudia-launcher-panel');
+    await expect(openButton).toHaveText('Cloudiaに相談する');
+
+    await openButton.click();
+    await expect(panel).toHaveAttribute('aria-hidden', 'false');
+    await expect(openButton).toHaveText('Cloudiaを閉じる');
+    await expect(openButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('button', { name: '閉じる', exact: true })).toHaveCount(1);
+
+    await openButton.click();
+    await expect(panel).toHaveAttribute('aria-hidden', 'true');
+    await expect(openButton).toHaveText('Cloudiaに相談する');
+    await expect(openButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(openButton).toBeFocused();
+  });
+
+  // zh・ko・es のページには、以前は英語の案内とボタンが出ていた。各言語で出ることを固定する。
+  for (const { lang, title, cta, launcher, close, closeLauncher } of [
+    { lang: 'zh', title: '请先与 Cloudia 沟通', cta: '打开 Cloudia', launcher: '咨询 Cloudia', close: '关闭', closeLauncher: '关闭 Cloudia' },
+    { lang: 'ko', title: '먼저 Cloudia에게 상담해 주세요', cta: 'Cloudia 열기', launcher: 'Cloudia에게 상담하기', close: '닫기', closeLauncher: 'Cloudia 닫기' },
+    { lang: 'es', title: 'Empiece con una conversación con Cloudia', cta: 'Abrir Cloudia', launcher: 'Consultar con Cloudia', close: 'Cerrar', closeLauncher: 'Cerrar Cloudia' },
+  ]) {
+    test(`shows the Cloudia entry and launcher in the page language (${lang})`, async ({ page }) => {
+      await page.goto(`/${lang}/contact/`);
+
+      const entry = page.locator('section[aria-labelledby="cloudia-contact-entry-title"]');
+      await expect(entry.locator('#cloudia-contact-entry-title')).toHaveText(title);
+      await expect(entry.locator('[data-cloudia-query-link]')).toHaveText(cta);
+      await expect(entry).not.toContainText('Start with a conversation');
+
+      const openButton = page.locator('#cloudia-launcher-open');
+      await expect(openButton).toHaveText(launcher);
+      await openButton.click();
+      await expect(openButton).toHaveText(closeLauncher);
+      await expect(page.locator('#cloudia-launcher-close')).toHaveAttribute('aria-label', close);
+    });
+  }
 
   test('fits a mobile safe-area viewport without horizontal scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
