@@ -412,3 +412,29 @@ describe('business pillars keep one order and wording (ADR-0022)', () => {
     }
   });
 });
+
+// Epic #104: 業種別ページの「02」の欄の見出しは、どの業種でも「Cor.は、こう伴走します。」。
+// 医療だけ「こうお手伝いします。」になっていたのを 2026-10-26 のレビューで直した（#421）。
+// 5 つの業種で見出しがそろっていることを、言語ごとに確かめる。
+describe('industry pages share one support heading (Epic #104)', () => {
+  const INDUSTRIES = [
+    'industryMedical',
+    'industryShigyo',
+    'industryConstruction',
+    'industryManufacturing',
+    'industryEducation',
+  ] as const;
+
+  it.each(LOCALES)('locale %s uses the same support.eyebrow and support.title on every industry page', (locale) => {
+    const t = getTranslations(locale);
+    for (const field of ['eyebrow', 'title'] as const) {
+      const observed = Object.fromEntries(INDUSTRIES.map((key) => [key, t[key].support[field]]));
+      const expected = Object.fromEntries(INDUSTRIES.map((key) => [key, t.industryShigyo.support[field]]));
+      expect(observed, `${locale} support.${field}`).toEqual(expected);
+    }
+  });
+
+  it('uses the 伴走 wording in ja', () => {
+    expect(getJaTranslations().industryMedical.support.title).toBe('Cor.は、こう伴走します。');
+  });
+});
