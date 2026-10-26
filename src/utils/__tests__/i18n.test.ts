@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   getCurrentLocale,
@@ -389,26 +391,172 @@ describe('business pillars keep one order and wording (ADR-0022)', () => {
   const pillarNames = (locale: Locale) =>
     getTranslations(locale).companyPage.business.map((pillar) => pillar.name);
 
+  // 文中に出てくる順に並べ直した柱の名前。抜け・言い換え・並びの違いは、正本との差として出る。
+  const pillarsInTextOrder = (text: string, names: string[]) => {
+    const lower = text.toLowerCase();
+    return names
+      .filter((name) => lower.includes(name))
+      .sort((a, b) => lower.indexOf(a) - lower.indexOf(b));
+  };
+
+  // 実績（src/content/cases/ja/*.md の category）と柱（companyPage.business の添字）の対応。
+  const CASE_CATEGORY_PILLAR: Record<string, number> = {
+    grift: 0,
+    'confidential-ai': 1,
+    'local-llm': 1,
+    'ai-contract': 3,
+  };
+  const CASES_DIR = path.resolve('src/content/cases/ja');
+  const caseCategories = () =>
+    readdirSync(CASES_DIR)
+      .filter((name) => name.endsWith('.md'))
+      .map((name) => {
+        const category = /^category:\s*['"]?([\w-]+)['"]?\s*$/m.exec(readFileSync(path.join(CASES_DIR, name), 'utf8'));
+        return category ? category[1] : `(no category in ${name})`;
+      });
+
   it.each(LOCALES)('locale %s names the services2026 items after the pillars, in order', (locale) => {
     const names = getTranslations(locale).services2026.items.map((item) => item.name.split(/\s*[｜|]\s*/)[0]);
     expect(names).toEqual(pillarNames(locale));
   });
 
-  it.each(LOCALES)('locale %s lists every pillar in order in the FAQ, meta and company profile', (locale) => {
+  it.each(LOCALES)('locale %s lists every pillar in order in the FAQ, meta, company profile and company lead', (locale) => {
     const t = getTranslations(locale);
     const names = pillarNames(locale).map((name) => name.toLowerCase());
     const texts = {
       'faq.questions[0].answer': t.faq.questions[0].answer,
       'meta.company.description': t.meta.company.description,
+      'meta.home.description': t.meta.home.description,
+      'meta.home.ogDescription': t.meta.home.ogDescription,
+      'meta.about.description': t.meta.about.description,
       'companyPage.profile[4].value': t.companyPage.profile[4].value,
+      'companyPage.lead': t.companyPage.lead,
     };
-    for (const [path, text] of Object.entries(texts)) {
-      // 文中に出てくる順に並べ直した柱の名前。抜け・言い換え・並びの違いは、正本との差として出る。
-      const lower = text.toLowerCase();
-      const inTextOrder = names
-        .filter((name) => lower.includes(name))
-        .sort((a, b) => lower.indexOf(a) - lower.indexOf(b));
-      expect(inTextOrder, `${locale} ${path}`).toEqual(names);
+    for (const [key, text] of Object.entries(texts)) {
+      expect(pillarsInTextOrder(text, names), `${locale} ${key}`).toEqual(names);
     }
+  });
+
+  // 実績の一覧（/works）の meta は、実績のある柱だけを同じ並びと言い回しで挙げる。
+  // 実績のない柱まで挙げると、ない実績があるように読めるため（ADR-0007）。
+  it.each(LOCALES)('locale %s names only the pillars with case studies, in order, in meta.works.description', (locale) => {
+    const categories = caseCategories();
+    for (const category of categories) {
+      expect(Object.keys(CASE_CATEGORY_PILLAR), `case category ${category}`).toContain(category);
+    }
+    const withCases = new Set(categories.map((category) => CASE_CATEGORY_PILLAR[category]));
+    const names = pillarNames(locale).map((name) => name.toLowerCase());
+    const expected = names.filter((_, index) => withCases.has(index));
+    expect(pillarsInTextOrder(getTranslations(locale).meta.works.description, names), `${locale}`).toEqual(expected);
+  });
+});
+
+// Epic #104: 業種別ページの「02」の欄の見出しは、どの業種でも「Cor.は、こう伴走します。」。
+// 医療だけ「こうお手伝いします。」になっていたのを 2026-10-26 のレビューで直した（#421）。
+// 同じ日に、欄の導入文（support.intro）も医療の文にそろえた。ほかの 4 業種は Grift を
+// 組み合わせる例に挙げていたが、ADR-0022 で業種別ページから Grift の導線を外している。
+// 5 つの業種で見出しと導入文がそろっていることを、言語ごとに確かめる。
+describe('industry pages share one support heading and intro, and the 伴走 wording (Epic #104)', () => {
+  const INDUSTRIES = [
+    'industryMedical',
+    'industryShigyo',
+    'industryConstruction',
+    'industryManufacturing',
+    'industryEducation',
+  ] as const;
+  // 各言語で「伴走」を言う語。hero.subtitle の結びは、5 業種ともこれを含む。
+  const BANSO_WORDING: Record<Locale, string> = {
+    ja: '伴走します。',
+    en: 'walks with you',
+    zh: '陪伴你',
+    ko: '함께 달립니다',
+    es: 'te acompaña',
+  };
+
+  it.each(LOCALES)('locale %s uses the same support.eyebrow, title and intro on every industry page', (locale) => {
+    const t = getTranslations(locale);
+    for (const field of ['eyebrow', 'title', 'intro'] as const) {
+      const observed = Object.fromEntries(INDUSTRIES.map((key) => [key, t[key].support[field]]));
+      const expected = Object.fromEntries(INDUSTRIES.map((key) => [key, t.industryShigyo.support[field]]));
+      expect(observed, `${locale} support.${field}`).toEqual(expected);
+    }
+  });
+
+  it.each(LOCALES)('locale %s does not offer Grift in any industry support.intro (ADR-0022)', (locale) => {
+    const t = getTranslations(locale);
+    const offending = INDUSTRIES.filter((key) => /grift/i.test(t[key].support.intro));
+    expect(offending, `${locale} support.intro mentions Grift`).toEqual([]);
+  });
+
+  // hero.subtitle の結びも、5 業種とも「伴走」で言う（士業だけ「お手伝いします」だった）。
+  it.each(LOCALES)('locale %s uses the 伴走 wording in every industry hero.subtitle', (locale) => {
+    const t = getTranslations(locale);
+    const missing = INDUSTRIES.filter((key) => !t[key].hero.subtitle.includes(BANSO_WORDING[locale]));
+    expect(missing, `${locale} hero.subtitle without "${BANSO_WORDING[locale]}"`).toEqual([]);
+  });
+
+  it('uses the 伴走 wording in ja', () => {
+    const ja = getJaTranslations();
+    expect(ja.industryMedical.support.title).toBe('Cor.は、こう伴走します。');
+    const helping = INDUSTRIES.filter((key) => ja[key].hero.subtitle.includes('お手伝いします'));
+    expect(helping, 'ja hero.subtitle still says お手伝いします').toEqual([]);
+  });
+});
+
+// ADR-0022 の改訂（2026-10-26）: Grift の対象は「人材紹介会社・SES の営業」と「自社開発企業の採用担当」。
+// Grift の対象を書く文は、5 言語とも採用担当を含める。Grift の利用規範（grift-cli の docs/norms.md）は
+// 順位・合否を出す利用を非準拠にしているので、ja の文に「合否」「選考」を書かない。
+describe('Grift copy names both audiences (ADR-0022 revision 2026-10-26)', () => {
+  const IN_HOUSE_HIRING: Record<Locale, string> = {
+    ja: '自社開発企業',
+    en: 'build their own software',
+    zh: '自主开发软件',
+    ko: '자체 개발 기업',
+    es: 'desarrollan su propio software',
+  };
+  const griftAudienceTexts = (locale: Locale) => {
+    const t = getTranslations(locale);
+    return {
+      'faq.questions[6].answer': t.faq.questions[6].answer,
+      'griftBridge.description': t.griftBridge.description,
+      'griftBridge.note': t.griftBridge.note,
+      'services2026.items[0].description': t.services2026.items[0].description,
+      'works.items[0].description': t.works.items[0].description,
+      'companyPage.business[0].status': t.companyPage.business[0].status,
+    };
+  };
+
+  it.each(LOCALES)('locale %s mentions in-house hiring teams wherever it names the Grift audience', (locale) => {
+    const missing = Object.entries(griftAudienceTexts(locale))
+      .filter(([, text]) => !text.includes(IN_HOUSE_HIRING[locale]))
+      .map(([path]) => path);
+    expect(missing, `${locale} Grift audience without "${IN_HOUSE_HIRING[locale]}"`).toEqual([]);
+  });
+
+  // 採用担当向けの文は、同意の条件（候補者本人が共有した記録から）を必ず書く（grift-cli の docs/norms.md §4）。
+  it('says the hiring team reads only what the candidate shares (ja)', () => {
+    const t = getJaTranslations();
+    const hiringSentences = {
+      'faq.questions[6].answer': t.faq.questions[6].answer,
+      'griftBridge.description': t.griftBridge.description,
+      'services2026.items[0].description': t.services2026.items[0].description,
+    };
+    const missing = Object.entries(hiringSentences)
+      .filter(([, text]) => !text.includes('自社開発企業の採用担当が、候補者本人が共有した記録から'))
+      .map(([path]) => path);
+    expect(missing, 'ja hiring sentence without the consent condition').toEqual([]);
+  });
+
+  it.each(LOCALES)('locale %s labels the Grift entry for both placing and hiring', (locale) => {
+    const marker: Record<Locale, string> = { ja: '紹介や採用', en: 'place or hire', zh: '介绍或招聘', ko: '소개나 채용', es: 'presentan o contratan' };
+    const audience = getTranslations(locale).finalCta.items[2].audience;
+    expect(audience, `${locale} finalCta.items[2].audience`).toContain(marker[locale]);
+  });
+
+  it('does not offer Grift for pass/fail screening in ja', () => {
+    const offending = Object.entries(griftAudienceTexts('ja'))
+      .filter(([, text]) => /合否|選考/.test(text))
+      .map(([path]) => path);
+    expect(offending, 'ja Grift copy mentions 合否 or 選考').toEqual([]);
   });
 });

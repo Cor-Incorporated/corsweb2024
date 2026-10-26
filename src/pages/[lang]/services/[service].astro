@@ -1,0 +1,22 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import ServiceBody from '../../../components/services/ServiceBody.astro';
+import { SERVICE_PAGES, type ServiceKey } from '../../../config/services';
+import { NON_JA_LOCALES } from '../../../utils/content-i18n';
+import { getTranslations, type Locale } from '../../../utils/i18n';
+
+// 非ja のサービスのページ /[lang]/services/<slug>（ADR-0024）。ja はルート直下 (/services/<slug>) が担当する。
+export function getStaticPaths() {
+  return NON_JA_LOCALES.flatMap((lang) =>
+    SERVICE_PAGES.map((page) => ({ params: { lang, service: page.slug }, props: { serviceKey: page.key } })),
+  );
+}
+
+const { lang } = Astro.params;
+const { serviceKey } = Astro.props as { serviceKey: ServiceKey };
+const meta = getTranslations(lang as Locale).meta[serviceKey];
+---
+
+<Layout description={meta.description} title={meta.title} availableLocales={['ja', 'en', 'zh', 'ko', 'es']}>
+  <ServiceBody serviceKey={serviceKey} />
+</Layout>

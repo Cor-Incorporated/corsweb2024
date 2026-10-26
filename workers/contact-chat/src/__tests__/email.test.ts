@@ -195,8 +195,17 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
     expect(body).toContain('ご相談の要約');
     expect(body).toContain('ご入力の補足');
     expect(body).toContain(inquiry.message);
-    expect(body).toContain('返信目安: 2営業日以内');
+    expect(body).toContain('返信目安: 原則3営業日以内');
     expect(body).toContain('COR-20260713-ABCD1234');
+  });
+
+  // お問い合わせページ（contactPage）と Cloudia の送信後の文言が「原則3営業日以内」なので、メールだけ
+  // 違う日数を書かない。フォームは無い（ADR-0005 の 2026-09-13 改訂）ので、フォームへ案内しない。
+  it('受付確認本文は返信の目安をサイトとそろえ、無いフォームへ案内しない', () => {
+    const body = buildReceiptBody(inquiry, 'COR-20260713-ABCD1234');
+    expect(body.match(/[0-9０-９]+営業日/gu) ?? []).toEqual(['3営業日']);
+    expect(body).not.toContain('フォーム');
+    expect(body).toContain('Cloudia');
   });
 
   it('本人向け要約から社内分類・intentを除外する', () => {

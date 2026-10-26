@@ -10,7 +10,13 @@ import {
   WEBSITE_ID,
 } from '../../config/organization';
 import type { Locale } from '../i18n';
-import { buildFaqPageJsonLd, buildOrganizationJsonLd, buildWebSiteJsonLd, organizationRef } from '../structured-data';
+import {
+  buildFaqPageJsonLd,
+  buildOrganizationJsonLd,
+  buildServiceJsonLd,
+  buildWebSiteJsonLd,
+  organizationRef,
+} from '../structured-data';
 
 const LOCALES: Locale[] = ['ja', 'en', 'zh', 'ko', 'es'];
 
@@ -63,6 +69,26 @@ describe('buildWebSiteJsonLd', () => {
     expect(site.name).toBe('Cor.Inc.');
     expect(site).not.toHaveProperty('potentialAction');
     expect(site.publisher).toEqual({ '@id': ORGANIZATION_ID });
+  });
+});
+
+describe('buildServiceJsonLd', () => {
+  it('carries only the displayed name and description, with the Organization as provider and no offers', () => {
+    const service = buildServiceJsonLd('ko', {
+      path: '/ko/services/local-llm-poc/',
+      name: 'Name',
+      description: 'Description',
+    });
+    expect(service).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'Service',
+      '@id': 'https://cor-jp.com/ko/services/local-llm-poc/#service',
+      name: 'Name',
+      description: 'Description',
+      url: 'https://cor-jp.com/ko/services/local-llm-poc/',
+      provider: organizationRef('ko'),
+    });
+    expect(service).not.toHaveProperty('offers');
   });
 });
 

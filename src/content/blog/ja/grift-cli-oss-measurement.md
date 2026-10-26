@@ -3,6 +3,7 @@ title: "経歴書の年数では、仕事の仕方は分からない。点数を
 description: "経歴書の年数や人月だけでは、その人がどんな仕事の仕方をしてきたかは分かりません。Cor.が点数も順位もつけないGriftを作った理由と、MBTIとの違い、実在のOSSを4つ測って見えたこと・見えなかったことを、紹介会社・SESの営業の方とエンジニアの方に向けて書きます。"
 summary: "Griftは、gitに残った変更の記録から、仕事の傾向と、その根拠になった件数を出します。本人が質問に答えてタイプを出すMBTIとは違い、根拠は申告ではなく記録で、同じ記録なら誰が数えても同じ値になります。実在のOSSを4つ測ると、作業の領域や変更の間隔の違いは見えた一方、レビューの質や会議、本人の同意のない経験は見えませんでした。数字は分母と規則と一緒に読む必要があり、判断するのは人です。"
 pubDate: 2026-10-25
+updatedDate: 2026-10-26
 author: "Terisuke"
 category: "engineering"
 ctaIntent: "grift-team-beta"
@@ -16,7 +17,7 @@ isDraft: false
 
 年数や人月は、仕事の量の目安にはなります。でも、動作を確かめるテストを書きながら進める人なのか。文書を整える人なのか。小さな変更をこまめに出す人なのか。仕事の仕方までは教えてくれません。
 
-紹介会社やSESの営業の方が、推薦の理由を根拠で言えずに止まってしまう。その原因の1つは、このすき間にあるとCor.は考えています。
+紹介会社やSESの営業の方が、推薦の理由を根拠で言えずに止まってしまう。その原因の1つは、このすき間にあるとCor.株式会社は考えています。
 
 ## 点数をつけない理由
 
@@ -57,7 +58,7 @@ Griftは記録から事実を取り出す手順をTEP（Technical Evidence Pipel
 
 ## 実在のOSSで試す
 
-本当にこの手順で、仕事の傾向が見えるのか。2026年10月25日に、Grift CLI（コマンドで動かすGriftの道具）の次の版（0.8.0）で確かめました。0.8.0はこの日の時点ではまだ公開の準備中です。
+本当にこの手順で、仕事の傾向が見えるのか。2026年10月25日に、Grift CLI（コマンドで動かすGriftの道具）の0.8.0で確かめました。0.8.0はこの日の時点ではまだ公開の準備中で、翌日の10月26日に公開しました（[リリースノート](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)）。
 
 実在の人を同意なく測らないように、ソースコードが公開されているソフトウェア（OSS）を、リポジトリ（1つのソフトウェアの記録をまとめた場所）の単位で測りました。人ごとの数字はこの記事に1つも載せていません。
 
@@ -120,7 +121,7 @@ Griftは測れなかったものを「未観測」と書きます。未観測は
 
 ## 0.8.0で直したこと
 
-0.7.2（今の公開版）では、リポジトリに関わった人の一覧が、変更の多い順に並んでいました。一番上の人を「一番よくやった人」と読めてしまいます。0.8.0ではID（人ごとに付けた記号）の順に並べます。
+[0.7.2](https://pypi.org/project/grift-cli/0.7.2/)（測った時点の公開版）では、リポジトリに関わった人の一覧が、変更の多い順に並んでいました。一番上の人を「一番よくやった人」と読めてしまいます。0.8.0ではID（人ごとに付けた記号）の順に並べます。
 
 4つのリポジトリで、0.7.2と0.8.0の一覧を比べました。名前と数は見ず、並び方だけを見ています。0.7.2は4つとも、一番上が変更の最も多い人でした。0.8.0では、その人の行は、clickで467行中120行目、flaskで870行中280行目、httpxで258行中232行目、commander.jsで203行中15行目でした。
 
@@ -148,8 +149,8 @@ Griftが出すのは、傾向と、その根拠の件数と、見えなかった
 
 エンジニアの方が手元で確かめられるように、測った条件と数字をまとめます。
 
-- grift 0.8.0（定義版`tep-v0.8.0-2026-10-25`）。公開前のソース（開発用リポジトリの`87076c8`）を手元に入れました
-- 比べるために、公開版の0.7.2も同じ4つにかけました
+- grift 0.8.0（定義版`tep-v0.8.0-2026-10-25`）。公開前のソース（開発用リポジトリの`87076c8`）を手元に入れました。公開した0.8.0の`src/`（プログラムの本体）は、このソースと同じです
+- 比べるために、当時の公開版の[0.7.2](https://pypi.org/project/grift-cli/0.7.2/)も同じ4つにかけました
 - Apple M4 Max、macOS 26.7.1、Python 3.12.9、git 2.54.0
 - 対象は2026年9月2日にcloneしてから更新していない手元の4つです
 
@@ -171,7 +172,7 @@ grift repo click --format both --out out/click
 grift verify out/click/report.json --repo click
 ```
 
-`grift repo`は4つとも2.5秒以内に終わり、`grift verify`は4つとも`VERIFIED`でした。新しくcloneしたclickでも、実行した時刻のほかは同じ結果になりました。公開版の0.7.2と同じソースでも、ここに載せた観測値は同じでした。
+`grift repo`は4つとも2.5秒以内に終わり、`grift verify`は4つとも`VERIFIED`でした。新しくcloneしたclickでも、実行した時刻のほかは同じ結果になりました。当時の公開版の[0.7.2](https://pypi.org/project/grift-cli/0.7.2/)と同じソースでも、ここに載せた観測値は同じでした。
 
 | リポジトリ | 人間のcommit / merge / bot |
 |---|---|
@@ -219,7 +220,7 @@ testの種類は、clickがunit 555・不明23、flaskがunit 484・不明204、
 - `consenting_actor_required`: 経験、役割、ライブラリの文脈
 - `no_upstream_lineage`、`parent_repo_not_provided`、`template_not_provided`: upstreamとの関係、テンプレートからの継承
 - `no_tenant_commits`: 自社のcommitの8割が入る期間
-- `survival_scan_disabled`: 定着率
+- `survival_scan_disabled`: コードの新しさ（いまのコードがどれだけ最近書かれたか）
 - `outcome_declaration_not_provided`: 作業の後に起きたことの宣言
 - `deferred_to_v0.6`: 行単位の手戻り（0.8.0でも、0.6のころの名前のままです）
 
@@ -258,7 +259,9 @@ grift project click --requirements python-lib-maintenance.toml --format both --o
 
 ## 参考資料
 
-- [grift-cli（GitHub、MIT）](https://github.com/Cor-Incorporated/grift-cli) - CLIのソースコード。公開版は0.7.2で、0.8.0は公開の準備中
+- [grift-cli（GitHub、MIT）](https://github.com/Cor-Incorporated/grift-cli) - CLIのソースコード。測った時点の公開版は0.7.2で、0.8.0は2026年10月26日に公開
+- [grift-cli 0.8.0のリリースノート（GitHub）](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0) - 0.8.0の変更点
+- [grift-cli 0.7.2（PyPI）](https://pypi.org/project/grift-cli/0.7.2/) - 測った時点の公開版
 - [Grift](https://griftai.org) - 製品サイト
 - [TEPのページ（Grift）](https://griftai.org/tep) - TEPの詳しい説明
 - [griftレポートの読み方（metrics-guide）](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - 指標ごとの平易な解説

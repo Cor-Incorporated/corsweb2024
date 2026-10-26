@@ -5,6 +5,7 @@
 // 心理的な負担の小さい資料を入口にすることを決めた）。文言は ADR-0007 / ADR-0020 の 8 に従う（「無料」を使わない）。
 import { blogCtaSource, resolveBlogCtaIntent } from '../../config/blog-cta';
 import { COMPANY_DECK_URL, getContactUrl, type ContactIntent } from '../../config/site';
+import { findServiceByIntent, formatServiceLinkLabel, getServiceUrl } from '../../config/services';
 import { getCurrentLocale, getTranslations, type Locale } from '../../utils/i18n';
 
 interface Props {
@@ -22,7 +23,7 @@ const COPY: Record<Locale, Copy> = {
     leads: {
       'confidential-ai-assessment': '機密データAI活用診断のご相談を、AI受付「Cloudia」でお受けしています。',
       'local-llm-poc': 'ローカルLLM／AI基盤PoCのご相談を、AI受付「Cloudia」でお受けしています。',
-      'grift-team-beta': '紹介会社さま・SES企業さま向けのGriftのテスト導入（PoC）のご相談を、AI受付「Cloudia」でお受けしています。',
+      'grift-team-beta': '紹介会社さま・SES企業さま・自社開発企業さまからのGriftのテスト導入（PoC）のご相談を、AI受付「Cloudia」でお受けしています。',
       'contract-dev': 'AI受託開発のご相談を、AI受付「Cloudia」でお受けしています。',
       'press-speaking-other': '取材や登壇のご依頼、記事へのご質問を、AI受付「Cloudia」でお受けしています。',
     },
@@ -33,7 +34,7 @@ const COPY: Record<Locale, Copy> = {
     leads: {
       'confidential-ai-assessment': 'Our AI reception "Cloudia" takes requests for a confidential-data AI assessment.',
       'local-llm-poc': 'Our AI reception "Cloudia" takes requests for a local LLM / AI infrastructure PoC.',
-      'grift-team-beta': 'Our AI reception "Cloudia" takes requests from recruiting agencies and SES companies for a Grift trial (PoC).',
+      'grift-team-beta': 'Our AI reception "Cloudia" takes requests from recruiting agencies, SES companies and companies that build their own software for a Grift trial (PoC).',
       'contract-dev': 'Our AI reception "Cloudia" takes requests for contract AI development.',
       'press-speaking-other': 'Our AI reception "Cloudia" takes interview and speaking requests and questions about this article.',
     },
@@ -44,7 +45,7 @@ const COPY: Record<Locale, Copy> = {
     leads: {
       'confidential-ai-assessment': '机密数据 AI 活用诊断的咨询，由 AI 接待「Cloudia」受理。',
       'local-llm-poc': '本地 LLM／AI 基础设施 PoC 的咨询，由 AI 接待「Cloudia」受理。',
-      'grift-team-beta': '面向人才中介公司及 SES 企业的 Grift 试用（PoC）的咨询，由 AI 接待「Cloudia」受理。',
+      'grift-team-beta': '面向人才中介公司、SES 企业及自主开发软件企业的 Grift 试用（PoC）的咨询，由 AI 接待「Cloudia」受理。',
       'contract-dev': 'AI 受托开发的咨询，由 AI 接待「Cloudia」受理。',
       'press-speaking-other': '采访、演讲邀请以及对本文的提问，由 AI 接待「Cloudia」受理。',
     },
@@ -55,7 +56,7 @@ const COPY: Record<Locale, Copy> = {
     leads: {
       'confidential-ai-assessment': '기밀 데이터 AI 활용 진단 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
       'local-llm-poc': '로컬 LLM／AI 기반 PoC 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
-      'grift-team-beta': '인재 소개 회사・SES 기업을 위한 Grift 시범 도입(PoC) 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
+      'grift-team-beta': '인재 소개 회사・SES 기업・자체 개발 기업을 위한 Grift 시범 도입(PoC) 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
       'contract-dev': 'AI 수탁 개발 상담은 AI 접수 「Cloudia」에서 받고 있습니다.',
       'press-speaking-other': '취재·강연 의뢰와 이 글에 대한 질문은 AI 접수 「Cloudia」에서 받고 있습니다.',
     },
@@ -66,7 +67,7 @@ const COPY: Record<Locale, Copy> = {
     leads: {
       'confidential-ai-assessment': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de diagnóstico de IA con datos confidenciales.',
       'local-llm-poc': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de PoC de LLM local e infraestructura de IA.',
-      'grift-team-beta': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de agencias de selección y empresas SES para una prueba piloto (PoC) de Grift.',
+      'grift-team-beta': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de agencias de selección, empresas SES y empresas que desarrollan su propio software para una prueba piloto (PoC) de Grift.',
       'contract-dev': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de desarrollo de IA por encargo.',
       'press-speaking-other': 'Nuestra recepción con IA «Cloudia» atiende solicitudes de entrevistas, charlas y preguntas sobre este artículo.',
     },
@@ -89,6 +90,15 @@ const PRIMARY_LABELS: Partial<Record<ContactIntent, string>> = {
   'contract-dev': t.caseStudy.ctas['ai-contract'],
 };
 const primaryLabel = PRIMARY_LABELS[intent] ?? t.caseStudy.ctas.techCultureContact;
+
+// 相談の種類にサービスのページ（ADR-0024）があれば、ボタンの下に説明のページへのリンクを置く。CTA の箱は 1 つのまま（ADR-0020 の 2）
+const relatedService = findServiceByIntent(intent);
+const serviceLink = relatedService
+  ? {
+      label: formatServiceLinkLabel(t.servicePages.common.serviceLinkLabel, t.nav[relatedService.key]),
+      href: getServiceUrl(relatedService, locale),
+    }
+  : null;
 ---
 
 <section
@@ -115,4 +125,17 @@ const primaryLabel = PRIMARY_LABELS[intent] ?? t.caseStudy.ctas.techCultureConta
       {t.nextStep.about.materialsLabel}<span aria-hidden="true" class="ml-1">↗</span>
     </a>
   </div>
+  {/* type-action（句の境目で折り返し、行の長さをそろえる）。スマホの幅で「…詳しく見る」の最後の 1 文字だけが
+      次の行に落ちていた（visual-text の terminal-orphan-fragment、2026-10-26）。矢印は改行しない空白で最後の語に付ける */}
+  {
+    serviceLink && (
+      <a
+        href={serviceLink.href}
+        data-testid="blog-cta-service"
+        class="type-action mt-4 inline-block min-h-[44px] py-2.5 text-base font-medium text-[#2d4a6b] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:text-stone-200"
+      >
+        {serviceLink.label}<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    )
+  }
 </section>

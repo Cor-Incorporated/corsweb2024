@@ -1,6 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl, type Locale } from '../../utils/i18n';
 import { getContactUrl, getGriftUrl } from '../../config/site';
+import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
 
 // このページが存在するロケール。言語切替が「同一ページの翻訳版」へ飛ぶか、翻訳が無い言語で
 // ホームへフォールバックするかの判定に使う。未指定なら全言語ありとみなす（従来の暗黙の挙動）。
@@ -14,40 +15,19 @@ const t = getTranslations(currentLocale);
 // nav 拡張キー（未翻訳言語向けフォールバック）
 const nav = t.nav as typeof t.nav & {
   services?: string;
-  serviceAssessment?: string;
-  serviceLocalLlm?: string;
-  serviceAiDev?: string;
   industries?: string;
   consult?: string;
   press?: string;
 };
 
-// サービス導線（ADR-0011）: LP 未整備のため intent 付き /contact と Grift
+// サービス導線（ADR-0024。ADR-0011 の「intent 付き /contact へ直行」を置き換え）: 3 つのサービスは説明のページへ、
+// Grift は griftai.org へ。相談（intent 付きの /contact = Cloudia）は各ページを読んだあとの最後の CTA から。
 const serviceLinks = [
-  {
-    name: nav.serviceAssessment || '機密データAI活用診断',
-    href: getContactUrl(currentLocale, {
-      intent: 'confidential-ai-assessment',
-      source: 'header',
-    }),
+  ...SERVICE_PAGES.map((page) => ({
+    name: t.nav[page.key],
+    href: getServiceUrl(page, currentLocale),
     isExternal: false,
-  },
-  {
-    name: nav.serviceLocalLlm || 'ローカルLLM / セキュアAI PoC',
-    href: getContactUrl(currentLocale, {
-      intent: 'local-llm-poc',
-      source: 'header',
-    }),
-    isExternal: false,
-  },
-  {
-    name: nav.serviceAiDev || 'AI基盤構築・AI受託',
-    href: getContactUrl(currentLocale, {
-      intent: 'contract-dev',
-      source: 'header-ai-dev',
-    }),
-    isExternal: false,
-  },
+  })),
   {
     name: nav.grift,
     href: getGriftUrl('/', { intent: 'grift-team-beta', source: 'header' }),
@@ -111,14 +91,16 @@ const servicesLabel = nav.services || 'サービス';
 // それまではブログと About がスマホのメニューにしかなかった（代表の指摘）。
 type DesktopEntry =
   // highlight: 中のページを開いているとき、プルダウンのボタンを現在地として光らせるか。
-  // サービスの中身は相談の種類つきのお問い合わせなので光らせない（お問い合わせのページで二重に光るため）。
-  | { kind: 'menu'; label: string; items: typeof serviceLinks; highlight: boolean; isActive: boolean }
+  // サービスは以前は相談の種類つきのお問い合わせへ直行していたので光らせなかった（お問い合わせのページで二重に光るため）。
+  // 説明のページができたので光らせる（ADR-0024）。外部の Grift は判定の対象外。
+  // menu: プルダウンの目印（data-menu）。ビルド結果の検査（tests/build-output/service-pages.test.ts）がサービスのメニューを見分けるのに使う
+  | { kind: 'menu'; menu: 'services' | 'about'; label: string; items: typeof serviceLinks; highlight: boolean; isActive: boolean }
   | { kind: 'link'; name: string; href: string; isActive: boolean };
 const desktopEntries: DesktopEntry[] = [
-  { kind: 'menu', label: servicesLabel, items: serviceLinks, highlight: false, isActive: false },
+  { kind: 'menu', menu: 'services', label: servicesLabel, items: serviceLinks, highlight: true, isActive: false },
   { kind: 'link', name: t.nav.works, href: getLocalizedUrl('/works', currentLocale), isActive: false },
   { kind: 'link', name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isActive: false },
-  { kind: 'menu', label: t.nav.aboutMenu, items: aboutLinks, highlight: true, isActive: false },
+  { kind: 'menu', menu: 'about', label: t.nav.aboutMenu, items: aboutLinks, highlight: true, isActive: false },
   { kind: 'link', name: nav.consult || t.nav.contact, href: getContactUrl(currentLocale, { source: 'header-quick' }), isActive: false },
 ];
 const desktopNav = desktopEntries.map((entry): DesktopEntry =>
@@ -207,6 +189,7 @@ const langOptions = localeOrder.map((loc) => ({
                 </svg>
               </button>
               <ul
+                data-menu={entry.menu}
                 x-cloak
                 x-show="menuOpen"
                 x-transition:enter="transition ease-out duration-150"
@@ -468,7 +451,7 @@ const langOptions = localeOrder.map((loc) => ({
           <p class="mb-4 text-xs font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
             {servicesLabel}
           </p>
-          <ul class="flex flex-col gap-3">
+          <ul data-menu="services-mobile" class="flex flex-col gap-3">
             {
               serviceLinks.map((link) => (
                 <li>
@@ -476,7 +459,13 @@ const langOptions = localeOrder.map((loc) => ({
                     href={link.href}
                     target={link.isExternal ? '_blank' : undefined}
                     rel={link.isExternal ? 'noopener noreferrer' : undefined}
-                    class="inline-flex min-h-[44px] items-center text-xl font-medium tracking-tight text-primary-950 underline-offset-4 transition hover:underline dark:text-primary-200 sm:text-2xl"
+                    aria-current={!link.isExternal && isCurrentSection(link.href) ? 'page' : undefined}
+                    class:list={[
+                      'inline-flex min-h-[44px] items-center text-xl tracking-tight underline-offset-4 transition hover:underline sm:text-2xl',
+                      !link.isExternal && isCurrentSection(link.href)
+                        ? 'font-semibold text-[#2d4a6b] dark:text-primary-100'
+                        : 'font-medium text-primary-950 dark:text-primary-200',
+                    ]}
                   >
                     {link.name}
                   </a>
