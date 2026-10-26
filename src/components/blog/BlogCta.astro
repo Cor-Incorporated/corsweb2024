@@ -125,15 +125,16 @@ const serviceLink = relatedService
       {t.nextStep.about.materialsLabel}<span aria-hidden="true" class="ml-1">↗</span>
     </a>
   </div>
+  {/* type-action（句の境目で折り返し、行の長さをそろえる）。スマホの幅で「…詳しく見る」の最後の 1 文字だけが
+      次の行に落ちていた（visual-text の terminal-orphan-fragment、2026-10-26）。矢印は改行しない空白で最後の語に付ける */}
   {
     serviceLink && (
       <a
         href={serviceLink.href}
         data-testid="blog-cta-service"
-        class="mt-4 inline-flex min-h-[44px] items-center gap-1 text-base font-medium text-[#2d4a6b] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:text-stone-200"
+        class="type-action mt-4 inline-block min-h-[44px] py-2.5 text-base font-medium text-[#2d4a6b] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:text-stone-200"
       >
-        {serviceLink.label}
-        <span aria-hidden="true">→</span>
+        {serviceLink.label}<span aria-hidden="true">&nbsp;→</span>
       </a>
     )
   }
