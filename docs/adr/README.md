@@ -30,6 +30,7 @@
 | [ADR-0021](./ADR-0021-contact-guard-phone-detection.md) | /contact 回帰ガードの電話検出（判定の対象・電話番号・句） | Accepted (2026-09-28) |
 | [ADR-0022](./ADR-0022-business-pillars-grift-cli.md) | 事業の柱を5本にし、Grift を CLI（OSS）＋紹介会社向け試行として扱う（ISMS 表現・会社概要・llms.txt を含む） | Proposed (2026-10-20) |
 | [ADR-0024](./ADR-0024-service-pages.md) | サービスのページ（診断・PoC・AI受託）を作り、ヘッダーの「サービス」を説明のページへ向ける（ADR-0011 のサービス導線を置き換え） | Proposed (2026-10-26) |
+| [ADR-0025](./ADR-0025-contact-channels-beyond-chat.md) | チャット以外の連絡の手段: Cloudia に「AI と話さずに伝言だけ残す」入口を足し、日程調整は測ってから足す（調査: `docs/contact-channels-research-2026-10.md`） | Proposed (2026-10-26) |
 
 ## フェーズ対応
 
