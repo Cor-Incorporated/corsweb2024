@@ -8,6 +8,8 @@
  *   ja と一致するか（行き先だけを入れ替えた訳を落とす。#339 Codex 最終レビュー P2-1）
  * - 未翻訳検出: 日本語（かな・漢字）が残りすぎていないか
  * - 社名: モデルが書いた表記ゆれを翻訳先言語の正式表記にそろえ、社名トークンを正式表記で戻す（glossary.mjs）
+ * - Grift の用語: トークン ⟦G…⟧ はほかのプレースホルダと同じく、全部・1 回ずつ残っていることを確かめ、
+ *   正式表記で戻す（grift-terms.mjs。モデルが自分で書いた訳語はそろえない）
  */
 import { normalizeNames } from './glossary.mjs';
 import {
@@ -246,10 +248,10 @@ function fieldValueErrors(key, source, translated) {
   const errors = [];
   if (!source.includes('\n') && translated.trim().includes('\n'))
     errors.push(`${key}: 改行が混入しています`);
-  // 名前のトークン（社名 ⟦N…⟧・代表の氏名 ⟦F…⟧）は入力と同じものが同じ回数だけ残っていること。
-  // それ以外の ⟦ ⟧ は混入扱い。
+  // 名前と用語のトークン（社名 ⟦N…⟧・代表の氏名 ⟦F…⟧・Grift の用語 ⟦G…⟧）は入力と同じものが同じ回数だけ
+  // 残っていること。それ以外の ⟦ ⟧ は混入扱い。
   if (multisetDiff(tokenIds(source), tokenIds(translated)).length > 0)
-    errors.push(`${key}: プレースホルダ（社名・代表の氏名）が一致しません`);
+    errors.push(`${key}: プレースホルダ（社名・代表の氏名・Grift の用語）が一致しません`);
   if (/[⟦⟧]/.test(translated.replace(TOKEN_ANY_RE, '')))
     errors.push(`${key}: 予約文字 ⟦ ⟧ が混入しています`);
   const diff = multisetDiff(

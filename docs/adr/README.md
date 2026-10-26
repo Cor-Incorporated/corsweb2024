@@ -10,7 +10,7 @@
 |---|---|---|
 | [ADR-0001](./ADR-0001-cms-studiocms.md) | CMS に StudioCMS（Astroネイティブ・SSR・libSQL）を採用 | **Superseded by ADR-0017** (2026-09-27)（未導入） |
 | [ADR-0002](./ADR-0002-hosting-firebase-app-hosting.md) | ホスティングを Firebase App Hosting（cor-jp-web）＋Astro SSR に移行（静的SSGから） | **Superseded by ADR-0017** (2026-09-27)（未実施・静的のまま） |
-| [ADR-0003](./ADR-0003-db-supabase-postgres.md) | DB に Supabase（Postgres・東京 ap-northeast-1・既存org再利用）を採用。PII は対象外（別管理） | **Superseded by ADR-0017** (2026-09-27)（利用 0 件） |
+| [ADR-0003](./ADR-0003-db-supabase-postgres.md) | DB に Supabase（Postgres・東京 ap-northeast-1・既存org再利用）を採用。PII は対象外（別管理） | **Superseded by ADR-0017** (2026-09-27)（利用 0 件。プロジェクトは 2026-10-26 に削除） |
 | [ADR-0004](./ADR-0004-analytics-cloudflare-clarity.md) | 計測を Cloudflare Web Analytics＋Microsoft Clarity（ファネルイベント含む） | Accepted (2026-06-13) / rev 2026-07-10 |
 | [ADR-0005](./ADR-0005-contact-phased-migration.md) | Contact 段階移行（Phase2 = Cloudia UI + contact-chat Worker） | Accepted (2026-06-13) / rev 2026-07-10 / **rev 2026-09-13（§6 撤回・Cloudia 一本化）** |
 | [ADR-0006](./ADR-0006-i18n-single-source.md) | i18n source of truth を `src/utils/i18n.ts` に一本化（`*.json` 廃止） | **Superseded** (2026-09-27)（正本は `src/i18n/locales/*.json`） |
@@ -25,7 +25,7 @@
 | [ADR-0015](./ADR-0015-cross-repo-adr-canon.md) | 横断 ADR の正本配置と参照方式 | Accepted (2026-07-11) |
 | [ADR-0017](./ADR-0017-static-astro-direction-2026q4.md) | HP の技術方針（2026Q4）: 静的 Astro を継続し、Next.js へは移行しない | Accepted (2026-09-27) |
 | [ADR-0018](./ADR-0018-cms-sveltia.md) | CMS を Sveltia CMS（Git ベース・静的管理画面・PR レビュー）にする | Proposed (2026-09-27) |
-| [ADR-0019](./ADR-0019-i18n-auto-translation.md) | コンテンツ多言語化は ja 正本・他言語は CI が Gemini で差分翻訳・検証して専有（ADR-0006 の原則をコンテンツへ拡張） | Accepted (2026-09-28) / rev 2026-10-25（代表の氏名を用語集に追加・翻訳コミット後の CI を approve-checks で承認） |
+| [ADR-0019](./ADR-0019-i18n-auto-translation.md) | コンテンツ多言語化は ja 正本・他言語は CI が Gemini で差分翻訳・検証して専有（ADR-0006 の原則をコンテンツへ拡張） | Accepted (2026-09-28) / rev 2026-10-25（代表の氏名を用語集に追加・翻訳コミット後の CI を approve-checks で承認）/ rev 2026-10-26（Grift の用語を固定）/ rev 2026-10-27（Grift の記事を tags で判定） |
 | [ADR-0020](./ADR-0020-blog-cta-intent.md) | ブログ記事の CTA と相談の種類（intent）の既定値 | Proposed (2026-09-27) |
 | [ADR-0021](./ADR-0021-contact-guard-phone-detection.md) | /contact 回帰ガードの電話検出（判定の対象・電話番号・句） | Accepted (2026-09-28) |
 | [ADR-0022](./ADR-0022-business-pillars-grift-cli.md) | 事業の柱を5本にし、Grift を CLI（OSS）＋紹介会社向けテスト導入として扱う（ISMS 表現・会社概要・llms.txt を含む） | Proposed (2026-10-20) / rev 2026-10-26（自社開発企業の採用担当を対象に追加） |

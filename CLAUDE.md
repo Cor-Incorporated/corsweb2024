@@ -301,12 +301,21 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
 - **Freshness**: the SHA-256 of the translatable parts of the ja file is stored
   as `translationSourceHash` (with `translatedAt` and `translationModel`) in
   each translation; statuses are missing / stale / untracked / meta-drift /
-  orphan / invalid / source-error / ok
+  orphan / invalid / source-error / ok. For Grift articles the hash also covers
+  the Grift terms they use and their fixed forms, so changing a form in
+  `scripts/i18n/grift-terms.mjs` makes exactly those translations stale
+  (re-translate them with the workflow_dispatch backfill)
 - **Protection**: code blocks, inline code, URLs, link-card lines, math, HTML
   and image paths are replaced by placeholders and restored exactly. The
   company name and the founder's name become tokens too and come back as each
   locale's official spelling (`scripts/i18n/glossary.mjs`, linked by tests to
-  `src/config/organization.ts` and `src/config/author.ts`)
+  `src/config/organization.ts` and `src/config/author.ts`). In Grift articles
+  (ja articles tagged "Grift"; a test fails when a ja article with "Grift" in
+  its title lacks the tag), Grift's terms (検査値, テスト併修率, 作業領域,
+  コードの新しさ, …) also become tokens and come back as each locale's
+  fixed form (`scripts/i18n/grift-terms.mjs`, linked by a test to griftai's
+  `src/config/tep.ts`, grift-cli's docs and the table in
+  `src/content/cases/ja/grift.md`)
 - **Validation**: heading / code block / link / image / table (rows and cells
   per row) parity, the order of link and image destinations per heading, table
   cell, list item and paragraph, untranslated-Japanese detection and a Zod
