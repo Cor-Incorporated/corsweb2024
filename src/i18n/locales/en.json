@@ -968,13 +968,13 @@
     },
     "home": {
       "title": "AI Development and Generative AI Adoption in Fukuoka | Cor.Inc. (Local LLM, Grift)",
-      "description": "Cor.Inc. is an AI implementation company in Fukuoka. Built around local LLMs and secure AI that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and AI contract development from design through operations, we are also advancing hardware AI and initiatives in education and the local community. When it's right, we'll even propose not building yet.",
+      "description": "Cor.Inc. is an AI implementation company in Fukuoka. Our business has five pillars: Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community. We support you from design through operations so you can use AI without sending confidential data outside. When it's right, we'll even propose not building yet.",
       "ogTitle": "AI for the front lines, ready to use with confidence. | Cor.Inc.",
-      "ogDescription": "A Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development, also creating opportunities for learning and community in the region. You can consult us even before your AI or system requirements are settled."
+      "ogDescription": "A Fukuoka-based AI implementation company with five business pillars: Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community. You can consult us even before your AI or system requirements are settled."
     },
     "about": {
       "title": "About | Cor.Inc.",
-      "description": "Cor.Inc. is a Fukuoka-based AI implementation company that works with you end to end — from framing the problem to design, implementation, and operations — built around local LLMs, our own product Grift, and AI contract development. Learn about our \"Kyousou\" approach and our implementation capabilities."
+      "description": "Cor.Inc. is an AI implementation company in Fukuoka. Our business has five pillars: Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community. We work with you end to end, from framing the problem through design, implementation, and operations. Learn about our \"Kyousou\" approach and our implementation capabilities."
     },
     "contact": {
       "title": "Contact | Cor.Inc.",
@@ -994,7 +994,7 @@
     },
     "works": {
       "title": "Works | Cor.Inc.",
-      "description": "Case studies from Cor.Inc. — how we framed, designed, implemented, and operated solutions for our clients' business challenges. Built around local LLMs, AI contract development, and Grift, we work with you starting from information design, before AI is even used."
+      "description": "Case studies from Cor.Inc.: business challenges we solved in Grift, local LLM & secure AI, and AI contract development & adoption support, presented through the problem, design, implementation, and operations. We work with you starting from information design, before AI is even used."
     },
     "press": {
       "title": "Press releases | Cor.Inc.",
@@ -1364,7 +1364,7 @@
   "companyPage": {
     "kicker": "Company",
     "title": "Company Profile",
-    "lead": "Cor.Inc. is an AI implementation company based in Fukuoka. Our work centers on local LLMs that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and contract development from design through operations, and we also help create opportunities for learning and community in the region.",
+    "lead": "Cor.Inc. is an AI implementation company based in Fukuoka. Our business has five pillars: Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community. Grift is our own product that extracts verifiable facts from engineers' git history. Some of our hardware AI and education & community work is still in preparation or planned.",
     "asOf": "As of October 20, 2026",
     "profileTitle": "Basic Information",
     "profile": [

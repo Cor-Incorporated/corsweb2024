@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   getCurrentLocale,
@@ -389,27 +391,63 @@ describe('business pillars keep one order and wording (ADR-0022)', () => {
   const pillarNames = (locale: Locale) =>
     getTranslations(locale).companyPage.business.map((pillar) => pillar.name);
 
+  // 文中に出てくる順に並べ直した柱の名前。抜け・言い換え・並びの違いは、正本との差として出る。
+  const pillarsInTextOrder = (text: string, names: string[]) => {
+    const lower = text.toLowerCase();
+    return names
+      .filter((name) => lower.includes(name))
+      .sort((a, b) => lower.indexOf(a) - lower.indexOf(b));
+  };
+
+  // 実績（src/content/cases/ja/*.md の category）と柱（companyPage.business の添字）の対応。
+  const CASE_CATEGORY_PILLAR: Record<string, number> = {
+    grift: 0,
+    'confidential-ai': 1,
+    'local-llm': 1,
+    'ai-contract': 3,
+  };
+  const CASES_DIR = path.resolve('src/content/cases/ja');
+  const caseCategories = () =>
+    readdirSync(CASES_DIR)
+      .filter((name) => name.endsWith('.md'))
+      .map((name) => {
+        const category = /^category:\s*['"]?([\w-]+)['"]?\s*$/m.exec(readFileSync(path.join(CASES_DIR, name), 'utf8'));
+        return category ? category[1] : `(no category in ${name})`;
+      });
+
   it.each(LOCALES)('locale %s names the services2026 items after the pillars, in order', (locale) => {
     const names = getTranslations(locale).services2026.items.map((item) => item.name.split(/\s*[｜|]\s*/)[0]);
     expect(names).toEqual(pillarNames(locale));
   });
 
-  it.each(LOCALES)('locale %s lists every pillar in order in the FAQ, meta and company profile', (locale) => {
+  it.each(LOCALES)('locale %s lists every pillar in order in the FAQ, meta, company profile and company lead', (locale) => {
     const t = getTranslations(locale);
     const names = pillarNames(locale).map((name) => name.toLowerCase());
     const texts = {
       'faq.questions[0].answer': t.faq.questions[0].answer,
       'meta.company.description': t.meta.company.description,
+      'meta.home.description': t.meta.home.description,
+      'meta.home.ogDescription': t.meta.home.ogDescription,
+      'meta.about.description': t.meta.about.description,
       'companyPage.profile[4].value': t.companyPage.profile[4].value,
+      'companyPage.lead': t.companyPage.lead,
     };
-    for (const [path, text] of Object.entries(texts)) {
-      // 文中に出てくる順に並べ直した柱の名前。抜け・言い換え・並びの違いは、正本との差として出る。
-      const lower = text.toLowerCase();
-      const inTextOrder = names
-        .filter((name) => lower.includes(name))
-        .sort((a, b) => lower.indexOf(a) - lower.indexOf(b));
-      expect(inTextOrder, `${locale} ${path}`).toEqual(names);
+    for (const [key, text] of Object.entries(texts)) {
+      expect(pillarsInTextOrder(text, names), `${locale} ${key}`).toEqual(names);
     }
+  });
+
+  // 実績の一覧（/works）の meta は、実績のある柱だけを同じ並びと言い回しで挙げる。
+  // 実績のない柱まで挙げると、ない実績があるように読めるため（ADR-0007）。
+  it.each(LOCALES)('locale %s names only the pillars with case studies, in order, in meta.works.description', (locale) => {
+    const categories = caseCategories();
+    for (const category of categories) {
+      expect(Object.keys(CASE_CATEGORY_PILLAR), `case category ${category}`).toContain(category);
+    }
+    const withCases = new Set(categories.map((category) => CASE_CATEGORY_PILLAR[category]));
+    const names = pillarNames(locale).map((name) => name.toLowerCase());
+    const expected = names.filter((_, index) => withCases.has(index));
+    expect(pillarsInTextOrder(getTranslations(locale).meta.works.description, names), `${locale}`).toEqual(expected);
   });
 });
 
