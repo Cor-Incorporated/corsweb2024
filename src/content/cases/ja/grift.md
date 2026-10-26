@@ -79,12 +79,13 @@ v0.6で加わった`report-v2`では、1人のエンジニアの仕事の形を�
 - リポジトリ: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
 - 配布: PyPI「grift-cli」（`pipx install grift-cli`、Python 3.11以上）
 - ライセンス: MIT
+- リリースノート: [github.com/Cor-Incorporated/grift-cli/releases](https://github.com/Cor-Incorporated/grift-cli/releases)（版ごとの変更点）
 
 ## 成果
 
 2026年9月8日に、PyPIでv0.7.2を公開しました。指標は公開されている117のリポジトリで検証し、区別できた比較と、まだ区別できていない比較の両方をGitHubで公開しています（社内での測定で、第三者による監査は受けていません）。
 
-2026年10月25日に、サイトの文言とCLIの出力を1行ずつ突き合わせました。複数人の一覧（`actor-index`）が、注記では「順位ではない」と書きながらコミット数の多い順に並んでいたため、次の版（0.8）では並びをIDの辞書順に変えます。コミット数の値は残します。経緯と、0.8系に課す5つの受入条件は[ブログ記事](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)に書きました。
+2026年10月25日に、サイトの文言とCLIの出力を1行ずつ突き合わせました。複数人の一覧（`actor-index`）が、注記では「順位ではない」と書きながらコミット数の多い順に並んでいたため、2026年10月26日に公開した0.8.0で、並びをIDの辞書順に変えました。コミット数の値は残しています。経緯と、0.8系に課す5つの受入条件は[ブログ記事](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)に書きました。
 
 いまは、候補者本人が手元で実行した記録をもとに推薦の理由を具体的にするテスト導入（PoC）の準備を、紹介会社さま・SES企業さまと進めています。正式版についてはテスト導入の結果をふまえて2027年の提供開始を目指しています。Griftは [griftai.org](https://griftai.org) でも紹介しています。
 
