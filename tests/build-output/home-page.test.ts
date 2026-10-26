@@ -77,12 +77,35 @@ describe('最初の画面 (#414)', () => {
   });
 });
 
+// 本文に描画されたサイト内リンク（クエリと # を除いたパス）
+function internalHrefs(html: string): string[] {
+  const hrefs = [...mainOf(html).matchAll(/\bhref=["']?([^"'\s>]+)/g)].map((m) => decode(m[1]));
+  return [...new Set(hrefs.filter((href) => href.startsWith('/')).map((href) => href.split(/[?#]/)[0]))];
+}
+
+function existsInDist(href: string): boolean {
+  return existsSync(path.join(DIST_DIR, href.replace(/^\/+|\/+$/g, ''), 'index.html'));
+}
+
 describe('トップからのリンク先 (#414)', () => {
-  it.each(LOCALE_KEYS)('%s: 課題・業種のリンク先が dist にある', (locale) => {
+  it.each(LOCALE_KEYS)('%s: 本文のサイト内リンクが、その言語のページを指し、dist にある', (locale) => {
+    const hrefs = internalHrefs(readHome(locale));
+    expect(hrefs.length, '本文にサイト内リンクが無い').toBeGreaterThan(0);
+    expect(hrefs.filter((href) => !existsInDist(href)), 'dist に無いリンク先').toEqual([]);
+    if (locale !== 'ja') {
+      // 代表の物語は、訳がまだない言語では ja の記事へ戻す決まり（src/utils/founder-story.ts）なので除く
+      const otherLocale = hrefs.filter((href) => !href.startsWith(`/${locale}/`) && href !== `/${locale}` && !href.includes('/blog/founder-story'));
+      expect(otherLocale, `/${locale}/ で始まらないリンク`).toEqual([]);
+    }
+  });
+
+  it.each(LOCALE_KEYS)('%s: 課題・業種のカードが locale のリンク先どおりに描画されている', (locale) => {
     const t = LOCALES[locale];
-    const links = [...t.homeChallenges.items.map((item) => item.link), ...t.homeIndustries.rows.map((row) => row.link)];
-    const missing = links.filter((link) => !existsSync(path.join(DIST_DIR, prefix(locale), link, 'index.html')));
-    expect(missing).toEqual([]);
+    const hrefs = internalHrefs(readHome(locale)).map((href) => href.replace(/\/+$/, ''));
+    const expected = [...t.homeChallenges.items.map((item) => item.link), ...t.homeIndustries.rows.map((row) => row.link)].map(
+      (link) => (locale === 'ja' ? link : `/${locale}${link}`),
+    );
+    expect(expected.filter((link) => !hrefs.includes(link)), '本文に無いリンク').toEqual([]);
   });
 
   it.each(LOCALE_KEYS)('%s: FAQ の構造化データが残っている（AIO）', (locale) => {
