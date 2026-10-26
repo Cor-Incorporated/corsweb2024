@@ -121,6 +121,49 @@ test.describe('Cloudia contact routing', () => {
     await expect(openButton).toBeFocused();
   });
 
+  // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押すと何が起きるか分からない。
+  // 開いている間は「閉じる」と表示し、押せば閉じてラベルが戻ることを固定する。
+  test('turns the launcher button into a close button while the panel is open', async ({ page }) => {
+    await page.goto('/contact/');
+
+    const openButton = page.locator('#cloudia-launcher-open');
+    const panel = page.locator('#cloudia-launcher-panel');
+    await expect(openButton).toHaveText('Cloudiaに相談する');
+
+    await openButton.click();
+    await expect(panel).toHaveAttribute('aria-hidden', 'false');
+    await expect(openButton).toHaveText('閉じる');
+    await expect(openButton).toHaveAttribute('aria-expanded', 'true');
+
+    await openButton.click();
+    await expect(panel).toHaveAttribute('aria-hidden', 'true');
+    await expect(openButton).toHaveText('Cloudiaに相談する');
+    await expect(openButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(openButton).toBeFocused();
+  });
+
+  // zh・ko・es のページには、以前は英語の案内とボタンが出ていた。各言語で出ることを固定する。
+  for (const { lang, title, cta, launcher, close } of [
+    { lang: 'zh', title: '请先与 Cloudia 沟通', cta: '打开 Cloudia', launcher: '咨询 Cloudia', close: '关闭' },
+    { lang: 'ko', title: '먼저 Cloudia에게 상담해 주세요', cta: 'Cloudia 열기', launcher: 'Cloudia에게 상담하기', close: '닫기' },
+    { lang: 'es', title: 'Empiece con una conversación con Cloudia', cta: 'Abrir Cloudia', launcher: 'Consultar con Cloudia', close: 'Cerrar' },
+  ]) {
+    test(`shows the Cloudia entry and launcher in the page language (${lang})`, async ({ page }) => {
+      await page.goto(`/${lang}/contact/`);
+
+      const entry = page.locator('section[aria-labelledby="cloudia-contact-entry-title"]');
+      await expect(entry.locator('#cloudia-contact-entry-title')).toHaveText(title);
+      await expect(entry.locator('[data-cloudia-query-link]')).toHaveText(cta);
+      await expect(entry).not.toContainText('Start with a conversation');
+
+      const openButton = page.locator('#cloudia-launcher-open');
+      await expect(openButton).toHaveText(launcher);
+      await openButton.click();
+      await expect(openButton).toHaveText(close);
+      await expect(page.locator('#cloudia-launcher-close')).toHaveAttribute('aria-label', close);
+    });
+  }
+
   test('fits a mobile safe-area viewport without horizontal scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/contact/${query}`);
