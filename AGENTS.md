@@ -514,3 +514,10 @@ PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key_here
 FounderNote, TeamIntro). Its text lives in the `aboutPage` keys of
 `src/i18n/locales/*.json`. Company facts (legal name, IDs, social links) come
 from `src/config/organization.ts`; author facts from `src/config/author.ts`.
+
+The founder section (`FounderNote.astro`, `#founder-story`) shows the
+founder's profile, a timeline and the opening scene of the founder's story.
+The full story is the blog post `src/content/blog/ja/founder-story.md`; About
+and the top page link to it through `src/utils/founder-story.ts`, which falls
+back to the ja post when a locale has no translation yet. The story and every
+page follow the narrative in `docs/story-spine.md`.

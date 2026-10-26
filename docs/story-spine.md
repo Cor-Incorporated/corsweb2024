@@ -92,6 +92,6 @@ About の代表の見出し「言葉だけでは届かないものを、技術�
 
 ## 出どころ
 
-- 代表の原体験: `src/i18n/locales/ja.json` の `founderStory`（以前の About に載っていた代表の想い）、`teamData`、`aboutPage.founderLead`。プロフィールを書くときは、本人の note「アスペのトランペット奏者がリクルートを経てエンジニアで起業した話【Why me】」などを読む
+- 代表の原体験: 物語の全文 `src/content/blog/ja/founder-story.md`、`teamData`、`aboutPage.founderLead`、`aboutPage.founderTimeline`。以前の About に載っていた代表の想い（ja.json の `founderStory`）は、どこからも使われていなかったので #396 で消した。文は `git show 4e36034:src/i18n/locales/ja.json` で読める。プロフィールを書くときは、本人の note「アスペのトランペット奏者がリクルートを経てエンジニアで起業した話【Why me】」などを読む
 - 事業と立場: ADR-0022、`kyousou`、`homeHero`
 - 証拠: `src/content/cases/ja/`、`companyPage`、ADR-0022（ISMS の書き方）

@@ -676,86 +676,7 @@
     "consult": "Contact Us",
     "press": "Press releases"
   },
-  "hero": {
-    "title": "Beyond Words, Delivering Feelings.",
-    "subtitle": "Once expressed through trumpet, now through code. A former musician's pursuit of 'communication beyond words.'",
-    "cta": "View Our Work & Products"
-  },
-  "services": {
-    "title": "Services",
-    "items": [
-      {
-        "step": "01",
-        "name": "IT Consulting & Data Analysis",
-        "description": "DX support service that visualizes current status through Python-based scraping and BI analysis, accompanying from strategy planning to implementation."
-      },
-      {
-        "step": "02",
-        "name": "Web & Mobile App Development",
-        "description": "One-stop provision of high-speed, rich UX B2B/B2C apps using the latest frameworks like Flutter and React."
-      },
-      {
-        "step": "03",
-        "name": "AI Solution Development",
-        "description": "Developing intelligent apps and automation tools optimized for customer challenges using generative AI/LLM, image recognition, and voice processing."
-      }
-    ]
-  },
-  "about": {
-    "title": "About Cor.Inc.",
-    "description": "Cor.inc's mission is to 'pioneer the future through co-creation rather than competition, realizing a happy society.' We plan, define requirements for, develop, and operate AI solutions, along with associated accounting and financial operations. We emphasize 'co-creation' over 'competition' and leverage the startup strength of 'speed' to provide services full of creativity and innovation.",
-    "cta": "More details",
-    "heading": {
-      "title": "About Cor.Inc.",
-      "description": "Cor.inc's mission is to 'pioneer the future through co-creation rather than competition, realizing a happy society.' We plan, define requirements for, develop, and operate AI solutions, along with associated accounting and financial operations. We emphasize 'co-creation' over 'competition' and leverage the startup strength of 'speed' to provide services full of creativity and innovation."
-    }
-  },
-  "mission": {
-    "title": "Our mission",
-    "subtitle": "What I once pursued with the trumpet - communication beyond words - now through technology.",
-    "paragraphs": [
-      "Our founder has ASD and knows the pain of 'not being understood.'",
-      "That's why we're serious about realizing miscommunication-free communication.",
-      "Through business card exchanges, websites, and AI-mediated conversations. Small moments of 'ah, it got through' in daily life.",
-      "When these accumulate, everyone can properly convey and be understood for their value.",
-      "We use technology to remove the 'word barriers' between people, creating a world where everyone can shine as themselves."
-    ],
-    "stats": [
-      {
-        "name": "Since Founded",
-        "value": "2 years"
-      },
-      {
-        "name": "Languages",
-        "value": "10"
-      },
-      {
-        "name": "Projects",
-        "value": "15"
-      },
-      {
-        "name": "Services",
-        "value": "App Develop & IT/AI Strategy"
-      }
-    ]
-  },
-  "founderStory": {
-    "title": "Founder's Story",
-    "subtitle": "Why does a former musician run a non-music business?",
-    "paragraphs": [
-      "Since childhood, I was 'the kid who couldn't read the room.' With ASD, I've always felt a wall between myself and others.",
-      "In my second year of high school, playing a trumpet solo in a hall filled with 2,000 people, I first experienced the emotion of 'communication beyond words.' Every consciousness in the venue focused on me, and my soul trembled with a sense of unity that needed no words.",
-      "But in the music industry, I never felt that emotion again. Connections, hierarchy, reading between the lines. Expression degraded into mere 'work,' and I became ill.",
-      "During the pandemic, I left music and worked in sales at Recruit. There, I faced 'the limitations of existing tools' and 'the frustration of words not reaching people.'",
-      "Then I discovered technology. Code doesn't betray. AI doesn't get emotional. Most importantly, I could witness how what I created solved someone's problems and enriched their lives.",
-      "That emotion from high school, now in daily life. In business card exchanges, on websites, through AI-mediated communication. Accumulating small moments of 'ah, it got through.'",
-      "That is the origin of Cor.inc."
-    ]
-  },
   "contact": {
-    "title": "Feel free to contact us!",
-    "description1": "After reviewing your inquiry, our representative will contact you within 3 business days. Please wait a moment.",
-    "description2": "If you do not receive a reply within the above period, there may be a transmission problem. We apologize for the inconvenience, but please contact us again.",
     "heading": {
       "title": "Tell us what is stuck.",
       "description": "No fixed requirements needed. Share the issue, constraints, or idea; we reply within 3 business days."
@@ -844,41 +765,6 @@
       "company": "Company Profile"
     },
     "description": "Cor.Inc. is a Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — and we also help create opportunities for learning and community in the region."
-  },
-  "features": {
-    "title": "Features",
-    "items": [
-      {
-        "id": "uniqueness-1",
-        "name": "Digital Technology Integration",
-        "description": "We can cover all projects spanning multiple technologies and processes, from IT strategy planning based on information collected with Python, to developing MVP web apps and conducting test marketing, all within our single company."
-      },
-      {
-        "id": "uniqueness-2",
-        "name": "One-Stop Service",
-        "description": "We handle everything consistently from planning to development, test release, and service launch. Since the same team is responsible, misunderstandings are less likely to occur, providing more cost-effective and speedy development."
-      },
-      {
-        "id": "uniqueness-3",
-        "name": "Customer-First Development",
-        "description": "What we value most in our development is \"customer resolution.\" Through detailed feedback, test marketing, and milestones, we identify what customers truly seek and build relationships to become Win-Win business partners."
-      },
-      {
-        "id": "uniqueness-4",
-        "name": "Fastest and Smartest Experience",
-        "description": "We constantly and sharply capture new trends and knowledge. We quickly reflect beneficial solutions for all stakeholders in our proposals, providing unprecedented new experiences."
-      },
-      {
-        "id": "uniqueness-5",
-        "name": "Creating New Values",
-        "description": "Without being bound by conventional concepts, we sincerely face new perspectives and ideas. We maximize the startup-specific \"speed\" to give voice to newly born values through technology."
-      },
-      {
-        "id": "uniqueness-6",
-        "name": "Solving Social Issues with Unique Perspective",
-        "description": "Our passion for human progress knows no bounds. We actively work to solve social problems accompanying progress while using technology to bridge gaps and promote meaningful communication."
-      }
-    ]
   },
   "header": {
     "mobileMenuDescription": "Cor.Inc. is an AI implementation company based in Fukuoka. Our work centers on local LLMs and secure AI, our own product Grift, and AI contract development and adoption support, and we are also working on hardware AI and on creating opportunities for learning and community in the region."
@@ -1032,24 +918,12 @@
       "videosNotFound": "No videos found"
     }
   },
-  "values": {
-    "title": "Our Values"
-  },
-  "team": {
-    "title": "Meet our team"
-  },
-  "linkTypes": {
-    "LitLink": "LitLink",
-    "X": "X",
-    "Zenn": "Zenn",
-    "Homepage": "Homepage"
-  },
   "faq": {
     "title": "FAQ",
     "questions": [
       {
         "question": "What can we consult Cor.Inc. about?",
-        "answer": "We focus on local LLMs and secure AI, our own product Grift, and AI contract development and AI adoption support, and you can consult us end to end — from framing the problem through design, implementation, and operations. We are also developing hardware AI (smart glasses) and running initiatives in education and the local community."
+        "answer": "Our business has five pillars: Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community. For AI adoption and development, you can consult us end to end — from framing the problem through design, implementation, and operations. Some of our hardware AI (smart glasses) and education & community work is still in preparation or planned."
       },
       {
         "question": "What is the first step in introducing AI?",
@@ -1083,44 +957,6 @@
     "ariaLabel": "CEO Schedule Calendar",
     "note": "* If you cannot find a suitable time, please contact us via Cloudia, our AI chat."
   },
-  "testimonials": {
-    "title": "Technical Expertise",
-    "items": [
-      {
-        "name": "JavaScript/TypeScript",
-        "description": "Frontend & Backend Development",
-        "image": "/assets/jsts.avif",
-        "message": "JavaScript was born in 1995 at Netscape and has become the foundation of web development. TypeScript, as its superset, adds static typing to improve maintainability in large-scale projects. It's used in combination with Node.js and React for real-time communication and UI construction. With asynchronous processing and a rich ecosystem, it's ideal for rapid and interactive application development."
-      },
-      {
-        "name": "Python",
-        "description": "AI & Machine Learning",
-        "image": "/assets/python.avif",
-        "message": "Python is a versatile programming language developed in 1991. Known for its simple and readable syntax, it's widely used in machine learning, AI development, and data analysis. By leveraging libraries like TensorFlow and PyTorch, complex AI models can be built rapidly, making it popular from beginners to advanced users."
-      },
-      {
-        "name": "Go",
-        "description": "Backend & High-Performance Systems",
-        "image": "/assets/go.avif",
-        "message": "Go (Golang) is a lightweight and fast programming language developed by Google in 2009. Known for its simple syntax and concurrent processing (goroutines), it's ideal for cloud-native applications and microservices. With fast compilation speed and high memory efficiency, it's optimal for scalable server development."
-      }
-    ]
-  },
-  "cta": {
-    "title": "Need more detailed information?",
-    "description": "Feel free to contact us. If you need more detailed information or have specific questions, our team will support you."
-  },
-  "products": {
-    "heading": {
-      "title": "Products & Insights",
-      "description": "Detailed information about our products, services, and technical insights."
-    }
-  },
-  "homeCta": {
-    "title": "Contact Us",
-    "description": "Feel free to contact us for any questions, consultations, or quote requests.",
-    "button": "Contact us"
-  },
   "contactInfo": {
     "address": {
       "label": "Postal address",
@@ -1133,42 +969,6 @@
       "notice": "Contact us by phone. A member of our team will call you back."
     }
   },
-  "valuesData": [
-    [
-      {
-        "ref": "01",
-        "name": "Take Action First",
-        "description": "Anyone can just think. Accept that the right answer will be judged by future people, and once decided, act quickly toward the best outcome."
-      },
-      {
-        "ref": "02",
-        "name": "Always Self-Reflect",
-        "description": "The form of happiness is constantly changing. To pursue true happiness, we must always ask ourselves \"Is this the best?\" and continue moving without stopping our thinking."
-      },
-      {
-        "ref": "03",
-        "name": "Make Both Others and Yourself Happy",
-        "description": "Only happy people can make others happy. Always think through actions that create win-win situations for both yourself and others without sacrificing anything."
-      }
-    ],
-    [
-      {
-        "ref": "04",
-        "name": "Express Intentions Clearly",
-        "description": "Indecisive actions are wasteful and benefit no one. Make firm decisions yourself and commit fully to everything."
-      },
-      {
-        "ref": "05",
-        "name": "Flexible Services",
-        "description": "Help as many stakeholders as possible become happy. For this purpose, we deliberately avoid standardized services and build optimal services tailored to individual tasks. (Example) Instantly customize WebAR business cards and AI chatbots according to customer requirements"
-      },
-      {
-        "ref": "06",
-        "name": "Forge Your Own Destiny",
-        "description": "Regardless of success or failure, take responsibility for your own actions. Accept all results and reflections from your actions with a smile."
-      }
-    ]
-  ],
   "teamData": [
     {
       "id": "kousuke-terada",
@@ -1178,23 +978,6 @@
       "description": "Music college graduate → Musical instrument manufacturer sales → Corporate sales at mega-venture → Career change to IT. Leveraging this unique background to challenge \"bridging technology and language.\"",
       "comingSoon": false,
       "link": "https://cor-jp.com/about"
-    },
-    {
-      "name": "Cloudia Sorano",
-      "image": "/assets/cloudia.avif",
-      "job": "AI Ambassador",
-      "description": "In-house AI that shares technical topics in Fukuoka dialect. Currently challenging 51 consecutive weeks of Lightning Talks on Zenn and X.",
-      "comingSoon": false,
-      "link": "https://x.com/Cloudia_Cor",
-      "zennLink": "https://zenn.dev/cloudia"
-    },
-    {
-      "name": "Nagisa Terada",
-      "image": "/assets/nagi.avif",
-      "job": "Staff",
-      "description": "After graduating from beauty school, worked at a salon for 7 years. Transitioned to IT after learning programming. Striving daily to turn challenges into possibilities.",
-      "comingSoon": false,
-      "link": "https://digital-studio-c5abe.web.app/"
     }
   ],
   "meta": {
@@ -1258,7 +1041,7 @@
     },
     "company": {
       "title": "Company Profile | Cor.Inc.",
-      "description": "Company profile of Cor.Inc. (Fukuoka City): address, founding date, representative, business areas (local LLM & secure AI, Grift, hardware AI, AI contract development & adoption support, education & community), our information security efforts, and our selection as one of Fukuoka's 100 Representative Companies."
+      "description": "Company profile of Cor.Inc. (Fukuoka City): address, founding date, representative, business areas (Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, education & community), our information security efforts, and our selection as one of Fukuoka's 100 Representative Companies."
     }
   },
   "privacy": {
@@ -1650,7 +1433,7 @@
       },
       {
         "label": "Business",
-        "value": "Planning, requirements definition, development, and operation of AI solutions (local LLM & secure AI, our own product Grift, hardware AI, AI contract development & adoption support, and initiatives in education and the local community)"
+        "value": "Planning, requirements definition, development, and operation of AI solutions (Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, and education & community)"
       },
       {
         "label": "Service area",

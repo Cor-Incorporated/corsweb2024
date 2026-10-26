@@ -1,0 +1,100 @@
+name: Delete PR preview channel
+
+# PR を閉じたとき（merge を含む）に、その PR のプレビューチャネルを Firebase Hosting（cor-jp-web の cor-jp-main）から消す。
+# deploy.yml の Preview ステップ（action-hosting-deploy v0.7.1）は、PR ごとに pr<番号>-<ブランチ名の先頭 20 字> の
+# チャネルを expires: 30d で作るが、PR を閉じても消さない。2026-10-23 にチャネルが 51 個たまって上限に達し、
+# develop → main の PR #399 の build_and_deploy が channel quota reached（HTTP 429）で落ちた。
+# - 消すのは pr<番号>- で始まるチャネルだけ。live と develop は名前でも除外する。ブランチ名の部分は action が
+#   切り詰めて置き換えるので、番号だけで選ぶ（途中でブランチ名を変えた PR の古いチャネルも消える）。
+# - base では絞らない。PR の base を途中で変えても、チャネルは残っているため。
+# - フォークの PR は secret を受け取れず、チャネルも作られないので動かさない。
+# - concurrency は deploy.yml の PR のグループ（deploy-pr-<番号>）と同じにする。プレビューのデプロイが走っている
+#   ときに閉じたら、そのデプロイを取り消してから消す。後から終わったデプロイがチャネルを作り直さないようにするため。
+#   ジョブに置く（ワークフローに置くと、if で飛ばすフォークの PR の run も、同じ PR のデプロイを取り消す）。
+# - リポジトリのコードは実行しない（checkout も npm もしない）。
+# 照合: src/config/__tests__/preview-channel-cleanup.test.ts（deploy.yml・deploy-cms.yml・firebase.json の値と、
+# run のスクリプトを偽物の firebase で実際に動かした結果）
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  delete_preview_channel:
+    name: Delete the preview channel of the closed PR
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    concurrency:
+      group: deploy-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      # deploy-cms.yml と同じ単体バイナリ（版と sha256 を固定）。npm で入れると依存の版が実行のたびに解決される。
+      - name: Download firebase-tools (standalone v15.32.1, sha256 pinned)
+        env:
+          FIREBASE_TOOLS_URL: https://github.com/firebase/firebase-tools/releases/download/v15.32.1/firebase-tools-linux
+          FIREBASE_TOOLS_SHA256: '790d991658b7ea9a009a947721944b03695c7f3d97bdcddc887857c1a7671118'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/bin/firebase" "$FIREBASE_TOOLS_URL"
+          echo "${FIREBASE_TOOLS_SHA256}  $RUNNER_TEMP/bin/firebase" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/bin/firebase"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # deploy.yml のプレビューと同じサービスアカウント。鍵のファイルは GOOGLE_APPLICATION_CREDENTIALS で firebase-tools に渡り、
+      # ジョブの終わりに消える。
+      - name: Authenticate to Google Cloud (service account of deploy.yml)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_COR_JP_WEB }}
+
+      - name: Delete the preview channels of this PR
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          FIREBASE_PROJECT: cor-jp-web
+          FIREBASE_SITE: cor-jp-main
+        run: |
+          set -euo pipefail
+          if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error title=PR の番号が読めない::PR_NUMBER=\"${PR_NUMBER}\""
+            exit 1
+          fi
+          # hosting:channel:list と delete は、firebase.json の無いディレクトリでは動かない（requireConfig。
+          # 「Not in a Firebase app directory」で exit 1）。checkout しないので空の設定を置き、サイトとプロジェクトは引数で渡す。
+          work="$RUNNER_TEMP/firebase-cli"
+          mkdir -p "$work"
+          echo '{}' > "$work/firebase.json"
+          cd "$work"
+          rc=0
+          firebase hosting:channel:list --project "$FIREBASE_PROJECT" --site "$FIREBASE_SITE" --json --non-interactive > channels.json || rc=$?
+          if [ "$rc" -ne 0 ] || ! jq -e '.status == "success" and (.result.channels | type) == "array"' channels.json > /dev/null; then
+            echo "::error title=チャネルの一覧を取れない（exit ${rc}）::firebase-tools の --json の出力を次に示す"
+            cat channels.json
+            exit 1
+          fi
+          jq -r '.result.channels[].name | split("/") | last' channels.json > names.txt
+          # live は必ずある。無ければ別のサイトを見ていて、このあとの「0 個」も信じられない。
+          if ! grep -qx live names.txt; then
+            echo "::error title=live チャネルが一覧に無い::${FIREBASE_PROJECT}/${FIREBASE_SITE} のチャネル: $(tr '\n' ' ' < names.txt)"
+            exit 1
+          fi
+          prefix="pr${PR_NUMBER}-"
+          targets=()
+          while IFS= read -r name; do
+            case "$name" in
+              live | develop) ;;
+              "$prefix"*) targets+=("$name") ;;
+            esac
+          done < names.txt
+          echo "チャネル $(grep -c '' names.txt) 個のうち、${prefix} で始まるもの: ${#targets[@]} 個"
+          if [ "${#targets[@]}" -eq 0 ]; then
+            exit 0
+          fi
+          for channel in "${targets[@]}"; do
+            firebase hosting:channel:delete "$channel" --project "$FIREBASE_PROJECT" --site "$FIREBASE_SITE" --force --non-interactive
+          done
