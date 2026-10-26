@@ -21,7 +21,7 @@ ADR-0025 の判断材料。取りまとめの Issue は #421（作業 D）。調
   - 電話番号 `070-8561-1659` は特定商取引法の表記に載っている（表示の義務があるため。ADR-0005 の改訂）
   - つまり、調べる気のある営業はいまでも連絡先にたどり着ける。`/contact` に出さないことで減っているのは、ついでに連絡してくる営業だと考えられる（所見）
 
-チャットの UX のうち判断の要らないものは、#425（corsweb）と Cor-Incorporated/cloudia#33 で直した。操作して見つけたつまずきの一覧は #425 の本文にある。
+チャットの UX のうち判断の要らないものは、#425（corsweb）と Cor-Incorporated/cloudia#33 で PR を出した（どちらも未マージ、代表の OK 待ち）。操作して見つけたつまずきの一覧は #425 の本文にある。
 
 ## 2. いまの実際の様子が分かるデータ
 
@@ -50,7 +50,11 @@ SELECT date(created_at, 'unixepoch', '+9 hours') AS day, intent, classification,
 FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
 ```
 
-会話の数と送信の数を並べれば、途中でやめた割合のおよそが出る。D1 は 30 日と 90 日で消えるので、長い期間を見るには受信箱の件数を使う。
+会話の数と送信の数を並べれば、途中でやめた割合のおよそが出る。読むときの注意が 3 つある。
+
+- 会話は 30 日、送信は 90 日で消える作りなので、両方を並べて比べられるのは直近の 30 日だけ。長い期間は受信箱の件数を使う
+- その削除は、外部キーの制約で毎回失敗し、消えるはずの行が残っている可能性がある（#430。コードと SQLite で再現した。本番は未確認）
+- `submission_intake` の分類（`classification`）は、ブラウザが送った値をそのまま保存している（`validate.ts` の `normalizeInquiry`）。営業の割合を見るなら、会話の側（`contact_sessions`）の分類を使う
 
 ## 3. 案ごとの事実
 
@@ -60,8 +64,9 @@ FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
   - 個人と Business Starter で作れる予約ページは 1 つ。予約者のメール確認（ヘルプの原文は「スパム予約を防ぐには、【メール確認を必須にする】のチェックボックスをオンにします」）は、Workspace Individual か Business Standard 以上
   - 予約できるのは「予約ページのリンクを知っているすべてのユーザー」。1 回限りのリンクはヘルプに書かれていない
   - 有料の予約（Stripe）は Business Standard 以上などで使える（一次: https://knowledge.workspace.google.com/admin/calendar/allow-paid-appointment-schedules-in-calendar?hl=ja ）
+  - Workspace の Business Standard は、料金ページで「￥800￥1,600」とユーザーあたり月額（税別）の 2 つの額が並んで表示され、割引期間（2026-11-08〜2027-02-08）の記載がある（一次: https://workspace.google.com/intl/ja/pricing.html 。割引前と割引後と読めるが、契約の画面で確かめる）。比べた表の「¥1,600/人」はこの額
 - TimeRex（一次: https://timerex.net/plan ）: 税抜でフリー ¥0、ベーシック ¥900/月、プレミアム ¥1,500/月（月払い）。回答による出し分けはプレミアムだけ。一度限りの「ワンタイムURL」がある（一次: ベンダーの発表 https://prtimes.jp/main/html/rd/p/000000069.000032995.html 。プランの条件は書かれていない）。データの保管場所の記載は見つからなかった
-- Calendly（一次: https://calendly.com/help/how-to-create-a-single-use-link 、https://calendly.com/help/how-to-require-email-verification-for-event-types 、https://calendly.com/help/how-to-change-your-event-type-language ）: 1 回限りのリンク（予約が 1 件入ると失効）とメール確認は全プラン。予約ページを自動で訳す言語に日本語はない
+- Calendly（一次: https://calendly.com/pricing 、https://calendly.com/help/how-to-create-a-single-use-link 、https://calendly.com/help/how-to-require-email-verification-for-event-types 、https://calendly.com/help/how-to-change-your-event-type-language ）: Standard は $10/人・月（年払い）。1 回限りのリンク（予約が 1 件入ると失効）とメール確認は全プラン。予約ページを自動で訳す言語に日本語はない
 - Cal.com（一次: https://cal.com/pricing 、https://github.com/calcom/cal.com ）: 招待した人だけが使える非公開のリンクは Free から。自前で置く版（Cal.diy）は README が「personal, non-production use」を勧めていて、チーム向けの機能も外されている
 - 所見: どれも「リンクを知っていれば予約できる」。チャットの後に出すなら、転送されて営業に使われないよう、1 回限りのリンクかメール確認があるものがよい。1 件ごとにリンクを出すには各社の API が要る（API の条件は調べていない）
 
@@ -95,13 +100,16 @@ FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
 - ADR-0011 は、着信・転送・録音の案内・個人情報の扱い・弁護士の確認が終わるまで 050 番号を出さないと決めている
 - 所見: 番号を出せば営業電話は来る。電話したい本物の相談者は取りこぼさない
 
-### F. メールアドレスを出す
+### F・F'. メールアドレスと「広告メールお断り」
 
-- 特定電子メール法: 広告や宣伝のメールは、原則として同意した人にだけ送れる。例外として、アドレスを公開している事業者には同意なしに送れる。ただし、**アドレスの直前か直後に「広告メールお断り」などと一緒に公開すると、この例外が外れ、同意のない広告宣伝メールは送れなくなる**（一次: 施行規則第 3 条、総務省・消費者庁「特定電子メールの送信等に関するガイドライン」平成 23 年 8 月 p.18–19 https://www.soumu.go.jp/main_content/000127185.pdf 、パンフレット https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/pdf/m_mail_pamphlet.pdf ）。違反は命令の対象で、従わなければ罰則がある
+F は、すでに公開しているアドレスの隣に「広告メールお断り」と書くこと。F' は、`/contact` にもメールアドレスを出すこと（「広告メールお断り」を添える）。
+
+
+- 特定電子メール法: 広告や宣伝のメールは、原則として同意した人にだけ送れる。例外として、アドレスを公開している事業者には同意なしに送れる。ただし、**アドレスの直前か直後に「広告メールお断り」などと一緒に公開すると、この例外が外れる**（同意を得た人、名刺などでアドレスを知らされた人、取引のある人からは、引き続き送れる）（一次: 施行規則第 3 条、総務省・消費者庁「特定電子メールの送信等に関するガイドライン」平成 23 年 8 月 p.18–19 https://www.soumu.go.jp/main_content/000127185.pdf 、パンフレット https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/pdf/m_mail_pamphlet.pdf ）。違反は命令の対象で、従わなければ罰則がある
 - 問い合わせフォームから送る営業文がこの法律の「電子メール」に当たるかについて、公的な見解は見つからなかった
 - 会社あての営業電話は特定商取引法の電話勧誘販売の規制の外にある。「営業電話お断り」に法的な効き目はない（一次: https://www.no-trouble.caa.go.jp/what/telemarketing/ ）
-- アドレスを伏せ字にすると、自動で集めるボットからのスパムは大きく減る（米 FTC の 2005 年の調査、一次: https://ftc.gov/node/41872 ）。cor-jp.com は Cloudflare のプロキシを通っているので（本番のページが `cor-jp.com/cdn-cgi/rum` へ送っている）、Cloudflare の Email Address Obfuscation を使える見込みがある（一次: https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/ 。設定は確かめていない）
-- 所見: 人が見て書き写す営業は止まらない。一方、`company@cor-jp.com` はすでに公開しているので、「広告メールお断り」を隣に書くだけでも、法律上の歯止めが 1 つ増える
+- アドレスを伏せ字にすると、自動で集めるボットからのスパムは大きく減る（米 FTC の 2005 年の調査、一次: https://ftc.gov/node/41872 ）。cor-jp.com は Cloudflare のプロキシを通っているので（Worker の経路が `zone_name = "cor-jp.com"` で張られている。`workers/contact-chat/wrangler.toml`、`workers/contact-edge/wrangler.toml`）、Cloudflare の Email Address Obfuscation を使える見込みがある（一次: https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/ 。設定は確かめていない）
+- 所見: 人が見て書き写す営業は止まらない。一方、`company@cor-jp.com` はすでに公開しているので、「広告メールお断り」を隣に書くだけでも（F）、広告宣伝メールへの法律上の歯止めが 1 つ増える
 
 ### G. 取材専用の窓口
 
@@ -124,7 +132,8 @@ FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
 | C 有料の診断 | 低 | 低〜中（件数は減る） | 中 | 中（返金・請求書） | 固定費なし・3.6% | 中（Stripe に渡る） |
 | D LINE 公式アカウント | 中 | 中 | 低 | 中 | ¥0〜 | 中〜高 |
 | E 050 の AI 電話 | 高 | 高 | 低〜中 | 中 | ¥3,980〜＋α | 中（録音を外部に保存） |
-| F メールアドレス＋「広告メールお断り」 | 高（人の営業は止まらない。広告メールには法律上の歯止めがつく） | 高 | 低 | 中〜高 | ¥0 | 低 |
+| F 公開済みのアドレスに「広告メールお断り」 | 変わらない（広告宣伝メールに法律上の歯止めがつく） | 変わらない | 低（法務の文書なので弁護士の確認） | 低 | ¥0 | 変わらない |
+| F' `/contact` にメールアドレス（＋お断り） | 高（人の営業は止まらない） | 高 | 低 | 中〜高 | ¥0 | 低 |
 | G 取材専用の窓口 | 中 | 低〜中 | 低 | 低 | ¥0 | 低 |
 
 ## 5. 判断待ち・分からなかったこと
