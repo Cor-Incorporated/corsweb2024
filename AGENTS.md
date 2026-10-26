@@ -43,6 +43,7 @@ npm run security:audit           # security:audit:firebase + security:audit:work
 npm run i18n:check        # Missing/outdated content translations (no API key; exit 1 if any)
 npm run check:links       # scripts/check-external-links.mjs: no hard-coded griftai.org, no unbacked "30秒" / multipliers in pages, components, i18n
 npm run blog:check -- src/content/blog/ja/your-post.md   # scripts/blog-guardrails.mjs on one article (ADR-0007 wording)
+npm run check:grift-version  # ja articles that call an old Grift CLI version "公開中/最新/現在" (ADR-0023; also run by test:run)
 npm run seo:snapshot -- --out snapshot.json   # SEO/AIO snapshot of dist (see scripts/seo-snapshot.mjs for --compare)
 ```
 
@@ -58,6 +59,16 @@ What CI runs (`.github/workflows/`):
 - `deploy.yml`: Firebase Hosting deploy (`main` = production, `develop` and
   PRs = preview channels); `deploy-cms.yml` deploys the CMS admin
 - `h5-admission.yml` (`scripts/h5-admission-check.sh`) and `guard-base-branch.yml`
+- `grift-cli-release-watch.yml` (daily, on `main` only): compares the Grift
+  CLI version in `src/config/grift-cli-release.json` with PyPI and opens an
+  Issue when they differ (ADR-0023)
+- `cleanup-preview-channel.yml`: deletes a PR's Firebase preview channel when
+  the PR is closed (preview channels are capped)
+- `cms-pr-status.yml`: comments on PRs opened by the CMS (`cms/` branches)
+  whether the translations arrived and the checks passed
+- `claude.yml` (Claude Code on @claude mentions in issues and PRs) and
+  `claude-code-review.yml` (manual only since 2026-08-16, until its
+  credentials exist)
 
 `check:links` and `blog:check` are not run by CI — run them yourself when you
 touch public copy or articles.
@@ -103,7 +114,14 @@ and the ADR disagree.
     the works list
   - Grift is an own product that extracts verifiable facts from engineers'
     git history (OSS CLI `grift-cli`, MIT; trial for recruiting/SES agencies and in-house hiring teams;
-    no scores or rankings). It is no longer an estimation tool (ADR-0022)
+    no scores or rankings). It is no longer an estimation tool (ADR-0022).
+    Call the trial 「テスト導入（PoC）」, never 「試行」
+  - Grift CLI versions (ADR-0023): the current version lives only in
+    `src/config/grift-cli-release.json` (read via `src/config/grift-cli.ts`).
+    Articles write a version as a record of their time (「執筆時点では v0.x」)
+    and link that version's GitHub Release (or its PyPI page when there is no
+    Release; not checked by any test). They never write 「公開中」「最新」「現在」
+    plus a version that differs from the JSON: `npm run test:run` fails on that
   - The business has five pillars (Grift / local LLM & secure AI / hardware AI /
     AI contract development & adoption support / education & community); keep
     their order and wording in sync across `services2026`, `companyPage`, FAQ,
@@ -156,13 +174,14 @@ There are two separate mechanisms. Do not mix them up.
 ### Repository Layout
 
 - `src/pages/` — ja pages at the root; `en/`, `zh/`, `ko/`, `es/` hold the
-  localized copies of most pages; `[lang]/` serves news, works and
-  industries for the non-ja locales; `og/` generates OGP images
+  localized copies of most pages; `[lang]/` serves news, works, industries
+  and services for the non-ja locales; `og/` generates OGP images
 - `src/components/` — by feature: `home/`, `about/`, `blog/`, `news/`,
-  `works/`, `industry/`, `contact/`, `products/`, `common/`, `layout/`
+  `works/`, `industry/`, `services/`, `contact/`, `products/`, `common/`, `layout/`
   (Header, Footer, AlpineInit, ThemeInit), `analytics/`, `youtube/`
 - `src/config/` — site facts and single sources: `organization.ts`,
-  `author.ts`, `site.ts`, `blog-schema.ts`, `categories.ts`,
+  `author.ts`, `site.ts`, `services.ts` (the three service pages: slug, intent,
+  related works; ADR-0024), `blog-schema.ts`, `categories.ts`,
   `news-categories.ts`, `indexing.ts` (noindex / sitemap), `contact-guards.ts`
 - `src/utils/` — i18n, structured data / JSON-LD, OG image rendering,
   Alpine stores
@@ -174,7 +193,9 @@ There are two separate mechanisms. Do not mix them up.
   `contact-edge` (`/contact/chat/` → Cloudia Pages), `sveltia-cms-auth`
 - `services/vertex-gateway/` — Cloud Run gateway to Vertex AI Gemini for Cloudia
 - `e2e/` — Playwright specs; `tests/build-output/` — dist tests
-- `docs/` — ADRs, i18n guide, CMS guide, blog style guide
+- `docs/` — ADRs, i18n guide, CMS guide, blog style guide, the site's story
+  (`story-spine.md`) and the contact-channel research behind ADR-0025
+  (`contact-channels-research-2026-10.md`)
 
 Pages use a consistent pattern:
 

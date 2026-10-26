@@ -1,6 +1,8 @@
 # ADR-0010 Cor↔Grift クロスサイト CTA の環境変数化・intent・Preview noindex
 
-## ステータス: Accepted (2026-07-10)
+## ステータス: Accepted (2026-07-10) / 注記 2026-10-27
+
+2026-10-27 の注記: intent のキーは ADR-0014 で 7 キーにし、2026-10-27 に意味を今に合わせた。下の intent の表と「30秒」の推奨代替にある Team Beta・Paid Trial・Estimate Audit・見積もりの文言は、ADR-0022 で Grift の扱いを改めた（git 履歴から確かめられる事実を取り出す CLI とテスト導入。見積もりのツールではない）ので使わない。環境変数・Preview noindex・「30秒」を使わない決まり（`npm run check:links`）は今も有効。
 
 ## 背景
 - 更新予定 Cor は CTA が `https://griftai.org` ハードコード、更新予定 Grift は `https://cor-jp.com/contact/` ハードコード。

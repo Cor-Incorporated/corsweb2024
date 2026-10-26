@@ -1,6 +1,6 @@
 # ADR-0011 有料入口 CTA・情報設計・050 AI受付の表示方針
 
-## ステータス: Accepted (2026-07-10)
+## ステータス: Accepted (2026-07-10) / 改訂 2026-10-24（Header IA）/ 改訂 2026-10-25（About 代表）/ 改訂 2026-10-26（トップ）/ サービスの行き先は ADR-0024 で置き換え（2026-10-26）
 
 ## 背景
 - 更新予定 Cor で「無料で相談する」が主 CTA に残り、v0.5 の有料入口（機密データAI活用診断 10万〜30万円等）と競合する（監査 P0-3）。
@@ -12,7 +12,7 @@
 ### 主 CTA は 3 本に固定
 1. **機密データAI活用診断を相談する**（`intent=confidential-ai-assessment`）
 2. **ローカルLLM / セキュアAI PoCを相談する**（`intent=local-llm-poc`）
-3. **Grift Team Beta / Estimate Auditを相談する**（`intent=grift-team-beta` または `estimate-audit`）
+3. ~~**Grift Team Beta / Estimate Auditを相談する**（`intent=grift-team-beta` または `estimate-audit`）~~ 2026-10 に Team Beta と Estimate Audit を取り下げた。Grift の相談は `intent=grift-team-beta`（ADR-0022、ADR-0014 の 2026-10-27 の改訂）
 
 - 「無料30分相談」「無料で相談する」は **トップの主 CTA にしない**。
 - 無料枠は紹介限定・高適合リード・診断前の確認に限定し、文言・配置を弱くする。

@@ -83,7 +83,7 @@ PoC の受入基準をすべて満たした時点で Accepted に改める。
   - 配信用 SA と Workload Identity Federation の設定
   - GitHub Environment `cms-production`（main だけ）の作成
   - 配信を有効にするリポジトリ変数 `CMS_DEPLOY_ENABLED=true` の設定
-- 最初に cor-jp-web に作ったサイト `cor-jp-cms` は使わない（退役予定）。
+- 最初に cor-jp-web に作ったサイト `cor-jp-cms` は使わない（2026-09-28 に削除した。`docs/cms-sveltia.md`）。
 - 本番への反映は、develop への merge の後、次の develop → main のリリースで行われる。
 - develop 宛の PR ごとにプレビューチャネルが作られる。
 - 翻訳 CI が GitHub Actions の標準トークンで push すると、後続の pull_request の実行は承認待ちになる（GitHub の仕様）。翻訳 CI の設計でこれを扱う（ADR-0019 の決定 6: 既定は GITHUB_TOKEN で push し、翻訳コミットで承認待ちになった実行を approve-checks が同じトークンで承認する。2026-10-25 から。それまでは workflow_dispatch で再実行していたが、その結果は PR の必須チェックとして数えられなかった。任意の TRANSLATION_BOT_TOKEN を使えば、承認待ちにならずに全 CI が動く）。
