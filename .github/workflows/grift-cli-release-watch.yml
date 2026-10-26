@@ -1,0 +1,81 @@
+name: Grift CLI release watch
+
+# Grift CLI の版の正本（src/config/grift-cli-release.json）を、毎日 PyPI の最新と照合し、違えば Issue を開く（ADR-0023）。
+# Grift の次の版が出たことに、こちらから連絡しなくても気づけるようにする（2026-10-26 の代表の指摘）。
+# - 比べるのは scripts/grift-cli-release-watch.mjs（Node の組み込みだけ。npm ci をしない）
+# - 同じ題（正本と PyPI の版の組み合わせ）の Issue が開いていれば、もう開かない。同じになったら、開いている Issue を閉じる
+# - PyPI が取れなければ失敗する（黙って通さない）。GitHub の Release は本文に並べるだけで、取れなくても止めない
+# - ビルドのときにネットから版を取る方式は採らない（ビルドが外の応答で変わり、PyPI が落ちるとデプロイも止まる。ADR-0023）
+#
+# schedule は既定ブランチ（main）にあるこのファイルでだけ動く（develop に入っても、main へのリリースまでは動かない）。
+# workflow_dispatch（Actions タブ → Grift CLI release watch → Run workflow）も、main に入ってから使える。
+# 照合: src/config/__tests__/grift-cli-release-watch-workflow.test.ts（起動の条件・権限・checkout・run を実際に動かす）
+
+on:
+  schedule:
+    # 毎日 09:17（日本時間）
+    - cron: '17 0 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: grift-cli-release-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Compare the Grift CLI release with PyPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the release with PyPI
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY_FILE: ${{ runner.temp }}/grift-cli-release-issue.md
+        run: node scripts/grift-cli-release-watch.mjs --body-file "$BODY_FILE" --github-output "$GITHUB_OUTPUT"
+
+      # 違えば Issue を開き（同じ題が開いていれば開かない）、照合の結果が変わった古い Issue は閉じる。
+      # 正本を develop で直しても、schedule は main の正本を読むので、main へのリリースまでは Issue が開いたままになる
+      # （cor-jp.com の本番も古い版のまま）。リリースのあとの照合で同じになれば、ここで閉じる
+      - name: Open or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DRIFT: ${{ steps.compare.outputs.drift }}
+          TITLE: ${{ steps.compare.outputs.title }}
+          PYPI_VERSION: ${{ steps.compare.outputs.pypi_version }}
+          BODY_FILE: ${{ runner.temp }}/grift-cli-release-issue.md
+        run: |
+          set -euo pipefail
+          prefix='Grift CLI の版の正本（'
+          issues="$(gh issue list --state open --limit 200 --json number,title)"
+          stale="$(printf '%s' "$issues" | jq -r --arg prefix "$prefix" --arg title "$TITLE" --arg drift "$DRIFT" \
+            '.[] | select((.title | startswith($prefix)) and ($drift != "true" or .title != $title)) | .number')"
+          if [ "$DRIFT" = "true" ]; then
+            comment="照合の結果が変わったので閉じます（新しい結果: $TITLE）"
+          else
+            comment="正本と PyPI の最新が v${PYPI_VERSION} で同じになったので閉じます"
+          fi
+          for number in $stale; do
+            gh issue close "$number" --comment "$comment"
+          done
+          if [ "$DRIFT" != "true" ]; then
+            exit 0
+          fi
+          existing="$(printf '%s' "$issues" | jq -r --arg title "$TITLE" '[.[] | select(.title == $title)][0].number // empty')"
+          if [ -n "$existing" ]; then
+            echo "同じ題の Issue が開いている: #$existing"
+            exit 0
+          fi
+          gh issue create --title "$TITLE" --body-file "$BODY_FILE"
