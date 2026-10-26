@@ -220,7 +220,7 @@ testの種類は、clickがunit 555・不明23、flaskがunit 484・不明204、
 - `consenting_actor_required`: 経験、役割、ライブラリの文脈
 - `no_upstream_lineage`、`parent_repo_not_provided`、`template_not_provided`: upstreamとの関係、テンプレートからの継承
 - `no_tenant_commits`: 自社のcommitの8割が入る期間
-- `survival_scan_disabled`: 定着率
+- `survival_scan_disabled`: コードの新しさ（いまのコードがどれだけ最近書かれたか）
 - `outcome_declaration_not_provided`: 作業の後に起きたことの宣言
 - `deferred_to_v0.6`: 行単位の手戻り（0.8.0でも、0.6のころの名前のままです）
 

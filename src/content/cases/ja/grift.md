@@ -72,7 +72,7 @@ v0.6で加わった`report-v2`では、1人のエンジニアの仕事の形を�
 | テスト併修率 | test co-change |
 | 手戻り率 | corrective rework |
 | 磨き直し | path retouch |
-| 定着率 | survival（`--survival`を指定したときだけ） |
+| コードの新しさ | survival（`--survival`を指定したときだけ） |
 | リポジトリの文脈 | context profile |
 | 作業領域・変更リズム・検証の形 | surface_profile / change_rhythm / verification_profile |
 
