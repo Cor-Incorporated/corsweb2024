@@ -6,16 +6,7 @@
     "cta": "ホームに戻る"
   },
   "homeBlog": {
-    "eyebrow": "読みもの",
-    "title": "AIの「進め方」を、記事で。",
-    "description": "AI導入・機密データの安全な活用・見積もりの考え方など、現場で使える視点をまとめています。",
     "cta": "ブログをすべて見る"
-  },
-  "homeNews": {
-    "eyebrow": "News",
-    "title": "最新ニュース",
-    "description": "Cor.株式会社からのお知らせ、サービス更新、外部掲載、イベント情報をトップページから確認できます。",
-    "cta": "ニュースをすべて見る"
   },
   "news": {
     "eyebrow": "News",
@@ -370,7 +361,7 @@
       "description": "ページが見つかりません。URLを確かめて、もう一度お試しください。"
     },
     "home": {
-      "title": "Cor.株式会社｜福岡のAI実装会社（ローカルLLM・Grift・AI受託開発）",
+      "title": "福岡のAI開発・生成AI導入支援｜Cor.株式会社（ローカルLLM・Grift）",
       "description": "福岡のAI実装会社、Cor.株式会社。事業の柱はGrift、ローカルLLM・セキュアAI、ハードウェアAI、AI受託開発・導入支援、教育・地域の5つです。機密データを外に出さずにAIを使えるよう、設計から運用までご支援しています。必要なら「まだ作らない」選択肢も提案します。",
       "ogTitle": "AIを、安心して使える形で現場へ。｜Cor.株式会社",
       "ogDescription": "Grift、ローカルLLM・セキュアAI、ハードウェアAI、AI受託開発・導入支援、教育・地域の5つを事業の柱にする、福岡のAI実装会社。AIやシステムの要件が固まっていない段階から相談できます。"
@@ -628,15 +619,22 @@
   "homeHero": {
     "kicker": "想像の先まで、共に実装する。",
     "title": "<span class='nowrap'>AIを、安心して</span><br /><span class='nowrap'>使える形で現場へ。</span>",
-    "subtitle": "Cor.株式会社は、福岡のAI実装会社です。<br class='sm:hidden' />機密データを外に出さないローカルLLM、確かめられる根拠をつくる自社プロダクト「Grift」、設計から運用までの受託開発を軸に、教育や地域での場づくりにも取り組んでいます。<br />必要なら「まだ作らない」選択肢もご提案します。",
-    "support": "ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む、福岡のAI実装会社です。",
+    "subtitle": "契約書の確認、問い合わせの受付、社内の資料探し。<br class='sm:hidden' />福岡のCor.株式会社は、外に出せない情報を扱う業務でも、AIをどこに使えるかを確かめ、設計から運用まで一緒に進めます。<br />必要なら「まだ作らない」選択肢もご提案します。",
     "primaryCta": "機密データAI活用診断を相談す⁠る",
-    "secondaryCta": "ローカルLLM / セキュアAI PoCを相談す⁠る",
-    "philosophyCta": "「きょうそう」の思想を読む",
+    "secondaryCta": "実績を見る",
     "trustBadges": [
-      "ローカルLLM・情報を外に出さない",
-      "セキュリティ体制構築",
-      "福岡発・全国対応"
+      {
+        "id": "isms",
+        "label": "ISMSの第2段階審査を終了（2026年10月）"
+      },
+      {
+        "id": "engineer-cafe",
+        "label": "エンジニアカフェの多言語AI受付を開発・運用"
+      },
+      {
+        "id": "fukuoka",
+        "label": "福岡発・全国対応"
+      }
     ],
     "penguinBubble": [
       "ようこそ！",
@@ -645,42 +643,45 @@
     "fukuoka100Alt": "福岡を代表する企業100選 選出（Made In Local）"
   },
   "homeChallenges": {
-    "eyebrow": "01 / あなたの課題",
-    "title": "進まない業務の壁を、一緒に整理します。",
+    "eyebrow": "あなたの課題",
+    "title": "進まない業務を止まっている理由から一緒に整理します。",
     "items": [
       {
-        "title": "老朽化した基幹システムをクラウド化したい",
-        "description": "今使っているデータの整理から、クラウド上への移行・運用設計まで一緒に進めます。"
+        "title": "機密データを外に出さずに、AIを使いたい",
+        "description": "情報を外に出さないAIと、会社で承認したAIツールを、情報の重要度に合わせて使い分けられるように設計します。",
+        "link": "/works/confidential-data-ai-assessment"
       },
       {
-        "title": "多言語対応のAI受付・チャットを導入したい",
-        "description": "音声対応や社内資料で学習したAI、自動で動くAIの仕組みを使って、施設・自治体向けの案内体験を設計します。"
+        "title": "生成AIのサービスを本番で動かしたい",
+        "description": "何を作るかの整理から、使い心地の設計、システムの連携、課金、自動テストと公開、監視まで対応します。",
+        "link": "/works/survey-platform-renewal"
       },
       {
-        "title": "生成AIサービスをゼロから本番化したい",
-        "description": "何を作るかの整理から、使い心地の設計、システム同士をつなぐ仕組み、課金、自動テスト・公開、監視まで一気に対応します。"
+        "title": "古くなった基幹システムをクラウドに移したい",
+        "description": "今使っているデータの整理から、クラウドへの移行と運用の設計まで、一緒に進めます。",
+        "link": "/works/legacy-core-system-cloud-migration"
       },
       {
-        "title": "機密データを外に出さずAI活用したい",
-        "description": "情報を外に出さないAIや、承認済みのAIツールを使って、情報の重要度ランクに合わせた設計をします。"
+        "title": "多言語のAI受付・チャットを入れたい",
+        "description": "音声での対応、社内資料で学習したAI、自動で動くAIの仕組みを使って、施設や自治体の案内を設計します。",
+        "link": "/works/engineer-cafe-navigator"
       },
       {
-        "title": "業界特化のAIツールを作りたい",
-        "description": "建築図面、間取り生成、業務固有データのAI処理など。"
+        "title": "業界に合ったAIツールを作りたい",
+        "description": "建築図面や間取りの生成など、業界ごとのデータをAIで処理する仕組みを作ります。",
+        "link": "/industries/construction"
       },
       {
-        "title": "AI駆動開発を社内に内製化したい",
-        "description": "AIの活用方針づくり、社内向け研修、開発の進め方の整備まで、チームに寄り添って進めます。"
+        "title": "AIを使った開発を社内で回せるようにしたい",
+        "description": "AIの活用方針づくり、社内研修、開発の進め方の整備まで、チームと一緒に進めます。",
+        "link": "/blog/ai-driven-development-workflow"
       }
-    ],
-    "cta": "機密データAI活用診断を相談す⁠る",
-    "ctaPrimary": "機密データAI活用診断を相談す⁠る",
-    "ctaSecondary": "Griftの仕組みを見⁠る"
+    ]
   },
   "griftBridge": {
-    "eyebrow": "Our Product / Grift",
+    "eyebrow": "自社プロダクト",
     "title": "経歴は盛れる。証拠は盛れない。",
-    "description": "Griftは、エンジニアの開発記録（git履歴）から、確かめられる事実を取り出す自社プロダクトです。点数はつけず、誰が実行しても同じ結果になります。人材紹介会社・SESの営業が、推薦の理由を根拠とともに伝えるために使えます。",
+    "description": "Griftは、エンジニアの開発記録（git履歴）から、確かめられる事実を取り出す自社プロダクトです。人材紹介会社・SESの営業が、推薦の理由を根拠とともに伝えるために使えます。",
     "cta": "Griftの仕組みを見⁠る",
     "ctaGithub": "GitHubでGrift CLIを見⁠る",
     "note": "Grift CLIは無償・MITライセンスのOSSとして公開しています。紹介会社さま・SES企業さまのテスト導入（PoC）のご相談を受け付けています。",
@@ -706,36 +707,32 @@
     }
   },
   "proof": {
-    "eyebrow": "03 / 実証",
-    "title": "AIを使う前に、扱う情報を設計する。",
-    "description": "契約書、議事録、見積書、顧客情報、社内ナレッジ。Cor.株式会社は、外部AIにそのまま渡しにくい情報を、入力境界・権限・ログ・人間承認まで含めて設計し、業務で動くAIシステムとして実装します。",
-    "stats": [
+    "eyebrow": "実証",
+    "title": "実績と体制を確かめられる形で載せています。",
+    "description": "事例のページでは課題・設計・実装・運用を順に読めます。",
+    "items": [
       {
-        "label": "事業の柱",
-        "value": "5本",
-        "note": "Grift・ローカルLLM・ハードウェアAI・AI受託・教育／地域",
-        "href": "/company"
+        "id": "engineer-cafe",
+        "title": "エンジニアカフェの多言語AI受付",
+        "body": "福岡市のエンジニアカフェ向けに、多言語の音声AI受付「Engineer Cafe Navigator」を開発し、OSSとして公開しています（実運用中）。"
       },
       {
-        "label": "AI運用設計",
-        "value": "4設計",
-        "note": "入力境界・権限・ログ・人間承認",
-        "href": "/security"
+        "id": "legacy-migration",
+        "title": "約25年運用された基幹システムのクラウド移行",
+        "body": "ある教育機関の基幹データベースを、事実と仮説を仕分ける調査から始めて、段階的にクラウドへ移しています。"
       },
       {
-        "label": "入口診断",
-        "value": "10万〜30万円",
-        "note": "機密データAI活用診断",
-        "href": "/works/confidential-data-ai-assessment"
+        "id": "isms",
+        "title": "ISMSの第2段階審査を終了",
+        "body": "2026年10月にISO/IEC 27001（ISMS）の第2段階審査を終え、2026年12月ごろの認証登録を見込んでいます。"
       },
       {
-        "label": "PoC構築",
-        "value": "3ヶ月300万円〜",
-        "note": "ローカルLLM・AI基盤PoC",
-        "href": "/works/local-llm-poc"
+        "id": "fukuoka100",
+        "title": "福岡を代表する企業100選 2026-2027",
+        "body": "Made In Local の「福岡を代表する企業100選 2026-2027」に選ばれ、特設ページで紹介されています。"
       }
     ],
-    "cta": "AI基盤PoCを相談す⁠る"
+    "cta": "実績をすべて見る"
   },
   "services2026": {
     "title": "5つの柱で、AIを安心して使える形にする。",
@@ -763,111 +760,71 @@
     ]
   },
   "securityTrust": {
-    "title": "実務上の不安に対応するセキュリティ設計",
-    "description": "入力データ、アクセス権限、操作ログから、人間承認、削除ルール、運用責任の所在まで。機密データを扱う上で生じる実務上の不安に、適切な設計で対応します。",
+    "eyebrow": "セキュリティ",
+    "title": "機密データを扱う不安に、設計で応えます。",
+    "description": "入力データ、アクセス権限、操作ログ、人の承認、削除のルール、運用の責任者。機密データを扱うときの不安を、一つずつ設計で決めていきます。",
     "items": [
-      "顧問弁護士と連携し、契約・AI・個人情報・ISMS運用をレビュー",
-      "2026年10月にISO/IEC 27001（ISMS）の第2段階審査を終え、12月ごろの認証登録を見込んでいます",
-      "機密度ティアに応じて承認AI・会社アカウント・隔離環境を使い分け",
-      "会社支給Mac、暗号化、MDM、検知・対応型の軽量統制"
+      "契約・AI・個人情報・ISMSの運用は、顧問弁護士と一緒に確認しています",
+      "情報の機密度に合わせて、承認したAI・会社のアカウント・隔離した環境を使い分けています",
+      "会社支給のMac、暗号化、MDM（端末の管理）、検知と対応を中心にした軽い統制"
     ],
     "cta": "セキュリティ方針を見る"
   },
-  "kyousou": {
-    "title": "作ることが目的ではありません。必要なら「まだ作らない」と提案します。",
-    "description": "利益第一ではなく、社会により良いものを生み出すために、競争することもあれば、共創することも、協奏することもあります。Cor.株式会社は、多くの意味を含むこの考え方を「きょうそう」と呼んでいます。",
+  "finalCta": {
+    "title": "まずは、扱う情報を確かめるところから。",
+    "description": "課題の整理から、AIの実装と運用まで、福岡のAI実装会社として一気通貫で伴走します。",
     "items": [
       {
-        "word": "共創",
-        "meaning": "一緒に価値を作る",
-        "cor": "顧客・パートナー・AIと共に作る"
+        "intent": "confidential-ai-assessment",
+        "label": "機密データAI活用診断を相談す⁠る",
+        "audience": "まだ要件が決まっていない方に",
+        "price": "10万〜30万円程度"
       },
       {
-        "word": "協奏",
-        "meaning": "異なる強みが響き合う",
-        "cor": "人、AI、専門性、地域が役割を持つ"
+        "intent": "local-llm-poc",
+        "label": "ローカルLLM / セキュアAI PoCを相談す⁠る",
+        "audience": "外に出せないデータで、AIを試したい方に",
+        "price": "3ヶ月300万円〜"
       },
       {
-        "word": "競争",
-        "meaning": "互いを磨く",
-        "cor": "イエスマンを拒み、率直に高め合う"
-      },
-      {
-        "word": "狂想",
-        "meaning": "まだ形のない構想",
-        "cor": "妄想で終わらせずプロダクトに落とす"
-      },
-      {
-        "word": "狂騒",
-        "meaning": "熱量・市場のざわめき",
-        "cor": "追う対象ではなく、結果として生むもの"
+        "intent": "grift-team-beta",
+        "label": "Griftを自社でテストしてみる",
+        "audience": "人材紹介会社・SESの営業の方に",
+        "price": ""
       }
     ],
-    "cta": "代表ストーリーを読む"
-  },
-  "finalCta": {
-    "title": "進まない業務を、実装で越える。",
-    "description": "課題の整理からAIの実装・運用まで、福岡発のAI実装パートナーが一気通貫で伴走します。",
-    "primary": "機密データAI活用診断を相談す⁠る",
-    "secondary": "Griftを見⁠る"
-  },
-  "serviceCtas": {
-    "heading": "目的に合わせてご相談ください",
-    "items": [
-      {
-        "label": "機密データAI活用診断を相談す⁠る",
-        "intent": "confidential-ai-assessment"
-      },
-      {
-        "label": "ローカルLLM / セキュアAI PoCを相談す⁠る",
-        "intent": "local-llm-poc"
-      },
-      {
-        "label": "Grift（推薦の根拠づくり）を見⁠る",
-        "intent": "grift-team-beta",
-        "external": "grift"
-      }
-    ]
+    "founderLead": "言葉だけでは届かないものを、技術で届く形にする。Cor.株式会社を始めた理由は、代表の物語に書いています。",
+    "founderCta": "代表ストーリーを読む"
   },
   "homeIndustries": {
-    "eyebrow": "Industry / 業種別",
+    "eyebrow": "業種別",
     "title": "業種によって、止まる理由は違います。",
-    "description": "現場ごとに、データの扱い方、業務フロー、判断基準は異なります。いきなり開発に入るのではなく、まずは進め方から一緒に整理します。",
-    "tableHead": {
-      "industry": "業種",
-      "theme": "よくあるテーマ",
-      "detail": ""
-    },
+    "description": "データの扱い方も、業務の流れも、判断の基準も、現場ごとに違います。開発に入る前に、進め方から一緒に整理します。",
     "rows": [
       {
         "industry": "医療",
         "theme": "院内データの整理、患者対応、情報セキュリティ、AI活用方針",
-        "link": "/industries/medical",
-        "linkLabel": "医療向けページ"
+        "link": "/industries/medical"
       },
       {
         "industry": "士業",
         "theme": "契約書精査、申請・登記、期日管理、補助金申請",
-        "link": "/industries/shigyo",
-        "linkLabel": "士業向けページ"
+        "link": "/industries/shigyo"
       },
       {
         "industry": "建設",
         "theme": "労務管理、設計変更、安全確認、ノウハウ継承",
-        "link": "/industries/construction",
-        "linkLabel": "建設向けページ"
+        "link": "/industries/construction"
       },
       {
         "industry": "製造",
         "theme": "目視検査、ノウハウ継承、設備保全、在庫管理",
-        "link": "/industries/manufacturing",
-        "linkLabel": "製造向けページ"
+        "link": "/industries/manufacturing"
       },
       {
         "industry": "教育",
         "theme": "テスト作業、保護者連絡、調査報告、ICT名簿管理",
-        "link": "/industries/education",
-        "linkLabel": "教育向けページ"
+        "link": "/industries/education"
       }
     ]
   },
@@ -901,7 +858,7 @@
     },
     "support": {
       "eyebrow": "02 / Cor.の伴走",
-      "title": "Cor.は、こうお手伝いします。",
+      "title": "Cor.は、こう伴走します。",
       "intro": "課題ごとに、Cor.のサービスを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
       "items": [
         {
@@ -943,7 +900,7 @@
     "hero": {
       "eyebrow": "Professional Services",
       "title": "士業の業務、“時間と神経”を使いすぎていませんか？",
-      "subtitle": "契約書の精査、度重なる法改正、行政申請の二重入力、そして絶対に遅れられない期日管理。専門知識を活かす本来の業務の裏側で、膨大な手作業と精神的プレッシャーに追われる日々を一緒に変えていけるよう、Cor.がお手伝いします。"
+      "subtitle": "契約書の精査、度重なる法改正、行政申請の二重入力、そして絶対に遅れられない期日管理。専門知識を活かす本来の業務の裏側で、膨大な手作業と精神的プレッシャーに追われる日々を変えていけるよう、Cor.が伴走します。"
     },
     "challenges": {
       "eyebrow": "01 / よくある課題",
@@ -970,7 +927,7 @@
     "support": {
       "eyebrow": "02 / Cor.の伴走",
       "title": "Cor.は、こう伴走します。",
-      "intro": "課題ごとに、AI受託開発・AI顧問・ローカルLLM・Griftを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
+      "intro": "課題ごとに、Cor.のサービスを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
       "items": [
         {
           "title": "定型・標準条項の初期スクリーニングを一緒に進めます",
@@ -1041,7 +998,7 @@
     "support": {
       "eyebrow": "02 / Cor.の伴走",
       "title": "Cor.は、こう伴走します。",
-      "intro": "課題ごとに、AI受託開発・AI顧問・ローカルLLM・Griftを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
+      "intro": "課題ごとに、Cor.のサービスを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
       "items": [
         {
           "title": "工程シミュレーションと稼働ログの可視化",
@@ -1104,7 +1061,7 @@
     "support": {
       "eyebrow": "02 / Cor.の伴走",
       "title": "Cor.は、こう伴走します。",
-      "intro": "課題ごとに、AI受託開発・AI顧問・ローカルLLM・Griftを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
+      "intro": "課題ごとに、Cor.のサービスを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
       "items": [
         {
           "title": "目視検査の基準を、現場で使える形に整理するお手伝い",
@@ -1167,7 +1124,7 @@
     "support": {
       "eyebrow": "02 / Cor.の伴走",
       "title": "Cor.は、こう伴走します。",
-      "intro": "課題ごとに、AI受託開発・AI顧問・ローカルLLM・Griftを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
+      "intro": "課題ごとに、Cor.のサービスを組み合わせながら一緒に進めます。断定ではなく、現場の課題に合わせた伴走を大切にしています。",
       "items": [
         {
           "title": "テスト期の作業負荷を、整理から一緒に見直す",
@@ -1409,16 +1366,8 @@
     "titleSuffix": "｜Cor.株式会社"
   },
   "regionalTrust": {
-    "eyebrow": "Fukuoka / 地域とともに",
-    "title": "福岡から、AIをつくる人と場を増やす。",
-    "description": "福岡を拠点に、地域の施設や学びの場と一緒に、AIを現場で使える形にしています。",
     "fukuoka100Title": "福岡を代表する企業100選 2026-2027",
-    "fukuoka100Body": "Made In Local の「福岡を代表する企業100選 2026-2027」に選ばれ、特設ページで紹介されています。",
-    "engineerCafeTitle": "エンジニアカフェの多言語AI受付を、OSSで開発・運用",
-    "engineerCafeBody": "福岡市のエンジニアカフェ向けに、多言語音声AI受付「Engineer Cafe Navigator」を開発し、OSSとして公開しています（実運用中）。福岡での生成AI展示会の開催も、エンジニアカフェと構想しています。",
-    "engineerCafeLink": "事例を読む",
-    "engineerCafeLogoAlt": "Engineer Cafe（エンジニアカフェ）",
-    "companyLink": "会社概要を見る"
+    "engineerCafeLogoAlt": "Engineer Cafe（エンジニアカフェ）"
   },
   "companyPage": {
     "kicker": "Company",

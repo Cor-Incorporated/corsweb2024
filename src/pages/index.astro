@@ -1,17 +1,12 @@
 ---
 import ProblemHero from '../components/home/ProblemHero.astro';
 import ChallengeGrid from '../components/home/ChallengeGrid.astro';
-import IndustryTable from '../components/home/IndustryTable.astro';
-import GriftBridge from '../components/home/GriftBridge.astro';
 import ProofHighlights from '../components/home/ProofHighlights.astro';
 import ServicesReframed from '../components/home/ServicesReframed.astro';
 import SecurityTrust from '../components/home/SecurityTrust.astro';
-import RegionalTrust from '../components/home/RegionalTrust.astro';
-import KyousouPhilosophy from '../components/home/KyousouPhilosophy.astro';
-import HomeNewsRail from '../components/home/HomeNewsRail.astro';
-import HomeBlog from '../components/home/HomeBlog.astro';
+import IndustryList from '../components/home/IndustryList.astro';
+import GriftBridge from '../components/home/GriftBridge.astro';
 import Faq from '../components/products/Faq.astro';
-import ServiceCtas from '../components/home/ServiceCtas.astro';
 import FinalCta from '../components/home/FinalCta.astro';
 import Layout from '../layouts/Layout.astro';
 import { getCurrentLocale, getTranslations } from '../utils/i18n';
@@ -27,18 +22,15 @@ const t = getTranslations(currentLocale);
   ogTitle={t.meta.home.ogTitle || t.meta.home.title}
   ogDescription={t.meta.home.ogDescription || t.meta.home.description}
 >
+  {/* 並びは #414 で決めた「課題 → 実証 → 柱 → セキュリティ → 業種 → Grift」（docs/story-spine.md）。
+      5 言語で同じ並びかは src/utils/__tests__/home-page.test.ts で照合する。 */}
   <ProblemHero />
   <ChallengeGrid />
-  <IndustryTable />
-  <GriftBridge />
   <ProofHighlights />
   <ServicesReframed />
   <SecurityTrust />
-  <RegionalTrust />
-  <KyousouPhilosophy />
-  <HomeNewsRail />
-  <HomeBlog />
+  <IndustryList />
+  <GriftBridge />
   <Faq />
-  <ServiceCtas />
   <FinalCta />
 </Layout>

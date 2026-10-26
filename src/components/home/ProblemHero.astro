@@ -1,46 +1,29 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
-import { getContactUrl, FUKUOKA100_PAGE_URL } from '../../config/site';
+import { getContactUrl, ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
 import PenguinWalker from './PenguinWalker.astro';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-// 防御的ガード: 万一 i18n に福岡100選のテキスト badge が復活しても、公式エンブレム画像
-// （#276）と重複表示しないよう除外する。現在どのロケールにも該当文言は無く実質 no-op。
-// 根拠のない倍率バッジは i18n 側で削除済み（ADR-0007）。
-const HIDDEN_TRUST_BADGES = ['福岡100選 2026-2027'];
-const trustBadges = t.homeHero.trustBadges.filter(
-  (badge) => !HIDDEN_TRUST_BADGES.includes(badge),
-);
-// trustBadges の並び（全言語共通）に対応するリンク先。順: ①ローカルLLM ②セキュリティ体制 ③福岡発。
-// 対応先が無い index は非リンク（span）で表示。
-const BADGE_HREFS: (string | null)[] = [
-  getLocalizedUrl('/works/local-llm-poc', currentLocale), // /works も各言語版あり（#313）→ ロケール別に
-  getLocalizedUrl('/security', currentLocale), // /security は各言語版あり → ロケール別に
-  FUKUOKA100_PAGE_URL, // 福岡発バッジ → 100選の特設ページ（エンブレムと同じ遷移先）
-];
+// 最初の画面には、使う技術や製品名（ローカルLLM・PoC・Grift など）を出さず、改善できる業務と
+// 信頼の材料（審査・実績・選出）を置く（#414、2026-10-26 の社内レビュー）。文言の検査は
+// src/utils/__tests__/home-page.test.ts。
+// trustBadges の id ごとのリンク先。id は全言語で同じ並び（同じテストで照合する）。
+const BADGE_HREFS: Record<string, string> = {
+  isms: getLocalizedUrl('/security', currentLocale),
+  'engineer-cafe': getLocalizedUrl(ENGINEER_CAFE_CASE_PATH, currentLocale),
+  fukuoka: FUKUOKA100_PAGE_URL, // 福岡発 → 100選の特設ページ（エンブレムと同じ遷移先）
+};
 
-// CJK（ja/zh/ko）は 7vw で画面幅に自動追従させ、上限に当てない（#302）。
+// 見出しの大きさ（2026-10-26 に測って決めた）。
 //
-// 経緯: 元は clamp(2.15rem,7vw,5.75rem) の上限が 1314px で効き、それ以上いくら画面が広くても
-// ヒーローが一切成長しなかった。#298 で 2xl(1536px) に段差を足したが、MacBook 14" の 1512px は
-// 段差の 24px 手前で恩恵ゼロ、外部モニター（2164px・実測）も段差の上限 128px で頭打ちのまま
-// だった。上限そのものが原因なので、CJK は上限を実質廃止して比率を一定にする。
-// 結果、CJK タイトルは画面幅によらず一定比率で表示される（ja 61% / ko 64% / zh 48%）。
-//
-// 枠（max-w-*）は触らないこと。内側の div は items-center 配下の flex item ＝ 既に shrink-to-fit で、
-// h1 は nowrap + text-center。つまり枠の max-width を変えても h1 は同じ位置に着地する
-// （ja@2164/3440 でピクセル一致を実測）。CJK には無意味なうえ、枠を広げると 1536〜1888px で
-// es の行数が増えて主CTA がファーストビューから落ちる退行を生む。
-//
-// ラテン系（en/es）は現状維持（#298 時点と同一の値）。タイトルが折り返すため文字を大きくすると
-// 行が増え、ヒーローが縦に伸びて主CTA が画面外に落ちる。es@1512x982 の CTA 余白は元から +13px
-// しかなく、少しでも育てると破綻する。主CTA は有料入口なので見出しの大きさより優先する。
-// en/es を大きくしたいなら、まずタイトルの文言を短くすること（コード側では解けない）。
-//
-// 15rem(240px) は CJK の安全弁。7vw が 240px に達する 3429px 以上でのみ効く（通常は no-op）。
+// 7vw のときは 1440×900 で h1 が 100.8px、ヒーローが 1,132px と画面の高さを超え、「大きすぎる」と
+// 言われていた。5vw にすると 1440px で 72px。CJK（ja/zh/ko）は #302 のとおり上限を置かずに画面幅へ
+// 比例させる（外部モニターで頭打ちにならない）。15rem(240px) は 4800px 以上でだけ効く安全弁。
+// ラテン系（en/es）はタイトルが折り返すので、比率を下げたうえで 5.5rem(88px) を上限にする。
+// 下限の 2.15rem はスマホ幅で効く（390px では 34.4px）。
 //
 // 注意1: h1 の text-balance は Tailwind 3.4 の機能で、本プロジェクト（3.3.3）では CSS が出ない。
 //        折り返しは font-size と枠幅だけで決まる（バージョンを上げるとこの前提が変わる）。
@@ -48,29 +31,23 @@ const BADGE_HREFS: (string | null)[] = [
 //        切られる）。検証する場合は行の矩形とビューポートを直接比較すること。
 const isCjkLocale = ['ja', 'zh', 'ko'].includes(currentLocale);
 const heroTitleSizeClass = isCjkLocale
-  ? 'text-[clamp(2.15rem,7vw,15rem)]'
-  : 'text-[clamp(2.15rem,7vw,5.75rem)] 2xl:text-[clamp(5.75rem,6vw,6.25rem)]';
+  ? 'text-[clamp(2.15rem,5vw,15rem)]'
+  : 'text-[clamp(2.15rem,4.5vw,5.5rem)]';
 
-// 主CTA: 機密データAI活用診断 / 副: ローカルLLM PoC（ADR-0011）
+// 主CTA: 機密データAI活用診断（ADR-0011）。副は実績（信頼の材料を上へ寄せる。PoC の入口は締めに置く）
 const primaryHref = getContactUrl(currentLocale, {
   intent: 'confidential-ai-assessment',
   source: 'home-hero',
 });
-const secondaryHref = getContactUrl(currentLocale, {
-  intent: 'local-llm-poc',
-  source: 'home-hero',
-});
+const secondaryHref = getLocalizedUrl('/works', currentLocale);
 ---
 
-<section class="relative isolate flex min-h-[88vh] items-center overflow-hidden pt-20 pb-32 sm:pt-28 sm:pb-36">
+{/* 高さは中身で決める（以前の min-h-[88vh] は外した）。下の余白はペンギンが歩く場所。 */}
+<section class="relative isolate flex items-center overflow-hidden pt-12 pb-28 sm:pt-20 sm:pb-32">
   {/* 抽象モーション背景（装飾・読み上げ対象外）。prefers-reduced-motion で静止。 */}
   <div class="motion-bg" aria-hidden="true"></div>
-  {/* 2xl(≥1536px) の枠の上乗せは #298 の名残。h1 は shrink-to-fit + nowrap + text-center の
-      ため、この枠は h1 の見た目には影響しない（heroTitleSizeClass のコメント参照）。効くのは
-      枠内で折り返す要素＝字幕・CTA・バッジ側。h1 の頭打ちは heroTitleSizeClass で解消済みで、
-      1314px の上限が残るのはラテン系（en/es）だけ。 */}
   <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 2xl:max-w-[90rem]">
-    <div class="flex flex-col items-center gap-8 text-center sm:gap-10" data-hero-content>
+    <div class="flex flex-col items-center gap-6 text-center sm:gap-8" data-hero-content>
       <p
         class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
         data-reveal
@@ -78,22 +55,18 @@ const secondaryHref = getContactUrl(currentLocale, {
       >
         {t.homeHero.kicker}
       </p>
-      <div class="flex max-w-5xl flex-col items-center gap-6 sm:gap-8 2xl:max-w-7xl">
-        {/* 巨大タイポ＝「視覚で止まる」主役。即描画(LCP死守)のため演出は付けない。
-            サイズは heroTitleSizeClass が全て持つ（ベタ書きの text-[...] を足すと、後勝ちが
-            クラス属性の順ではなく CSS の出力順で決まるため、無言で競合する）。 */}
+      <div class="flex max-w-5xl flex-col items-center gap-5 sm:gap-6 2xl:max-w-7xl">
+        {/* 即描画(LCP死守)のため演出は付けない。サイズは heroTitleSizeClass が全て持つ（ベタ書きの
+            text-[...] を足すと、後勝ちがクラス属性の順ではなく CSS の出力順で決まるため、無言で競合する）。 */}
         <h1
           class={`text-balance font-semibold leading-[1.05] tracking-tight ${heroTitleSizeClass}`}
           set:html={t.homeHero.title}
         />
-        {/* 2xl では列幅だけ広げ、文字サイズは上げない。theme.fontSize が [size, lineHeight] の
-            タプル指定のため text-2xl は line-height:2rem も出し、後勝ちで leading-relaxed(1.625) を
-            打ち消してしまう（20px/1.70 → 24px/1.33 と字間が詰まって逆に読みにくくなる）。
-            2xl:leading-relaxed で戻すと es の主CTA が 1920×950 でファーストビュー外に落ちる。 */}
-        <p class="max-w-3xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl 2xl:max-w-4xl" set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
+        {/* theme.fontSize が [size, lineHeight] のタプル指定のため text-xl は line-height も出し、
+            後勝ちで leading-relaxed を打ち消す。sm:leading-relaxed で戻す。 */}
+        <p class="max-w-3xl text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl sm:leading-relaxed" set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
       </div>
-      <div class="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:justify-center" data-reveal style="--reveal-delay:0.3s">
-        {/* 有料入口: 診断（主）+ ローカルLLM PoC（副）。Grift は GriftBridge / ServiceCtas 側（ADR-0011）。 */}
+      <div class="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center sm:gap-4" data-reveal style="--reveal-delay:0.3s">
         <a
           href={primaryHref}
           class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 py-4 text-center text-lg font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8"
@@ -104,54 +77,39 @@ const secondaryHref = getContactUrl(currentLocale, {
           href={secondaryHref}
           class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto"
         >
-          {t.homeHero.secondaryCta}
+          {t.homeHero.secondaryCta}<span aria-hidden="true">&nbsp;→</span>
         </a>
       </div>
-      {
-        trustBadges.length > 0 && (
-          <ul class="flex flex-wrap items-center justify-center gap-3" data-reveal style="--reveal-delay:0.45s">
-            {trustBadges.map((badge, i) => {
-              const href = BADGE_HREFS[i];
-              const isExternal = Boolean(href && href.startsWith('http'));
-              const pill = 'inline-flex rounded-full bg-primary-500/10 px-4 py-1.5 text-sm text-primary-950/70 dark:bg-primary-400/10 dark:text-primary-200/70';
-              return (
-                <li>
-                  {href ? (
-                    <a
-                      href={href}
-                      target={isExternal ? '_blank' : undefined}
-                      rel={isExternal ? 'noopener noreferrer' : undefined}
-                      class={`${pill} transition hover:bg-primary-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:hover:bg-primary-400/20`}
-                    >
-                      {badge}
-                    </a>
-                  ) : (
-                    <span class={pill}>{badge}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )
-      }
+      <ul class="flex flex-wrap items-center justify-center gap-2 sm:gap-3" data-reveal style="--reveal-delay:0.45s">
+        {
+          t.homeHero.trustBadges.map((badge) => {
+            const href = BADGE_HREFS[badge.id];
+            if (!href) throw new Error(`homeHero.trustBadges: unknown id "${badge.id}" (${currentLocale})`);
+            const isExternal = href.startsWith('http');
+            return (
+              <li>
+                <a
+                  href={href}
+                  target={isExternal ? '_blank' : undefined}
+                  rel={isExternal ? 'noopener noreferrer' : undefined}
+                  class="inline-flex rounded-full bg-primary-500/10 px-3 py-1 text-xs text-primary-950/70 transition hover:bg-primary-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400/10 dark:text-primary-200/70 dark:hover:bg-primary-400/20 sm:px-4 sm:py-1.5 sm:text-sm"
+                >
+                  {badge.label}
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
       {/* 福岡を代表する企業100選 公式エンブレム（#276 / #304）。掲載条件（クリック遷移・掲載期限）は
-          コンポーネント側で一括して担保しているため、ここでは配置とサイズだけ指定する。
-          スマホは 56px（CTA とバッジに挟まれて主張しすぎないため）、sm 以上で 80px。 */}
-      <Fukuoka100Emblem imgClass="h-14 w-auto sm:h-20" class="mt-2" data-reveal style="--reveal-delay:0.5s" />
-      {/* ファーストビュー直下の補助文（#175）: 事業内容を一文で補足する控えめなライン。 */}
-      <p
-        class="max-w-3xl text-pretty text-sm leading-relaxed text-primary-950/60 dark:text-primary-200/60 sm:text-base"
-        data-reveal
-        style="--reveal-delay:0.55s"
-      >
-        {t.homeHero.support}
-      </p>
+          コンポーネント側で一括して担保しているため、ここでは配置とサイズだけ指定する。 */}
+      <Fukuoka100Emblem imgClass="h-12 w-auto sm:h-16" data-reveal style="--reveal-delay:0.5s" />
     </div>
   </div>
   {/* ロゴのペンギンがヒーロー下部を歩く演出（装飾）。クリックで飛び立ち、下から再登場。 */}
   <PenguinWalker bubble={t.homeHero.penguinBubble} locale={currentLocale} />
   {/* 「↓」スクロールヒント: 下に続きがあると気づかせ離脱を防ぐ。少しスクロールで消える。 */}
-  <div class="scroll-hint pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center" aria-hidden="true">
+  <div class="scroll-hint pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center" aria-hidden="true">
     <span class="scroll-hint-arrow text-2xl text-primary-950/40 dark:text-primary-200/40">↓</span>
   </div>
 </section>

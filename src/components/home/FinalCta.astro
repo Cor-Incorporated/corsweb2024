@@ -1,43 +1,67 @@
 ---
-import { getCurrentLocale, getTranslations, emphasizeKyousou } from '../../utils/i18n';
-import { getContactUrl, getGriftUrl } from '../../config/site';
+import { getFounderStoryLink } from '../../utils/founder-story';
+import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import { getContactUrl, getGriftUrl, isContactIntent } from '../../config/site';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-const primaryHref = getContactUrl(currentLocale, {
-  intent: 'confidential-ai-assessment',
-  source: 'final-cta',
+// 締め（docs/story-spine.md の場面 5）。見出しは全ページ共通の締めの一文で、home-page.test.ts が
+// story-spine.md と照合する。入口は読み手の状況ごとに 3 つ（ADR-0011 の有料入口。無料相談は主にしない）。
+// 以前の「目的に合わせてご相談ください」（ServiceCtas）をここにまとめた。
+const items = t.finalCta.items.map((item) => {
+  if (!isContactIntent(item.intent)) throw new Error(`finalCta.items: unknown intent "${item.intent}" (${currentLocale})`);
+  const isGrift = item.intent.startsWith('grift');
+  const href = isGrift
+    ? getGriftUrl('/', { intent: item.intent, source: 'final-cta' })
+    : getContactUrl(currentLocale, { intent: item.intent, source: 'final-cta' });
+  return { ...item, href, isExternal: isGrift };
 });
-const secondaryHref = getGriftUrl('/', {
-  intent: 'grift-team-beta',
-  source: 'final-cta',
-});
+// 原体験は一言だけ触れて、代表の物語の全文（ブログの founder の記事）へつなぐ（docs/story-spine.md、ADR-0011）。
+const founderStory = await getFounderStoryLink(currentLocale);
 ---
 
-<section class="py-24 sm:py-32" data-reveal>
+<section class="py-16 sm:py-24" data-reveal>
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex flex-col items-center gap-8 rounded-3xl bg-primary-500/10 px-6 py-16 text-center dark:bg-primary-400/10 sm:px-12 sm:py-20">
-      <div class="flex max-w-2xl flex-col gap-4">
-        <h2 class="text-3xl font-medium tracking-tight sm:text-4xl" set:html={emphasizeKyousou(t.finalCta.title)} />
-        <p class="text-lg text-primary-950/70 dark:text-primary-200/70">
+    <div class="flex flex-col gap-8 rounded-3xl bg-primary-500/10 px-5 py-10 dark:bg-primary-400/10 sm:gap-10 sm:px-12 sm:py-16">
+      <div class="flex max-w-2xl flex-col gap-3 sm:gap-4">
+        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">{t.finalCta.title}</h2>
+        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
           {t.finalCta.description}
         </p>
       </div>
-      <div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+      <ul class="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
+        {
+          items.map((item) => (
+            <li class="group relative flex h-full flex-col gap-1 rounded-2xl bg-white/70 px-5 py-4 transition hover:bg-white dark:bg-primary-950/40 dark:hover:bg-primary-950/60">
+              <p class="text-sm text-primary-950/70 dark:text-primary-200/70">{item.audience}</p>
+              <div class="flex items-start justify-between gap-3">
+                <a
+                  href={item.href}
+                  target={item.isExternal ? '_blank' : undefined}
+                  rel={item.isExternal ? 'noopener noreferrer' : undefined}
+                  class="text-base font-semibold text-primary-950 after:absolute after:inset-0 after:rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-100"
+                >
+                  {item.label}
+                </a>
+                <span aria-hidden="true" class="shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-300">{item.isExternal ? '↗' : '→'}</span>
+              </div>
+              {item.price && <p class="mt-auto pt-1 text-sm text-primary-950/70 dark:text-primary-200/70">{item.price}</p>}
+            </li>
+          ))
+        }
+      </ul>
+      <div class="flex flex-col gap-3 border-t border-primary-900/10 pt-6 dark:border-primary-300/10 sm:flex-row sm:items-center sm:justify-between">
+        <p class="max-w-2xl text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base">
+          {t.finalCta.founderLead}
+        </p>
         <a
-          href={primaryHref}
-          class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-5 py-3 text-base font-medium text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b]"
+          href={founderStory.href}
+          hreflang={founderStory.locale}
+          data-testid="founder-story-link"
+          class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full border border-primary-950/20 px-5 py-2.5 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10 sm:text-base"
         >
-          {t.finalCta.primary}
-        </a>
-        <a
-          href={secondaryHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10"
-        >
-          {t.finalCta.secondary}
+          {t.finalCta.founderCta}
         </a>
       </div>
     </div>
