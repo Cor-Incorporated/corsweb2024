@@ -105,7 +105,22 @@ Grift の用語: Grift の記事（訳す frontmatter か本文のどこかに�
 - Grift の記事以外では固定しません（「作業領域」「検査値」などは一般の言葉としても使うため）。「検証の形式」のように後ろに漢字・カタカナが続くものと、「磨き直した」「磨き直して」などの動詞も用語として扱いません
 - モデルが自分で書いた訳語はそろえません（言い換えに際限が無いため）。トークンが全部・1 回ずつ残っていることを検証で確かめます
 - 用語の表は [`scripts/i18n/grift-terms.mjs`](../scripts/i18n/grift-terms.mjs)。`scripts/i18n/__tests__/grift-terms-link.test.mjs` が、griftai の `tep.ts` と grift-cli の docs（別のリポジトリなので、値と出典の path・commit をテストに写してある）、事例ページの「サイトの言い方 | CLIの語」の表と照合します。正本が変わったら、テストの値と commit を写し直し、表も直します
-- 表の値を変えると、その用語を含む記事の訳が `stale` になります（2 章）。PR の i18n-check は PR で変わった記事しか見ないので、表だけを変えた PR では気づけません。表を変えた PR では、`npm run i18n:check` で `stale` の記事を確かめ、6 章の workflow_dispatch（mode=translate）をその PR のブランチで起動して訳を付け直し、できたコミットをその PR に入れてください
+- 表の値を変えると、その用語を含む記事の訳が `stale` になります（2 章）。PR の i18n-check は PR で変わった記事しか見ないので、表だけを変えた PR では気づけません。表を変えた PR では、下の手順で訳を付け直し、できた翻訳コミットをその PR に入れてください
+
+表を変えた PR での訳の付け直し（2026-10-26 にこの手順で付け直した: run 40331030446 → 翻訳コミット 4a536d6、16 ファイル）。PR のブランチを checkout した worktree で実行します。
+
+```bash
+npm run i18n:check   # stale になった記事を確かめる（値を変えた用語を含む記事が、4 言語ずつ stale になる）
+branch="$(git branch --show-current)"
+url="$(gh workflow run translate-content.yml -R Cor-Incorporated/corsweb2024 --ref "$branch" -f mode=translate 2>&1 | grep -oE 'https://github.com/[^ ]+/actions/runs/[0-9]+')"
+run="${url##*/}"
+gh run watch "$run" -R Cor-Incorporated/corsweb2024 --exit-status
+# push されたブランチ（同じ日に 2 回目なら末尾に -<run の ID> が付く）を、PR のブランチに早送りで取り込んで push する
+backfill="$(gh run view "$run" -R Cor-Incorporated/corsweb2024 --log | grep -oE 'chore/i18n-backfill-[0-9]{8}(-[0-9]+)?' | sort -u)"
+git fetch origin "refs/heads/$backfill" && git merge --ff-only FETCH_HEAD && git push
+```
+
+`git merge --ff-only` が失敗したら、dispatch のあとに PR のブランチへコミットが積まれています。もう一度 dispatch からやり直してください。
 
 title と本文の見出しの一致: ja で frontmatter の `title` と本文の最初の `# ` 見出し（H1）が同じ文言なら、訳文の H1 を訳した `title` に置き換えます（モデルは両者を別々に訳すため、同じ文言でも訳が割れることがあるため。PR #344 の実 API 検証で en / zh / ko に発生）。
 
