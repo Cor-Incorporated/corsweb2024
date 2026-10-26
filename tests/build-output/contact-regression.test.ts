@@ -75,7 +75,14 @@ function extractLauncher(page: DistPage): { readonly asideHtml: string; readonly
 }
 
 // CloudiaLauncher の初期化スクリプトを、指定した URL のページとして実際に動かす。
-function runLauncher(page: DistPage, url: URL): LauncherRun {
+// scriptRuns: ViewTransitions はランチャーの無いページ（/contact/chat/ のプレースホルダ）を経て戻ると、
+// このスクリプトをもう一度実行する。その状態を再現するときは 2 を渡す。
+function runLauncher(
+  page: DistPage,
+  url: URL,
+  scriptRuns = 1,
+  beforeScripts?: (window: JSDOM['window']) => void
+): LauncherRun {
   const { asideHtml, script } = extractLauncher(page);
   const errors: string[] = [];
   const virtualConsole = new VirtualConsole();
@@ -85,9 +92,23 @@ function runLauncher(page: DistPage, url: URL): LauncherRun {
     runScripts: 'outside-only',
     virtualConsole,
   });
-  dom.window.eval(script);
+  beforeScripts?.(dom.window);
+  for (let run = 0; run < scriptRuns; run += 1) dom.window.eval(script);
   dom.window.document.dispatchEvent(new dom.window.Event('astro:page-load'));
   return { document: dom.window.document, errors };
+}
+
+// 開いている間はフォールバックの待ち（8 秒）と iframe の確認（250ms ごと）のタイマーが動くので、
+// 開いたテストは最後に window を閉じてタイマーを止める。
+function clickLauncherButton(run: LauncherRun): HTMLElement {
+  const button = run.document.getElementById('cloudia-launcher-open');
+  if (!button) throw new Error('#cloudia-launcher-open が無い');
+  button.click();
+  return button;
+}
+
+function closeLauncherRun(run: LauncherRun): void {
+  run.document.defaultView?.close();
 }
 
 function lastMain(document: Document): Element {
@@ -111,6 +132,86 @@ describe('B-1 5 言語の /contact: ランチャー実行後に表示される�
     const run = runLauncher(page, page.pageUrl);
     expect(run.errors).toEqual([]);
     expect(findPhoneLeads(run.document)).toEqual([]);
+    // ボタンを押した後に差し込まれる文言（data-label-close）も見る。
+    clickLauncherButton(run);
+    expect(findPhoneLeads(run.document)).toEqual([]);
+    closeLauncherRun(run);
+  });
+});
+
+// e2e（e2e/contact-cloudia.spec.ts）は CI で走らないので、開閉の文言と言語は dist の実物でも固定する。
+describe('ランチャーのボタンは開いている間「閉じる」の文言になり、押すと閉じる（5 言語）', () => {
+  const enLabels = (() => {
+    const run = runLauncher(loadDistPage(CONTACT_PAGE_PATHS.en), loadDistPage(CONTACT_PAGE_PATHS.en).pageUrl);
+    const button = run.document.getElementById('cloudia-launcher-open');
+    return { open: button?.getAttribute('data-label-open'), close: button?.getAttribute('data-label-close') };
+  })();
+
+  it.each(LOCALES)('%s', (locale) => {
+    const page = loadDistPage(CONTACT_PAGE_PATHS[locale]);
+    const run = runLauncher(page, page.pageUrl);
+    const button = run.document.getElementById('cloudia-launcher-open');
+    const labelOpen = button?.getAttribute('data-label-open');
+    const labelClose = button?.getAttribute('data-label-close');
+    const xLabel = run.document.getElementById('cloudia-launcher-close')?.getAttribute('aria-label');
+    expect(run.errors).toEqual([]);
+    expect(labelOpen).toBeTruthy();
+    expect(labelClose).toBeTruthy();
+    // × ボタンと同じ名前だと、読み上げで 2 つの「閉じる」が並ぶ。
+    expect(labelClose).not.toBe(xLabel);
+    if (locale !== 'en') {
+      // 以前は ja 以外がすべて英語だった。
+      expect(labelOpen).not.toBe(enLabels.open);
+      expect(labelClose).not.toBe(enLabels.close);
+    }
+
+    expect(button?.textContent?.trim()).toBe(labelOpen);
+    clickLauncherButton(run);
+    expect(button?.getAttribute('aria-expanded')).toBe('true');
+    expect(button?.textContent?.trim()).toBe(labelClose);
+    clickLauncherButton(run);
+    expect(button?.getAttribute('aria-expanded')).toBe('false');
+    expect(button?.textContent?.trim()).toBe(labelOpen);
+    closeLauncherRun(run);
+  });
+
+  it.each(['zh', 'ko', 'es'] as const)('%s の /contact の Cloudia の案内が英語のままでない', (locale) => {
+    const enTitle = loadDistPage(CONTACT_PAGE_PATHS.en).document.getElementById('cloudia-contact-entry-title')?.textContent;
+    const title = loadDistPage(CONTACT_PAGE_PATHS[locale]).document.getElementById('cloudia-contact-entry-title')?.textContent;
+    expect(title).toBeTruthy();
+    expect(title).not.toBe(enTitle);
+  });
+
+  // ランチャーの無いページを経て戻ると、スクリプトがもう一度実行される。開閉を 2 回束縛すると、
+  // 2 つの受け手の opened がずれる（Escape は最後の受け手にしか届かない）。いまは最後の受け手が
+  // 勝つので見た目は合うが、内部の状態がずれたまま残る。見た目では分からないので、束縛の数を数える。
+  // /contact では 1 回目の初期化がフォールバックのリンクを消すので、2 回目は早く抜けて二重にならない。
+  // 二重になるのは /contact 以外のページなので、トップで確かめる。
+  it('スクリプトが 2 回実行されても、ボタンの開閉は 1 回だけ束縛する（トップ）', () => {
+    const page = loadDistPage('/');
+    let openButtonClickBindings = 0;
+    const run = runLauncher(page, page.pageUrl, 2, (window) => {
+      const original = window.EventTarget.prototype.addEventListener;
+      window.EventTarget.prototype.addEventListener = function (
+        this: EventTarget,
+        ...args: Parameters<EventTarget['addEventListener']>
+      ) {
+        if (args[0] === 'click' && (this as Element).id === 'cloudia-launcher-open') openButtonClickBindings += 1;
+        return original.apply(this, args);
+      };
+    });
+    expect(run.errors).toEqual([]);
+    expect(openButtonClickBindings).toBe(1);
+
+    const panel = run.document.getElementById('cloudia-launcher-panel');
+    clickLauncherButton(run);
+    expect(panel?.getAttribute('aria-hidden')).toBe('false');
+    run.document.dispatchEvent(new run.document.defaultView!.KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(panel?.getAttribute('aria-hidden')).toBe('true');
+    const button = clickLauncherButton(run);
+    expect(panel?.getAttribute('aria-hidden')).toBe('false');
+    expect(button.textContent?.trim()).toBe(button.getAttribute('data-label-close'));
+    closeLauncherRun(run);
   });
 });
 
@@ -211,6 +312,21 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     expect(findPhoneLeads(page.document)).toEqual([]);
     const kinds = findPhoneLeads(runLauncher(page, page.pageUrl).document).map((finding) => finding.kind);
     expect(kinds).toEqual(expect.arrayContaining(['text', 'number']));
+  });
+
+  // ボタンを押した後にだけ表示される文言（data-label-close）も、押した後の DOM で検出する。
+  it('ランチャーのボタンの「閉じる」の文言に電話の案内が入る（押した後に表示される）', () => {
+    const page = loadDistPage(CONTACT_PAGE_PATHS.ja);
+    page.document
+      .getElementById('cloudia-launcher-open')
+      ?.setAttribute('data-label-close', '閉じる（お急ぎはお電話 092-000-0000）');
+    const run = runLauncher(page, page.pageUrl);
+    expect(findPhoneLeads(run.document)).toEqual([]);
+    clickLauncherButton(run);
+    expect(findPhoneLeads(run.document).map((finding) => finding.kind)).toEqual(
+      expect.arrayContaining(['text', 'number'])
+    );
+    closeLauncherRun(run);
   });
 
   it('ja の /privacy に語を伴わない番号（TEL 092-000-0000）が出る', () => {
