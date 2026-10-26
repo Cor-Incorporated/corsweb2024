@@ -415,7 +415,9 @@ describe('business pillars keep one order and wording (ADR-0022)', () => {
 
 // Epic #104: 業種別ページの「02」の欄の見出しは、どの業種でも「Cor.は、こう伴走します。」。
 // 医療だけ「こうお手伝いします。」になっていたのを 2026-10-26 のレビューで直した（#421）。
-// 5 つの業種で見出しがそろっていることを、言語ごとに確かめる。
+// 同じ日に、欄の導入文（support.intro）も医療の文にそろえた。ほかの 4 業種は Grift を
+// 組み合わせる例に挙げていたが、ADR-0022 で業種別ページから Grift の導線を外している。
+// 5 つの業種で見出しと導入文がそろっていることを、言語ごとに確かめる。
 describe('industry pages share one support heading (Epic #104)', () => {
   const INDUSTRIES = [
     'industryMedical',
@@ -425,16 +427,31 @@ describe('industry pages share one support heading (Epic #104)', () => {
     'industryEducation',
   ] as const;
 
-  it.each(LOCALES)('locale %s uses the same support.eyebrow and support.title on every industry page', (locale) => {
+  it.each(LOCALES)('locale %s uses the same support.eyebrow, title and intro on every industry page', (locale) => {
     const t = getTranslations(locale);
-    for (const field of ['eyebrow', 'title'] as const) {
+    for (const field of ['eyebrow', 'title', 'intro'] as const) {
       const observed = Object.fromEntries(INDUSTRIES.map((key) => [key, t[key].support[field]]));
       const expected = Object.fromEntries(INDUSTRIES.map((key) => [key, t.industryShigyo.support[field]]));
       expect(observed, `${locale} support.${field}`).toEqual(expected);
     }
   });
 
+  it.each(LOCALES)('locale %s does not offer Grift in any industry support.intro (ADR-0022)', (locale) => {
+    const t = getTranslations(locale);
+    const observed = Object.fromEntries(INDUSTRIES.map((key) => [key, t[key].support.intro]));
+    for (const [key, intro] of Object.entries(observed)) {
+      expect(intro, `${locale} ${key}.support.intro`).not.toMatch(/grift/i);
+    }
+  });
+
   it('uses the 伴走 wording in ja', () => {
-    expect(getJaTranslations().industryMedical.support.title).toBe('Cor.は、こう伴走します。');
+    const ja = getJaTranslations();
+    expect(ja.industryMedical.support.title).toBe('Cor.は、こう伴走します。');
+    // hero.subtitle の結びも、5 業種とも「伴走」で言う（士業だけ「お手伝いします」だった）。
+    const subtitles = Object.fromEntries(INDUSTRIES.map((key) => [key, ja[key].hero.subtitle]));
+    for (const [key, subtitle] of Object.entries(subtitles)) {
+      expect(subtitle, `ja ${key}.hero.subtitle`).toContain('伴走します。');
+      expect(subtitle, `ja ${key}.hero.subtitle`).not.toContain('お手伝いします');
+    }
   });
 });
