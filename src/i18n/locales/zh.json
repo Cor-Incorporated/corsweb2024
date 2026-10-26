@@ -1509,21 +1509,21 @@
   },
   "servicePages": {
     "common": {
-      "eyebrow": "服务",
       "termsTitle": "本页使用的词语",
       "stepsTitle": "推进方式",
       "costTitle": "费用",
       "costNote": "费用因课题与内容而异。我们会以明确前提条件、风险与工作范围的形式报价，正式金额与工期在确认需求后确定。",
       "relatedWorksTitle": "相关实绩・案例",
       "allWorksLabel": "查看全部实绩・案例",
-      "industriesTitle": "按行业查看",
+      "industriesTitle": "各行业的常见课题",
       "industriesLead": "不同行业，卡住的理由各不相同。各行业页面整理了常见课题，以及 Cor. 如何陪伴推进。",
       "otherServicesTitle": "其他服务",
       "ctaTitle": "先从确认要处理的信息开始。",
-      "ctaNote": "点击按钮后，将在咨询页面由 AI 接待“Cloudia”了解您的需求。"
+      "ctaNote": "点击按钮后，将在咨询页面由 AI 接待“Cloudia”了解您的需求。",
+      "serviceLinkLabel": "详细了解{service}"
     },
     "serviceAssessment": {
-      "catch": "在交给 AI 之前，和您一起梳理要处理的信息。",
+      "catch": "从要处理的信息出发，梳理出可以交给 AI 的业务。",
       "lead": "合同、会议记录、客户信息、报价单、内部知识。公司里有很多可以用于 AI 的信息，却无法判断能否直接交给外部 AI。这项诊断面向中小企业的经营者与管理部门，从这里开始和您一起思考。",
       "terms": [
         {
@@ -1598,7 +1598,7 @@
       "ctaLabel": "咨询机密数据 AI 应用诊断"
     },
     "serviceLocalLlm": {
-      "catch": "备齐判断是否投入正式运行的材料。",
+      "catch": "即使是处理不能外传信息的业务，也帮您确认能否使用生成式 AI。",
       "lead": "有处理机密数据的业务，无法全部交给云端 AI。但本地 LLM 在自家业务中是否真正可用，单靠自己又难以判断。这项 PoC 从这种状态出发，用 3 个月备齐判断是否投入正式运行的材料。",
       "terms": [
         {
@@ -1662,7 +1662,7 @@
       "ctaLabel": "咨询本地 LLM / 安全 AI PoC"
     },
     "serviceAiDev": {
-      "catch": "不止步于 PoC，而是融入现场业务。",
+      "catch": "不止于试用，把 AI 融入现场业务。",
       "lead": "从课题梳理到设计、实施、运维，全程一体化陪伴。运用生成式 AI、RAG、AI 智能体、图像与语音处理等技术，打造能够融入现场业务的 AI 系统，并支持制定 AI 应用方针与内部规则。",
       "terms": [
         {

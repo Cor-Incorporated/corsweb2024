@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 import {
   SERVICE_KEYS,
   SERVICE_PAGES,
+  findServiceByCaseCategory,
+  findServiceByIntent,
+  formatServiceLinkLabel,
   getServiceBasePath,
   getServiceContactSource,
   getServiceOgSlug,
@@ -36,6 +39,31 @@ describe('SERVICE_PAGES（正本）', () => {
       serviceLocalLlm: 'local-llm-poc',
       serviceAiDev: 'contract-dev',
     });
+  });
+
+  it('ブログの相談の種類と実績のカテゴリから、対応するサービスのページを引ける（Grift などは引かない）', () => {
+    expect(findServiceByIntent('local-llm-poc')?.key).toBe('serviceLocalLlm');
+    expect(findServiceByIntent('contract-dev')?.key).toBe('serviceAiDev');
+    expect(findServiceByIntent('grift-team-beta')).toBeUndefined();
+    expect(findServiceByIntent('press-speaking-other')).toBeUndefined();
+    expect(findServiceByCaseCategory('confidential-ai')?.key).toBe('serviceAssessment');
+    expect(findServiceByCaseCategory('ai-contract')?.key).toBe('serviceAiDev');
+    expect(findServiceByCaseCategory('grift')).toBeUndefined();
+    expect(findServiceByCaseCategory('tech-culture')).toBeUndefined();
+  });
+
+  it('実績のカテゴリは src/content/config.ts の caseCategories にある', () => {
+    const config = readFileSync(path.resolve('src/content/config.ts'), 'utf8');
+    const categories = config.match(/const caseCategories = \[([\s\S]*?)\]/)?.[1] ?? '';
+    for (const page of SERVICE_PAGES) expect(categories, page.key).toContain(`'${page.caseCategory}'`);
+  });
+
+  it('リンクの文言はサービス名を埋めて作る（5 言語とも {service} を 1 つ持つ）', () => {
+    for (const locale of LOCALES) {
+      const template = getTranslations(locale).servicePages.common.serviceLinkLabel;
+      expect(template.split('{service}').length - 1, `${locale}: ${template}`).toBe(1);
+    }
+    expect(formatServiceLinkLabel('{service}について詳しく見る', '機密データAI活用診断')).toBe('機密データAI活用診断について詳しく見る');
   });
 
   it('URL は ja が接頭辞なし、ほかの言語は /<lang>/services/<slug>', () => {

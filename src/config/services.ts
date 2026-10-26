@@ -23,6 +23,8 @@ export type ServicePage = {
   intent: ContactIntent;
   /** 「関係する実績・事例」に出す cases コレクションの slug（言語ディレクトリを除いた名前）。並びのとおりに出す */
   relatedCaseSlugs: readonly string[];
+  /** このサービスの実績のカテゴリ（src/content/config.ts の caseCategories）。実績のページからこのページへつなぐ */
+  caseCategory: 'confidential-ai' | 'local-llm' | 'ai-contract';
 };
 
 export const SERVICE_PAGES: readonly ServicePage[] = [
@@ -31,20 +33,38 @@ export const SERVICE_PAGES: readonly ServicePage[] = [
     slug: 'confidential-ai-assessment',
     intent: 'confidential-ai-assessment',
     relatedCaseSlugs: ['confidential-data-ai-assessment', 'local-llm-poc'],
+    caseCategory: 'confidential-ai',
   },
   {
     key: 'serviceLocalLlm',
     slug: 'local-llm-poc',
     intent: 'local-llm-poc',
     relatedCaseSlugs: ['local-llm-poc', 'confidential-data-ai-assessment'],
+    caseCategory: 'local-llm',
   },
   {
     key: 'serviceAiDev',
     slug: 'ai-development',
     intent: 'contract-dev',
     relatedCaseSlugs: ['engineer-cafe-navigator', 'legacy-core-system-cloud-migration', 'survey-platform-renewal'],
+    caseCategory: 'ai-contract',
   },
 ];
+
+/** ブログの CTA の相談の種類（ADR-0020）から、関係するサービスのページを引く。Grift などサービスのページが無いものは undefined */
+export function findServiceByIntent(intent: string): ServicePage | undefined {
+  return SERVICE_PAGES.find((p) => p.intent === intent);
+}
+
+/** 実績のカテゴリから、関係するサービスのページを引く。Grift・テックカルチャーは undefined */
+export function findServiceByCaseCategory(category: string): ServicePage | undefined {
+  return SERVICE_PAGES.find((p) => p.caseCategory === category);
+}
+
+/** サービスのページへのリンクの文言（locale の `servicePages.common.serviceLinkLabel` の {service} を埋める） */
+export function formatServiceLinkLabel(template: string, serviceName: string): string {
+  return template.replace('{service}', serviceName);
+}
 
 export function getServicePage(key: ServiceKey): ServicePage {
   const page = SERVICE_PAGES.find((p) => p.key === key);

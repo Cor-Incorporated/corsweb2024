@@ -1509,21 +1509,21 @@
   },
   "servicePages": {
     "common": {
-      "eyebrow": "Servicios",
       "termsTitle": "Términos que usamos en esta página",
       "stepsTitle": "Cómo trabajamos",
       "costTitle": "Coste",
       "costNote": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos.",
       "relatedWorksTitle": "Proyectos y casos relacionados",
       "allWorksLabel": "Ver todos los proyectos y casos",
-      "industriesTitle": "Por sector",
+      "industriesTitle": "Temas frecuentes por sector",
       "industriesLead": "Cada sector se detiene por motivos distintos. En las páginas por sector reunimos los retos habituales y cómo te acompaña Cor.",
       "otherServicesTitle": "Otros servicios",
       "ctaTitle": "Empieza por comprobar la información que manejas.",
-      "ctaNote": "Al pulsar el botón, en la página de contacto nuestra recepción con IA, Cloudia, te preguntará qué necesitas."
+      "ctaNote": "Al pulsar el botón, en la página de contacto nuestra recepción con IA, Cloudia, te preguntará qué necesitas.",
+      "serviceLinkLabel": "Más información: {service}"
     },
     "serviceAssessment": {
-      "catch": "Antes de dársela a la IA, ordenamos contigo la información que manejas.",
+      "catch": "Identificamos las tareas que puede asumir la IA, a partir de la información que manejas.",
       "lead": "Contratos, actas, datos de clientes, presupuestos, conocimiento interno. Tu empresa tiene mucha información que la IA podría aprovechar, pero no sabes si puedes entregarla tal cual a una IA externa. Este diagnóstico está pensado para la dirección y las áreas de administración de pymes, y lo pensamos contigo desde ahí.",
       "terms": [
         {
@@ -1598,7 +1598,7 @@
       "ctaLabel": "Consultar diagnóstico de IA con datos confidenciales"
     },
     "serviceLocalLlm": {
-      "catch": "Reunimos el material para decidir si pasar a producción.",
+      "catch": "Comprobamos si la IA generativa puede usarse incluso en tareas con información que no puede salir de tu empresa.",
       "lead": "Tienes tareas con datos confidenciales y no puedes enviarlo todo a una IA en la nube. Pero tampoco puedes juzgar por tu cuenta si un LLM local funcionaría de verdad en tu negocio. Partiendo de ahí, esta PoC reúne en tres meses el material para decidir si pasar a producción.",
       "terms": [
         {
@@ -1662,7 +1662,7 @@
       "ctaLabel": "Consultar PoC de LLM local / IA segura"
     },
     "serviceAiDev": {
-      "catch": "Que no se quede en una PoC: la integramos en tu trabajo diario.",
+      "catch": "No nos quedamos en la prueba: integramos la IA en tu trabajo diario.",
       "lead": "Te acompañamos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación. Con IA generativa, RAG, agentes de IA, procesamiento de imagen y voz, entre otros, te ayudamos a crear sistemas de IA que se integren en el trabajo diario, incluida la definición de políticas de uso de IA y normas internas.",
       "terms": [
         {

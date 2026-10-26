@@ -1509,21 +1509,21 @@
   },
   "servicePages": {
     "common": {
-      "eyebrow": "Services",
       "termsTitle": "Terms used on this page",
       "stepsTitle": "How we proceed",
       "costTitle": "Cost",
       "costNote": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review.",
       "relatedWorksTitle": "Related work and case studies",
       "allWorksLabel": "See all work and case studies",
-      "industriesTitle": "By industry",
+      "industriesTitle": "Common themes by industry",
       "industriesLead": "Every industry gets stuck for different reasons. Our industry pages cover the usual problems and how Cor. works alongside you.",
       "otherServicesTitle": "Other services",
       "ctaTitle": "Start by checking the information you handle.",
-      "ctaNote": "The button takes you to our contact page, where our AI receptionist Cloudia will ask what you need."
+      "ctaNote": "The button takes you to our contact page, where our AI receptionist Cloudia will ask what you need.",
+      "serviceLinkLabel": "Learn more about our {service}"
     },
     "serviceAssessment": {
-      "catch": "Before it goes to AI, we sort out the information you handle, together.",
+      "catch": "We find the work AI can take on, starting from the information you handle.",
       "lead": "Contracts, meeting minutes, customer information, quotes, internal know-how. Your company holds plenty of information AI could use, yet you can't tell whether it is safe to hand it to an external AI as is. This assessment is for executives and back-office teams at small and mid-sized companies, and we think it through with you from there.",
       "terms": [
         {
@@ -1598,7 +1598,7 @@
       "ctaLabel": "Discuss a confidential-data AI assessment"
     },
     "serviceLocalLlm": {
-      "catch": "We gather the material you need to decide whether to go to production.",
+      "catch": "We check whether generative AI can work even for tasks with information you can't send outside.",
       "lead": "You have work that involves confidential data, so you can't send everything to a cloud AI. Yet you can't tell on your own whether a local LLM would really work for your business. Starting from there, this PoC gathers in three months the material you need to decide whether to go to production.",
       "terms": [
         {
@@ -1662,7 +1662,7 @@
       "ctaLabel": "Discuss a local LLM / secure AI PoC"
     },
     "serviceAiDev": {
-      "catch": "We don't stop at the PoC; we build AI into your day-to-day work.",
+      "catch": "We don't stop at a trial; we build AI into your day-to-day work.",
       "lead": "We work with you end to end — from framing the problem to design, implementation, and operations. Using generative AI, RAG, AI agents, image and audio processing, and more, we help you build AI systems that fit into day-to-day work, including AI usage policies and internal rules.",
       "terms": [
         {

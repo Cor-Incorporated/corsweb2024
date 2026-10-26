@@ -14,7 +14,9 @@ import { safeJsonLd } from '../../utils/json-ld';
 import { buildServiceJsonLd } from '../../utils/structured-data';
 
 // /services/<slug>（ja）と /[lang]/services/<slug>（非ja）で共有する、サービスのページの本体（ADR-0024）。
-// 読み手が止まっているところ → 進め方 → 手元に残るもの → 費用 → 実績・業種 → 最後に 1 か所だけ相談の CTA。
+// どんな業務がよくなるか → 業種ごとのよくあるテーマ → 止まっているところ → 言葉 → 進め方 → 手元に残るもの →
+// 費用 → 実績 → ほかのサービス → 最後に 1 か所だけ相談の CTA。
+// 技術の言葉（ローカルLLM・PoC など）で始めない（読み手はエンジニアではない決裁者。ADR-0024 の 2）。サービス名は見出しの上の小さなラベルにする。
 // 以前はヘッダーの「サービス」から intent 付きの /contact へ直行していた。読んでから Cloudia へつなぐ。
 interface Props {
   serviceKey: ServiceKey;
@@ -63,8 +65,10 @@ const relatedCases = service.relatedCaseSlugs.map((slug) => {
   };
 });
 
+// 業種ごとのよくあるテーマは、トップの業種の欄（homeIndustries）と同じ文言
 const industries = t.homeIndustries.rows.map((row) => ({
   name: row.industry,
+  theme: row.theme,
   href: getLocalizedUrl(row.link, currentLocale),
 }));
 
@@ -88,19 +92,16 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   <div class="motion-bg" aria-hidden="true"></div>
   <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
     <div class="flex max-w-4xl flex-col items-start gap-6 text-left sm:gap-8">
-      <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400" data-reveal>
-        {common.eyebrow}
+      <p class="text-base font-medium text-primary-600 dark:text-primary-400 sm:text-lg" data-reveal>
+        {name}
       </p>
       <h1
-        class="text-balance text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl"
+        class="text-balance text-3xl font-semibold leading-[1.2] tracking-tight sm:text-4xl lg:text-5xl"
         data-reveal
         style="--reveal-delay:0.1s"
       >
-        {name}
-      </h1>
-      <p class="text-balance text-2xl font-medium tracking-tight sm:text-3xl" data-reveal style="--reveal-delay:0.15s">
         {page.catch}
-      </p>
+      </h1>
       <p
         class="max-w-3xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl"
         data-reveal
@@ -112,23 +113,41 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   </div>
 </section>
 
-<!-- 2. このページで使う言葉（エンジニアではない決裁者向けに、専門用語を平易に言い換える） -->
-<section class="pb-8">
+<!-- 2. 業種ごとのよくあるテーマ。どんな業務がよくなるかを、技術の言葉より先に見せる（ADR-0024 の 2）。業種別ページへつなぐ -->
+<section>
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="rounded-3xl border border-primary-900/10 p-6 dark:border-primary-300/10 sm:p-8" data-reveal>
-      <h2 class="text-base font-medium text-primary-950/70 dark:text-primary-200/70">{common.termsTitle}</h2>
-      <dl class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div class="flex flex-col gap-8">
+      <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-3xl">{common.industriesTitle}</h2>
+        <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+          {common.industriesLead}
+        </p>
+      </div>
+      <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {
-          page.terms.map((term) => (
-            <div class="flex flex-col gap-1">
-              <dt class="text-lg font-medium tracking-tight">{term.term}</dt>
-              <dd class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-                {term.description}
-              </dd>
-            </div>
+          industries.map((industry, i) => (
+            <li
+              class="group relative flex h-full flex-col gap-2 rounded-3xl bg-primary-500/10 p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10"
+              data-reveal
+              style={`--reveal-delay:${(0.1 + i * 0.06).toFixed(2)}s`}
+            >
+              <div class="flex items-start justify-between gap-2">
+                {/* リンクの文字は業種名だけにする（可視文テキスト監査が a[href] の innerText を測るため） */}
+                <h3 class="text-lg font-medium tracking-tight">
+                  <a
+                    href={industry.href}
+                    class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  >
+                    {industry.name}
+                  </a>
+                </h3>
+                <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">→</span>
+              </div>
+              <p class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70">{industry.theme}</p>
+            </li>
           ))
         }
-      </dl>
+      </ul>
     </div>
   </div>
 </section>
@@ -157,7 +176,28 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   </div>
 </section>
 
-<!-- 4. 進め方 -->
+<!-- 4. このページで使う言葉（エンジニアではない決裁者向けに、専門用語を平易に言い換える。業務の話のあと、進め方の前に置く） -->
+<section class="pb-20 sm:pb-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="rounded-3xl border border-primary-900/10 p-6 dark:border-primary-300/10 sm:p-8" data-reveal>
+      <h2 class="text-base font-medium text-primary-950/70 dark:text-primary-200/70">{common.termsTitle}</h2>
+      <dl class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
+        {
+          page.terms.map((term) => (
+            <div class="flex flex-col gap-1">
+              <dt class="text-lg font-medium tracking-tight">{term.term}</dt>
+              <dd class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+                {term.description}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 進め方 -->
 <section class="bg-[#1b2c40] py-20 sm:py-28">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
     <div class="flex flex-col gap-10 sm:gap-12">
@@ -186,7 +226,7 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   </div>
 </section>
 
-<!-- 5. 手元に残るもの・そのあと（書ける事実があるサービスだけ） -->
+<!-- 6. 手元に残るもの・そのあと（書ける事実があるサービスだけ） -->
 {
   (page.results || page.next) && (
     <section class="pt-20 sm:pt-28">
@@ -229,7 +269,7 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   )
 }
 
-<!-- 6. 費用（価格はこのページに載せない。判断待ち: ADR-0024）。5 がないページ（AI受託）でも進め方の帯から離すため、上にも余白を取る -->
+<!-- 7. 費用（価格はこのページに載せない。判断待ち: ADR-0024）。6 がないページ（AI受託）でも進め方の帯から離すため、上にも余白を取る -->
 <section class="py-20 sm:py-28">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
     <div class="flex max-w-3xl flex-col gap-4" data-reveal>
@@ -239,7 +279,7 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   </div>
 </section>
 
-<!-- 7. 関係する実績・事例 -->
+<!-- 8. 関係する実績・事例 -->
 <section class="pb-20 sm:pb-28">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
     <div class="flex flex-col gap-10">
@@ -273,32 +313,6 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
         {common.allWorksLabel}
         <span aria-hidden="true">→</span>
       </a>
-    </div>
-  </div>
-</section>
-
-<!-- 8. 業種ごとに見る -->
-<section class="pb-20 sm:pb-28">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex max-w-3xl flex-col gap-6" data-reveal>
-      <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{common.industriesTitle}</h2>
-      <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-        {common.industriesLead}
-      </p>
-      <ul class="flex flex-wrap gap-3">
-        {
-          industries.map((industry) => (
-            <li>
-              <a
-                href={industry.href}
-                class="inline-flex min-h-[44px] items-center rounded-full border border-primary-950/20 px-5 py-2 text-base font-medium transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:hover:bg-primary-400/10"
-              >
-                {industry.name}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
     </div>
   </div>
 </section>

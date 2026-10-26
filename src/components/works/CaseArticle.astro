@@ -6,6 +6,7 @@ import { DATE_LOCALES, localizeEntries, toCleanSlug } from '../../utils/content-
 import { safeJsonLd } from '../../utils/json-ld'
 import { organizationRef } from '../../utils/structured-data'
 import { ORGANIZATION_LOGO } from '../../config/organization'
+import { findServiceByCaseCategory, formatServiceLinkLabel, getServiceUrl } from '../../config/services'
 
 // /works/<slug>（ja）と /[lang]/works/<slug>（非ja）で共有する実績記事本体。
 // 本文の見出し（## 課題 / アプローチ / 実装 / 成果）は markdown 側にある。
@@ -58,7 +59,17 @@ const CTA_MAP: Record<CtaKey, Cta[]> = {
 }
 
 const ctaKey = (data.ctaType ?? data.category) as CtaKey
-const ctas = CTA_MAP[ctaKey]
+// 関係するサービスのページがあれば、相談の次に並べる（ADR-0024。実績からサービスの説明へつなぐ）
+const relatedService = findServiceByCaseCategory(ctaKey)
+const ctas: Cta[] = relatedService
+  ? [
+      ...CTA_MAP[ctaKey],
+      {
+        label: formatServiceLinkLabel(t.servicePages.common.serviceLinkLabel, t.nav[relatedService.key]),
+        href: getServiceUrl(relatedService, currentLocale),
+      },
+    ]
+  : CTA_MAP[ctaKey]
 
 // 関連記事: relatedSlugs があればそれ（実在 + 非下書き）。なければ同カテゴリから最大3件（自身を除く）。
 // 一覧は現在ロケール版（未翻訳は ja へフォールバック）に揃える。slug は言語ディレクトリを外して比較する。

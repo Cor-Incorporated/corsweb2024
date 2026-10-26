@@ -1,11 +1,13 @@
 // ビルド済み dist のサービスのページの検査（設定: vitest.dist.config.ts。`npm run build` の後に `npm run test:dist`）。ADR-0024。
 // 2026-10-26: ヘッダーの「サービス」は Grift 以外の 3 つがすべて intent 付きの /contact（Cloudia）へ直行していた（代表の指摘）。
 // 3 つの説明のページを 5 言語で作り、ヘッダー（パソコン・スマホ）・フッター・トップからそこへつなぐ。相談はページの最後の CTA から。
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   SERVICE_PAGES,
+  findServiceByCaseCategory,
+  findServiceByIntent,
   getServiceContactSource,
   getServiceOgSlug,
   getServiceUrl,
@@ -107,6 +109,63 @@ describe('サービスのページへの入口', () => {
       expect(expected.filter((href) => !inFooter.includes(href)), 'フッターにないリンク').toEqual([]);
     });
   }
+});
+
+// ブログと実績から、関係するサービスのページへつなぐ（ADR-0024 の 7）
+describe('実績とブログからサービスのページへ', () => {
+  const caseDir = path.resolve('src/content/cases/ja');
+  const cases = readdirSync(caseDir)
+    .filter((name) => name.endsWith('.md'))
+    .map((name) => {
+      const text = readFileSync(path.join(caseDir, name), 'utf8');
+      const field = (key: string) => text.match(new RegExp(`^${key}:\\s*['"]?([\\w-]+)`, 'm'))?.[1];
+      return { slug: name.replace(/\.md$/, ''), cta: field('ctaType') ?? field('category'), draft: field('isDraft') === 'true' };
+    })
+    .filter((c) => !c.draft);
+
+  it('サービスのページに対応する実績が 1 本以上ある（この検査が空振りしない）', () => {
+    expect(cases.filter((c) => c.cta && findServiceByCaseCategory(c.cta)).length).toBeGreaterThan(0);
+  });
+
+  for (const locale of LOCALES) {
+    it(`${locale}: 実績のページの本文から、カテゴリに対応するサービスのページへ行ける`, () => {
+      const missing = cases.flatMap((c) => {
+        const service = c.cta ? findServiceByCaseCategory(c.cta) : undefined;
+        if (!service) return [];
+        const href = getServiceUrl(service, locale);
+        const prefix = locale === 'ja' ? '' : `/${locale}`;
+        return hrefs(main(read(pageFile(`${prefix}/works/${c.slug}`)))).includes(href) ? [] : [`${c.slug} → ${href}`];
+      });
+      expect(missing).toEqual([]);
+    });
+  }
+
+  it('ブログの CTA の箱は、相談の種類にサービスのページがあれば、そのページへのリンクを持つ', () => {
+    const blogDirs = ['blog', 'en/blog'].map((dir) => path.join(DIST_DIR, dir));
+    const checked: string[] = [];
+    const wrong: string[] = [];
+    for (const dir of blogDirs) {
+      for (const slug of readdirSync(dir)) {
+        const file = path.join(dir, slug, 'index.html');
+        if (!existsSync(file)) continue;
+        const html = readFileSync(file, 'utf8');
+        const box = html.match(/<section\b[^>]*data-testid=["']?blog-cta["'\s>][\s\S]*?<\/section>/)?.[0];
+        if (!box) continue;
+        const intent = box.match(/data-intent=["']?([\w-]+)/)?.[1] ?? '';
+        const service = findServiceByIntent(intent);
+        const link = box.match(/<a\b[^>]*data-testid=["']?blog-cta-service["'\s>][^>]*>/)?.[0];
+        const locale = dir.endsWith(path.join('en', 'blog')) ? 'en' : 'ja';
+        checked.push(`${locale}/${slug}`);
+        if (!service) {
+          if (link) wrong.push(`${locale}/${slug}: intent=${intent} なのにサービスのリンクがある`);
+        } else if (!link || !hrefs(link).includes(getServiceUrl(service, locale))) {
+          wrong.push(`${locale}/${slug}: intent=${intent} → ${getServiceUrl(service, locale)} が無い`);
+        }
+      }
+    }
+    expect(checked.length, 'CTA の箱のある記事が見つからない').toBeGreaterThan(0);
+    expect(wrong).toEqual([]);
+  });
 });
 
 describe('サイトの案内', () => {
