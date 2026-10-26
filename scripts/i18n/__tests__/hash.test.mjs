@@ -1,7 +1,8 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { parseDocument } from '../frontmatter.mjs';
-import { computeSourceHash, SOURCE_HASH_RE } from '../hash.mjs';
+import { computeSourceHash, SOURCE_HASH_RE, translatableSource } from '../hash.mjs';
 import { JA_BLOG, JA_NEWS } from './helpers.mjs';
 
 const blog = parseDocument(JA_BLOG);
@@ -56,6 +57,31 @@ describe('computeSourceHash', () => {
     expect(hashOf('news', JA_NEWS.replace('"サイト更新"', '"更新"'))).not.toBe(
       hashOf('news', JA_NEWS)
     );
+  });
+
+  // Grift の用語（grift-terms.mjs）: 用語の出る Grift の記事だけ、用語と各言語の正式表記をハッシュに入れる
+  it('does not add Grift terms to articles without them (their hashes stay as they were)', () => {
+    const generic = JA_BLOG.replace('## はじめに', '## 作業領域');
+    expect(
+      translatableSource('blog', parseDocument(generic).data, parseDocument(generic).body)
+    ).not.toHaveProperty('griftTerms');
+    const griftWithoutTerms = JA_BLOG.replace('## はじめに', '## Griftについて');
+    const doc = parseDocument(griftWithoutTerms);
+    expect(translatableSource('blog', doc.data, doc.body)).not.toHaveProperty('griftTerms');
+  });
+
+  it('adds the Grift terms and their official forms to Grift articles (a form change makes them stale)', () => {
+    const doc = parseDocument(JA_BLOG.replace('## はじめに', '## Griftの作業領域'));
+    const source = translatableSource('blog', doc.data, doc.body);
+    expect(source.griftTerms).toEqual([
+      ['work-surface', '作業領域', 'work surface', '工作领域', '작업 영역', 'áreas de trabajo'],
+    ]);
+    const { griftTerms, ...withoutTerms } = source;
+    const hashWithoutTerms = createHash('sha256')
+      .update(JSON.stringify(withoutTerms), 'utf8')
+      .digest('hex');
+    expect(computeSourceHash('blog', doc.data, doc.body)).not.toBe(hashWithoutTerms);
+    expect(griftTerms).toHaveLength(1);
   });
 
   it('includes news.source (translated) but not news.category (copied)', () => {

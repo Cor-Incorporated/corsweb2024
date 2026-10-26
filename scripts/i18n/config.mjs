@@ -54,7 +54,11 @@ export const META_KEYS = Object.freeze([
 /** --adopt で既存（来歴なし）翻訳を採用したときに translationModel へ入れる値。 */
 export const ADOPTED_MODEL_LABEL = 'adopted-legacy';
 
-/** ソースハッシュの入力形式を変えたら上げる（上げると全翻訳が stale になる）。 */
+/**
+ * ソースハッシュの入力形式を変えたら上げる（上げると全翻訳が stale になる）。
+ * Grift の用語（hash.mjs の griftTerms）は、用語の出る記事の入力にだけ足したので上げていない（用語の出ない記事の
+ * ハッシュは変わらず、用語の出る記事だけが stale になる）。
+ */
 export const HASH_VERSION = 1;
 
 /**

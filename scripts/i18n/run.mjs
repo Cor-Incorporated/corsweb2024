@@ -15,7 +15,8 @@ import { getPath } from './util.mjs';
 
 export const HINTS = Object.freeze({
   missing: '翻訳ファイルがありません → npm run i18n:translate（GEMINI_API_KEY が必要）',
-  stale: 'ja が更新されています → npm run i18n:translate で再翻訳',
+  stale:
+    'ja（Grift の記事では Grift の用語の表も）が更新されています → npm run i18n:translate で再翻訳',
   invalid:
     '翻訳ファイルの frontmatter が壊れている・スキーマに違反しています → npm run i18n:translate で再生成',
   untracked:

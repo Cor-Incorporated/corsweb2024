@@ -48,6 +48,31 @@ describe('system instructions — 代表の氏名', () => {
   });
 });
 
+describe('system instructions — Grift の用語', () => {
+  const terms = [
+    { tokens: ['⟦G2⟧', '⟦G7⟧'], form: 'work surface' },
+    { tokens: ['⟦G5⟧'], form: 'Code recency' },
+  ];
+
+  it('用語のある記事では、トークンごとに入る語を伝え、トークンのまま返させる', () => {
+    for (const system of [
+      bodySystemInstruction('en', terms),
+      fieldsSystemInstruction('en', terms),
+    ]) {
+      expect(system).toContain('Tokens like ⟦G0⟧ stand for terms of Grift');
+      expect(system).toContain('Output each token itself');
+      expect(system).toContain('⟦G2⟧ ⟦G7⟧ → "work surface"');
+      expect(system).toContain('⟦G5⟧ → "Code recency"');
+    }
+  });
+
+  it('用語の無い記事のプロンプトは変えない', () => {
+    expect(bodySystemInstruction('ko', [])).toBe(bodySystemInstruction('ko'));
+    expect(bodySystemInstruction('ko')).not.toContain('terms of Grift');
+    expect(fieldsSystemInstruction('zh')).not.toContain('⟦G0⟧');
+  });
+});
+
 describe('fieldsResponseSchema', () => {
   it('pins keys and the tag count', () => {
     expect(fieldsResponseSchema({ title: 'タ', tags: ['a', 'b'] })).toEqual({

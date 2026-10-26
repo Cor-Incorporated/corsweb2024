@@ -5,14 +5,15 @@
  * frontmatter を組み立て（翻訳対象以外は ja からコピー、lang と来歴を設定）→ Zod ミラーで検証。
  * どこかで検証に落ちたら例外（呼び出し側はファイルを書かない）。
  * 社名と代表の氏名は本文・frontmatter とも保護トークン（⟦N…⟧ / ⟦F…⟧）で送り、翻訳先言語の正式表記で戻す
- * （glossary.mjs の NAME_TOKENS）。
+ * （glossary.mjs の NAME_TOKENS）。Grift の記事では、Grift の用語も保護トークン（⟦G…⟧）で送り、正式表記で戻す
+ * （grift-terms.mjs。どの記事で固定するかは griftTermsIn が決め、来歴のハッシュと同じ判定を使う）。
  * ja で title と本文の最初の H1 が同じ文言なら、訳文の H1 も訳した title にそろえる（alignTitleHeading）。
  */
 import { COLLECTIONS, META_KEYS } from './config.mjs';
 import { bodyCore, composeDocument } from './frontmatter.mjs';
-import { NAME_TOKENS } from './glossary.mjs';
-import { computeSourceHash } from './hash.mjs';
-import { expandTokens, protect, ProtectionError, segment } from './markdown.mjs';
+import { griftTermsIn, griftTermTokens } from './grift-terms.mjs';
+import { computeSourceHash, translatableSource } from './hash.mjs';
+import { expandTokens, protect, ProtectionError, segment, tokenTable } from './markdown.mjs';
 import { bodySystemInstruction, fieldsResponseSchema, fieldsSystemInstruction } from './prompt.mjs';
 import { validateTranslatedFrontmatter } from './schema.mjs';
 import { getPath, setPath } from './util.mjs';
@@ -43,18 +44,21 @@ export function fieldsPayload(collection, data) {
 }
 
 /**
- * frontmatter の翻訳ペイロードの名前（社名・代表の氏名）を保護トークンに置き換える（本文の protect() と同じ表・同じ順）。
+ * frontmatter の翻訳ペイロードの名前（社名・代表の氏名）と、Grift の記事なら Grift の用語を、保護トークンに置き換える
+ * （本文の protect() と同じ表・同じ順）。
+ * @param {{ griftTerms?: boolean }} [options]
  * @returns {{ payload: Record<string, string | string[]>, store: Map<string, { kind: string, original: string }> }}
  */
-export function protectPayloadNames(payload) {
+export function protectPayloadNames(payload, { griftTerms = false } = {}) {
   const store = new Map();
+  const tokens = tokenTable(griftTerms);
   const protectText = (text) => {
     if (/[⟦⟧]/.test(text)) {
       throw new ProtectionError(
         'frontmatter に予約文字 ⟦ ⟧ が含まれているため安全に保護できません'
       );
     }
-    return NAME_TOKENS.reduce(
+    return tokens.reduce(
       (current, { kind, prefix, pattern }) =>
         current.replace(pattern, (original) => {
           const id = `${prefix}${store.size}`;
@@ -73,7 +77,7 @@ export function protectPayloadNames(payload) {
   return { payload: protectedPayload, store };
 }
 
-/** 翻訳済みペイロードの名前のトークンを、翻訳先言語の正式表記に戻す。 */
+/** 翻訳済みペイロードの名前と用語のトークンを、翻訳先言語の正式表記に戻す。 */
 export function restorePayloadNames(value, store, lang) {
   const restoreText = (text) => expandTokens(text, store, lang);
   return Object.fromEntries(
@@ -129,13 +133,13 @@ export function buildTranslatedData(collection, sourceData, translated, lang, me
   };
 }
 
-async function translateFields({ collection, lang, data, client, attempts }) {
-  const { payload, store } = protectPayloadNames(fieldsPayload(collection, data));
+async function translateFields({ collection, lang, data, client, attempts, griftTerms }) {
+  const { payload, store } = protectPayloadNames(fieldsPayload(collection, data), { griftTerms });
   if (Object.keys(payload).length === 0) return { fields: {} };
   const errors = [];
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await client.generate({
-      system: fieldsSystemInstruction(lang),
+      system: fieldsSystemInstruction(lang, griftTermTokens(store, lang)),
       prompt: JSON.stringify(payload, null, 2),
       jsonSchema: fieldsResponseSchema(payload),
     });
@@ -151,14 +155,14 @@ async function translateFields({ collection, lang, data, client, attempts }) {
   throw new TranslationError('frontmatter', errors);
 }
 
-async function translateBody({ body, lang, client, attempts }) {
+async function translateBody({ body, lang, client, attempts, griftTerms }) {
   const sourceCore = bodyCore(body);
   if (sourceCore === '') return '';
-  const { text: protectedText, store } = protect(sourceCore);
+  const { text: protectedText, store } = protect(sourceCore, { griftTerms });
   const errors = [];
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await client.generate({
-      system: bodySystemInstruction(lang),
+      system: bodySystemInstruction(lang, griftTermTokens(store, lang)),
       prompt: protectedText,
     });
     const result = checkBodyOutput({
@@ -210,14 +214,24 @@ export function alignTitleHeading({ sourceTitle, sourceBody, translatedTitle, tr
  */
 export async function translateDocument({ collection, lang, source, client, now, attempts }) {
   const hash = computeSourceHash(collection, source.data, source.body);
+  // Grift の用語を固定する記事か（来歴のハッシュに用語を入れる判定と同じ）
+  const griftTerms =
+    griftTermsIn(translatableSource(collection, source.data, source.body)).length > 0;
   const translated = await translateFields({
     collection,
     lang,
     data: source.data,
     client,
     attempts,
+    griftTerms,
   });
-  const translatedBody = await translateBody({ body: source.body, lang, client, attempts });
+  const translatedBody = await translateBody({
+    body: source.body,
+    lang,
+    client,
+    attempts,
+    griftTerms,
+  });
   const body = alignTitleHeading({
     sourceTitle: source.data.title,
     sourceBody: bodyCore(source.body),
