@@ -13,6 +13,7 @@ import { safeJsonLd } from '../utils/json-ld';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
 import { ORGANIZATION_NAMES } from '../config/organization';
 import { isNoindexPath } from '../config/indexing';
+import { SERVICE_PAGES, getServiceBasePath, getServiceOgSlug } from '../config/services';
 
 interface Props {
   description: string;
@@ -66,6 +67,8 @@ const OG_PAGE_SLUGS: Record<string, string> = {
   '/security': 'security',
   '/contact': 'contact',
   '/privacy': 'privacy',
+  // サービスのページ（ADR-0024）。対応表は config/services.ts から作る
+  ...Object.fromEntries(SERVICE_PAGES.map((page) => [getServiceBasePath(page), getServiceOgSlug(page)])),
 };
 const ogBaseKey = basePath.replace(/\/+$/, '') || '/';
 const ogPageSlug = OG_PAGE_SLUGS[ogBaseKey] ?? (ogBaseKey.startsWith('/news/') ? 'news' : undefined);

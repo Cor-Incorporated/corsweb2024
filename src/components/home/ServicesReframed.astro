@@ -1,19 +1,28 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
 import { getGriftUrl } from '../../config/site';
+import { getServicePage, getServiceUrl } from '../../config/services';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
 // services2026.items（全言語同一の並び＝事業の5本柱、ADR-0022）に対応する関連ページ。
-// /works・/works/<slug>・/company は各言語版があるため localize、Grift は env 経由（ADR-0010）。
+// サービスのページ（ADR-0024）と /company は各言語版があるため localize、Grift は env 経由（ADR-0010）。
 // ハードウェアAIは開発・実証の準備段階で紹介ページが無いため、リンクを付けない（null）。
 const SERVICE_HREFS: (string | null)[] = [
   getGriftUrl('/', { intent: 'grift-team-beta', source: 'services-reframed' }), // Grift
-  getLocalizedUrl('/works/local-llm-poc', currentLocale), // ローカルLLM・セキュアAI → PoC の進め方
+  getServiceUrl(getServicePage('serviceLocalLlm'), currentLocale), // ローカルLLM・セキュアAI → PoC のページ
   null, // ハードウェアAI
-  getLocalizedUrl('/works', currentLocale), // AI受託開発・導入支援 → 実績一覧
+  getServiceUrl(getServicePage('serviceAiDev'), currentLocale), // AI受託開発・導入支援 → AI基盤構築・AI受託のページ
   getLocalizedUrl('/company', currentLocale), // 教育・地域 → 会社概要（事業の柱）
+];
+// カード全体のリンクとは別に置く、同じ柱のもう 1 つの入口。ローカルLLM・セキュアAI の柱には、PoC の前の診断がある。
+const SUB_LINKS: ({ name: string; href: string } | null)[] = [
+  null,
+  { name: t.nav.serviceAssessment, href: getServiceUrl(getServicePage('serviceAssessment'), currentLocale) },
+  null,
+  null,
+  null,
 ];
 ---
 
@@ -27,6 +36,7 @@ const SERVICE_HREFS: (string | null)[] = [
         {
           t.services2026.items.map((item, i) => {
             const href = SERVICE_HREFS[i];
+            const subLink = SUB_LINKS[i];
             const isExternal = Boolean(href && href.startsWith('http'));
             {/* カード全体をクリック可能にしつつ、リンクのテキストはタイトルのみに限定する
                 （説明文を <a> 配下に含めない）。可視文テキスト監査が a[href] の innerText を
@@ -59,6 +69,16 @@ const SERVICE_HREFS: (string | null)[] = [
                 <p class="text-base text-primary-950/70 dark:text-primary-200/70">
                   {item.description}
                 </p>
+                {/* カード全体を覆うリンクの上に重ねる（relative z-10）。押すとカードではなくこちらへ行く */}
+                {subLink && (
+                  <a
+                    href={subLink.href}
+                    class="relative z-10 mt-auto inline-flex w-fit items-center gap-1 text-sm font-medium text-primary-600 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-400"
+                  >
+                    {subLink.name}
+                    <span aria-hidden="true">→</span>
+                  </a>
+                )}
               </li>
             );
           })

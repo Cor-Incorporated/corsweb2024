@@ -1,3 +1,6 @@
+import { SERVICE_PAGES, getServiceOgSlug } from '../config/services';
+import { getJaTranslations } from './i18n';
+
 export const OG_IMAGE_WIDTH = 1200;
 export const OG_IMAGE_HEIGHT = 630;
 
@@ -35,6 +38,12 @@ export const OG_PAGES: OgPage[] = [
   },
   { slug: 'contact', title: 'お問い合わせ', subtitle: 'ご相談・お見積もりはお気軽に' },
   { slug: 'privacy', title: 'プライバシーポリシー', subtitle: '個人情報保護方針' },
+  // サービスのページ（ADR-0024）。ページ名と一言は ja の locale と同じ文言（ほかのページと同じく、画像は ja だけ）
+  ...SERVICE_PAGES.map((page) => ({
+    slug: getServiceOgSlug(page),
+    title: getJaTranslations().nav[page.key],
+    subtitle: getJaTranslations().servicePages[page.key].catch,
+  })),
 ];
 
 const PAGE_FONT_STACK =

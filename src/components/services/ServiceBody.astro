@@ -1,0 +1,357 @@
+---
+import { getCollection } from 'astro:content';
+import { getContactUrl } from '../../config/site';
+import {
+  SERVICE_PAGES,
+  getServiceContactSource,
+  getServicePage,
+  getServiceUrl,
+  type ServiceKey,
+} from '../../config/services';
+import { localizeEntries, toCleanSlug } from '../../utils/content-i18n';
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import { safeJsonLd } from '../../utils/json-ld';
+import { buildServiceJsonLd } from '../../utils/structured-data';
+
+// /services/<slug>（ja）と /[lang]/services/<slug>（非ja）で共有する、サービスのページの本体（ADR-0024）。
+// 読み手が止まっているところ → 進め方 → 手元に残るもの → 費用 → 実績・業種 → 最後に 1 か所だけ相談の CTA。
+// 以前はヘッダーの「サービス」から intent 付きの /contact へ直行していた。読んでから Cloudia へつなぐ。
+interface Props {
+  serviceKey: ServiceKey;
+}
+
+type Term = { term: string; description: string };
+type Step = { title: string; description: string };
+// 診断と PoC には「手元に残るもの」「そのあと」があり、AI受託にはない（サイトに書いた事実がないため作らない）
+type ServiceCopy = {
+  catch: string;
+  lead: string;
+  terms: Term[];
+  situations: { title: string; items: string[] };
+  steps: { lead: string; items: Step[] };
+  results?: { title: string; lead: string; items?: string[] };
+  next?: { title: string; items: string[]; note: string };
+  ctaLabel: string;
+};
+
+const { serviceKey } = Astro.props;
+const service = getServicePage(serviceKey);
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+const common = t.servicePages.common;
+const page = t.servicePages[serviceKey] as ServiceCopy;
+const name = t.nav[serviceKey];
+
+const ctaHref = getContactUrl(currentLocale, {
+  intent: service.intent,
+  source: getServiceContactSource(service),
+});
+
+// 関係する実績・事例は cases コレクションから、現在の言語の版（無ければ ja）を config の並びで出す。
+// config の slug が記事と合わなくなったら、黙って消さずにビルドを止める。
+const cases = localizeEntries(
+  await getCollection('cases', ({ data }) => import.meta.env.DEV || !data.isDraft),
+  currentLocale,
+);
+const relatedCases = service.relatedCaseSlugs.map((slug) => {
+  const entry = cases.find((c) => toCleanSlug(c.slug) === slug);
+  if (!entry) throw new Error(`config/services.ts: ${serviceKey} の relatedCaseSlugs にある「${slug}」の実績が無い`);
+  return {
+    title: entry.data.title,
+    summary: entry.data.summary,
+    href: getLocalizedUrl(`/works/${slug}`, currentLocale),
+  };
+});
+
+const industries = t.homeIndustries.rows.map((row) => ({
+  name: row.industry,
+  href: getLocalizedUrl(row.link, currentLocale),
+}));
+
+const otherServices = SERVICE_PAGES.filter((p) => p.key !== serviceKey).map((p) => ({
+  name: t.nav[p.key],
+  catch: t.servicePages[p.key].catch,
+  href: getServiceUrl(p, currentLocale),
+}));
+
+const serviceJsonLd = buildServiceJsonLd(currentLocale, {
+  path: Astro.url.pathname,
+  name,
+  description: t.meta[serviceKey].description,
+});
+---
+
+<script type="application/ld+json" is:inline set:html={safeJsonLd(serviceJsonLd)} />
+
+<!-- 1. Hero -->
+<section class="relative isolate flex min-h-[60vh] items-center overflow-hidden py-20 sm:py-28">
+  <div class="motion-bg" aria-hidden="true"></div>
+  <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex max-w-4xl flex-col items-start gap-6 text-left sm:gap-8">
+      <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400" data-reveal>
+        {common.eyebrow}
+      </p>
+      <h1
+        class="text-balance text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl"
+        data-reveal
+        style="--reveal-delay:0.1s"
+      >
+        {name}
+      </h1>
+      <p class="text-balance text-2xl font-medium tracking-tight sm:text-3xl" data-reveal style="--reveal-delay:0.15s">
+        {page.catch}
+      </p>
+      <p
+        class="max-w-3xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl"
+        data-reveal
+        style="--reveal-delay:0.2s"
+      >
+        {page.lead}
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 2. このページで使う言葉（エンジニアではない決裁者向けに、専門用語を平易に言い換える） -->
+<section class="pb-8">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="rounded-3xl border border-primary-900/10 p-6 dark:border-primary-300/10 sm:p-8" data-reveal>
+      <h2 class="text-base font-medium text-primary-950/70 dark:text-primary-200/70">{common.termsTitle}</h2>
+      <dl class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
+        {
+          page.terms.map((term) => (
+            <div class="flex flex-col gap-1">
+              <dt class="text-lg font-medium tracking-tight">{term.term}</dt>
+              <dd class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+                {term.description}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 読み手が止まっているところ -->
+<section class="py-20 sm:py-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-10 sm:gap-12">
+      <h2 class="max-w-3xl text-balance text-3xl font-medium tracking-tight sm:text-4xl" data-reveal>
+        {page.situations.title}
+      </h2>
+      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          page.situations.items.map((item, i) => (
+            <li
+              class="rounded-3xl bg-primary-500/10 p-6 text-pretty text-lg leading-relaxed dark:bg-primary-400/10"
+              data-reveal
+              style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
+            >
+              {item}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 進め方 -->
+<section class="bg-[#1b2c40] py-20 sm:py-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-10 sm:gap-12">
+      <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+        <h2 class="text-balance text-3xl font-medium tracking-tight text-white sm:text-4xl">{common.stepsTitle}</h2>
+        <p class="text-pretty text-lg leading-relaxed text-white/80">{page.steps.lead}</p>
+      </div>
+      <ol class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {
+          page.steps.items.map((step, i) => (
+            <li
+              class="flex flex-col gap-3 rounded-3xl bg-white p-6"
+              data-reveal
+              style={`--reveal-delay:${(0.1 + i * 0.06).toFixed(2)}s`}
+            >
+              <span class="text-sm font-medium text-[#2d4a6b]" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <h3 class="text-balance text-lg font-medium tracking-tight text-primary-950">{step.title}</h3>
+              <p class="text-pretty text-base leading-relaxed text-primary-950/70">{step.description}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 手元に残るもの・そのあと（書ける事実があるサービスだけ） -->
+{
+  (page.results || page.next) && (
+    <section class="pt-20 sm:pt-28">
+      <div class="mx-auto grid max-w-2xl grid-cols-1 gap-12 px-4 sm:px-6 lg:max-w-7xl lg:grid-cols-2 lg:gap-16 lg:px-8">
+        {page.results && (
+          <div class="flex flex-col gap-6" data-reveal>
+            <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-3xl">{page.results.title}</h2>
+            <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+              {page.results.lead}
+            </p>
+            {page.results.items && (
+              <ul class="flex flex-col gap-3">
+                {page.results.items.map((item) => (
+                  <li class="flex gap-3 text-pretty text-base leading-relaxed">
+                    <span class="mt-1 text-primary-600 dark:text-primary-400" aria-hidden="true">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {page.next && (
+          <div class="flex flex-col gap-6" data-reveal style="--reveal-delay:0.1s">
+            <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-3xl">{page.next.title}</h2>
+            <ul class="flex flex-col gap-3">
+              {page.next.items.map((item) => (
+                <li class="rounded-2xl bg-primary-500/10 px-5 py-4 text-pretty text-base leading-relaxed dark:bg-primary-400/10">
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+              {page.next.note}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+<!-- 6. 費用（価格はこのページに載せない。判断待ち: ADR-0024）。5 がないページ（AI受託）でも進め方の帯から離すため、上にも余白を取る -->
+<section class="py-20 sm:py-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+      <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{common.costTitle}</h2>
+      <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">{common.costNote}</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 関係する実績・事例 -->
+<section class="pb-20 sm:pb-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-10">
+      <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-3xl" data-reveal>{common.relatedWorksTitle}</h2>
+      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          relatedCases.map((item, i) => (
+            <li
+              class="group relative flex h-full flex-col gap-3 rounded-3xl bg-primary-500/10 p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10"
+              data-reveal
+              style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
+            >
+              {/* リンクの文字はタイトルだけにする（可視文テキスト監査が a[href] の innerText を測るため。ServicesReframed と同じ） */}
+              <h3 class="text-balance text-lg font-medium tracking-tight">
+                <a
+                  href={item.href}
+                  class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                >
+                  {item.title}
+                </a>
+              </h3>
+              <p class="line-clamp-3 text-pretty text-base text-primary-950/70 dark:text-primary-200/70">{item.summary}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <a
+        class="type-action inline-flex w-fit items-center gap-1 text-base text-primary-950/70 underline-offset-4 transition hover:text-primary-950 hover:underline dark:text-primary-200/70 dark:hover:text-primary-100"
+        href={getLocalizedUrl('/works', currentLocale)}
+      >
+        {common.allWorksLabel}
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 業種ごとに見る -->
+<section class="pb-20 sm:pb-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex max-w-3xl flex-col gap-6" data-reveal>
+      <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{common.industriesTitle}</h2>
+      <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+        {common.industriesLead}
+      </p>
+      <ul class="flex flex-wrap gap-3">
+        {
+          industries.map((industry) => (
+            <li>
+              <a
+                href={industry.href}
+                class="inline-flex min-h-[44px] items-center rounded-full border border-primary-950/20 px-5 py-2 text-base font-medium transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:hover:bg-primary-400/10"
+              >
+                {industry.name}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9. ほかのサービス -->
+<section class="pb-20 sm:pb-28">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-10">
+      <h2 class="text-2xl font-medium tracking-tight sm:text-3xl" data-reveal>{common.otherServicesTitle}</h2>
+      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {
+          otherServices.map((other, i) => (
+            <li
+              class="group relative flex h-full flex-col gap-3 rounded-3xl bg-primary-500/10 p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10"
+              data-reveal
+              style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
+            >
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-balance text-lg font-medium tracking-tight">
+                  <a
+                    href={other.href}
+                    class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  >
+                    {other.name}
+                  </a>
+                </h3>
+                <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">→</span>
+              </div>
+              <p class="text-pretty text-base text-primary-950/70 dark:text-primary-200/70">{other.catch}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 10. CTA（ページの最後に 1 か所だけ。intent 付きで /contact の Cloudia へ） -->
+<section class="pb-24 sm:pb-32">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div
+      class="flex flex-col items-center gap-8 rounded-3xl bg-[#2d4a6b] px-6 py-16 text-center text-white sm:px-12 sm:py-20"
+      data-reveal
+    >
+      <h2 class="max-w-2xl text-balance text-3xl font-medium tracking-tight sm:text-4xl">{common.ctaTitle}</h2>
+      <a
+        href={ctaHref}
+        data-service-cta={service.intent}
+        class="inline-flex min-h-[48px] w-full max-w-md items-center justify-center rounded-full border border-transparent bg-white px-6 py-4 text-center text-lg font-semibold text-[#2d4a6b] shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-auto sm:px-8"
+      >
+        <span class="block text-balance">{page.ctaLabel}</span>
+      </a>
+      <p class="max-w-xl text-pretty text-sm leading-relaxed text-white/70">{common.ctaNote}</p>
+    </div>
+  </div>
+</section>
