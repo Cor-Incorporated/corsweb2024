@@ -88,7 +88,7 @@
   "griftBridge": {
     "eyebrow": "Producto propio",
     "title": "El currículum se puede inflar. La evidencia, no.",
-    "description": "Grift es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). Los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato. Los equipos de selección de empresas que desarrollan su propio software pueden usarlo para comprobar en qué consiste realmente el trabajo de un candidato.",
+    "description": "Grift es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). Los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato. Los responsables de contratación de empresas que desarrollan su propio software pueden usar los registros que el propio candidato comparte para comprobar en qué ha consistido realmente su trabajo.",
     "cta": "Ver cómo funciona Grift",
     "ctaGithub": "Ver Grift CLI en GitHub",
     "note": "Grift CLI se publica de forma gratuita como software de código abierto con licencia MIT. Atendemos consultas de agencias de selección, empresas de SES y empresas que desarrollan su propio software sobre pruebas piloto (PoC).",
@@ -549,7 +549,7 @@
       {
         "name": "«Grift», nuestro producto propio que extrae hechos verificables del historial de git",
         "tag": "Producto propio",
-        "description": "El currículum se puede inflar. La evidencia, no. Reto: con el currículum y una entrevista apenas se transmite en qué consiste realmente el trabajo de un ingeniero, y métricas de actividad como el número de commits se inflan fácilmente con IA generativa. Diseño e implementación: desarrollamos una CLI que no usa IA (LLM) para medir y que extrae del historial de git hechos como la atribución del trabajo o los cambios en las pruebas hechos junto al código, y la publicamos como código abierto (licencia MIT). Operación: atendemos consultas sobre pruebas piloto (PoC) de equipos comerciales de agencias de selección y empresas de SES, y de equipos de selección de empresas que desarrollan su propio software.",
+        "description": "El currículum se puede inflar. La evidencia, no. Reto: con el currículum y una entrevista apenas se transmite en qué consiste realmente el trabajo de un ingeniero, y métricas de actividad como el número de commits se inflan fácilmente con IA generativa. Diseño e implementación: desarrollamos una CLI que no usa IA (LLM) para medir y que extrae del historial de git hechos como la atribución del trabajo o los cambios en las pruebas hechos junto al código, y la publicamos como código abierto (licencia MIT). Operación: atendemos consultas sobre pruebas piloto (PoC) de equipos comerciales de agencias de selección y empresas de SES, y de responsables de contratación de empresas que desarrollan su propio software.",
         "href": "grift"
       },
       {
@@ -597,7 +597,7 @@
     "items": [
       {
         "name": "Grift | El currículum se puede inflar. La evidencia, no.",
-        "description": "Nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero. No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute. Los equipos comerciales de agencias de selección y empresas de SES pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato. Los equipos de selección de empresas que desarrollan su propio software pueden usarlo para comprobar en qué consiste realmente el trabajo de un candidato."
+        "description": "Nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero. No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute. Los equipos comerciales de agencias de selección y empresas de SES pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato. Los responsables de contratación de empresas que desarrollan su propio software pueden usar los registros que el propio candidato comparte para comprobar en qué ha consistido realmente su trabajo."
       },
       {
         "name": "LLM local e IA segura | IA generativa sin sacar tus datos al exterior.",
@@ -908,7 +908,7 @@
       },
       {
         "question": "¿Qué es Grift?",
-        "answer": "Es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). No asigna puntuaciones ni clasificaciones y no utiliza IA (LLM) para medir, por lo que obtiene el mismo resultado sin importar quién lo ejecute, y quien recibe el informe puede comprobarlo. La CLI se publica de forma gratuita como software de código abierto con licencia MIT, y atendemos consultas sobre pruebas piloto (PoC) para que los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) puedan explicar, con evidencias, por qué recomiendan a un candidato, y para que los equipos de selección de empresas que desarrollan su propio software comprueben en qué consiste realmente el trabajo de un candidato."
+        "answer": "Es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). No asigna puntuaciones ni clasificaciones y no utiliza IA (LLM) para medir, por lo que obtiene el mismo resultado sin importar quién lo ejecute, y quien recibe el informe puede comprobarlo. La CLI se publica de forma gratuita como software de código abierto con licencia MIT, y atendemos consultas sobre pruebas piloto (PoC) para que los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) puedan explicar, con evidencias, por qué recomiendan a un candidato, y para que los responsables de contratación de empresas que desarrollan su propio software comprueben, a partir de los registros que el propio candidato comparte, en qué ha consistido realmente su trabajo."
       }
     ]
   },

@@ -510,7 +510,7 @@ describe('Grift copy names both audiences (ADR-0022 revision 2026-10-26)', () =>
   const IN_HOUSE_HIRING: Record<Locale, string> = {
     ja: '自社開発企業',
     en: 'build their own software',
-    zh: '自主开发软件的企业',
+    zh: '自主开发软件',
     ko: '자체 개발 기업',
     es: 'desarrollan su propio software',
   };
@@ -531,6 +531,26 @@ describe('Grift copy names both audiences (ADR-0022 revision 2026-10-26)', () =>
       .filter(([, text]) => !text.includes(IN_HOUSE_HIRING[locale]))
       .map(([path]) => path);
     expect(missing, `${locale} Grift audience without "${IN_HOUSE_HIRING[locale]}"`).toEqual([]);
+  });
+
+  // 採用担当向けの文は、同意の条件（候補者本人が共有した記録から）を必ず書く（grift-cli の docs/norms.md §4）。
+  it('says the hiring team reads only what the candidate shares (ja)', () => {
+    const t = getJaTranslations();
+    const hiringSentences = {
+      'faq.questions[6].answer': t.faq.questions[6].answer,
+      'griftBridge.description': t.griftBridge.description,
+      'services2026.items[0].description': t.services2026.items[0].description,
+    };
+    const missing = Object.entries(hiringSentences)
+      .filter(([, text]) => !text.includes('自社開発企業の採用担当が、候補者本人が共有した記録から'))
+      .map(([path]) => path);
+    expect(missing, 'ja hiring sentence without the consent condition').toEqual([]);
+  });
+
+  it.each(LOCALES)('locale %s labels the Grift entry for both placing and hiring', (locale) => {
+    const marker: Record<Locale, string> = { ja: '紹介や採用', en: 'place or hire', zh: '介绍或招聘', ko: '소개나 채용', es: 'presentan o contratan' };
+    const audience = getTranslations(locale).finalCta.items[2].audience;
+    expect(audience, `${locale} finalCta.items[2].audience`).toContain(marker[locale]);
   });
 
   it('does not offer Grift for pass/fail screening in ja', () => {

@@ -109,7 +109,7 @@ and the ADR disagree.
   - Grift is an own product that extracts verifiable facts from engineers'
     git history (OSS CLI `grift-cli`, MIT; trial for recruiting/SES agencies and in-house hiring teams;
     no scores or rankings). It is no longer an estimation tool (ADR-0022).
-    Call the agency trial 「テスト導入（PoC）」, never 「試行」
+    Call the trial 「テスト導入（PoC）」, never 「試行」
   - Grift CLI versions (ADR-0023): the current version lives only in
     `src/config/grift-cli-release.json` (read via `src/config/grift-cli.ts`).
     Articles write a version as a record of their time (「執筆時点では v0.x」)
