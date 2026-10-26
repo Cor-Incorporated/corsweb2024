@@ -18,7 +18,7 @@
 | [ADR-0008](./ADR-0008-yomimono-ai-workflow.md) | 読みもの AI 支援ワークフロー | **Deprecated** (2026-09-27)（yomimono 退役。後継候補 ADR-0018） |
 | [ADR-0009](./ADR-0009-news-cases-cms-expansion.md) | news/cases CMS 拡張 + プレスリリース運用 + OGP PNG | Accepted (2026-07-14) / **一部 Deprecated** (2026-09-27)（yomimono 部分） |
 | [ADR-0010](./ADR-0010-cross-site-cta-env-and-intent.md) | Cor↔Grift CTA 環境変数・intent・Preview noindex | Accepted (2026-07-10) |
-| [ADR-0011](./ADR-0011-paid-entry-and-nav-ia.md) | 有料入口 CTA・Header IA・050 表示方針 | Accepted (2026-07-10) / rev 2026-10-24（Header IA）/ rev 2026-10-25（About 代表） |
+| [ADR-0011](./ADR-0011-paid-entry-and-nav-ia.md) | 有料入口 CTA・Header IA・050 表示方針 | Accepted (2026-07-10) / rev 2026-10-24（Header IA）/ rev 2026-10-25（About 代表）/ サービスの行き先は ADR-0024 で置き換え（2026-10-26） |
 | [ADR-0012](./ADR-0012-cloudia-integration-and-org-transfer.md) | Cloudia を Contact フォーム代用として統合（org 移管・CF） | Accepted (2026-07-10) / **一部撤回 2026-09-13**（フォーム fallback） |
 | [ADR-0013](./ADR-0013-contact-consolidation-cloudia.md) | 問い合わせ一極集中（Cloudia UI + contact-chat） | Accepted (2026-07-11) / **一部撤回 2026-09-13**（fallback フォーム恒久維持） |
 | [ADR-0014](./ADR-0014-intent-7keys-and-routing.md) | intent 正本の 7 キー化と intent ルーティング | Accepted (2026-07-11) |
@@ -29,6 +29,7 @@
 | [ADR-0020](./ADR-0020-blog-cta-intent.md) | ブログ記事の CTA と相談の種類（intent）の既定値 | Proposed (2026-09-27) |
 | [ADR-0021](./ADR-0021-contact-guard-phone-detection.md) | /contact 回帰ガードの電話検出（判定の対象・電話番号・句） | Accepted (2026-09-28) |
 | [ADR-0022](./ADR-0022-business-pillars-grift-cli.md) | 事業の柱を5本にし、Grift を CLI（OSS）＋紹介会社向け試行として扱う（ISMS 表現・会社概要・llms.txt を含む） | Proposed (2026-10-20) |
+| [ADR-0024](./ADR-0024-service-pages.md) | サービスのページ（診断・PoC・AI受託）を作り、ヘッダーの「サービス」を説明のページへ向ける（ADR-0011 のサービス導線を置き換え） | Proposed (2026-10-26) |
 
 ## フェーズ対応
 
