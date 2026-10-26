@@ -88,6 +88,32 @@ export function buildWebSiteJsonLd(locale: Locale): JsonLd {
   };
 }
 
+export type ServiceJsonLdInput = {
+  /** サイト基準のパス（例: `/en/services/local-llm-poc/`） */
+  path: string;
+  /** ページの見出しに表示しているサービス名 */
+  name: string;
+  /** ページの description（meta）と同じ文 */
+  description: string;
+};
+
+/**
+ * サービスのページ（ADR-0024）の Service。表示しているサービス名と説明だけを載せ、提供元は Organization の @id で
+ * 参照する。価格はページに出していないので offers は付けない。対象地域もページに表示していないので書かない。
+ */
+export function buildServiceJsonLd(locale: Locale, { path, name, description }: ServiceJsonLdInput): JsonLd {
+  const url = new URL(path, `${SITE_ORIGIN}/`).toString();
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': `${url}#service`,
+    name,
+    description,
+    url,
+    provider: organizationRef(locale),
+  };
+}
+
 export type FaqItem = { question: string; answer: string };
 
 /** 本文に表示している Q&A と同じデータから FAQPage を作る（表示していない Q&A を載せない）。 */

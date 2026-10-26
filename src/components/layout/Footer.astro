@@ -2,6 +2,7 @@
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
+import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -11,6 +12,15 @@ const bottomLinks = [
     header: t.footer.social,
     // 正本は config/organization.ts。会社の公式アカウントだけが Organization JSON-LD の sameAs にも入る。
     links: SOCIAL_LINKS.map(({ name, href }) => ({ name, href, isExternal: true })),
+  },
+  // サービスのページ（ADR-0024）。正本は config/services.ts（ヘッダーの「サービス」と同じ並び）
+  {
+    header: t.nav.services,
+    links: SERVICE_PAGES.map((page) => ({
+      name: t.nav[page.key],
+      href: getServiceUrl(page, currentLocale),
+      isExternal: false,
+    })),
   },
   {
     header: t.footer.company,
@@ -120,7 +130,8 @@ const linkGroups = bottomLinks.map((group) => ({
       </div>
 
       <!-- Bottom links -->
-      <div class="grid max-w-xl flex-1 grid-cols-1 gap-8 sm:grid-cols-3">
+      <!-- 列は 4 つ（Social / サービス / Company / Legal）。サービス名が長いので、横に 4 列並べるのは xl から -->
+      <div class="grid max-w-3xl flex-1 grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-4">
         {
           linkGroups.map((group) => (
             <div class="flex flex-col gap-4">

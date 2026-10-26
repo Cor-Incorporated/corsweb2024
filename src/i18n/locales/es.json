@@ -1003,6 +1003,18 @@
     "company": {
       "title": "Perfil de la empresa | Cor.Inc.",
       "description": "Perfil de Cor.Inc. (ciudad de Fukuoka): dirección, fundación, representante, actividades (Grift, LLM local e IA segura, IA en hardware, desarrollo de IA a medida y apoyo a la adopción, educación y comunidad), nuestras iniciativas de seguridad de la información y nuestra selección entre las «100 empresas representativas de Fukuoka»."
+    },
+    "serviceAssessment": {
+      "title": "Diagnóstico de IA con datos confidenciales | Cor.Inc.",
+      "description": "Para quienes dudan si pueden entregar contratos o datos de clientes a una IA externa. El diagnóstico de IA con datos confidenciales no empieza construyendo: parte de inventariar tus tareas, clasificar tus datos y ordenar los riesgos, y te entrega el material para decidir si pasar a una PoC."
+    },
+    "serviceLocalLlm": {
+      "title": "LLM local / PoC de IA segura | Cor.Inc.",
+      "description": "Una PoC de tres meses para comprobar si un LLM local funciona de verdad en tareas cuyos datos confidenciales no pueden ir a una IA externa. En lugar de una demo que funcione, reúne el material para decidir si pasar a producción. La IA en la nube y los LLM locales se usan según el nivel de confidencialidad de la información."
+    },
+    "serviceAiDev": {
+      "title": "Plataforma de IA y desarrollo por contrato | Cor.Inc.",
+      "description": "Desarrollo de IA por contrato que te acompaña de principio a fin, desde ordenar el problema hasta el diseño, la implementación y la operación. Con IA generativa, IA que responde a partir de tus documentos internos (RAG), agentes de IA y procesamiento de imagen y voz, creamos sistemas de IA que se integran en el trabajo diario. Si conviene, también proponemos no construir todavía."
     }
   },
   "privacy": {
@@ -1447,5 +1459,214 @@
       "legal": "Aviso Legal (Ley de Transacciones Comerciales Específicas)"
     },
     "cta": "Contacto"
+  },
+  "servicePages": {
+    "common": {
+      "termsTitle": "Términos que usamos en esta página",
+      "stepsTitle": "Cómo trabajamos",
+      "costTitle": "Coste",
+      "costNote": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos.",
+      "relatedWorksTitle": "Proyectos y casos relacionados",
+      "allWorksLabel": "Ver todos los proyectos y casos",
+      "industriesTitle": "Temas frecuentes por sector",
+      "industriesLead": "Cada sector se detiene por motivos distintos. En las páginas por sector reunimos los retos habituales y cómo te acompaña Cor.",
+      "otherServicesTitle": "Otros servicios",
+      "ctaTitle": "Empieza por comprobar la información que manejas.",
+      "ctaNote": "Al pulsar el botón, en la página de contacto nuestra recepción con IA, Cloudia, te preguntará qué necesitas.",
+      "serviceLinkLabel": "Más información: {service}"
+    },
+    "serviceAssessment": {
+      "catch": "Identificamos las tareas que puede asumir la IA, a partir de la información que manejas.",
+      "lead": "Contratos, actas, datos de clientes, presupuestos, conocimiento interno. Tu empresa tiene mucha información que la IA podría aprovechar, pero no sabes si puedes entregarla tal cual a una IA externa. Este diagnóstico está pensado para la dirección y las áreas de administración de pymes, y lo pensamos contigo desde ahí.",
+      "terms": [
+        {
+          "term": "IA en la nube",
+          "description": "IA generativa que ofrece un proveedor externo. Lo que introduces se envía fuera de tu empresa."
+        },
+        {
+          "term": "LLM local",
+          "description": "IA generativa que funciona en tu propio entorno, sin sacar los datos de tu empresa."
+        },
+        {
+          "term": "PoC",
+          "description": "Prueba de concepto: probar a pequeña escala, antes de producción, para comprobar que algo funciona."
+        }
+      ],
+      "situations": {
+        "title": "¿Te has quedado atascado en algo así?",
+        "items": [
+          "No sabes si puedes entregar datos confidenciales a una IA externa.",
+          "No sabes por dónde empezar y el tiempo sigue pasando.",
+          "Cuando consultas a un proveedor, la conversación salta directamente a un gran desarrollo."
+        ]
+      },
+      "steps": {
+        "lead": "No empezamos construyendo. En lugar de abrir con la tecnología, primero ponemos en palabras qué hay que manejar y cómo.",
+        "items": [
+          {
+            "title": "Entrevistas sobre el terreno",
+            "description": "Escuchamos cómo fluye tu trabajo y qué te está frenando."
+          },
+          {
+            "title": "Inventario de tareas",
+            "description": "Revisamos tu trabajo actual e identificamos las tareas que podrían pasar a la IA."
+          },
+          {
+            "title": "Clasificación de datos",
+            "description": "Clasificamos los datos que manejas según su nivel de confidencialidad."
+          },
+          {
+            "title": "Separar IA en la nube y LLM local",
+            "description": "Separamos lo que puede ir a una IA externa en la nube de lo que debe tratarse con un LLM local."
+          },
+          {
+            "title": "Ordenar los riesgos",
+            "description": "Lo revisamos desde cuatro puntos de vista: dónde trazar la línea de la información que se da a la IA (límites de entrada), permisos de acceso, registros de operaciones y aprobación humana."
+          },
+          {
+            "title": "Definir el rumbo",
+            "description": "Definimos si conviene pasar a una PoC."
+          }
+        ]
+      },
+      "results": {
+        "title": "Lo que te queda tras el diagnóstico",
+        "lead": "Al terminar el diagnóstico, tienes documentos que te sirven para la siguiente decisión.",
+        "items": [
+          "El inventario de tareas candidatas a la IA",
+          "La clasificación de tus datos y cómo tratar cada tipo",
+          "Los riesgos y cómo abordarlos",
+          "Una propuesta de rumbo si pasas a una PoC"
+        ]
+      },
+      "next": {
+        "title": "Cómo elegir después del diagnóstico",
+        "items": [
+          "Pasar a una PoC de LLM local / infraestructura de IA",
+          "Pasar a una implementación real a pequeña escala",
+          "Decidir no construir todavía"
+        ],
+        "note": "El diagnóstico puede concluir que es mejor no construir todavía. También te lo decimos con franqueza. Elijas lo que elijas, el diagnóstico está diseñado para darte el material con el que decidir tu siguiente paso."
+      },
+      "ctaLabel": "Consultar diagnóstico de IA con datos confidenciales"
+    },
+    "serviceLocalLlm": {
+      "catch": "Comprobamos si la IA generativa puede usarse incluso en tareas con información que no puede salir de tu empresa.",
+      "lead": "Tienes tareas con datos confidenciales y no puedes enviarlo todo a una IA en la nube. Pero tampoco puedes juzgar por tu cuenta si un LLM local funcionaría de verdad en tu negocio. Partiendo de ahí, esta PoC reúne en tres meses el material para decidir si pasar a producción.",
+      "terms": [
+        {
+          "term": "LLM local",
+          "description": "IA generativa que funciona en tu propio entorno, sin sacar los datos de tu empresa."
+        },
+        {
+          "term": "IA segura",
+          "description": "Un entorno de IA creado para poder manejar información difícil de entregar a una IA externa, incluido el diseño de normas internas, permisos y registros."
+        },
+        {
+          "term": "PoC",
+          "description": "Prueba de concepto: probar a pequeña escala, antes de producción, para comprobar que algo funciona."
+        }
+      ],
+      "situations": {
+        "title": "¿Te has quedado atascado en algo así?",
+        "items": [
+          "Tienes datos confidenciales y no puedes enviarlo todo a una IA en la nube.",
+          "No puedes juzgar internamente si un LLM local funcionaría de verdad en tu trabajo.",
+          "Sin normas internas, cada prueba se queda en la PoC."
+        ]
+      },
+      "steps": {
+        "lead": "Durante tres meses avanzamos así. No apostamos solo por la IA en la nube ni solo por un LLM local: el diseño parte de usar cada uno según el nivel de confidencialidad de la información.",
+        "items": [
+          {
+            "title": "Delimitar las tareas",
+            "description": "Acotamos las tareas que cubre la PoC. Si ya tienes lo ordenado en un diagnóstico de IA con datos confidenciales, fijamos el alcance a partir de ello."
+          },
+          {
+            "title": "Diseñar el tratamiento de los datos",
+            "description": "Diseñamos dónde trazar la línea de la información que se da a la IA (límites de entrada), los permisos de acceso, los registros de operaciones y la aprobación humana."
+          },
+          {
+            "title": "Montar un entorno de pruebas",
+            "description": "Creamos un entorno para probar antes de producción."
+          },
+          {
+            "title": "Definir y medir criterios de evaluación",
+            "description": "Decidimos qué cuenta como utilizable y lo medimos de verdad."
+          },
+          {
+            "title": "Decidir sobre producción",
+            "description": "Decidimos si pasar a producción."
+          }
+        ]
+      },
+      "results": {
+        "title": "Lo que te queda tras la PoC",
+        "lead": "El objetivo no es una demo que funcione, sino tener el material para decidir si pasar a producción. Construir no es un fin en sí mismo."
+      },
+      "next": {
+        "title": "Después de la PoC",
+        "items": [
+          "Si va bien, pasas a la construcción en producción y a la operación y mantenimiento (presupuesto individual según los requisitos).",
+          "Si no, creemos que la decisión de «ahora no» también es un resultado de la PoC que puedes llevarte."
+        ],
+        "note": "En Cor. seguimos probando LLM locales y aplicamos esa experiencia al diseño de cada PoC."
+      },
+      "ctaLabel": "Consultar PoC de LLM local / IA segura"
+    },
+    "serviceAiDev": {
+      "catch": "No nos quedamos en la prueba: integramos la IA en tu trabajo diario.",
+      "lead": "Te acompañamos de principio a fin: desde ordenar el problema hasta el diseño, la implementación y la operación. Con IA generativa, RAG, agentes de IA, procesamiento de imagen y voz, entre otros, te ayudamos a crear sistemas de IA que se integren en el trabajo diario, incluida la definición de políticas de uso de IA y normas internas.",
+      "terms": [
+        {
+          "term": "RAG",
+          "description": "Un mecanismo para que la IA responda a partir de tus documentos internos."
+        },
+        {
+          "term": "Agente de IA",
+          "description": "Un mecanismo de IA que funciona de forma automática."
+        },
+        {
+          "term": "PoC",
+          "description": "Prueba de concepto: probar a pequeña escala, antes de producción, para comprobar que algo funciona."
+        }
+      ],
+      "situations": {
+        "title": "Si quieres avanzar en algo así",
+        "items": [
+          "Llevar a la nube un sistema central obsoleto.",
+          "Implantar recepción o chat con IA que atienda en varios idiomas.",
+          "Llevar un servicio de IA generativa desde cero hasta producción.",
+          "Crear una herramienta de IA especializada para tu sector.",
+          "Poder desarrollar con IA dentro de tu propio equipo."
+        ]
+      },
+      "steps": {
+        "lead": "Construir no es el objetivo. Si conviene, también proponemos no construir todavía.",
+        "items": [
+          {
+            "title": "Ordenar el problema",
+            "description": "Ordenamos contigo qué construir y si de verdad hay que construirlo."
+          },
+          {
+            "title": "Presupuesto",
+            "description": "Presupuestamos de forma que queden claros los requisitos, los supuestos, los riesgos y el alcance del trabajo. También puedes consultarnos desde el primer borrador para la aprobación interna o el presupuesto."
+          },
+          {
+            "title": "Diseño",
+            "description": "Diseñamos la experiencia de uso y cómo se conectan los sistemas. La información que se maneja se diseña incluyendo límites de entrada, permisos, registros y aprobación humana."
+          },
+          {
+            "title": "Implementación",
+            "description": "Lo implementamos como un sistema de IA que funciona en el trabajo real, incluida la facturación, las pruebas automatizadas y la publicación."
+          },
+          {
+            "title": "Operación",
+            "description": "Te acompañamos en la operación tras la publicación, incluida la monitorización."
+          }
+        ]
+      },
+      "ctaLabel": "Consultar plataforma de IA y desarrollo por contrato"
+    }
   }
 }

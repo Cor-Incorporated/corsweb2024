@@ -168,13 +168,14 @@ There are two separate mechanisms. Do not mix them up.
 ### Repository Layout
 
 - `src/pages/` — ja pages at the root; `en/`, `zh/`, `ko/`, `es/` hold the
-  localized copies of most pages; `[lang]/` serves news, works and
-  industries for the non-ja locales; `og/` generates OGP images
+  localized copies of most pages; `[lang]/` serves news, works, industries
+  and services for the non-ja locales; `og/` generates OGP images
 - `src/components/` — by feature: `home/`, `about/`, `blog/`, `news/`,
-  `works/`, `industry/`, `contact/`, `products/`, `common/`, `layout/`
+  `works/`, `industry/`, `services/`, `contact/`, `products/`, `common/`, `layout/`
   (Header, Footer, AlpineInit, ThemeInit), `analytics/`, `youtube/`
 - `src/config/` — site facts and single sources: `organization.ts`,
-  `author.ts`, `site.ts`, `blog-schema.ts`, `categories.ts`,
+  `author.ts`, `site.ts`, `services.ts` (the three service pages: slug, intent,
+  related works; ADR-0024), `blog-schema.ts`, `categories.ts`,
   `news-categories.ts`, `indexing.ts` (noindex / sitemap), `contact-guards.ts`
 - `src/utils/` — i18n, structured data / JSON-LD, OG image rendering,
   Alpine stores

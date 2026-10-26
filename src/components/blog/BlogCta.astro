@@ -5,6 +5,7 @@
 // 心理的な負担の小さい資料を入口にすることを決めた）。文言は ADR-0007 / ADR-0020 の 8 に従う（「無料」を使わない）。
 import { blogCtaSource, resolveBlogCtaIntent } from '../../config/blog-cta';
 import { COMPANY_DECK_URL, getContactUrl, type ContactIntent } from '../../config/site';
+import { findServiceByIntent, formatServiceLinkLabel, getServiceUrl } from '../../config/services';
 import { getCurrentLocale, getTranslations, type Locale } from '../../utils/i18n';
 
 interface Props {
@@ -89,6 +90,15 @@ const PRIMARY_LABELS: Partial<Record<ContactIntent, string>> = {
   'contract-dev': t.caseStudy.ctas['ai-contract'],
 };
 const primaryLabel = PRIMARY_LABELS[intent] ?? t.caseStudy.ctas.techCultureContact;
+
+// 相談の種類にサービスのページ（ADR-0024）があれば、ボタンの下に説明のページへのリンクを置く。CTA の箱は 1 つのまま（ADR-0020 の 2）
+const relatedService = findServiceByIntent(intent);
+const serviceLink = relatedService
+  ? {
+      label: formatServiceLinkLabel(t.servicePages.common.serviceLinkLabel, t.nav[relatedService.key]),
+      href: getServiceUrl(relatedService, locale),
+    }
+  : null;
 ---
 
 <section
@@ -115,4 +125,17 @@ const primaryLabel = PRIMARY_LABELS[intent] ?? t.caseStudy.ctas.techCultureConta
       {t.nextStep.about.materialsLabel}<span aria-hidden="true" class="ml-1">↗</span>
     </a>
   </div>
+  {/* type-action（句の境目で折り返し、行の長さをそろえる）。スマホの幅で「…詳しく見る」の最後の 1 文字だけが
+      次の行に落ちていた（visual-text の terminal-orphan-fragment、2026-10-26）。矢印は改行しない空白で最後の語に付ける */}
+  {
+    serviceLink && (
+      <a
+        href={serviceLink.href}
+        data-testid="blog-cta-service"
+        class="type-action mt-4 inline-block min-h-[44px] py-2.5 text-base font-medium text-[#2d4a6b] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:text-stone-200"
+      >
+        {serviceLink.label}<span aria-hidden="true">&nbsp;→</span>
+      </a>
+    )
+  }
 </section>

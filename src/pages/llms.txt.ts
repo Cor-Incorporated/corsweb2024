@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { GRIFT_CLI_RELEASE } from '../config/grift-cli';
 import { GRIFT_CLI_GITHUB_URL, getGriftBaseUrl } from '../config/site';
+import { SERVICE_PAGES, getServiceBasePath } from '../config/services';
+import { getJaTranslations } from '../utils/i18n';
 
 /**
  * llms.txt — 回答エンジン・LLM 向けのサイト要約（https://llmstxt.org/ の形式）。
@@ -11,11 +13,16 @@ import { GRIFT_CLI_GITHUB_URL, getGriftBaseUrl } from '../config/site';
  * Grift CLI の版は正本（src/config/grift-cli.ts、ADR-0023）から入れ、行に公開日を書く。版だけが変わったときは
  * CONTENT_AS_OF を変えない。
  */
-const CONTENT_AS_OF = '2026-10-20';
+const CONTENT_AS_OF = '2026-10-26';
 
 export const GET: APIRoute = () => {
   const site = (import.meta.env.SITE || 'https://cor-jp.com').replace(/\/$/, '');
   const grift = getGriftBaseUrl();
+  // サービスのページ（ADR-0024）。ページ名と説明は、ページの見出しと meta description と同じ ja の文言
+  const ja = getJaTranslations();
+  const serviceLines = SERVICE_PAGES.map(
+    (page) => `- [${ja.nav[page.key]}](${site}${getServiceBasePath(page)}/): ${ja.meta[page.key].description}`,
+  ).join('\n');
   const body = `# Cor.株式会社（Cor.Inc.）
 
 > 福岡のAI実装会社。機密データを外に出さないローカルLLM、確かめられる根拠をつくる自社プロダクト「Grift」、設計から運用までの受託開発を軸に、教育や地域での場づくりにも取り組んでいる。必要なら「まだ作らない」選択肢も提案する。
@@ -40,6 +47,10 @@ Cor.株式会社（読み: コー株式会社、英文表記: Cor.Inc.）は福�
 3. ハードウェアAI — 視覚障がいのある方に向けたスマートグラスを開発パートナーと開発中。利用者との実証を準備中（販売前）
 4. AI受託開発・導入支援 — PoCで終わらせない。課題の整理から設計・実装・運用まで一気通貫で伴走する
 5. 教育・地域 — 専門学校での講師（2027年4月から予定）、国際的なプログラミング資格の教育パートナー（契約締結済み）、福岡での生成AI展示会の開催準備（エンジニアカフェと構想中）
+
+## サービス
+
+${serviceLines}
 
 ## 主要ページ
 

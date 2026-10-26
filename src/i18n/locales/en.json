@@ -1003,6 +1003,18 @@
     "company": {
       "title": "Company Profile | Cor.Inc.",
       "description": "Company profile of Cor.Inc. (Fukuoka City): address, founding date, representative, business areas (Grift, local LLM & secure AI, hardware AI, AI contract development & adoption support, education & community), our information security efforts, and our selection as one of Fukuoka's 100 Representative Companies."
+    },
+    "serviceAssessment": {
+      "title": "Confidential-data AI assessment | Cor.Inc.",
+      "description": "For teams unsure whether contracts or customer data can go to an external AI. Our confidential-data AI assessment doesn't jump into building: it starts by taking stock of your work, classifying your data and sorting out the risks, and gives you the material to decide whether to move on to a PoC."
+    },
+    "serviceLocalLlm": {
+      "title": "Local LLM / secure AI PoC | Cor.Inc.",
+      "description": "A three-month PoC that checks whether a local LLM really works for tasks whose confidential data can't go to an external AI. Rather than a working demo, it gives you the material to decide whether to go to production. Cloud AI and local LLMs are used according to how sensitive the information is."
+    },
+    "serviceAiDev": {
+      "title": "AI platform & contract development | Cor.Inc.",
+      "description": "AI contract development that stays with you end to end, from framing the problem through design, implementation and operations. Using generative AI, AI that answers from your internal documents (RAG), AI agents, and image and audio processing, we build AI systems that fit into day-to-day work. When it makes sense, we also suggest not building anything yet."
     }
   },
   "privacy": {
@@ -1447,5 +1459,214 @@
       "legal": "Legal Notice (Specified Commercial Transactions Act)"
     },
     "cta": "Contact"
+  },
+  "servicePages": {
+    "common": {
+      "termsTitle": "Terms used on this page",
+      "stepsTitle": "How we proceed",
+      "costTitle": "Cost",
+      "costNote": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review.",
+      "relatedWorksTitle": "Related work and case studies",
+      "allWorksLabel": "See all work and case studies",
+      "industriesTitle": "Common themes by industry",
+      "industriesLead": "Every industry gets stuck for different reasons. Our industry pages cover the usual problems and how Cor. works alongside you.",
+      "otherServicesTitle": "Other services",
+      "ctaTitle": "Start by checking the information you handle.",
+      "ctaNote": "The button takes you to our contact page, where our AI receptionist Cloudia will ask what you need.",
+      "serviceLinkLabel": "Learn more about our {service}"
+    },
+    "serviceAssessment": {
+      "catch": "We find the work AI can take on, starting from the information you handle.",
+      "lead": "Contracts, meeting minutes, customer information, quotes, internal know-how. Your company holds plenty of information AI could use, yet you can't tell whether it is safe to hand it to an external AI as is. This assessment is for executives and back-office teams at small and mid-sized companies, and we think it through with you from there.",
+      "terms": [
+        {
+          "term": "Cloud AI",
+          "description": "Generative AI provided by an outside vendor. What you enter is sent outside your company."
+        },
+        {
+          "term": "Local LLM",
+          "description": "Generative AI that runs in your own environment, without sending data outside your company."
+        },
+        {
+          "term": "PoC",
+          "description": "Proof of concept: a small trial before production to check that something works."
+        }
+      ],
+      "situations": {
+        "title": "Is this where you are stuck?",
+        "items": [
+          "You don't know whether confidential data can go to an external AI.",
+          "You don't know where to start, and time keeps passing.",
+          "When you ask a vendor, the talk jumps straight to a large development project."
+        ]
+      },
+      "steps": {
+        "lead": "We don't start by building. Instead of opening with technology, we first put into words what to handle and how.",
+        "items": [
+          {
+            "title": "On-site interviews",
+            "description": "We hear how your work flows and what is getting in the way."
+          },
+          {
+            "title": "Taking stock of tasks",
+            "description": "We look at your current work and list the tasks AI could take on."
+          },
+          {
+            "title": "Classifying data",
+            "description": "We sort the data you handle by how confidential it is."
+          },
+          {
+            "title": "Separating cloud AI and local LLM use",
+            "description": "We separate what may go to an external cloud AI from what should stay with a local LLM."
+          },
+          {
+            "title": "Sorting out risks",
+            "description": "We review four points: where to draw the line on information given to AI (input boundaries), access rights, operation logs, and human approval."
+          },
+          {
+            "title": "Setting a direction",
+            "description": "We set a direction on whether to move on to a PoC."
+          }
+        ]
+      },
+      "results": {
+        "title": "What you have after the assessment",
+        "lead": "When the assessment ends, you have documents you can use for the next decision.",
+        "items": [
+          "An inventory of tasks that are candidates for AI",
+          "Your data classified, with how to handle each kind",
+          "Risks and how to address them",
+          "A proposed direction if you move on to a PoC"
+        ]
+      },
+      "next": {
+        "title": "Choosing what comes next",
+        "items": [
+          "Move on to a local LLM / AI infrastructure PoC",
+          "Move on to a small-scale production build",
+          "Decide not to build anything yet"
+        ],
+        "note": "The assessment may conclude that it is better not to build yet. We tell you that conclusion plainly too. Whichever you choose, the assessment is designed to give you the material to decide your next step."
+      },
+      "ctaLabel": "Discuss a confidential-data AI assessment"
+    },
+    "serviceLocalLlm": {
+      "catch": "We check whether generative AI can work even for tasks with information you can't send outside.",
+      "lead": "You have work that involves confidential data, so you can't send everything to a cloud AI. Yet you can't tell on your own whether a local LLM would really work for your business. Starting from there, this PoC gathers in three months the material you need to decide whether to go to production.",
+      "terms": [
+        {
+          "term": "Local LLM",
+          "description": "Generative AI that runs in your own environment, without sending data outside your company."
+        },
+        {
+          "term": "Secure AI",
+          "description": "An AI environment built to handle information that is hard to give to an external AI, including the design of internal rules, permissions and logs."
+        },
+        {
+          "term": "PoC",
+          "description": "Proof of concept: a small trial before production to check that something works."
+        }
+      ],
+      "situations": {
+        "title": "Is this where you are stuck?",
+        "items": [
+          "You have confidential data, so you can't send it all to a cloud AI.",
+          "You can't judge in-house whether a local LLM would really work for your business.",
+          "With no internal rules, every trial ends at the PoC stage."
+        ]
+      },
+      "steps": {
+        "lead": "Over three months, we proceed as follows. We don't bet on either cloud AI or a local LLM; the design assumes using each according to how sensitive the information is.",
+        "items": [
+          {
+            "title": "Defining the target work",
+            "description": "We narrow down the work the PoC covers. If you have results from a confidential-data AI assessment, we set the scope based on them."
+          },
+          {
+            "title": "Designing how data is handled",
+            "description": "We design where to draw the line on information given to AI (input boundaries), access rights, operation logs, and human approval."
+          },
+          {
+            "title": "Building a test environment",
+            "description": "We build an environment for trying things out before production."
+          },
+          {
+            "title": "Setting and measuring evaluation criteria",
+            "description": "We decide what counts as usable, then actually measure it."
+          },
+          {
+            "title": "Deciding on production",
+            "description": "We decide whether to go to production."
+          }
+        ]
+      },
+      "results": {
+        "title": "What you have after the PoC",
+        "lead": "The goal is not a working demo but having the material in place to decide whether to go to production. Building something is not the goal in itself."
+      },
+      "next": {
+        "title": "After the PoC",
+        "items": [
+          "If it goes well, you move on to a production build and operations/maintenance (quoted individually based on requirements).",
+          "If not, we believe a decision of \"not now\" is also something you can take away as a result of the PoC."
+        ],
+        "note": "Cor. keeps testing local LLMs and applies that experience to the design of each PoC."
+      },
+      "ctaLabel": "Discuss a local LLM / secure AI PoC"
+    },
+    "serviceAiDev": {
+      "catch": "We don't stop at a trial; we build AI into your day-to-day work.",
+      "lead": "We work with you end to end — from framing the problem to design, implementation, and operations. Using generative AI, RAG, AI agents, image and audio processing, and more, we help you build AI systems that fit into day-to-day work, including AI usage policies and internal rules.",
+      "terms": [
+        {
+          "term": "RAG",
+          "description": "A way for AI to answer based on your internal documents."
+        },
+        {
+          "term": "AI agent",
+          "description": "AI that runs autonomously."
+        },
+        {
+          "term": "PoC",
+          "description": "Proof of concept: a small trial before production to check that something works."
+        }
+      ],
+      "situations": {
+        "title": "If you want to get things like this moving",
+        "items": [
+          "Move an aging core system to the cloud.",
+          "Introduce AI reception or chat that can guide people in multiple languages.",
+          "Take a generative-AI service from zero to production.",
+          "Build an industry-specific AI tool.",
+          "Be able to develop with AI in-house."
+        ]
+      },
+      "steps": {
+        "lead": "Building is not the goal. When it makes sense, we also suggest not building anything yet.",
+        "items": [
+          {
+            "title": "Framing the problem",
+            "description": "We work out with you what to build, and whether to build at all."
+          },
+          {
+            "title": "Estimate",
+            "description": "Our estimates make the requirements, assumptions, risks and scope of work clear. You can also come to us for a first draft for internal approval or budgeting."
+          },
+          {
+            "title": "Design",
+            "description": "We design the user experience and how systems connect. The information you handle is designed down to input boundaries, permissions, logs and human approval."
+          },
+          {
+            "title": "Implementation",
+            "description": "We build it as an AI system that works in daily operations, including billing, automated testing and release."
+          },
+          {
+            "title": "Operations",
+            "description": "We stay with you through operations after release, including monitoring."
+          }
+        ]
+      },
+      "ctaLabel": "Discuss AI platform & contract development"
+    }
   }
 }
