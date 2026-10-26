@@ -114,8 +114,8 @@ and the ADR disagree.
     `src/config/grift-cli-release.json` (read via `src/config/grift-cli.ts`).
     Articles write a version as a record of their time (「執筆時点では v0.x」)
     and link that version's GitHub Release (or its PyPI page when there is no
-    Release), never 「公開中」「最新」「現在」 plus a version;
-    `npm run test:run` fails when they do
+    Release; not checked by any test). They never write 「公開中」「最新」「現在」
+    plus a version that differs from the JSON: `npm run test:run` fails on that
   - The business has five pillars (Grift / local LLM & secure AI / hardware AI /
     AI contract development & adoption support / education & community); keep
     their order and wording in sync across `services2026`, `companyPage`, FAQ,

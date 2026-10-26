@@ -95,14 +95,14 @@ Grift のリリースを進めるセッションか、照合の Issue を見た�
 
    - `pr-body.md` には、手順 1・3・5 の出力と `H5-E2E: none`（workflow を変えないとき）、照合の Issue があれば `Refs #<番号>` を書く。
    - 照合の Issue は手で閉じない。閉じると、main の正本がまだ古いので翌朝また開く。
-7. 本番に出るのは develop から main へのリリースのとき（代表の判断）。リリースの翌朝の照合のあと、次のコマンドが何も出さなければ終わり: `gh issue list -R Cor-Incorporated/corsweb2024 --state open --search "Grift CLI の版の正本 in:title"`
+7. 本番に出るのは develop から main へのリリースのとき（代表の判断）。リリースの翌朝の照合のあと、次のコマンドが何も出さなければ終わり（workflow と同じく、題の先頭で探す）: `gh issue list -R Cor-Incorporated/corsweb2024 --state open --limit 200 --json number,title --jq '.[] | select(.title | startswith("Grift CLI の版の正本（")) | "#\(.number) \(.title)"'`
 
 ### 問題が起きたら
 
 | 起きたこと | 原因 | 直し方 |
 |---|---|---|
 | 手順 1 が `PyPI の info.version が版の形ではない（observed "…"）` で exit 1 | PyPI の最新が `0.9.0rc1` のようなプレリリースになった | 正本はプレリリースを持たない。正式版が出るまで待つ（そのあいだ照合の run は失敗する） |
-| `npm run test:run` の `grift-cli.test.ts` が落ちる | JSON を手で書き、形が違う（`v0.9.0`、`0.9`、`2026/11/02`、ほかのキー） | 手順 3 のコマンドで書き直す。落ちたメッセージの observed に、実際の値が出る |
+| `npm run test:run` の `grift-cli.test.ts` が落ちる | JSON を手で書き、形が違う（`v0.9.0`、`0.9`、`2026/11/02`、ほかのキー） | 手順 3 のコマンドは、いまの JSON が読めないと止まる。先に `git checkout origin/develop -- src/config/grift-cli-release.json` で JSON を戻してから、手順 3 をやり直す。落ちたメッセージの observed に、実際の値が出る |
 | `check:grift-version` が文を指すが、どこが悪いか分からない | 版と「最新」「公開中」「次の版」などを同じ文に書いている | 同じ文に「この記事を書いた時点」や「当時」を入れるか、版のないリンクにする |
 | 照合の Issue が毎朝開き直す | 照合の Issue を手で閉じた | 閉じない。main へのリリースのあとに workflow が閉じる |
 | 照合の run が失敗し、GitHub からメールが来る | PyPI が取れなかった（HTTP 5xx、20 秒の時間切れ） | 翌朝の run を待つ。続くときは PyPI の状態を見る |
