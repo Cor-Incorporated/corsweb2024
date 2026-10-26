@@ -1,0 +1,138 @@
+# チャット以外の連絡の手段の調査（2026-10）
+
+ADR-0025 の判断材料。取りまとめの Issue は #421（作業 D）。調査日は 2026-10-26 で、下の URL はすべてこの日に開いた。
+
+- **一次** はベンダー自身の料金・ヘルプ・ドキュメント、官公庁の資料、査読論文。**二次** はブログ、比較サイト、報道。二次資料にしかない数値は「未確認（二次資料のみ）」と書いた
+- 開けなかったページは中身を推測せず、そう書いた
+- 「所見」は資料ではなく、この文書の書き手の推論
+
+## 1. 代表の悩みと、いまの状態
+
+代表の悩み（2026-10-26）: 営業の連絡を避けたいので、電話番号やお問い合わせフォームは置きたくない。でも、連絡先がチャットボットだけだと、結局問い合わせが減って困る。
+
+いまの状態（develop、2026-10-26）は次のとおり。
+
+- `/contact` の連絡の手段は Cloudia（AI チャット）だけ。2026-09-13 に電話とフォームを取り下げた（ADR-0005 の改訂、ADR-0013）
+- Cloudia は、目的を選ぶ → AI がいくつか質問する → 連絡先（氏名・メール・会社名・補足）を入れて送る、の順。送った内容は `workers/contact-chat` の `/api/contact/submit` が受け、社内へ通知し、受付番号つきの確認メールを相手に送る。`/submit` は LLM を通らない
+- Worker は会話を genuine / sales / spam に分類している（LLM の判定）。営業らしさの点数と 3 段階の振り分けは未実装（Cor-Incorporated/cloudia#17）
+- Cloudia が落ちると、サイトに問い合わせの手段が残らない（ADR-0005 で受容したリスク。監視は #322 で未設定。行き止まりの件は #352）
+- **連絡先はすでに公開している**
+  - メールアドレス `company@cor-jp.com` はプライバシーポリシー（開示等の請求の窓口）と特定商取引法の表記に載っている
+  - 電話番号 `070-8561-1659` は特定商取引法の表記に載っている（表示の義務があるため。ADR-0005 の改訂）
+  - つまり、調べる気のある営業はいまでも連絡先にたどり着ける。`/contact` に出さないことで減っているのは、ついでに連絡してくる営業だと考えられる（所見）
+
+チャットの UX のうち判断の要らないものは、#425（corsweb）と Cor-Incorporated/cloudia#33 で直した。操作して見つけたつまずきの一覧は #425 の本文にある。
+
+## 2. いまの実際の様子が分かるデータ
+
+チャットの開始数・途中でやめた数・送られた数を、サイトの側では数えていない（計測イベントは #252 で未実装）。数えられそうなものは次のとおり。**どれも本番のデータか本番の画面なので、この調査では読んでいない。** 読むなら、どれを読むかを代表に決めてもらう。
+
+| データ | 分かること | 残っている期間 | 個人情報 |
+|---|---|---|---|
+| D1 `cor-contact-chat-prod` の `contact_sessions` | 会話の開始数、目的（intent）、言語、入口（source）、どこまで進んだか（stage・turn_count）、分類、状態 | 最後のやり取りから 30 日（`SESSION_TTL_SECONDS`） | 集計だけなら含まない（会話の抜粋の列は読まない） |
+| D1 の `submission_intake` | 送られた数、目的、分類 | 受付から 90 日（`SUBMISSION_TTL_SECONDS`） | 集計だけなら含まない（氏名などは暗号化された列。読まない） |
+| Cloudflare Web Analytics | `/contact/` と `/contact/chat/` の表示回数 | 管理画面の保持期間 | なし |
+| Microsoft Clarity | `/contact/` での動き（Cloudia の中は計測していない） | 管理画面の保持期間 | なし（入力はマスク） |
+| `cloudia@cor-jp.com` の受信箱 | Cloudia 経由の通知メールの件数（月ごと） | 消していなければ全期間 | 件名と日付だけ数えれば含まない |
+| 2026-09-13 より前のフォーム（SSGFORM）の受信 | フォームがあった頃の月ごとの件数（取り下げの前後を比べられる） | 受信箱しだい | 同上 |
+
+読むときは、次の集計を使う（D1、読み取りだけ。個人情報の列には触れない）。
+
+```sql
+-- 日ごと・目的ごと・分類ごとの会話の数と、平均の往復数
+SELECT date(created_at, 'unixepoch', '+9 hours') AS day, intent, classification, stage,
+       COUNT(*) AS sessions, AVG(turn_count) AS avg_turns
+FROM contact_sessions WHERE mode = 'intake'
+GROUP BY day, intent, classification, stage ORDER BY day;
+
+-- 日ごと・目的ごと・分類ごとの送信の数
+SELECT date(created_at, 'unixepoch', '+9 hours') AS day, intent, classification, COUNT(*) AS submissions
+FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
+```
+
+会話の数と送信の数を並べれば、途中でやめた割合のおよそが出る。D1 は 30 日と 90 日で消えるので、長い期間を見るには受信箱の件数を使う。
+
+## 3. 案ごとの事実
+
+### A. チャットで確かめてから出す日程調整のリンク
+
+- Google カレンダーの予約スケジュール（一次: https://support.google.com/calendar/answer/16287038?hl=ja 、https://support.google.com/calendar/answer/10729749?hl=ja ）
+  - 個人と Business Starter で作れる予約ページは 1 つ。予約者のメール確認（ヘルプの原文は「スパム予約を防ぐには、【メール確認を必須にする】のチェックボックスをオンにします」）は、Workspace Individual か Business Standard 以上
+  - 予約できるのは「予約ページのリンクを知っているすべてのユーザー」。1 回限りのリンクはヘルプに書かれていない
+  - 有料の予約（Stripe）は Business Standard 以上などで使える（一次: https://knowledge.workspace.google.com/admin/calendar/allow-paid-appointment-schedules-in-calendar?hl=ja ）
+- TimeRex（一次: https://timerex.net/plan ）: 税抜でフリー ¥0、ベーシック ¥900/月、プレミアム ¥1,500/月（月払い）。回答による出し分けはプレミアムだけ。一度限りの「ワンタイムURL」がある（一次: ベンダーの発表 https://prtimes.jp/main/html/rd/p/000000069.000032995.html 。プランの条件は書かれていない）。データの保管場所の記載は見つからなかった
+- Calendly（一次: https://calendly.com/help/how-to-create-a-single-use-link 、https://calendly.com/help/how-to-require-email-verification-for-event-types 、https://calendly.com/help/how-to-change-your-event-type-language ）: 1 回限りのリンク（予約が 1 件入ると失効）とメール確認は全プラン。予約ページを自動で訳す言語に日本語はない
+- Cal.com（一次: https://cal.com/pricing 、https://github.com/calcom/cal.com ）: 招待した人だけが使える非公開のリンクは Free から。自前で置く版（Cal.diy）は README が「personal, non-production use」を勧めていて、チーム向けの機能も外されている
+- 所見: どれも「リンクを知っていれば予約できる」。チャットの後に出すなら、転送されて営業に使われないよう、1 回限りのリンクかメール確認があるものがよい。1 件ごとにリンクを出すには各社の API が要る（API の条件は調べていない）
+
+### B. チャットの中に「AI と話さずに伝言だけ残す」入口
+
+- 今の `/api/contact/submit` をそのまま使える。LLM を通らないので、LLM が止まっていても受け付けられる
+- Cloudflare Turnstile（一次: https://developers.cloudflare.com/turnstile/plans/ 、https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ ）: 無料でチャレンジ数の上限なし。サーバー側での検証（Siteverify）が必須で、トークンは 5 分・1 回限り。Worker には検証の処理（`verifyTurnstile`）がすでにあり、`TURNSTILE_SECRET` が無いと検証を飛ばす。Cloudia の画面にはまだ Turnstile が無い
+- Turnstile が止めるのはボットで、人が手で書く営業は止めない。ハニーポットや CAPTCHA で何割止まるかの数値は二次資料しか見つからなかった（未確認（二次資料のみ）: https://splitforms.com/blog/stop-contact-form-spam ）
+- チャットとフォームの比較
+  - Luo ほか（2019, Marketing Science 38(6)、一次: https://ideas.repec.org/a/inm/ormksc/v38y2019i6p937-947.html ）は、会話の前に「ボットです」と明かすと購入率が 79.7% 以上下がったと報告している。ただし会社から電話をかける営業の実験で、サイトに来た人が自分から話しかける場面にそのまま当てはまるかは分からない
+  - 会社サイトの問い合わせで「チャットだけ」と「フォームあり」を比べた信頼できる研究は見つからなかった
+- 所見: AI と話したくない人と、Cloudia の調子が悪いときの受け皿になる。営業も入ってくるので、Worker の分類（cloudia#17 の 3 段階の振り分け）で、営業らしいものを日次のまとめや隔離に回す
+
+### C. 有料の診断の申込みを入口にする
+
+- Stripe（日本）の手数料はカード決済 3.6%、固定費なし。Payment Links は無料で、ブラウザの言語に合わせて表示し、購入回数を制限できる（一次: https://stripe.com/jp/pricing 、https://docs.stripe.com/payment-links ）
+- 初回の相談を有料にして営業の連絡がどう変わったかを示す資料は見つからなかった
+- 所見: 支払いの一手間は営業の人にはほぼ越えられない。同時に、まだ迷っている本物の相談者も減らす。唯一の入口にはせず、「しっかり診てほしい人向け」として並べるのが筋
+
+### D. LINE 公式アカウント
+
+- 税別でコミュニケーション ¥0（200 通）、ライト ¥5,000、スタンダード ¥15,000。1:1 のチャットは通数に数えない（一次: https://www.lycbiz.com/jp/service/line-official-account/plan/ ）
+- 友だち追加を制限する公式の機能は見つからなかった。誰でも追加でき、営業も入ってこられる
+- 総務省は 2024 年に LINE ヤフーへ行政指導をしている（一次: https://www.soumu.go.jp/menu_news/s-news/01kiban18_01000224.html ）
+- 所見: 相手の私用の LINE に会社の相談が入る形になり、B2B の窓口には向きにくい
+
+### E. 050 の AI 電話受付
+
+- IVRy（一次: https://ivry.jp/pricing/ 、https://ivry.jp/function/whitelist/ ）: 税抜でスターター ¥3,980〜/月（050 番号）、ほかに番号の維持費と従量の料金（額はページにない）。営業電話への対処は番号を登録して自動で切るブラックリストと、自動応答での振り分け。AI が営業電話を自動で見分ける機能は、公式のページでは確認できなかった
+- 録音していることを相手に伝える法的な義務はない。利用目的を通知か公表する義務はある（一次: 個人情報保護委員会 Q&A 1-10 https://www.ppc.go.jp/all_faq_index/faq1-q1-10/ ）
+- ADR-0011 は、着信・転送・録音の案内・個人情報の扱い・弁護士の確認が終わるまで 050 番号を出さないと決めている
+- 所見: 番号を出せば営業電話は来る。電話したい本物の相談者は取りこぼさない
+
+### F. メールアドレスを出す
+
+- 特定電子メール法: 広告や宣伝のメールは、原則として同意した人にだけ送れる。例外として、アドレスを公開している事業者には同意なしに送れる。ただし、**アドレスの直前か直後に「広告メールお断り」などと一緒に公開すると、この例外が外れ、同意のない広告宣伝メールは送れなくなる**（一次: 施行規則第 3 条、総務省・消費者庁「特定電子メールの送信等に関するガイドライン」平成 23 年 8 月 p.18–19 https://www.soumu.go.jp/main_content/000127185.pdf 、パンフレット https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/pdf/m_mail_pamphlet.pdf ）。違反は命令の対象で、従わなければ罰則がある
+- 問い合わせフォームから送る営業文がこの法律の「電子メール」に当たるかについて、公的な見解は見つからなかった
+- 会社あての営業電話は特定商取引法の電話勧誘販売の規制の外にある。「営業電話お断り」に法的な効き目はない（一次: https://www.no-trouble.caa.go.jp/what/telemarketing/ ）
+- アドレスを伏せ字にすると、自動で集めるボットからのスパムは大きく減る（米 FTC の 2005 年の調査、一次: https://ftc.gov/node/41872 ）。cor-jp.com は Cloudflare のプロキシを通っているので（本番のページが `cor-jp.com/cdn-cgi/rum` へ送っている）、Cloudflare の Email Address Obfuscation を使える見込みがある（一次: https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/ 。設定は確かめていない）
+- 所見: 人が見て書き写す営業は止まらない。一方、`company@cor-jp.com` はすでに公開しているので、「広告メールお断り」を隣に書くだけでも、法律上の歯止めが 1 つ増える
+
+### G. 取材専用の窓口
+
+- PR TIMES の登録メディアは取材の問い合わせ先などの限定情報を見られる（一次: https://prtimes.jp/user_info/media/ ）。登録の審査の条件は書かれていない
+- 所見: 公開した press@ にも営業は来る。Cloudia の目的「取材・登壇・その他」と、B の伝言の入口で足りる
+
+### H. そのほか
+
+- SNS の DM（X、LinkedIn）: 営業がよく使う経路で、目的と逆を向きやすい（ヘルプは開けず、検索結果の抜粋のみ）
+- 「営業お断り」の表示で営業の連絡がどれだけ減ったかを測った調査は見つからなかった（二次資料のみ: https://salesnow.jp/db/knowledge/202 ）
+
+## 4. 比べた表
+
+書き手の粗い見立て。「営業の来やすさ」は低いほど望ましい。月額は 2026-10-26 のページの表示。
+
+| 案 | 営業の来やすさ | 本物の問い合わせ | 作る手間 | 運用の手間 | 月額 | 個人情報 |
+|---|---|---|---|---|---|---|
+| A 日程調整（チャットの後） | 低（見極めた後だけ。1 回限りなら転送されにくい） | 中（話す気のある人には早い。チャットを使わない人には届かない） | 中（1 件ごとのリンクは API 連携） | 低 | ¥0〜¥1,600/人 | 中（新しい委託先が増える場合がある） |
+| B AI を通らない伝言 | 中（ボットは減るが、人の営業は止まらない） | 高（AI を避けたい人と障害時の受け皿） | 低〜中 | 中（振り分けの確認） | ¥0 | 低（今の Worker と同じ項目） |
+| C 有料の診断 | 低 | 低〜中（件数は減る） | 中 | 中（返金・請求書） | 固定費なし・3.6% | 中（Stripe に渡る） |
+| D LINE 公式アカウント | 中 | 中 | 低 | 中 | ¥0〜 | 中〜高 |
+| E 050 の AI 電話 | 高 | 高 | 低〜中 | 中 | ¥3,980〜＋α | 中（録音を外部に保存） |
+| F メールアドレス＋「広告メールお断り」 | 高（人の営業は止まらない。広告メールには法律上の歯止めがつく） | 高 | 低 | 中〜高 | ¥0 | 低 |
+| G 取材専用の窓口 | 中 | 低〜中 | 低 | 低 | ¥0 | 低 |
+
+## 5. 判断待ち・分からなかったこと
+
+- **プライバシーポリシー**: B（伝言）と A（日程調整）は、今の Cloudia と同じ項目を、新しい経路で集める。#382（弁護士の確認待ち）の第10項と L8（同意の文言）に響く。ポリシーはこの調査では直していない。A で Google 以外の予約サービスを使うなら、委託先と外国での取扱いの記載が増える
+- **特定電子メール法の表記**: F の「広告メールお断り」を `/privacy` と特商法のページのアドレスの隣に書くかは、法務の文書の変更なので弁護士の確認を通す
+- cor-jp.com の Google Workspace のエディション（予約ページの数、予約者のメール確認、有料の予約が使えるかがこれで決まる）
+- Calendly と Cal.com の Routing Forms のプランの条件（料金ページとヘルプで食い違う）、TimeRex のデータの保管場所、IVRy の番号維持費と従量料金
+- 「営業お断り」の表示・ハニーポット・CAPTCHA が営業の連絡を何割減らすかの、信頼できる測定
+- 会社サイトの問い合わせで「チャットだけ」と「フォームあり」を比べた、信頼できる研究
+- ガイドライン（平成 23 年版）以降の改正の有無
