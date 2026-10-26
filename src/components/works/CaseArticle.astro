@@ -59,17 +59,17 @@ const CTA_MAP: Record<CtaKey, Cta[]> = {
 }
 
 const ctaKey = (data.ctaType ?? data.category) as CtaKey
-// 関係するサービスのページがあれば、相談の次に並べる（ADR-0024。実績からサービスの説明へつなぐ）
+const ctas = CTA_MAP[ctaKey]
+// 関係するサービスのページがあれば、相談の箱の下に文字のリンクで置く（ADR-0024。実績からサービスの説明へつなぐ）。
+// ボタンとして相談の横に並べると、ボタンの幅が半分になり、ko のタブレット・パソコンの幅で 2 つのボタンとも最後の
+// 1 文字だけが折り返した（visual-text の terminal-orphan-fragment、2026-10-26）。
 const relatedService = findServiceByCaseCategory(ctaKey)
-const ctas: Cta[] = relatedService
-  ? [
-      ...CTA_MAP[ctaKey],
-      {
-        label: formatServiceLinkLabel(t.servicePages.common.serviceLinkLabel, t.nav[relatedService.key]),
-        href: getServiceUrl(relatedService, currentLocale),
-      },
-    ]
-  : CTA_MAP[ctaKey]
+const serviceLink = relatedService
+  ? {
+      label: formatServiceLinkLabel(t.servicePages.common.serviceLinkLabel, t.nav[relatedService.key]),
+      href: getServiceUrl(relatedService, currentLocale),
+    }
+  : null
 
 // 関連記事: relatedSlugs があればそれ（実在 + 非下書き）。なければ同カテゴリから最大3件（自身を除く）。
 // 一覧は現在ロケール版（未翻訳は ja へフォールバック）に揃える。slug は言語ディレクトリを外して比較する。
@@ -202,6 +202,17 @@ const articleJsonLd = {
       lead={t.caseStudy.nextLead}
       ctas={ctas}
     />
+    {serviceLink && (
+      <p class="mt-6 text-center">
+        <a
+          href={serviceLink.href}
+          data-testid="case-service-link"
+          class="type-action inline-block min-h-[44px] py-2.5 text-base font-medium text-[#2d4a6b] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:text-primary-200"
+        >
+          {serviceLink.label}<span aria-hidden="true">&nbsp;→</span>
+        </a>
+      </p>
+    )}
   </div>
 
   <!-- 関連記事 -->
