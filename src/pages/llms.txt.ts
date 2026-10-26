@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { GRIFT_CLI_RELEASE } from '../config/grift-cli';
 import { GRIFT_CLI_GITHUB_URL, getGriftBaseUrl } from '../config/site';
 import { SERVICE_PAGES, getServiceBasePath } from '../config/services';
 import { getJaTranslations } from '../utils/i18n';
@@ -9,6 +10,8 @@ import { getJaTranslations } from '../utils/i18n';
  * 会社の事実（事業の柱・所在地・設立・情報セキュリティの状況）と主要ページを Markdown で渡す。
  * 本文はページに表示している事実だけにする（ADR-0017・ADR-0022）。未確定の予定は「予定」「構想」と書き、
  * ISMS は登録前のため「取得済み」と書かない（ADR-0007）。内容を変えたら CONTENT_AS_OF も更新する。
+ * Grift CLI の版は正本（src/config/grift-cli.ts、ADR-0023）から入れ、行に公開日を書く。版だけが変わったときは
+ * CONTENT_AS_OF を変えない。
  */
 const CONTENT_AS_OF = '2026-10-26';
 
@@ -70,6 +73,7 @@ ${serviceLines}
 - Grift: ${grift}/
 - Grift CLI（GitHub）: ${GRIFT_CLI_GITHUB_URL}
 - Grift CLI（PyPI）: https://pypi.org/project/grift-cli/
+- Grift CLI の最新の公開版: v${GRIFT_CLI_RELEASE.version}（${GRIFT_CLI_RELEASE.releasedOn} 公開。変更点: ${GRIFT_CLI_RELEASE.releaseNotesUrl}）
 - Grift の思想（Qiita）: https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1
 - Grift の思想（note）: https://note.com/cor_instrument/n/nd58ba0955317
 `;

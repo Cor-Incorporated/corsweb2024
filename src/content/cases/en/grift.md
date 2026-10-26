@@ -1,16 +1,16 @@
 ---
 title: "Grift — Resumes can be embellished. Evidence cannot. An OSS tool that extracts verifiable facts from git history"
-description: "Grift is our in-house product that extracts verifiable facts (test values) from an engineer's git history, rather than arbitrary scores. Here is how and why we shifted direction from an estimation-support web app to an open-source CLI and recommendation-support tool for staffing agencies and SES companies, along with its design."
+description: "Grift is our in-house product that extracts verifiable facts (test values) from an engineer's git history, rather than scores. This post shares the background and design of how we pivoted from an estimation support web app to an open-source CLI and recommendation support tool for staffing agencies and SES firms."
 category: "grift"
-tags: ["Grift", "OSS", "CLI", "git", "Staffing & Recruitment", "SES"]
+tags: ["Grift", "OSS", "CLI", "git", "Recruitment Agencies", "SES"]
 publishedAt: 2026-06-30
 updatedAt: 2026-10-26
-summary: "Grift is an in-house product that extracts \"verifiable facts\" from an engineer's git history. It assigns neither scores nor rankings. Because it does not use AI (LLMs) for measurement, it yields the exact same results regardless of who runs it, allowing the recipient to verify the numbers independently. The CLI is released as open source software under the MIT license."
+summary: "Grift is our in-house product that extracts \"verifiable facts\" from an engineer's git history. It assigns neither scores nor rankings. Because it does not use AI (LLMs) for measurement, it yields the same results regardless of who runs it, allowing the recipient to verify the findings independently. The CLI is released as open-source software under the MIT License."
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "3e040444b57b65105b31020423b445f7e2670d2f2e3b6da65bf6bbeaed4d4660"
-translatedAt: "2026-10-25T15:05:49.533Z"
+translationSourceHash: "a8dfe812f53fcb36961bc564396c501ad8a746b23ccaa423c7c09d13cd6b686f"
+translatedAt: "2026-10-26T04:37:40.796Z"
 translationModel: "gemini-3.8-flash"
 ---
 
@@ -27,68 +27,69 @@ NDA・機密案件では具体名や数値をぼかし、frontmatter の securit
 2026-10-26: 「実装」に TEP の 4 つの段階の平易な説明と、griftai.org の TEP ページへのリンクを足した。
 -->
 
-## Challenges
+## The Challenge
 
-When staffing agencies or SES sales representatives recommend a candidate to a company, they need to explain why they are recommending that person. However, the materials they have on hand consist almost entirely of resumes and interview impressions. Even if a resume states "5 years of Java," it does not convey the substance of the work—such as what kind of changes were made and how they were verified along the way.
+When recommending candidates to client companies, recruiters and SES sales representatives need to explain "why we recommend this person." However, the materials they have on hand are almost entirely limited to resumes and interview impressions. Even if a resume states "5 years of Java experience," it does not convey the substance of the work—what kinds of changes the engineer made, or how they verified their work as they progressed.
 
-At the same time, "activity volume"—such as GitHub contribution graphs and commit counts—has become easy to inflate using generative AI and agents. High volume is no longer reliable grounds for a recommendation. On the other hand, collapsing everything into a single score erases what was measured, over what period, and from what sample size, causing it to be used as a blunt filtering tool. Both those making recommendations and those being recommended lacked "verifiable materials."
+On the other hand, "activity metrics" such as GitHub contribution graphs ("green squares") and commit counts have become easy to inflate using generative AI and autonomous agents. High volume alone is no longer reliable evidence for a recommendation. Yet condensing everything into a single score erases what was measured, over what time frame, and against what base population, turning the metric into a crude screening tool. Both those making recommendations and those being recommended lacked "verifiable materials."
 
-## Approach
+## The Approach
 
-Grift began in February 2026 as a web application supporting estimates for contract development. While exploring the rationale behind estimates, we realized that the most reliable material is the git history that engineers have built up themselves. In August 2026, we extracted the measurement component as a command-line tool. In September, we discontinued the former web application and pivoted our direction toward supporting staffing agencies and SES sales teams.
+Grift began in February 2026 as a web application supporting contract development estimates. While exploring the basis for these estimates, we realized that the most dependable evidence lies in the git history engineers have built over time. In August 2026, we extracted the measurement component as a command-line tool. In September, we discontinued the legacy web app and pivoted toward supporting recruiters and SES sales teams.
 
-In our design, we established three commitments upfront:
+During design, we established three initial commitments:
 
-- Do not turn it into a score: We provide observed values; human beings make the judgment. We do not produce composite scores, rankings, pass/fail decisions, or grades, and every number is always accompanied by a numerator and a denominator.
-- Identical results every time: We do not use AI (LLMs) for measurement. For the same repository and the same version, anyone running it gets the exact same numbers.
-- Send nowhere: It runs entirely on the local PC. Whether to share it, and which repositories to present, is decided by the individuals themselves.
+- No scores: Output test values, and let humans make the judgment. We produce no composite scores, rankings, pass/fail decisions, or tiers; every number always includes a numerator and a denominator.
+- Deterministic results: No AI (LLMs) is used for measurement. Given the same repository and the same version, anyone running the tool gets the exact same numbers.
+- Transmit nowhere: Runs entirely on the user's local PC. The engineer decides whether to share the results and which repositories to include.
 
-Additionally, we established seven codes of conduct—including "do not interpret absence as negative," "do not screen candidates based on numbers alone," and "do not measure others without their consent." We set a rule that any usage failing to adhere to these must not be referred to by the method's name (TEP: Technical Evidence Pipeline).
+In addition, we established a seven-article code of conduct, including rules such as "do not interpret absence as negative," "never screen candidates using numbers alone," and "do not measure others without their consent." Any usage that violates these rules cannot be referred to by the method's name (TEP: Technical Evidence Pipeline).
 
 ## Implementation
 
-Grift CLI extracts observations such as the following solely from git history:
+Grift CLI extracts observations like the following using only git history:
 
-- Attribution distinction: Separates whose work it is across 11 classifications, including the individual's original commits, work by others, bots, generated/vendor artifacts, and history inherited from upstream forks.
-- Test co-change rate: The proportion of commits modifying production code that also modify tests in the same commit.
-- Corrective rework rate / path retouch: The proportion of rework or re-engagement with recently touched files (recorded as a trend, not used for pass/fail judgments).
-- Repository context: Working days, number of contributors involved and the dominant author's share, proportion of changes via review, etc.
+- Attribution distinction: Distinguishes whose work it is across 11 classifications, including the individual's original commits, work by others, bots, generated/vendor artifacts, and history inherited from upstream forks.
+- Test co-change rate: The proportion of commits where tests were modified alongside production code changes.
+- Corrective rework rate & path retouching: The proportion of re-dos or revisits to recently touched files (recorded as tendencies, never used for pass/fail decisions).
+- Repository context: Active working days, number of contributors, commit share of the primary author, proportion of work merged via review, etc.
 
-With `report-v2` added in v0.6, we introduced an additional layer for examining an individual engineer's work patterns. All metrics come with numerators and denominators and are not judgments of job role or capability.
+With `report-v2` added in v0.6, we expanded the layers for examining the shape of an individual engineer's work. All outputs include numerators and denominators, and none represent determinations of job titles or capabilities.
 
-- Surface profile (`surface_profile`): How many changes occurred across which domains, categorized into 11 classifications: test / docs / CI/CD / platform / data / observability / frontend / backend / config / generated & vendor / other.
-- Change rhythm (`change_rhythm`): The number of days changes were submitted within the last 180 days, and the intervals between submissions (median and 90th percentile, proportion of follow-ups within 2 days, proportion of gaps of 30 days or more). This does not represent working hours or motivation.
-- Verification profile (`verification_profile`): The proportion of commits touching tests, their types (unit / integration / e2e / contract / unknown), and the proportion of fix commits accompanied by tests.
-- 4 dimensions of roles (`role_profile`): Limited to four dimensions—domain / work_type / time / process_position—without collapsing into a single job role. This is output only when an identity with recorded consent from the individual is present.
+- Work domains (`surface_profile`): How many changes occurred in which areas across 11 categories: test / docs / CI/CD / platform / data / observability / frontend / backend / config / generated & vendor / other.
+- Change rhythm (`change_rhythm`): Number of days changes were submitted within the last 180 days, and submission intervals (median and 90th percentile, proportion followed within 2 days, proportion with gaps of 30 days or more). This does not measure working hours or motivation.
+- Verification profile (`verification_profile`): Proportion of commits that touched tests, their types (unit / integration / e2e / contract / unknown), and the proportion of fix commits accompanied by tests.
+- Four dimensions of role (`role_profile`): Expressed strictly through four dimensions—domain / work_type / time / process_position—without collapsing them into a single job title. Output only when an identity with recorded consent is present.
 
-Alignment with project requirements is also performed without assigning rankings. The project side declares the required surface, verification, rhythm, and inputs using `grift project`, and `grift align` lines them up side by side with the candidate's observations across each dimension. The alignment is categorized into only five states—overlap, outside_declared_range, observed_zero, not_observed, and not_declared—with no calculation of overall scores, rankings, or pass/fail decisions. When viewing on a team basis using `--team`, it only outputs the count of individuals meeting the requirements; to prevent personal identification, it does not aggregate groups of fewer than 3 people.
+Alignment with project requirements is also conducted without ranking. The project side declares required domains, verification, rhythm, and inputs using `grift project`, and `grift align` lines them up against the candidate's observations across each axis. The alignment produces only five outcomes: overlap, outside declared range (outside_declared_range), zero observed (observed_zero), not observed (not_observed), or not declared (not_declared). No overall scores, rankings, or pass/fail decisions are calculated. When viewed at a team level using `--team`, it displays only the count of individuals meeting the requirements; aggregations are not performed for fewer than three people to prevent identifying individuals.
 
-When the sample size is under 20, it displays only counts rather than percentages, and unobserved items are output not as "no track record," but as "not_observed" with a stated reason. `grift verify` recalculates saved reports under the same conditions and returns match, mismatch, or unverifiable, allowing the receiving party to verify against alterations or discrepancies.
+When the base population is under 20, we present only raw counts without percentages, and anything that could not be observed is output as "not observed" with an accompanying reason, rather than "no track record." `grift verify` recalculates saved reports under identical conditions and returns match, mismatch, or unverifiable, allowing the recipient to verify tampering or discrepancies.
 
-The method is called TEP (Technical Evidence Pipeline). It consists of four stages: reading git records, counting by fixed rules, attaching denominators and reasons for uncounted items to the calculated values, and ensuring that anyone can recount them following the exact same procedure. A detailed explanation can be found on the [TEP page](https://griftai.org/tep) on the Grift website.
+The method is called TEP (Technical Evidence Pipeline: the flow of extracting technical evidence). It consists of four stages: reading git records, counting according to fixed rules, attaching denominators and reasons for uncounted items to the calculated values, and enabling anyone to recount using the exact same procedure. Detailed explanations are available on the [TEP page](https://griftai.org/tep) on the Grift website.
 
-The terminology used on this page and griftai.org corresponds to the terms written in the CLI output as follows:
+The terminology used on this page and on griftai.org corresponds to the terms written in CLI outputs as follows:
 
-| Term on Website | Term in CLI |
+| Website Term | CLI Term |
 |---|---|
-| Observed value | observed value (`kind: observed`; accompanied by value, unit, and denominator) |
+| Test value | observed value (`kind: observed`; accompanied by value, unit, and denominator) |
 | Test co-change rate | test co-change |
 | Rework rate | corrective rework |
-| Retouch | path retouch |
-| Survival rate | survival (only when `--survival` is specified) |
+| Retouching | path retouch |
+| Retention rate | survival (only when `--survival` is specified) |
 | Repository context | context profile |
-| Surface, change rhythm, verification profile | surface_profile / change_rhythm / verification_profile |
+| Work domains / Change rhythm / Verification profile | surface_profile / change_rhythm / verification_profile |
 
 - Repository: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
-- Distribution: PyPI "grift-cli" (`pipx install grift-cli`, Python 3.11 or higher)
+- Distribution: PyPI "grift-cli" (`pipx install grift-cli`, Python 3.11+)
 - License: MIT
+- Release Notes: [github.com/Cor-Incorporated/grift-cli/releases](https://github.com/Cor-Incorporated/grift-cli/releases) (changes by version)
 
-## Outcomes
+## Results
 
-On September 8, 2026, we released v0.7.2 on PyPI. The metrics were verified across 117 public repositories, and we have published on GitHub both the comparisons where distinctions could be made and those where distinctions could not yet be made (these are internal measurements and have not undergone third-party audits).
+On September 8, 2026, we released [v0.7.2](https://pypi.org/project/grift-cli/0.7.2/) on PyPI. The metrics were validated against 117 public repositories, and both comparisons that could be distinguished and those that could not yet be distinguished are published on GitHub (measured internally; not audited by a third party).
 
-On October 25, 2026, we compared the wording on the website line-by-line with the CLI output. Because the multi-person listing (`actor-index`) was sorted in descending order of commit counts despite a note stating "not a ranking," the next release (0.8) will change the order to lexicographical order of IDs. The commit count values will be retained. We described the background and the five acceptance criteria imposed on the 0.8 series in a [blog post](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/).
+On October 25, 2026, we checked the website copy against the CLI output line by line. Because the multi-person list (`actor-index`) was sorted in descending order of commit counts despite a footnote stating "not a ranking," we changed the ordering to lexicographical order by ID in [0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0), released on October 26, 2026. Commit count values are retained. The background and the five acceptance criteria imposed on the 0.8 series are detailed in a [blog post](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/).
 
-We are currently working with staffing agencies and SES companies to prepare proof-of-concept (PoC) deployments aimed at substantiating recommendation reasons based on records candidates run locally themselves. Based on the results of these pilot deployments, we aim to begin offering the official version in 2027. Grift is also introduced at [griftai.org](https://griftai.org).
+Currently, we are preparing proof-of-concept (PoC) trials with recruitment agencies and SES firms to substantiate recommendation rationales using records executed locally by the candidates themselves. We aim to launch the official release in 2027 based on the results of these trials. Grift is also featured on [griftai.org](https://griftai.org).
 
 The philosophy behind Grift is also introduced in articles on [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) and [note](https://note.com/cor_instrument/n/nd58ba0955317).

@@ -75,7 +75,7 @@ About の代表の見出し「言葉だけでは届かないものを、技術�
 | ブログ | 2 → 3 | 考え方が信頼できる | 記事ごとの相談 |
 | griftai.org | 経歴は盛れる。証拠は盛れない。 | 推薦の理由を根拠で言えそうだ | テスト導入（PoC） |
 
-トップの並びは、代表が決めた「課題 → 実証 → 柱 → セキュリティ → 業種 → Grift」です。場面では 2（課題）→ 4（実証）→ 3（柱・セキュリティ）→ 2（業種）→ Grift の順になります。
+トップの並びは、代表が決めた「課題 → 実証 → 柱 → セキュリティ → 業種 → Grift」です。場面では 2（課題）→ 4（実証）→ 3（柱・セキュリティ）→ 2（業種）→ Grift の順になります。そのあとに FAQ と締めを置き、締めには読み手の状況ごとの入口 3 つ（場面 5）と、代表の物語への一言を並べます（2026-10-26、#414）。最初の画面には「ローカルLLM」「PoC」などの言葉を出さず、改善できる業務から書きます。
 
 ## 共通の言葉
 
@@ -93,5 +93,5 @@ About の代表の見出し「言葉だけでは届かないものを、技術�
 ## 出どころ
 
 - 代表の原体験: 物語の全文 `src/content/blog/ja/founder-story.md`、`teamData`、`aboutPage.founderLead`、`aboutPage.founderTimeline`。以前の About に載っていた代表の想い（ja.json の `founderStory`）は、どこからも使われていなかったので #396 で消した。文は `git show 4e36034:src/i18n/locales/ja.json` で読める。プロフィールを書くときは、本人の note「アスペのトランペット奏者がリクルートを経てエンジニアで起業した話【Why me】」などを読む
-- 事業と立場: ADR-0022、`kyousou`、`homeHero`
+- 事業と立場: ADR-0022、`aboutPage.kyousou`、`homeHero`。トップにあった「きょうそう」の欄（ja.json の `kyousou`）は #414 で外し、「まだ作らない」はヒーローの説明に残した。以前の文は `git show 1ae26b7:src/i18n/locales/ja.json` で読める
 - 証拠: `src/content/cases/ja/`、`companyPage`、ADR-0022（ISMS の書き方）

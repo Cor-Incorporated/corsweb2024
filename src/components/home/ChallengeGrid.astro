@@ -1,99 +1,55 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
-import { getContactUrl, getGriftUrl } from '../../config/site';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-const primaryHref = getContactUrl(currentLocale, {
-  intent: 'confidential-ai-assessment',
-  source: 'challenge-grid',
-});
-const secondaryHref = getGriftUrl('/', {
-  intent: 'grift-team-beta',
-  source: 'challenge-grid',
-});
-
-// homeChallenges.items（全言語同一の並び）に対応する関連ページ。
-// /works/<slug>・/industries・/blog はいずれも各言語版があるため localize（#313）。
-const CHALLENGE_HREFS: (string | null)[] = [
-  getLocalizedUrl('/works/legacy-core-system-cloud-migration', currentLocale), // 老朽化した基幹システムのクラウド化
-  getLocalizedUrl('/works/engineer-cafe-navigator', currentLocale),           // 多言語対応のAI受付・チャット
-  getLocalizedUrl('/works/survey-platform-renewal', currentLocale),           // 生成AIサービスの本番化（近い刷新・本番化事例）
-  getLocalizedUrl('/works/confidential-data-ai-assessment', currentLocale),   // 機密データを外に出さずAI活用
-  getLocalizedUrl('/industries/construction', currentLocale), // 業界特化のAIツール（建築）
-  getLocalizedUrl('/blog/ai-driven-development-workflow', currentLocale), // AI駆動開発の内製化
-];
+// 各カードのリンク先は homeChallenges.items[].link（サイト内のパス）に持つ。並べ替えても
+// カードとリンクがずれない。5 言語で同じ並びか、リンク先が実在するかは home-page.test.ts で照合する。
+// カード全体をクリック可能にしつつ、リンクのテキストはタイトルのみに限定する（説明文を <a> 配下に
+// 含めない）。可視文テキスト監査が a[href] の innerText を測るため、長い説明文をリンクに含めると
+// 末尾行が孤立断片として弾かれる。
 ---
 
-<section class="py-24 sm:py-32">
+<section class="py-16 sm:py-24">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex flex-col gap-10 sm:gap-12">
-      <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+    <div class="flex flex-col gap-8 sm:gap-12">
+      <div class="flex max-w-3xl flex-col gap-3 sm:gap-4" data-reveal>
         <p
           class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
         >
           {t.homeChallenges.eyebrow}
         </p>
-        <h2 class="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
+        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
           {t.homeChallenges.title}
         </h2>
       </div>
-      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         {
-          t.homeChallenges.items.map((item, i) => {
-            const href = CHALLENGE_HREFS[i];
-            {/* カード全体をクリック可能にしつつ、リンクのテキストはタイトルのみに限定する
-                （説明文を <a> 配下に含めない）。可視文テキスト監査が a[href] の innerText を
-                測るため、長い説明文をリンクに含めると末尾行が孤立断片として弾かれる。 */}
-            return (
-              <li
-                class="group relative flex h-full flex-col gap-3 rounded-3xl bg-primary-500/10 p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10"
-                data-reveal
-                style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <h3 class="text-balance text-lg font-medium tracking-tight">
-                    {href ? (
-                      <a
-                        href={href}
-                        class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                      >
-                        {item.title}
-                      </a>
-                    ) : (
-                      item.title
-                    )}
-                  </h3>
-                  {href && (
-                    <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-950/40 opacity-0 transition group-hover:opacity-100 dark:text-primary-200/40">↗</span>
-                  )}
-                </div>
-                <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-                  {item.description}
-                </p>
-              </li>
-            );
-          })
+          t.homeChallenges.items.map((item, i) => (
+            <li
+              class="group relative flex h-full flex-col gap-2 rounded-3xl bg-primary-500/10 p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10 sm:gap-3 sm:p-6"
+              data-reveal
+              style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
+            >
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-balance text-lg font-medium tracking-tight">
+                  <a
+                    href={getLocalizedUrl(item.link, currentLocale)}
+                    class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  >
+                    {item.title}
+                  </a>
+                </h3>
+                <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">→</span>
+              </div>
+              <p class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base">
+                {item.description}
+              </p>
+            </li>
+          ))
         }
       </ul>
-      <div class="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-start" data-reveal style="--reveal-delay:0.6s">
-        {/* 主=診断 / 副=Grift 仕組み（ADR-0011） */}
-        <a
-          href={primaryHref}
-          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 py-4 text-center text-lg font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8"
-        >
-          {t.homeChallenges.ctaPrimary}
-        </a>
-        <a
-          href={secondaryHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-center text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10 sm:w-auto"
-        >
-          {t.homeChallenges.ctaSecondary}
-        </a>
-      </div>
     </div>
   </div>
 </section>

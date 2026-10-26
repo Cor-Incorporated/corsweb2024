@@ -1,5 +1,5 @@
 ---
-import { getCurrentLocale, getLocalizedUrl } from '../../utils/i18n';
+import { getCurrentLocale, getLocalizedUrl, type Locale } from '../../utils/i18n';
 import {
   CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS,
   CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS,
@@ -23,30 +23,73 @@ fallbackContactUrl.searchParams.set(
 );
 if (incomingIntent) fallbackContactUrl.searchParams.set('intent', incomingIntent);
 const fallbackContactHref = `${fallbackContactUrl.pathname}${fallbackContactUrl.search}`;
-const copy =
-  currentLocale === 'ja'
-    ? {
-        label: 'Cloudiaに相談する',
-        title: 'Cloudiaに相談する',
-        close: '閉じる',
-        // Cloudia が開けないときに出る唯一の導線。ここが実在しない手段を案内すると
-        // 「全部壊れている状況」で行き止まりになる（#290 の再演）。問い合わせは Cloudia に
-        // 一本化した（電話は CALL_CENTER_PHONE_VISIBLE=false で取り下げ、カレンダーは閲覧専用）。
-        // よってここでは別の手段ではなく、iframe ではなく単独ページで開き直す道を案内する。
-        fallback: 'この枠でチャットを開けない場合は、お問い合わせページから開き直してください。',
-        fallbackLink: 'お問い合わせページを開く',
-        // すでにお問い合わせページを見ている場合、上の案内は従えない指示になる（自分自身へのリンク）。
-        // その時だけ導線を消してこの文言に差し替え、/contact/chat/ と同じく終端させる。
-        fallbackSamePage: '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。',
-      }
-    : {
-        label: 'Chat with Cloudia',
-        title: 'Chat with Cloudia',
-        close: 'Close',
-        fallback: 'If the chat will not open here, please reopen it from the contact page.',
-        fallbackLink: 'Open the contact page',
-        fallbackSamePage: 'The AI chat cannot be reached right now. Please try again in a little while.',
-      };
+// 以前は ja/非ja の 2 分岐で、zh・ko・es のページでは英語のボタンが出ていた。
+// satisfies により、6 言語目を足したときに翻訳漏れが型エラーになる。
+type LauncherCopy = {
+  label: string;
+  title: string;
+  close: string;
+  // 開いている間の右下のボタンの文言。× ボタン（close）と同じ名前にすると、読み上げで 2 つの「閉じる」が並ぶ。
+  closeLauncher: string;
+  fallback: string;
+  fallbackLink: string;
+  fallbackSamePage: string;
+};
+const LAUNCHER_COPY = {
+  ja: {
+    label: 'Cloudiaに相談する',
+    title: 'Cloudiaに相談する',
+    close: '閉じる',
+    closeLauncher: 'Cloudiaを閉じる',
+    // Cloudia が開けないときに出る唯一の導線。ここが実在しない手段を案内すると
+    // 「全部壊れている状況」で行き止まりになる（#290 の再演）。問い合わせは Cloudia に
+    // 一本化した（電話は CALL_CENTER_PHONE_VISIBLE=false で取り下げ、カレンダーは閲覧専用）。
+    // よってここでは別の手段ではなく、iframe ではなく単独ページで開き直す道を案内する。
+    fallback: 'この枠でチャットを開けない場合は、お問い合わせページから開き直してください。',
+    fallbackLink: 'お問い合わせページを開く',
+    // すでにお問い合わせページを見ている場合、上の案内は従えない指示になる（自分自身へのリンク）。
+    // その時だけ導線を消してこの文言に差し替え、/contact/chat/ と同じく終端させる。
+    fallbackSamePage: '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。',
+  },
+  en: {
+    label: 'Chat with Cloudia',
+    title: 'Chat with Cloudia',
+    close: 'Close',
+    closeLauncher: 'Close Cloudia',
+    fallback: 'If the chat will not open here, please reopen it from the contact page.',
+    fallbackLink: 'Open the contact page',
+    fallbackSamePage: 'The AI chat cannot be reached right now. Please try again in a little while.',
+  },
+  zh: {
+    label: '咨询 Cloudia',
+    title: '咨询 Cloudia',
+    close: '关闭',
+    closeLauncher: '关闭 Cloudia',
+    fallback: '如果无法在此窗口中打开聊天，请从联系页面重新打开。',
+    fallbackLink: '打开联系页面',
+    fallbackSamePage: '目前无法使用 AI 聊天。请稍后再试。',
+  },
+  ko: {
+    label: 'Cloudia에게 상담하기',
+    title: 'Cloudia에게 상담하기',
+    close: '닫기',
+    closeLauncher: 'Cloudia 닫기',
+    fallback: '이 창에서 채팅이 열리지 않으면 문의 페이지에서 다시 열어 주세요.',
+    fallbackLink: '문의 페이지 열기',
+    fallbackSamePage: '현재 AI 채팅을 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+  },
+  es: {
+    label: 'Consultar con Cloudia',
+    title: 'Consultar con Cloudia',
+    close: 'Cerrar',
+    closeLauncher: 'Cerrar Cloudia',
+    fallback: 'Si el chat no se abre aquí, vuelva a abrirlo desde la página de contacto.',
+    fallbackLink: 'Abrir la página de contacto',
+    fallbackSamePage: 'El chat con IA no está disponible en este momento. Vuelva a intentarlo en un rato.',
+  },
+} as const satisfies Record<Locale, LauncherCopy>;
+
+const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
 ---
 
 <aside
@@ -106,6 +149,8 @@ const copy =
     class="min-h-[3rem] ml-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300"
     aria-expanded="false"
     aria-controls="cloudia-launcher-panel"
+    data-label-open={copy.label}
+    data-label-close={copy.closeLauncher}
   >
     {copy.label}
   </button>
@@ -133,6 +178,13 @@ const copy =
       !(fallbackLink instanceof HTMLAnchorElement)
     )
       return;
+
+    // 初期化は 1 つの要素につき 1 回だけ。/contact/chat/ のプレースホルダ（ランチャーなし）を経て戻ると、
+    // ViewTransitions がこのスクリプトをもう一度実行し、astro:page-load の受け手が 2 つになる。
+    // 2 つの受け手が同じボタンに開閉を付けると、それぞれの opened がずれて、開いてすぐ閉じることがある。
+    // 遷移のたびに body（＝ランチャー）は新しい要素になるので、要素に印を付けて二重の束縛だけを防ぐ。
+    if (launcher.dataset.cloudiaBound === 'true') return;
+    launcher.dataset.cloudiaBound = 'true';
 
     let opened = false;
     let frameReady = false;
@@ -206,11 +258,19 @@ const copy =
       if (opened) window.setTimeout(inspectFrame, 250);
     };
 
+    // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押したら何が起きるか分からない
+    // （スマホではパネルのすぐ下に残る）。開いている間は「Cloudiaを閉じる」と表示し、押せば閉じる。
+    const setOpenButtonLabel = (isOpen) => {
+      const label = isOpen ? openButton.dataset.labelClose : openButton.dataset.labelOpen;
+      if (label) openButton.textContent = label;
+    };
+
     const openPanel = () => {
       opened = true;
       panel.classList.remove('hidden');
       panel.setAttribute('aria-hidden', 'false');
       openButton.setAttribute('aria-expanded', 'true');
+      setOpenButtonLabel(true);
       closeButton.focus();
       window.clearTimeout(fallbackTimer);
       fallbackTimer = window.setTimeout(showFallback, 8000);
@@ -222,6 +282,7 @@ const copy =
       panel.classList.add('hidden');
       panel.setAttribute('aria-hidden', 'true');
       openButton.setAttribute('aria-expanded', 'false');
+      setOpenButtonLabel(false);
       openButton.focus();
     };
 
@@ -249,7 +310,7 @@ const copy =
     };
 
     // open/close/frame は遷移のたびに新しい要素になるので、毎回この要素に束縛する。
-    openButton.addEventListener('click', openPanel);
+    openButton.addEventListener('click', () => (opened ? closePanel() : openPanel()));
     closeButton.addEventListener('click', closePanel);
     frame.addEventListener('load', inspectFrame);
 

@@ -6,16 +6,7 @@
     "cta": "홈으로 돌아가기"
   },
   "homeBlog": {
-    "eyebrow": "읽을거리",
-    "title": "AI의 ‘진행 방법’을, 글로.",
-    "description": "AI 도입, 기밀 데이터의 안전한 활용, 견적에 대한 사고방식 등 현장에서 바로 쓸 수 있는 관점을 정리했습니다.",
     "cta": "블로그 전체 보기"
-  },
-  "homeNews": {
-    "eyebrow": "News",
-    "title": "최신 뉴스",
-    "description": "Cor.주식회사의 공지, 서비스 업데이트, 외부 게재, 이벤트 정보를 확인할 수 있습니다.",
-    "cta": "뉴스 전체 보기"
   },
   "news": {
     "eyebrow": "News",
@@ -35,15 +26,22 @@
   "homeHero": {
     "kicker": "상상 그 너머까지, 함께 구현합니다.",
     "title": "<span class='nowrap'>AI를, 안심하고</span><br /><span class='nowrap'>쓸 수 있는 형태로 현장에.</span>",
-    "subtitle": "Cor.주식회사는 후쿠오카의 AI 구현 회사입니다. <br class='sm:hidden' />기밀 데이터를 외부로 내보내지 않는 로컬 LLM, 확인할 수 있는 근거를 만드는 자사 제품 「Grift」, 설계부터 운영까지의 수탁 개발을 축으로 교육과 지역에서 배움과 교류의 장을 만드는 일에도 힘쓰고 있습니다.<br />필요하다면 「아직 만들지 않는」 선택지도 제안합니다.",
-    "support": "로컬 LLM・자사 제품 「Grift」・AI 수탁 개발을 축으로, 교육과 지역에서 배움과 교류의 장을 만드는 일에도 힘쓰는 후쿠오카의 AI 구현 회사입니다.",
+    "subtitle": "계약서 확인, 문의 접수, 사내 자료 찾기. <br class='sm:hidden' />후쿠오카의 Cor.주식회사는 외부로 내보낼 수 없는 정보를 다루는 업무에서도 AI를 어디에 쓸 수 있는지 확인하고, 설계부터 운영까지 함께 진행합니다.<br />필요하다면 「아직 만들지 않는」 선택지도 제안합니다.",
     "primaryCta": "기밀 데이터 AI 활용 진단 상담하⁠기",
-    "secondaryCta": "로컬 LLM / 시큐어 AI PoC 상담하⁠기",
-    "philosophyCta": "「きょうそう」의 사상을 읽기",
+    "secondaryCta": "실적 보기",
     "trustBadges": [
-      "로컬 LLM・정보를 외부로 내보내지 않음",
-      "보안 체계 구축",
-      "후쿠오카발・전국 대응"
+      {
+        "id": "isms",
+        "label": "ISMS 2단계 심사 완료(2026년 10월)"
+      },
+      {
+        "id": "engineer-cafe",
+        "label": "엔지니어 카페의 다국어 AI 접수를 개발・운영"
+      },
+      {
+        "id": "fukuoka",
+        "label": "후쿠오카발・전국 대응"
+      }
     ],
     "penguinBubble": [
       "환영합니다!",
@@ -52,42 +50,45 @@
     "fukuoka100Alt": "'후쿠오카를 대표하는 기업 100선' 선정 (Made In Local)"
   },
   "homeChallenges": {
-    "eyebrow": "01 / 당신의 과제",
-    "title": "이런 과제, 함께 풀어봐요.",
+    "eyebrow": "당신의 과제",
+    "title": "진척되지 않는 업무를 멈춘 이유부터 함께 정리합니다.",
     "items": [
       {
-        "title": "노후화된 기간 시스템을 클라우드화하고 싶다",
-        "description": "지금 사용 중인 데이터의 정리부터 클라우드로의 이전・운영 설계까지 함께 진행합니다."
+        "title": "기밀 데이터를 외부로 내보내지 않고 AI를 쓰고 싶다",
+        "description": "정보를 외부로 내보내지 않는 AI와 회사가 승인한 AI 도구를 정보의 중요도에 맞춰 구분해 쓸 수 있도록 설계합니다.",
+        "link": "/works/confidential-data-ai-assessment"
       },
       {
-        "title": "다국어 대응 AI 접수・챗봇을 도입하고 싶다",
-        "description": "음성 대응이나 사내 자료로 학습한 AI, 자동으로 동작하는 AI 구조를 활용하여 시설・지자체용 안내 경험을 설계합니다."
+        "title": "생성 AI 서비스를 실제 운영 환경에서 돌리고 싶다",
+        "description": "무엇을 만들지 정리하는 것부터 사용성 설계, 시스템 연동, 과금, 자동 테스트와 배포, 모니터링까지 대응합니다.",
+        "link": "/works/survey-platform-renewal"
       },
       {
-        "title": "생성 AI 서비스를 제로에서 본격 운영하고 싶다",
-        "description": "무엇을 만들지에 대한 정리부터 사용성 설계, 시스템 간 연동 구조, 과금, 자동 테스트・배포, 모니터링까지 한 번에 대응합니다."
+        "title": "노후화된 기간 시스템을 클라우드로 옮기고 싶다",
+        "description": "지금 사용 중인 데이터의 정리부터 클라우드로의 이전과 운영 설계까지 함께 진행합니다.",
+        "link": "/works/legacy-core-system-cloud-migration"
       },
       {
-        "title": "기밀 데이터를 외부로 내보내지 않고 AI를 활용하고 싶다",
-        "description": "정보를 외부로 내보내지 않는 AI나 승인된 AI 도구를 활용하여 정보의 중요도 등급에 맞춘 설계를 합니다."
+        "title": "다국어 AI 접수・챗봇을 도입하고 싶다",
+        "description": "음성 대응, 사내 자료로 학습한 AI, 자동으로 동작하는 AI 구조를 활용해 시설과 지자체의 안내를 설계합니다.",
+        "link": "/works/engineer-cafe-navigator"
       },
       {
-        "title": "업계 특화 AI 도구를 만들고 싶다",
-        "description": "건축 도면, 평면도 생성, 업무 고유 데이터의 AI 처리 등."
+        "title": "업계에 맞는 AI 도구를 만들고 싶다",
+        "description": "건축 도면이나 평면도 생성 등, 업계별 데이터를 AI로 처리하는 구조를 만듭니다.",
+        "link": "/industries/construction"
       },
       {
-        "title": "AI 주도 개발을 사내에 내재화하고 싶다",
-        "description": "AI 활용 방침 수립, 사내 연수, 개발 진행 방식 정비까지 팀에 밀착하여 함께 진행합니다."
+        "title": "AI를 활용한 개발을 사내에서 돌릴 수 있게 하고 싶다",
+        "description": "AI 활용 방침 수립, 사내 연수, 개발 진행 방식 정비까지 팀과 함께 진행합니다.",
+        "link": "/blog/ai-driven-development-workflow"
       }
-    ],
-    "cta": "기밀 데이터 AI 활용 진단 상담하⁠기",
-    "ctaPrimary": "기밀 데이터 AI 활용 진단 상담하⁠기",
-    "ctaSecondary": "Grift 구조 보기"
+    ]
   },
   "griftBridge": {
-    "eyebrow": "Our Product / Grift",
+    "eyebrow": "자사 제품",
     "title": "경력은 부풀릴 수 있다. 증거는 부풀릴 수 없다.",
-    "description": "Grift는 엔지니어의 개발 기록(git 이력)에서 확인할 수 있는 사실을 추출하는 자사 제품입니다. 점수를 매기지 않으며, 누가 실행해도 같은 결과가 나옵니다. 인재 소개 회사・SES(IT 인력 파견) 기업의 영업 담당자가 추천 이유를 근거와 함께 전달하는 데 활용할 수 있습니다.",
+    "description": "Grift는 엔지니어의 개발 기록(git 이력)에서 확인할 수 있는 사실을 추출하는 자사 제품입니다. 인재 소개 회사・SES(IT 인력 파견) 기업의 영업 담당자가 추천 이유를 근거와 함께 전달하는 데 활용할 수 있습니다.",
     "cta": "Grift 구조 보기",
     "ctaGithub": "GitHub에서 Grift CLI 보기",
     "note": "Grift CLI는 무료・MIT 라이선스의 OSS로 공개하고 있습니다. 인재 소개 회사・SES 기업과의 시범 도입(PoC) 상담을 받고 있습니다.",
@@ -113,139 +114,99 @@
     }
   },
   "proof": {
-    "eyebrow": "03 / 실증",
-    "title": "AI를 쓰기 전에, 다룰 정보부터 설계한다.",
-    "description": "계약서, 회의록, 견적서, 고객 정보, 사내 지식. Cor.주식회사는 외부 AI에 그대로 넘기기 어려운 정보를 입력 경계·권한·로그·휴먼 승인까지 포함하여 설계하고, 실제 업무에서 작동하는 AI 시스템으로 구현합니다.",
-    "stats": [
+    "eyebrow": "실증",
+    "title": "실적과 체계를 확인할 수 있는 형태로 싣고 있습니다.",
+    "description": "사례 페이지에서는 과제・설계・구현・운영을 차례로 읽을 수 있습니다.",
+    "items": [
       {
-        "label": "사업의 축",
-        "value": "5개 축",
-        "note": "Grift / 로컬 LLM / 하드웨어 AI / AI 수탁 개발 / 교육・지역"
+        "id": "engineer-cafe",
+        "title": "엔지니어 카페의 다국어 AI 접수",
+        "body": "후쿠오카시 엔지니어 카페를 위해 다국어 음성 AI 접수 「Engineer Cafe Navigator」를 개발하여 OSS로 공개하고 있습니다(실운영 중)."
       },
       {
-        "label": "AI 운영 설계",
-        "value": "4대 설계",
-        "note": "입력 경계 / 권한 / 로그 / 휴먼 승인"
+        "id": "legacy-migration",
+        "title": "약 25년 운영된 기간 시스템의 클라우드 이전",
+        "body": "사실과 가설을 구분하는 조사부터 시작해, 한 교육기관의 기간 데이터베이스를 단계적으로 클라우드로 옮기고 있습니다."
       },
       {
-        "label": "초기 진단",
-        "value": "10만~30만엔",
-        "note": "기밀 데이터 AI 활용 진단"
+        "id": "isms",
+        "title": "ISMS 2단계 심사 완료",
+        "body": "2026년 10월에 ISO/IEC 27001(ISMS) 2단계 심사를 마쳤으며, 2026년 12월경 인증 등록을 예상하고 있습니다."
       },
       {
-        "label": "PoC 구축",
-        "value": "3개월 300만엔~",
-        "note": "로컬 LLM / AI 기반 PoC"
+        "id": "fukuoka100",
+        "title": "후쿠오카를 대표하는 기업 100선 2026-2027",
+        "body": "Made In Local의 「후쿠오카를 대표하는 기업 100선 2026-2027」에 선정되어 특설 페이지에 소개되어 있습니다."
       }
     ],
-    "cta": "AI 기반 PoC 상담하⁠기"
+    "cta": "실적 모두 보기"
   },
   "securityTrust": {
-    "title": "자유롭게 만들고, 책임지고 지킵니다.",
-    "description": "Cor.는 개발자의 쾌적함과 고객의 정보를 지키는 책임을 양립시키기 위해 로컬 퍼스트, 최소한의 보안 로그, 기밀도 등급에 기반한 운영을 정비하고 있습니다.",
+    "eyebrow": "보안",
+    "title": "기밀 데이터를 다루는 불안에 설계로 답합니다.",
+    "description": "입력 데이터, 접근 권한, 조작 로그, 사람의 승인, 삭제 규칙, 운영 책임자. 기밀 데이터를 다룰 때의 불안을 하나씩 설계로 정해 갑니다.",
     "items": [
-      "고문 변호사와 연계하여 계약・AI・개인정보・ISMS 운영을 검토",
-      "2026년 10월에 ISO/IEC 27001(ISMS) 2단계 심사를 마쳤으며, 12월경 인증 등록을 예상",
-      "기밀도 등급에 따라 승인 AI・회사 계정・격리 환경을 구분하여 사용",
-      "회사 지급 Mac, 암호화, MDM, 탐지・대응형 경량 통제"
+      "계약・AI・개인정보・ISMS 운영은 고문 변호사와 함께 확인하고 있습니다",
+      "정보의 기밀도에 맞춰 승인된 AI・회사 계정・격리된 환경을 구분하여 사용하고 있습니다",
+      "회사 지급 Mac, 암호화, MDM(단말 관리), 탐지와 대응 중심의 경량 통제"
     ],
     "cta": "보안 방침 보기"
   },
-  "kyousou": {
-    "title": "Cor.는 「きょうそう」를 끊임없이 추구합니다.",
-    "description": "영합도 아니고 충돌도 아닌, 서로의 가치관을 가지고 모여 차이를 갈고닦으며 AI로 현장의 과제를 형상화한다. 그것이 Cor.가 생각하는 「きょうそう(共創 공동창조・協奏 협주・競争 경쟁・狂想 광상・狂騒 광소. 함께 만들고 갈고닦으며 울려 퍼지는 Cor.의 조어)」입니다.",
+  "finalCta": {
+    "title": "우선, 다루는 정보를 확인하는 것부터.",
+    "description": "과제 정리부터 AI 구현과 운영까지, 후쿠오카의 AI 구현 회사로서 처음부터 끝까지 함께합니다.",
     "items": [
       {
-        "word": "共創",
-        "meaning": "함께 가치를 만든다",
-        "cor": "고객・파트너・AI와 함께 만든다"
+        "intent": "confidential-ai-assessment",
+        "label": "기밀 데이터 AI 활용 진단 상담하⁠기",
+        "audience": "아직 요건이 정해지지 않은 분께",
+        "price": "10만~30만 엔 정도"
       },
       {
-        "word": "協奏",
-        "meaning": "서로 다른 강점이 울려 퍼진다",
-        "cor": "사람, AI, 전문성, 지역이 각자의 역할을 가진다"
+        "intent": "local-llm-poc",
+        "label": "로컬 LLM / 시큐어 AI PoC 상담하⁠기",
+        "audience": "외부로 내보낼 수 없는 데이터로 AI를 시험해 보고 싶은 분께",
+        "price": "3개월 300만 엔~"
       },
       {
-        "word": "競争",
-        "meaning": "서로를 갈고닦는다",
-        "cor": "예스맨을 거부하고 솔직하게 함께 높여간다"
-      },
-      {
-        "word": "狂想",
-        "meaning": "아직 형태가 없는 구상",
-        "cor": "망상으로 끝내지 않고 제품으로 구현한다"
-      },
-      {
-        "word": "狂騒",
-        "meaning": "열량・시장의 술렁임",
-        "cor": "쫓는 대상이 아니라 결과로서 만들어내는 것"
+        "intent": "grift-team-beta",
+        "label": "자사에서 Grift 테스트해 보기",
+        "audience": "인재 소개 회사・SES 기업의 영업 담당자께",
+        "price": ""
       }
     ],
-    "cta": "대표 이야기 읽기"
-  },
-  "finalCta": {
-    "title": "막힌 업무를 구현으로 넘깁니다.",
-    "description": "과제 정리부터 AI 설계·구현·운영까지, 후쿠오카발 AI 구현 파트너가 한 번에 동행합니다.",
-    "primary": "기밀 데이터 AI 활용 진단 상담하⁠기",
-    "secondary": "Grift 보기"
-  },
-  "serviceCtas": {
-    "heading": "목적에 맞게 상담해 주세요.",
-    "items": [
-      {
-        "label": "기밀 데이터 AI 활용 진단 상담하⁠기",
-        "intent": "confidential-ai-assessment"
-      },
-      {
-        "label": "로컬 LLM / 시큐어 AI PoC 상담하⁠기",
-        "intent": "local-llm-poc"
-      },
-      {
-        "label": "Grift(추천 근거 만들기) 보기",
-        "intent": "grift-team-beta",
-        "external": "grift"
-      }
-    ]
+    "founderLead": "말만으로는 닿지 않는 것을 기술로 닿게 한다. Cor.주식회사를 시작한 이유는 대표의 이야기에 적어 두었습니다.",
+    "founderCta": "대표 이야기 읽기"
   },
   "homeIndustries": {
-    "eyebrow": "Industry / 업종별",
+    "eyebrow": "업종별",
     "title": "업종에 따라, 멈추는 이유는 다릅니다.",
-    "description": "현장의 과제에 밀착하여 정리부터 진행 방식까지 함께 고민합니다.",
-    "tableHead": {
-      "industry": "업종",
-      "theme": "자주 보이는 테마",
-      "detail": ""
-    },
+    "description": "데이터를 다루는 방식도, 업무의 흐름도, 판단 기준도 현장마다 다릅니다. 개발에 들어가기 전에 진행 방식부터 함께 정리합니다.",
     "rows": [
       {
         "industry": "의료",
         "theme": "원내 데이터 정리, 환자 대응, 정보 보안, AI 활용 방침",
-        "link": "/industries/medical",
-        "linkLabel": "의료 페이지"
+        "link": "/industries/medical"
       },
       {
         "industry": "전문직(士業)",
         "theme": "계약서 정밀 검토, 신청・등기, 기일 관리, 보조금 신청",
-        "link": "/industries/shigyo",
-        "linkLabel": "전문직 페이지"
+        "link": "/industries/shigyo"
       },
       {
         "industry": "건설",
         "theme": "노무 관리, 설계 변경, 안전 확인, 노하우 계승",
-        "link": "/industries/construction",
-        "linkLabel": "건설 페이지"
+        "link": "/industries/construction"
       },
       {
         "industry": "제조",
         "theme": "육안 검사, 노하우 계승, 설비 보전, 재고 관리",
-        "link": "/industries/manufacturing",
-        "linkLabel": "제조 페이지"
+        "link": "/industries/manufacturing"
       },
       {
         "industry": "교육",
         "theme": "시험 업무, 학부모 연락, 조사 보고, ICT 명부 관리",
-        "link": "/industries/education",
-        "linkLabel": "교육 페이지"
+        "link": "/industries/education"
       }
     ]
   },
@@ -321,7 +282,7 @@
     "hero": {
       "eyebrow": "Professional Services",
       "title": "전문직 업무, “시간과 신경”을 너무 많이 쓰고 있지 않으신가요?",
-      "subtitle": "계약서 정밀 검토, 거듭되는 법 개정, 행정 신청의 이중 입력, 그리고 절대 늦출 수 없는 기일 관리. 전문 지식을 살리는 본래 업무 뒤편에서 막대한 수작업과 정신적 압박에 쫓기는 나날을, Cor.가 함께 바꿔 가도록 돕습니다."
+      "subtitle": "계약서 정밀 검토, 거듭되는 법 개정, 행정 신청의 이중 입력, 그리고 절대 늦출 수 없는 기일 관리. 전문 지식을 살리는 본래 업무 뒤편에서 막대한 수작업과 정신적 압박에 쫓기는 나날을 바꿔 갈 수 있도록 Cor.가 함께 달립니다."
     },
     "challenges": {
       "eyebrow": "01 / 자주 보이는 과제",
@@ -348,7 +309,7 @@
     "support": {
       "eyebrow": "02 / Cor.의 동반",
       "title": "Cor.는 이렇게 함께 달립니다.",
-      "intro": "과제별로 AI 수탁 개발・AI 고문・로컬 LLM・Grift를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
+      "intro": "과제별로 Cor.의 서비스를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
       "items": [
         {
           "title": "정형・표준 조항의 초기 스크리닝을 함께 진행합니다",
@@ -419,7 +380,7 @@
     "support": {
       "eyebrow": "02 / Cor.의 동반",
       "title": "Cor.는 이렇게 함께 달립니다.",
-      "intro": "과제별로 AI 수탁 개발・AI 고문・로컬 LLM・Grift를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
+      "intro": "과제별로 Cor.의 서비스를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
       "items": [
         {
           "title": "공정 시뮬레이션과 가동 로그의 시각화",
@@ -482,7 +443,7 @@
     "support": {
       "eyebrow": "02 / Cor.의 동반",
       "title": "Cor.는 이렇게 함께 달립니다.",
-      "intro": "과제별로 AI 수탁 개발・AI 고문・로컬 LLM・Grift를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
+      "intro": "과제별로 Cor.의 서비스를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
       "items": [
         {
           "title": "육안 검사 기준을 현장에서 쓸 수 있는 형태로 정리하는 지원",
@@ -545,7 +506,7 @@
     "support": {
       "eyebrow": "02 / Cor.의 동반",
       "title": "Cor.는 이렇게 함께 달립니다.",
-      "intro": "과제별로 AI 수탁 개발・AI 고문・로컬 LLM・Grift를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
+      "intro": "과제별로 Cor.의 서비스를 조합하면서 함께 진행합니다. 단정이 아니라 현장의 과제에 맞춘 동반을 소중히 여깁니다.",
       "items": [
         {
           "title": "시험 시기의 작업 부하를 정리부터 함께 재검토",
@@ -1006,7 +967,7 @@
       "description": "교육 현장의 과제——시험 작업, 보호자 연락, 조사 보고, ICT 명부 관리——를 Cor.가 함께 진행합니다. AI 수탁 개발・AI 고문・로컬 LLM으로 함께 달립니다."
     },
     "home": {
-      "title": "Cor.주식회사｜후쿠오카의 AI 구현 회사(로컬 LLM・Grift・AI 수탁 개발)",
+      "title": "후쿠오카의 AI 개발・생성형 AI 도입 지원｜Cor.주식회사(로컬 LLM・Grift)",
       "description": "후쿠오카의 AI 구현 회사, Cor.주식회사. 기밀 데이터를 외부로 내보내지 않는 로컬 LLM・시큐어 AI, 확인할 수 있는 근거를 만드는 자사 제품 「Grift」, 설계부터 운영까지의 AI 수탁 개발을 축으로 하드웨어 AI와 교육・지역 활동도 추진하고 있습니다. 필요하다면 「아직 만들지 않는」 선택지도 제안합니다.",
       "ogTitle": "AI를, 안심하고 쓸 수 있는 형태로 현장에.｜Cor.주식회사",
       "ogDescription": "로컬 LLM・자사 제품 「Grift」・AI 수탁 개발을 축으로 교육과 지역에서 배움과 교류의 장을 만드는 일에도 힘쓰는 후쿠오카의 AI 구현 회사. AI나 시스템의 요건이 정해지지 않은 단계부터 상담하실 수 있습니다."
@@ -1409,16 +1370,8 @@
     "titleSuffix": "｜Cor.주식회사"
   },
   "regionalTrust": {
-    "eyebrow": "Fukuoka / 지역과 함께",
-    "title": "후쿠오카에서, AI를 만드는 사람과 장을 늘려 갑니다.",
-    "description": "후쿠오카를 거점으로 지역의 시설과 배움의 장과 함께 AI를 현장에서 쓸 수 있는 형태로 만들고 있습니다.",
     "fukuoka100Title": "후쿠오카를 대표하는 기업 100선 2026-2027",
-    "fukuoka100Body": "Made In Local의 「후쿠오카를 대표하는 기업 100선 2026-2027」에 선정되어 특설 페이지에 소개되어 있습니다.",
-    "engineerCafeTitle": "엔지니어 카페의 다국어 AI 접수를 OSS로 개발・운영",
-    "engineerCafeBody": "후쿠오카시 엔지니어 카페를 위해 다국어 음성 AI 접수 「Engineer Cafe Navigator」를 개발하여 OSS로 공개하고 있습니다(실운영 중). 후쿠오카에서의 생성 AI 전시회 개최도 엔지니어 카페와 함께 구상하고 있습니다.",
-    "engineerCafeLink": "사례 읽기",
-    "engineerCafeLogoAlt": "Engineer Cafe(엔지니어 카페)",
-    "companyLink": "회사 개요 보기"
+    "engineerCafeLogoAlt": "Engineer Cafe(엔지니어 카페)"
   },
   "companyPage": {
     "kicker": "Company",

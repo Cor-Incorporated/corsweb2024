@@ -6,16 +6,7 @@
     "cta": "Go back home"
   },
   "homeBlog": {
-    "eyebrow": "Insights",
-    "title": "The \"how\" of AI, in articles.",
-    "description": "AI adoption, the safe use of confidential data, how to think about estimates — practical perspectives you can use on the ground.",
     "cta": "See all articles"
-  },
-  "homeNews": {
-    "eyebrow": "News",
-    "title": "Latest news",
-    "description": "Company announcements, service updates, external coverage, and event information from Cor. Inc.",
-    "cta": "See all news"
   },
   "news": {
     "eyebrow": "News",
@@ -35,15 +26,22 @@
   "homeHero": {
     "kicker": "Building with you, beyond what you imagined.",
     "title": "<span class='nowrap'>AI for the front lines,</span><br />ready to use with confidence.",
-    "subtitle": "Cor.Inc. is an AI implementation company in Fukuoka. <br class='sm:hidden' />Our work centers on local LLMs that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and contract development from design through operations, and we also help create opportunities for learning and community in the region.<br />When it's right, we'll even propose <em>not</em> building yet.",
-    "support": "A Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — also creating opportunities for learning and community in the region.",
+    "subtitle": "Reviewing contracts, answering inquiries, finding things in internal documents. <br class='sm:hidden' />Cor.Inc., based in Fukuoka, checks where AI can help, even in work that handles information you can't send outside, and works with you from design through operations.<br />When it's right, we'll even propose <em>not</em> building yet.",
     "primaryCta": "Discuss a confidential-data AI assessment",
-    "secondaryCta": "Discuss a local LLM / secure AI PoC",
-    "philosophyCta": "Read about our \"Kyousou\" philosophy",
+    "secondaryCta": "See our work",
     "trustBadges": [
-      "Local LLM — your data stays in",
-      "Secure Infrastructure",
-      "Born in Fukuoka, serving all of Japan"
+      {
+        "id": "isms",
+        "label": "ISMS Stage 2 audit completed (Oct 2026)"
+      },
+      {
+        "id": "engineer-cafe",
+        "label": "Developed and operates Engineer Cafe's multilingual AI reception"
+      },
+      {
+        "id": "fukuoka",
+        "label": "Born in Fukuoka, serving all of Japan"
+      }
     ],
     "penguinBubble": [
       "Welcome!",
@@ -52,42 +50,45 @@
     "fukuoka100Alt": "Selected as one of Fukuoka's Top 100 Representative Companies (Made In Local)"
   },
   "homeChallenges": {
-    "eyebrow": "01 / Your Challenges",
-    "title": "Let's solve challenges like these, together.",
+    "eyebrow": "Your challenges",
+    "title": "Let's sort out stuck work, starting from why it stopped.",
     "items": [
       {
+        "title": "Use AI without sending confidential data outside",
+        "description": "We design how to choose between AI that keeps information in-house and AI tools your company has approved, based on how important the information is.",
+        "link": "/works/confidential-data-ai-assessment"
+      },
+      {
+        "title": "Run a generative-AI service in production",
+        "description": "We cover everything from deciding what to build to the user experience, system integration, billing, automated testing and release, and monitoring.",
+        "link": "/works/survey-platform-renewal"
+      },
+      {
         "title": "Move an aging core system to the cloud",
-        "description": "From organizing the data you use today to migrating it to the cloud and designing how it runs, we move forward with you."
+        "description": "From organizing the data you use today to migrating it to the cloud and designing how it runs, we move forward with you.",
+        "link": "/works/legacy-core-system-cloud-migration"
       },
       {
         "title": "Introduce a multilingual AI reception desk or chat",
-        "description": "Using voice-enabled AI, AI trained on your internal documents, and AI that runs autonomously, we design guidance experiences for facilities and local governments."
+        "description": "Using voice support, AI trained on your internal documents, and AI that runs on its own, we design guidance for facilities and local governments.",
+        "link": "/works/engineer-cafe-navigator"
       },
       {
-        "title": "Take a generative-AI service from zero to production",
-        "description": "From defining what to build, to the user experience, the plumbing that connects systems, billing, automated testing and release, and monitoring — we cover it all in one go."
+        "title": "Build an AI tool that fits your industry",
+        "description": "We build systems that process industry-specific data with AI, such as architectural drawings and floor-plan generation.",
+        "link": "/industries/construction"
       },
       {
-        "title": "Use AI without sending confidential data outside",
-        "description": "With AI that keeps your data in and approved AI tools, we design around the sensitivity rank of your information."
-      },
-      {
-        "title": "Build an industry-specific AI tool",
-        "description": "Architectural drawings, floor-plan generation, AI processing of business-specific data, and more."
-      },
-      {
-        "title": "Bring AI-driven development in-house",
-        "description": "From shaping your AI strategy to internal training and refining how you run development, we work closely with your team."
+        "title": "Run AI-assisted development in-house",
+        "description": "From shaping how you use AI to internal training and how you run development, we work alongside your team.",
+        "link": "/blog/ai-driven-development-workflow"
       }
-    ],
-    "cta": "Discuss a confidential-data AI assessment",
-    "ctaPrimary": "Discuss a confidential-data AI assessment",
-    "ctaSecondary": "See how Grift works"
+    ]
   },
   "griftBridge": {
-    "eyebrow": "Our Product / Grift",
+    "eyebrow": "Our product",
     "title": "Résumés can be padded. Evidence can't.",
-    "description": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores, and it gives the same result no matter who runs it. Sales teams at recruiting agencies and SES (IT staffing) companies can use it to explain why they recommend a candidate, backed by evidence.",
+    "description": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). Sales teams at recruiting agencies and SES (IT staffing) companies can use it to explain why they recommend a candidate, backed by evidence.",
     "cta": "See how Grift works",
     "ctaGithub": "View Grift CLI on GitHub",
     "note": "Grift CLI is published free of charge as open source under the MIT License. We welcome inquiries from recruiting agencies and SES companies about trials (PoCs).",
@@ -113,139 +114,99 @@
     }
   },
   "proof": {
-    "eyebrow": "03 / Proof",
-    "title": "Designing Information Architecture Before Using AI.",
-    "description": "Contracts, minutes, estimates, customer data, and internal knowledge. Cor.Inc. designs secure processing for sensitive information—including input boundaries, permissions, logs, and human approval—implementing robust AI systems that actually work for your business.",
-    "stats": [
+    "eyebrow": "Proof",
+    "title": "Our track record and safeguards, in a form you can check.",
+    "description": "Each case page walks through the problem, design, build, and operation in order.",
+    "items": [
       {
-        "label": "Business Pillars",
-        "value": "5 Pillars",
-        "note": "Grift / Local LLM / Hardware AI / Custom AI / Education & Community"
+        "id": "engineer-cafe",
+        "title": "Engineer Cafe's multilingual AI reception",
+        "body": "For Engineer Cafe in Fukuoka City, we developed Engineer Cafe Navigator, a multilingual voice AI reception system, and published it as open source (in live operation)."
       },
       {
-        "label": "AI Operations",
-        "value": "4 Designs",
-        "note": "Boundaries / Permissions / Logs / Approvals"
+        "id": "legacy-migration",
+        "title": "Moving a core system run for about 25 years to the cloud",
+        "body": "Starting with research that separates facts from assumptions, we are moving an educational institution's core database to the cloud in stages."
       },
       {
-        "label": "Initial Assessment",
-        "value": "¥100k - ¥300k",
-        "note": "Confidential Data AI Assessment"
+        "id": "isms",
+        "title": "ISMS Stage 2 audit completed",
+        "body": "We completed the Stage 2 audit for ISO/IEC 27001 (ISMS) in October 2026 and expect certification registration around December 2026."
       },
       {
-        "label": "PoC Development",
-        "value": "From 3 Mos / ¥3M",
-        "note": "Local LLM & AI Infrastructure PoC"
+        "id": "fukuoka100",
+        "title": "Fukuoka's 100 Representative Companies 2026-2027",
+        "body": "We were selected for Made In Local's \"Fukuoka's 100 Representative Companies 2026-2027\" and are featured on its special website."
       }
     ],
-    "cta": "Discuss an AI platform PoC"
+    "cta": "See all our work"
   },
   "securityTrust": {
-    "title": "Build freely. Protect responsibly.",
-    "description": "To balance developer comfort with the responsibility of protecting our customers' information, Cor. operates a local-first setup, minimal security logging, and a sensitivity-tier-based approach.",
+    "eyebrow": "Security",
+    "title": "We address the worries of handling confidential data through design.",
+    "description": "Input data, access rights, operation logs, human approval, deletion rules, and who is responsible for operations. We settle each worry about handling confidential data in the design, one by one.",
     "items": [
-      "Working with our retained legal counsel to review contracts, AI, personal information, and ISMS operations",
-      "Completed the Stage 2 audit for ISO/IEC 27001 (ISMS) in October 2026; certification registration expected around December",
-      "Choosing approved AI, company accounts, and isolated environments according to sensitivity tier",
-      "Company-issued Macs, encryption, MDM, and lightweight detection-and-response controls"
+      "We review contracts, AI, personal information, and ISMS operations together with our retained legal counsel",
+      "We choose between approved AI, company accounts, and isolated environments according to how sensitive the information is",
+      "Company-issued Macs, encryption, MDM (device management), and lightweight controls centered on detection and response"
     ],
     "cta": "See our security policy"
   },
-  "kyousou": {
-    "title": "Cor. keeps chasing \"Kyousou.\"",
-    "description": "Not by pandering, not by clashing — but by bringing our values together, sharpening our differences, and using AI to give real shape to the challenges on the ground. That is what Cor. means by \"Kyousou\" (a coined word fusing co-creation, ensemble, competition, fantasy, and fervor — building, sharpening, and resonating together).",
+  "finalCta": {
+    "title": "Start by checking the information you handle.",
+    "description": "From sorting out the problem to building and running AI, we work with you end to end as an AI implementation company in Fukuoka.",
     "items": [
       {
-        "word": "Co-creation",
-        "meaning": "Creating value together",
-        "cor": "Building together with customers, partners, and AI"
+        "intent": "confidential-ai-assessment",
+        "label": "Discuss a confidential-data AI assessment",
+        "audience": "If your requirements aren't set yet",
+        "price": "Around ¥100k - ¥300k"
       },
       {
-        "word": "Ensemble",
-        "meaning": "Different strengths resonating",
-        "cor": "People, AI, expertise, and region each play a role"
+        "intent": "local-llm-poc",
+        "label": "Discuss a local LLM / secure AI PoC",
+        "audience": "If you want to try AI with data that can't go outside",
+        "price": "From ¥3M for 3 months"
       },
       {
-        "word": "Competition",
-        "meaning": "Sharpening one another",
-        "cor": "We refuse yes-men and raise each other through candor"
-      },
-      {
-        "word": "Fantasy",
-        "meaning": "A vision that has no shape yet",
-        "cor": "We turn it into a product instead of leaving it a daydream"
-      },
-      {
-        "word": "Fervor",
-        "meaning": "Energy, the buzz of the market",
-        "cor": "Not something we chase, but something we generate as a result"
+        "intent": "grift-team-beta",
+        "label": "Try Grift in your company",
+        "audience": "For sales teams at recruiting agencies and SES companies",
+        "price": ""
       }
     ],
-    "cta": "Read the founder's story"
-  },
-  "finalCta": {
-    "title": "Move stuck work forward with implementation.",
-    "description": "From framing the problem to AI design, build, and operations — a Fukuoka-based AI implementation partner works with you end to end.",
-    "primary": "Discuss a confidential-data AI assessment",
-    "secondary": "See Grift"
-  },
-  "serviceCtas": {
-    "heading": "Reach out based on what you need.",
-    "items": [
-      {
-        "label": "Discuss a confidential-data AI assessment",
-        "intent": "confidential-ai-assessment"
-      },
-      {
-        "label": "Discuss a local LLM / secure AI PoC",
-        "intent": "local-llm-poc"
-      },
-      {
-        "label": "See Grift (evidence for recommendations)",
-        "intent": "grift-team-beta",
-        "external": "grift"
-      }
-    ]
+    "founderLead": "Using technology to carry what words alone can't. Why we started Cor.Inc. is told in our founder's story.",
+    "founderCta": "Read the founder's story"
   },
   "homeIndustries": {
-    "eyebrow": "Industry",
+    "eyebrow": "By industry",
     "title": "Every industry gets stuck for different reasons.",
-    "description": "We stay close to your on-the-ground challenges and think through everything with you, from sorting things out to how to move forward.",
-    "tableHead": {
-      "industry": "Industry",
-      "theme": "Common themes",
-      "detail": ""
-    },
+    "description": "How data is handled, how work flows, and how decisions are made all differ from one workplace to another. Before we start building, we sort out how to proceed with you.",
     "rows": [
       {
         "industry": "Healthcare",
         "theme": "Organizing clinical data, patient response, information security, AI strategy",
-        "link": "/industries/medical",
-        "linkLabel": "Healthcare page"
+        "link": "/industries/medical"
       },
       {
         "industry": "Professional services",
         "theme": "Contract review, applications & registration, deadline management, subsidy applications",
-        "link": "/industries/shigyo",
-        "linkLabel": "Professional services page"
+        "link": "/industries/shigyo"
       },
       {
         "industry": "Construction",
         "theme": "Labor management, design changes, safety checks, passing on know-how",
-        "link": "/industries/construction",
-        "linkLabel": "Construction page"
+        "link": "/industries/construction"
       },
       {
         "industry": "Manufacturing",
         "theme": "Visual inspection, passing on know-how, equipment maintenance, inventory management",
-        "link": "/industries/manufacturing",
-        "linkLabel": "Manufacturing page"
+        "link": "/industries/manufacturing"
       },
       {
         "industry": "Education",
         "theme": "Test workload, parent communication, surveys & reports, ICT roster management",
-        "link": "/industries/education",
-        "linkLabel": "Education page"
+        "link": "/industries/education"
       }
     ]
   },
@@ -321,7 +282,7 @@
     "hero": {
       "eyebrow": "Professional Services",
       "title": "Professional-services work: are you spending too much time and nerve on it?",
-      "subtitle": "Reviewing contracts, one law change after another, double entry for government filings, and deadline management you can never afford to miss. Behind the expert work you're meant to focus on, the days are eaten up by endless manual tasks and mental pressure — and Cor. helps you change that, together."
+      "subtitle": "Reviewing contracts, one law change after another, double entry for government filings, and deadline management you can never afford to miss. Behind the expert work you're meant to focus on, the days are eaten up by endless manual tasks and mental pressure — and Cor. walks with you as you change that."
     },
     "challenges": {
       "eyebrow": "01 / Common Challenges",
@@ -348,7 +309,7 @@
     "support": {
       "eyebrow": "02 / How Cor. Walks With You",
       "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining AI contract development, AI advisory, local LLM, and Grift to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
+      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
       "items": [
         {
           "title": "We help you run an initial screening of standard, boilerplate clauses",
@@ -419,7 +380,7 @@
     "support": {
       "eyebrow": "02 / How Cor. Walks With You",
       "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining AI contract development, AI advisory, local LLM, and Grift to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
+      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
       "items": [
         {
           "title": "Schedule simulation and visualization of operation logs",
@@ -482,7 +443,7 @@
     "support": {
       "eyebrow": "02 / How Cor. Walks With You",
       "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining AI contract development, AI advisory, local LLM, and Grift to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
+      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
       "items": [
         {
           "title": "Helping organize visual-inspection standards into a form usable on site",
@@ -545,7 +506,7 @@
     "support": {
       "eyebrow": "02 / How Cor. Walks With You",
       "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining AI contract development, AI advisory, local LLM, and Grift to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
+      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
       "items": [
         {
           "title": "Rethinking the exam-period workload with you, starting from organizing it",
@@ -1006,7 +967,7 @@
       "description": "The challenges of education sites — exam tasks, parent communication, survey reports, ICT roster management — Cor. helps you move forward together. We walk with you through AI contract development, AI advisory, and local LLM."
     },
     "home": {
-      "title": "Cor.Inc. | AI Implementation Company in Fukuoka (Local LLM, Grift, AI Contract Development)",
+      "title": "AI Development and Generative AI Adoption in Fukuoka | Cor.Inc. (Local LLM, Grift)",
       "description": "Cor.Inc. is an AI implementation company in Fukuoka. Built around local LLMs and secure AI that keep confidential data in-house, Grift — our own product that produces verifiable evidence — and AI contract development from design through operations, we are also advancing hardware AI and initiatives in education and the local community. When it's right, we'll even propose not building yet.",
       "ogTitle": "AI for the front lines, ready to use with confidence. | Cor.Inc.",
       "ogDescription": "A Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development, also creating opportunities for learning and community in the region. You can consult us even before your AI or system requirements are settled."
@@ -1409,16 +1370,8 @@
     "titleSuffix": " | Cor.Inc."
   },
   "regionalTrust": {
-    "eyebrow": "Fukuoka / With our community",
-    "title": "From Fukuoka, growing the people and places that build AI.",
-    "description": "Based in Fukuoka, we work with local facilities and places of learning to put AI into a form that can be used on the ground.",
     "fukuoka100Title": "Fukuoka's 100 Representative Companies 2026-2027",
-    "fukuoka100Body": "We were selected for Made In Local's \"Fukuoka's 100 Representative Companies 2026-2027\" and are featured on its special website.",
-    "engineerCafeTitle": "Developing and operating Engineer Cafe's multilingual AI reception as open source",
-    "engineerCafeBody": "For Engineer Cafe in Fukuoka City, we developed Engineer Cafe Navigator, a multilingual voice AI reception system, and published it as open source (in live operation). We are also planning a generative AI exhibition in Fukuoka together with Engineer Cafe.",
-    "engineerCafeLink": "Read the case study",
-    "engineerCafeLogoAlt": "Engineer Cafe",
-    "companyLink": "View company profile"
+    "engineerCafeLogoAlt": "Engineer Cafe"
   },
   "companyPage": {
     "kicker": "Company",

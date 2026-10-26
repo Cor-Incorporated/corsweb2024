@@ -3,40 +3,45 @@ import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
+// ISMS の審査は「実証」の欄に載せたので、ここでは設計と運用の中身だけを並べる（#414）。
 ---
 
-<section class="py-24 sm:py-32">
+<section class="py-16 sm:py-24">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex flex-col gap-10 sm:gap-12">
-      <div class="flex max-w-3xl flex-col gap-4" data-reveal>
-        <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-16">
+      <div class="flex flex-col gap-3 sm:gap-4" data-reveal>
+        <p
+          class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
+        >
+          {t.securityTrust.eyebrow}
+        </p>
+        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
           {t.securityTrust.title}
         </h2>
-        <p class="text-lg text-primary-950/70 dark:text-primary-200/70">
+        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
           {t.securityTrust.description}
         </p>
+        <div class="mt-2">
+          <a
+            href={getLocalizedUrl('/security', currentLocale)}
+            class="inline-flex min-h-[48px] items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10"
+          >
+            {t.securityTrust.cta}
+          </a>
+        </div>
       </div>
-      <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <ul class="flex flex-col gap-3 rounded-3xl bg-primary-500/10 p-5 dark:bg-primary-400/10 sm:gap-4 sm:p-6" data-reveal style="--reveal-delay:0.15s">
         {
-          t.securityTrust.items.map((item, i) => (
-            <li
-              class="rounded-3xl bg-primary-500/10 p-6 text-base dark:bg-primary-400/10"
-              data-reveal
-              style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
-            >
-              {item}
+          t.securityTrust.items.map((item) => (
+            <li class="flex gap-3 text-sm leading-relaxed sm:text-base">
+              <svg class="mt-0.5 h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 10.5l4 4 8-9" />
+              </svg>
+              <span>{item}</span>
             </li>
           ))
         }
       </ul>
-      <div data-reveal style="--reveal-delay:0.3s">
-        <a
-          href={getLocalizedUrl('/security', currentLocale)}
-          class="inline-flex items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10"
-        >
-          {t.securityTrust.cta}
-        </a>
-      </div>
     </div>
   </div>
 </section>

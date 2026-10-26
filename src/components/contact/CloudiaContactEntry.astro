@@ -12,7 +12,7 @@ if (incomingIntent) chatUrl.searchParams.set('intent', incomingIntent);
 // この <details> の中身は所在地と、（PUBLIC_GCAL_ID がある時だけ）代表スケジュールのカレンダー。
 // 問い合わせは Cloudia に一本化した（ADR-0005 §6 撤回・2026-09-13）ため、ここを「代替の連絡先」と
 // 名乗らせない。カレンダーが出ない環境では時間帯に触れない文言へ切り替え、中身と食い違わせない。
-// 他のキーは ja/非ja の2分岐のままだが、今回書き換えたこの2つは全ロケール分を用意する
+// この 2 つも下の ENTRY_COPY も全ロケール分を用意する
 // （satisfies により、6言語目を足したときに翻訳漏れが型エラーになる）。
 type FallbackCopy = { title: string; description: string };
 const FALLBACK_WITH_CALENDAR = {
@@ -70,22 +70,50 @@ const fallbackCopy: FallbackCopy = CONTACT_CALENDAR_VISIBLE
   ? FALLBACK_WITH_CALENDAR[currentLocale]
   : FALLBACK_WITHOUT_CALENDAR[currentLocale];
 
-const copy =
-  currentLocale === 'ja'
-    ? {
-        eyebrow: 'Contact with Cloudia',
-        title: 'まずはCloudiaにご相談ください',
-        description:
-          '相談モードと雑談モードを切り替えながら、Cor.へのご相談内容を整理できます。日本語・英語に対応しています。',
-        cta: 'Cloudiaを開く',
-      }
-    : {
-        eyebrow: 'Contact with Cloudia',
-        title: 'Start with a conversation with Cloudia',
-        description:
-          'Use consultation or casual conversation mode to organize your inquiry to Cor. Cloudia supports Japanese and English.',
-        cta: 'Open Cloudia',
-      };
+// 以前は ja/非ja の 2 分岐で、zh・ko・es のお問い合わせページに英語の案内が出ていた。
+// 説明文は「開いた後に何が起きるか」を書く（目的を選ぶ → 質問に答える → 担当者へ引き継ぐ、
+// 連絡先は最後だけ）。Cloudia 自体は日本語と英語だけなので、その旨は各言語で書く。
+// 返信の目安（原則3営業日以内）はページの見出しの説明（contactPage）が書いているので、ここでは繰り返さない。
+type EntryCopy = { eyebrow: string; title: string; description: string; cta: string };
+const ENTRY_COPY = {
+  ja: {
+    eyebrow: 'Contact with Cloudia',
+    title: 'まずはCloudiaにご相談ください',
+    description:
+      'ご相談の目的を選び、いくつかの質問に答えていただくと、Cloudiaが内容を整理して担当者へ引き継ぎます。連絡先をお伺いするのは最後だけです。日本語と英語に対応しています。',
+    cta: 'Cloudiaを開く',
+  },
+  en: {
+    eyebrow: 'Contact with Cloudia',
+    title: 'Start with a conversation with Cloudia',
+    description:
+      'Choose the purpose of your inquiry and answer a few questions. Cloudia organizes your inquiry and hands it to our team. We ask for your contact details only at the end. Cloudia supports Japanese and English.',
+    cta: 'Open Cloudia',
+  },
+  zh: {
+    eyebrow: 'Contact with Cloudia',
+    title: '请先与 Cloudia 沟通',
+    description:
+      '选择咨询目的并回答几个问题后，Cloudia 会整理内容并转交给负责人。联系方式只在最后一步填写。Cloudia 支持日语和英语。',
+    cta: '打开 Cloudia',
+  },
+  ko: {
+    eyebrow: 'Contact with Cloudia',
+    title: '먼저 Cloudia에게 상담해 주세요',
+    description:
+      '문의 목적을 선택하고 몇 가지 질문에 답하시면 Cloudia가 내용을 정리해 담당자에게 전달합니다. 연락처는 마지막 단계에서만 여쭙니다. Cloudia는 일본어와 영어로 응대합니다.',
+    cta: 'Cloudia 열기',
+  },
+  es: {
+    eyebrow: 'Contact with Cloudia',
+    title: 'Empiece con una conversación con Cloudia',
+    description:
+      'Elija el motivo de su consulta y responda algunas preguntas. Cloudia organiza la información y la pasa a nuestro equipo. Solo le pedimos sus datos de contacto al final. Cloudia atiende en japonés e inglés.',
+    cta: 'Abrir Cloudia',
+  },
+} as const satisfies Record<Locale, EntryCopy>;
+
+const copy: EntryCopy = ENTRY_COPY[currentLocale];
 const chatPath = `${chatUrl.pathname}${chatUrl.search}`;
 ---
 
