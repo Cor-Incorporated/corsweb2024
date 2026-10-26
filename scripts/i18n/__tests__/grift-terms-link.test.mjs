@@ -10,10 +10,17 @@
  *   （0.9.0 向けの PR #95 の head。2026-10-26 時点で未マージ。マージ後の commit で写し直す）
  * - cor-jp.com 側: src/content/cases/ja/grift.md の「サイトの言い方 | CLIの語」の表
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { GRIFT_TERMS } from '../grift-terms.mjs';
+import { parseDocument } from '../frontmatter.mjs';
+import {
+  GRIFT_ARTICLE_TAG,
+  GRIFT_TERMS,
+  isGriftArticle,
+  SOURCE_GRIFT_TERM_PATTERN,
+} from '../grift-terms.mjs';
+import { translatableSource } from '../hash.mjs';
 
 const GRIFTAI = {
   repo: 'Cor-Incorporated/griftai',
@@ -236,5 +243,53 @@ describe('Grift の用語: scripts/i18n/grift-terms.mjs ↔ src/content/cases/ja
       })
     );
     expect(problems).toEqual([]);
+  });
+});
+
+describe('Grift の記事の判定: isGriftArticle ↔ src/content/*/ja の記事', () => {
+  const root = path.resolve(import.meta.dirname, '../../..');
+  const articles = ['blog', 'news', 'cases'].flatMap((collection) => {
+    const dir = path.join(root, 'src/content', collection, 'ja');
+    return readdirSync(dir)
+      .filter((name) => name.endsWith('.md'))
+      .map((name) => {
+        const { data, body } = parseDocument(readFileSync(path.join(dir, name), 'utf8'));
+        const source = translatableSource(collection, data, body);
+        return {
+          file: `${collection}/ja/${name}`,
+          data,
+          texts: [...Object.values(source.fields), ...(source.tags ?? []), source.body],
+        };
+      });
+  });
+
+  /**
+   * tags に「Grift」が無いまま、訳す部分に「Grift」と Grift の用語が両方出てよい記事（理由つき）。
+   * 一般の意味で用語を使う記事（末尾の事業の一覧で Grift に触れるだけの記事など）を、確かめたうえで足す。
+   */
+  const UNTAGGED_WITH_TERMS = Object.freeze({});
+
+  // 用語を固定するかは tags で決める（本文の「Grift」では決めない）。付け忘れると、Grift の記事でも用語が固定されない
+  it(`タイトルに「Grift」がある記事は、どれも tags に「${GRIFT_ARTICLE_TAG}」がある`, () => {
+    const missing = articles
+      .filter(({ data }) => String(data.title ?? '').includes('Grift') && !isGriftArticle(data))
+      .map(({ file, data }) => `${file}: tags ${JSON.stringify(data.tags ?? [])}`);
+    expect(missing).toEqual([]);
+  });
+
+  // タイトルに「Grift」が無い Grift の記事の付け忘れも拾う。一般の記事なら UNTAGGED_WITH_TERMS に理由を書く
+  it('tags に「Grift」が無いのに「Grift」と Grift の用語が両方出る記事は、理由つきの一覧にある', () => {
+    const unlisted = articles
+      .filter(({ data, file }) => !isGriftArticle(data) && !UNTAGGED_WITH_TERMS[file])
+      .flatMap(({ file, texts }) => {
+        const terms = [...new Set(texts.flatMap((t) => t.match(SOURCE_GRIFT_TERM_PATTERN) ?? []))];
+        return texts.some((t) => t.includes('Grift')) && terms.length > 0
+          ? [`${file}: ${terms.join('・')}`]
+          : [];
+      });
+    expect(unlisted).toEqual([]);
+    expect(
+      Object.keys(UNTAGGED_WITH_TERMS).filter((file) => !articles.some((a) => a.file === file))
+    ).toEqual([]);
   });
 });

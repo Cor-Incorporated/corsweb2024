@@ -109,15 +109,21 @@ describe('translateDocument with a mocked Gemini client', () => {
       });
       const { text } = await run(client, { source: twoLinks });
       expect(bodyCalls).toBe(2);
-      expect(text).toContain('[lorem](https://cor-jp.com) lorem [GitHub](https://github.com/Cor-Incorporated)');
+      expect(text).toContain(
+        '[lorem](https://cor-jp.com) lorem [GitHub](https://github.com/Cor-Incorporated)'
+      );
     });
 
     it('取り違えが続くなら、検証に落ちたとして何も返さない', async () => {
       const client = createMockClient({ mutateBody: swapLinks });
       const error = await run(client, { source: twoLinks }).catch((e) => e);
       expect(error).toBeInstanceOf(TranslationError);
-      expect(error.errors.join('\n')).toMatch(/#1 リンク・画像などの行き先の順序が ja と一致しません/);
-      expect(error.errors.join('\n')).toMatch(/#2 リンク・画像などの行き先の順序が ja と一致しません/);
+      expect(error.errors.join('\n')).toMatch(
+        /#1 リンク・画像などの行き先の順序が ja と一致しません/
+      );
+      expect(error.errors.join('\n')).toMatch(
+        /#2 リンク・画像などの行き先の順序が ja と一致しません/
+      );
     });
   });
 
@@ -205,9 +211,9 @@ lang: "ja"
     expect(error.errors.join('\n')).toMatch(/#2 プレースホルダ ⟦G\d+⟧ が欠落しています/);
   });
 
-  it('「Grift」の出ない記事では、同じ語でもトークンにしない（プロンプトも変えない）', async () => {
+  it('tags に「Grift」の無い記事では、本文に「Grift」が出ても同じ語をトークンにしない（プロンプトも変えない）', async () => {
     const generic = parseDocument(
-      JA_BLOG.replace('Second paragraph stays in English.', '作業領域を広げる。')
+      JA_BLOG.replace('Second paragraph stays in English.', 'Griftの話はしない。作業領域を広げる。')
     );
     const client = createMockClient();
     await run(client, { source: generic });

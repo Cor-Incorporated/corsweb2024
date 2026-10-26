@@ -59,19 +59,28 @@ describe('computeSourceHash', () => {
     );
   });
 
-  // Grift の用語（grift-terms.mjs）: 用語の出る Grift の記事だけ、用語と各言語の正式表記をハッシュに入れる
+  // Grift の用語（grift-terms.mjs）: 用語の出る Grift の記事（ja の tags に「Grift」）だけ、
+  // 用語と各言語の正式表記をハッシュに入れる
+  const tagGrift = (text) => text.replace('["テスト", "AI"]', '["Grift", "AI"]');
+
   it('does not add Grift terms to articles without them (their hashes stay as they were)', () => {
     const generic = JA_BLOG.replace('## はじめに', '## 作業領域');
     expect(
       translatableSource('blog', parseDocument(generic).data, parseDocument(generic).body)
     ).not.toHaveProperty('griftTerms');
-    const griftWithoutTerms = JA_BLOG.replace('## はじめに', '## Griftについて');
+    const griftWithoutTerms = tagGrift(JA_BLOG.replace('## はじめに', '## Griftについて'));
     const doc = parseDocument(griftWithoutTerms);
     expect(translatableSource('blog', doc.data, doc.body)).not.toHaveProperty('griftTerms');
   });
 
-  it('adds the Grift terms and their official forms to Grift articles (a form change makes them stale)', () => {
+  it('does not add Grift terms when only the body mentions Grift (no "Grift" tag)', () => {
     const doc = parseDocument(JA_BLOG.replace('## はじめに', '## Griftの作業領域'));
+    expect(translatableSource('blog', doc.data, doc.body)).not.toHaveProperty('griftTerms');
+  });
+
+  it('adds the Grift terms and their official forms to Grift articles (a form change makes them stale)', () => {
+    const doc = parseDocument(tagGrift(JA_BLOG.replace('## はじめに', '## Griftの作業領域')));
+    expect(doc.data.tags).toEqual(['Grift', 'AI']);
     const source = translatableSource('blog', doc.data, doc.body);
     expect(source.griftTerms).toEqual([
       ['work-surface', '作業領域', 'work surface', '工作领域', '작업 영역', 'áreas de trabajo'],

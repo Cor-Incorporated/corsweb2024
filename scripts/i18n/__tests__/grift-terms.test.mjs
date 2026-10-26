@@ -94,11 +94,15 @@ describe('SOURCE_GRIFT_TERM_PATTERN（ja 側の用語）', () => {
     ['磨き直しの割合', '磨き直し'],
     ['コードの新しさ（いまのコード）', 'コードの新しさ'],
     ['作業領域・変更リズム・検証の形', '作業領域,変更リズム,検証の形'],
+    // 「た」「て」「ま」が続いても、動詞の活用を外すのは「磨き直し」だけ
+    ['作業領域までを見る', '作業領域'],
+    ['検査値または手戻り率', '検査値,手戻り率'],
+    ['手戻り率まで', '手戻り率'],
   ])('%s → %s', (text, expected) => {
     expect(matchOf(text)).toEqual(expected.split(','));
   });
 
-  // 別の語の一部（後ろに漢字・カタカナが続く）と、動詞の活用は用語として扱わない
+  // 別の語の一部（後ろに漢字・カタカナが続く）と、「磨き直し」の動詞の活用は用語として扱わない
   it.each(['検証の形式', '作業領域内', '磨き直した', '磨き直して', '磨き直します', '定着率'])(
     '用語として扱わない: %s',
     (text) => {
@@ -109,22 +113,38 @@ describe('SOURCE_GRIFT_TERM_PATTERN（ja 側の用語）', () => {
 
 describe('griftTermsIn / griftTermFingerprint（どの記事で固定するか・ハッシュに入れる値）', () => {
   const source = (body, fields = {}) => ({ fields, body });
+  const grift = { tags: ['Grift', 'OSS'] };
+  const generic = { tags: ['AI導入'] };
 
-  it('「Grift」の出ない記事では固定しない（一般の言葉としての「作業領域」など）', () => {
-    expect(griftTermsIn(source('作業領域を広げる。検査値を見る。'))).toEqual([]);
-    expect(griftTermFingerprint(source('作業領域を広げる。'))).toBeNull();
+  it('tags に「Grift」の無い記事では固定しない（一般の言葉としての「作業領域」など）', () => {
+    expect(griftTermsIn(generic, source('作業領域を広げる。検査値を見る。'))).toEqual([]);
+    expect(griftTermFingerprint(generic, source('作業領域を広げる。'))).toBeNull();
+    expect(griftTermsIn({}, source('作業領域を広げる。'))).toEqual([]);
+  });
+
+  it('本文に「Grift」が出ても、tags に「Grift」が無ければ固定しない（記事の末尾の事業の一覧など）', () => {
+    const body =
+      'AI導入後に手戻り率が下がった。\n\n- [Cor.の事業領域、Grift、ローカルLLM](/company/)';
+    expect(griftTermsIn(generic, source(body, { description: 'Griftにも触れる' }))).toEqual([]);
+    expect(griftTermFingerprint(generic, source(body))).toBeNull();
+  });
+
+  it('tags の「Grift」は完全一致だけを見る（「Grift CLI」は Grift の記事にしない）', () => {
+    expect(griftTermsIn({ tags: ['Grift CLI'] }, source('作業領域'))).toEqual([]);
+    expect(griftTermsIn({ tags: 'Grift' }, source('作業領域'))).toEqual([]);
   });
 
   it('Grift の記事では、訳すフィールドと本文に出る用語を表の順に返す', () => {
     const terms = griftTermsIn(
+      grift,
       source('変更リズムと作業領域。', { description: 'Griftの検査値' })
     ).map((t) => t.ja);
     expect(terms).toEqual(['検査値', '作業領域', '変更リズム']);
-    expect(griftTermsIn(source('Griftの記事。用語は出ない。'))).toEqual([]);
+    expect(griftTermsIn(grift, source('Griftの記事。用語は出ない。'))).toEqual([]);
   });
 
   it('ハッシュに入れる値は、用語の id と ja と各言語の正式表記（表の値を変えるとハッシュが変わる）', () => {
-    expect(griftTermFingerprint(source('Griftの作業領域'))).toEqual([
+    expect(griftTermFingerprint(grift, source('Griftの作業領域'))).toEqual([
       ['work-surface', '作業領域', 'work surface', '工作领域', '작업 영역', 'áreas de trabajo'],
     ]);
   });

@@ -297,8 +297,9 @@ node --env-file=.env scripts/i18n/translate-content.mjs --write --only blog/your
   company name and the founder's name become tokens too and come back as each
   locale's official spelling (`scripts/i18n/glossary.mjs`, linked by tests to
   `src/config/organization.ts` and `src/config/author.ts`). In Grift articles
-  (any translatable part mentions "Grift"), Grift's terms (検査値, テスト併修率,
-  作業領域, コードの新しさ, …) also become tokens and come back as each locale's
+  (ja articles tagged "Grift"; a test fails when a ja article with "Grift" in
+  its title lacks the tag), Grift's terms (検査値, テスト併修率, 作業領域,
+  コードの新しさ, …) also become tokens and come back as each locale's
   fixed form (`scripts/i18n/grift-terms.mjs`, linked by a test to griftai's
   `src/config/tep.ts`, grift-cli's docs and the table in
   `src/content/cases/ja/grift.md`)

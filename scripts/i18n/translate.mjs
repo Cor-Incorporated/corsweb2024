@@ -216,7 +216,7 @@ export async function translateDocument({ collection, lang, source, client, now,
   const hash = computeSourceHash(collection, source.data, source.body);
   // Grift の用語を固定する記事か（来歴のハッシュに用語を入れる判定と同じ）
   const griftTerms =
-    griftTermsIn(translatableSource(collection, source.data, source.body)).length > 0;
+    griftTermsIn(source.data, translatableSource(collection, source.data, source.body)).length > 0;
   const translated = await translateFields({
     collection,
     lang,

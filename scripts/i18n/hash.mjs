@@ -32,7 +32,7 @@ export function translatableSource(collection, data, body) {
     ...(tags ? { tags } : {}),
     body: bodyCore(body),
   };
-  const griftTerms = griftTermFingerprint(source);
+  const griftTerms = griftTermFingerprint(data, source);
   return griftTerms ? { ...source, griftTerms } : source;
 }
 
