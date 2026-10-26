@@ -1,68 +1,99 @@
 ---
-import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import { ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
+import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-// 見出し → カード(1枚ずつ) → CTA の順に浮き上がる stagger。固定(pin)はせず通常スクロールで通過しながら自動表示。
-const cardBaseDelay = 0.15;
-const cardStep = 0.12;
-
-// ja のみ href 付きカードがある（詳しく見るリンク）。
-type ProofStat = { label: string; value: string; note: string; href?: string };
-const stats: ProofStat[] = t.proof.stats;
+// 実証（docs/story-spine.md の場面 4）。課題のすぐ下に置き、信頼の材料（実績・審査・選出）を上へ寄せる
+// （#414、2026-10-26 の社内レビュー）。以前の「地域とともに」の 2 枚（100選・エンジニアカフェ）もここに移した。
+// proof.items[].id ごとのリンク先と画像。id は全言語で同じ並び（home-page.test.ts で照合する）。
+type Media = 'engineer-cafe-logo' | 'fukuoka100-emblem';
+const ITEMS: Record<string, { href: string; external?: boolean; media?: Media }> = {
+  'engineer-cafe': { href: getLocalizedUrl(ENGINEER_CAFE_CASE_PATH, currentLocale), media: 'engineer-cafe-logo' },
+  'legacy-migration': { href: getLocalizedUrl('/works/legacy-core-system-cloud-migration', currentLocale) },
+  isms: { href: getLocalizedUrl('/security', currentLocale) },
+  fukuoka100: { href: FUKUOKA100_PAGE_URL, external: true, media: 'fukuoka100-emblem' },
+};
+const items = t.proof.items.map((item) => {
+  const meta = ITEMS[item.id];
+  if (!meta) throw new Error(`proof.items: unknown id "${item.id}" (${currentLocale})`);
+  return { ...item, ...meta };
+});
 ---
 
-<section class="py-24 sm:py-32">
+<section class="py-16 sm:py-24">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex flex-col gap-10 sm:gap-12">
-      <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+    <div class="flex flex-col gap-8 sm:gap-12">
+      <div class="flex max-w-3xl flex-col gap-3 sm:gap-4" data-reveal>
         <p
           class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
         >
           {t.proof.eyebrow}
         </p>
-        <h2 class="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
+        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
           {t.proof.title}
         </h2>
-        <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
           {t.proof.description}
         </p>
       </div>
-      <dl class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <ul class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         {
-          stats.map((stat, i) => (
-            <div
-              class:list={[
-                'relative flex flex-col gap-2 rounded-3xl bg-primary-500/10 p-6 transition duration-200 dark:bg-primary-400/10',
-                stat.href && 'hover:-translate-y-1 hover:shadow-lg',
-              ]}
+          items.map((item, i) => (
+            <li
+              class="group relative flex gap-4 rounded-3xl bg-primary-500/10 p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10 sm:gap-5 sm:p-6"
               data-reveal
-              style={`--reveal-delay:${(cardBaseDelay + i * cardStep).toFixed(2)}s`}
+              style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
             >
-              <dt class="text-sm text-primary-950/70 dark:text-primary-200/70">{stat.label}</dt>
-              <dd class="text-4xl font-semibold tracking-tight sm:text-5xl">{stat.value}</dd>
-              <dd class="text-sm text-primary-950/70 dark:text-primary-200/70">{stat.note}</dd>
-              {'href' in stat && stat.href && (
-                <dd class="mt-1 text-sm">
-                  <a
-                    href={stat.href}
-                    class="font-medium text-primary-950/80 underline-offset-4 after:absolute after:inset-0 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200/80"
-                  >
-                    詳しく見る<span aria-hidden="true"> →</span>
-                  </a>
-                </dd>
+              {/* 画像は白い枠にそろえる（エンジニアカフェのロゴは黒の線画なので、ダークモードでも白地に置く）。
+                  幅と高さを一度に決める size-* は Tailwind 3.4 からで、3.3 では効かないので h と w を並べる
+                  （tailwind-size-utility.test.ts）。 */}
+              {item.media === 'engineer-cafe-logo' && (
+                <span class="flex h-16 w-16 shrink-0 items-center justify-center self-start rounded-2xl bg-white p-1.5 sm:h-20 sm:w-20 sm:p-2">
+                  <img
+                    src="/assets/partners/engineer-cafe-logo.png"
+                    alt={t.regionalTrust.engineerCafeLogoAlt}
+                    width="182"
+                    height="162"
+                    class="h-full w-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
               )}
-            </div>
+              {/* エンブレムのリンクはカードのリンクより前面に置く（行き先は同じ特設ページ）。
+                  掲載条件（クリックで特設ページへ・掲載期限）は Fukuoka100Emblem が担保する。 */}
+              {item.media === 'fukuoka100-emblem' && (
+                <Fukuoka100Emblem
+                  variant="portrait"
+                  tone="light"
+                  imgClass="h-full w-auto"
+                  class="relative z-10 h-16 w-16 shrink-0 items-center justify-center self-start rounded-2xl bg-white p-1.5 sm:h-20 sm:w-20 sm:p-2"
+                />
+              )}
+              <div class="flex min-w-0 flex-col gap-1.5 sm:gap-2">
+                <h3 class="flex items-start justify-between gap-2 text-base font-medium tracking-tight sm:text-lg">
+                  <a
+                    href={item.href}
+                    target={item.external ? '_blank' : undefined}
+                    rel={item.external ? 'noopener noreferrer' : undefined}
+                    class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  >
+                    {item.title}
+                  </a>
+                  <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">{item.external ? '↗' : '→'}</span>
+                </h3>
+                <p class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base">{item.body}</p>
+              </div>
+            </li>
           ))
         }
-      </dl>
-      <div
-        data-reveal
-        style={`--reveal-delay:${(cardBaseDelay + t.proof.stats.length * cardStep).toFixed(2)}s`}
-      >
+      </ul>
+      <div data-reveal style="--reveal-delay:0.4s">
         <a
-          href={getLocalizedUrl('/contact', currentLocale)}
+          href={getLocalizedUrl('/works', currentLocale)}
           class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-primary-950/20 px-5 py-3 text-center text-base font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-primary-200/20 dark:text-primary-200 dark:hover:bg-primary-400/10 sm:w-auto"
         >
           {t.proof.cta}
