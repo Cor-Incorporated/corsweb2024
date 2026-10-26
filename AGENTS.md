@@ -102,7 +102,7 @@ and the ADR disagree.
     page that explains the conditions; "coming soon" cases never appear in
     the works list
   - Grift is an own product that extracts verifiable facts from engineers'
-    git history (OSS CLI `grift-cli`, MIT; trial for recruiting/SES agencies;
+    git history (OSS CLI `grift-cli`, MIT; trial for recruiting/SES agencies and in-house hiring teams;
     no scores or rankings). It is no longer an estimation tool (ADR-0022)
   - The business has five pillars (Grift / local LLM & secure AI / hardware AI /
     AI contract development & adoption support / education & community); keep

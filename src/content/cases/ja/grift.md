@@ -2,7 +2,7 @@
 title: 'Grift — 経歴は盛れる。証拠は盛れない。git履歴から確かめられる事実を取り出すOSS'
 description: 'エンジニアのgit履歴から、点数ではなく確かめられる事実（検査値）を取り出す自社プロダクトGrift。見積支援のWebアプリから、OSSのCLIと紹介会社・SES向けの推薦支援へ方針を変えた経緯と設計を紹介します。'
 category: 'grift'
-tags: ['Grift', 'OSS', 'CLI', 'git', '人材紹介', 'SES']
+tags: ['Grift', 'OSS', 'CLI', 'git', '人材紹介', 'SES', '採用']
 publishedAt: 2026-06-30
 updatedAt: 2026-10-26
 summary: 'Griftはエンジニアのgit履歴から「確かめられる事実」を取り出す自社プロダクトです。点数や順位はつけません。計測にAI（LLM）を使わないため、誰が実行しても同じ結果になり、受け取った側が検算できます。CLIはMITライセンスのOSSとして公開しています。'
@@ -87,6 +87,6 @@ v0.6で加わった`report-v2`では、1人のエンジニアの仕事の形を�
 
 2026年10月25日に、サイトの文言とCLIの出力を1行ずつ突き合わせました。複数人の一覧（`actor-index`）が、注記では「順位ではない」と書きながらコミット数の多い順に並んでいたため、2026年10月26日に公開した[0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)で、並びをIDの辞書順に変えました。コミット数の値は残しています。経緯と、0.8系に課す5つの受入条件は[ブログ記事](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)に書きました。
 
-いまは、候補者本人が手元で実行した記録をもとに推薦の理由を具体的にするテスト導入（PoC）の準備を、紹介会社さま・SES企業さまと進めています。正式版についてはテスト導入の結果をふまえて2027年の提供開始を目指しています。Griftは [griftai.org](https://griftai.org) でも紹介しています。
+いまは、候補者本人が手元で実行した記録をもとに推薦の理由を具体的にするテスト導入（PoC）の準備を、紹介会社さま・SES企業さまと進めています。自社開発企業の採用担当の方からも、候補者本人が共有した記録から、どんな仕事をしてきたかを確かめるテスト導入（PoC）のご相談を受け付けています。正式版についてはテスト導入の結果をふまえて2027年の提供開始を目指しています。Griftは [griftai.org](https://griftai.org) でも紹介しています。
 
 Griftの思想は[Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) と [note](https://note.com/cor_instrument/n/nd58ba0955317) の記事でも紹介しています。

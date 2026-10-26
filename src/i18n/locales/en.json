@@ -88,10 +88,10 @@
   "griftBridge": {
     "eyebrow": "Our product",
     "title": "Résumés can be padded. Evidence can't.",
-    "description": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). Sales teams at recruiting agencies and SES (IT staffing) companies can use it to explain why they recommend a candidate, backed by evidence.",
+    "description": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). Sales teams at recruiting agencies and SES (IT staffing) companies can use it to explain why they recommend a candidate, backed by evidence. Hiring teams at companies that build their own software can use the records a candidate chooses to share to see what their work has actually involved.",
     "cta": "See how Grift works",
     "ctaGithub": "View Grift CLI on GitHub",
-    "note": "Grift CLI is published free of charge as open source under the MIT License. We welcome inquiries from recruiting agencies and SES companies about trials (PoCs).",
+    "note": "Grift CLI is published free of charge as open source under the MIT License. We welcome inquiries about trials (PoCs) from recruiting agencies, SES companies and companies that build their own software.",
     "promises": [
       {
         "title": "No scores",
@@ -171,7 +171,7 @@
       {
         "intent": "grift-team-beta",
         "label": "Try Grift in your company",
-        "audience": "For sales teams at recruiting agencies and SES companies",
+        "audience": "For people who place or hire engineers",
         "price": ""
       }
     ],
@@ -549,7 +549,7 @@
       {
         "name": "Grift — our own product that extracts verifiable facts from git history",
         "tag": "In-house product",
-        "description": "Résumés can be padded. Evidence can't. Challenge: résumés and interviews alone rarely convey what an engineer's work actually involves, and activity metrics such as commit counts are easily inflated with generative AI. Design & implementation: we built a CLI that uses no AI (LLM) for measurement and extracts facts such as attribution and test co-changes from git history, and published it as open source (MIT License). Operation: we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES companies explain why they recommend a candidate, backed by evidence.",
+        "description": "Résumés can be padded. Evidence can't. Challenge: résumés and interviews alone rarely convey what an engineer's work actually involves, and activity metrics such as commit counts are easily inflated with generative AI. Design & implementation: we built a CLI that uses no AI (LLM) for measurement and extracts facts such as attribution and test co-changes from git history, and published it as open source (MIT License). Operation: we are accepting inquiries about trials (PoCs) from sales teams at recruiting agencies and SES companies and from hiring teams at companies that build their own software.",
         "href": "grift"
       },
       {
@@ -597,7 +597,7 @@
     "items": [
       {
         "name": "Grift | Résumés can be padded. Evidence can't.",
-        "description": "Our own product that extracts verifiable facts from an engineer's development record. It assigns no scores and gives the same result no matter who runs it. Sales teams at recruiting agencies and SES companies can use it to explain why they recommend a candidate, backed by evidence."
+        "description": "Our own product that extracts verifiable facts from an engineer's development record. It assigns no scores and gives the same result no matter who runs it. Sales teams at recruiting agencies and SES companies can use it to explain why they recommend a candidate, backed by evidence. Hiring teams at companies that build their own software can use the records a candidate chooses to share to see what their work has actually involved."
       },
       {
         "name": "Local LLM & Secure AI | Use generative AI without sending your data outside.",
@@ -908,7 +908,7 @@
       },
       {
         "question": "What is Grift?",
-        "answer": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores or rankings and uses no AI (LLM) for measurement, so it gives the same result no matter who runs it, and whoever receives the output can verify it. The CLI is published free of charge as open source under the MIT License, and we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES (IT staffing) companies explain why they recommend a candidate, backed by evidence."
+        "answer": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores or rankings and uses no AI (LLM) for measurement, so it gives the same result no matter who runs it, and whoever receives the output can verify it. The CLI is published free of charge as open source under the MIT License, and we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES (IT staffing) companies explain why they recommend a candidate, backed by evidence, and help hiring teams at companies that build their own software see, from the records a candidate chooses to share, what their work has actually involved."
       }
     ]
   },
@@ -1416,7 +1416,7 @@
         "name": "Grift",
         "tagline": "Résumés can be padded. Evidence can't.",
         "description": "Our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores and gives the same result no matter who runs it.",
-        "status": "The CLI is available free of charge under the MIT License. We are preparing trials (PoCs) for recruiting agencies and SES (IT staffing) companies."
+        "status": "The CLI is available free of charge under the MIT License. We are preparing trials (PoCs) for recruiting agencies, SES (IT staffing) companies and companies that build their own software."
       },
       {
         "name": "Local LLM & Secure AI",
