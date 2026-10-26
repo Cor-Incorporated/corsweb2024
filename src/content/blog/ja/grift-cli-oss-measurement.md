@@ -58,7 +58,7 @@ Griftは記録から事実を取り出す手順をTEP（Technical Evidence Pipel
 
 ## 実在のOSSで試す
 
-本当にこの手順で、仕事の傾向が見えるのか。2026年10月25日に、Grift CLI（コマンドで動かすGriftの道具）の0.8.0で確かめました。0.8.0はこの日の時点ではまだ公開の準備中で、翌日の10月26日に公開しました。
+本当にこの手順で、仕事の傾向が見えるのか。2026年10月25日に、Grift CLI（コマンドで動かすGriftの道具）の0.8.0で確かめました。0.8.0はこの日の時点ではまだ公開の準備中で、翌日の10月26日に公開しました（[リリースノート](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)）。
 
 実在の人を同意なく測らないように、ソースコードが公開されているソフトウェア（OSS）を、リポジトリ（1つのソフトウェアの記録をまとめた場所）の単位で測りました。人ごとの数字はこの記事に1つも載せていません。
 
@@ -121,7 +121,7 @@ Griftは測れなかったものを「未観測」と書きます。未観測は
 
 ## 0.8.0で直したこと
 
-0.7.2（測った時点の公開版）では、リポジトリに関わった人の一覧が、変更の多い順に並んでいました。一番上の人を「一番よくやった人」と読めてしまいます。0.8.0ではID（人ごとに付けた記号）の順に並べます。
+[0.7.2](https://pypi.org/project/grift-cli/0.7.2/)（測った時点の公開版）では、リポジトリに関わった人の一覧が、変更の多い順に並んでいました。一番上の人を「一番よくやった人」と読めてしまいます。0.8.0ではID（人ごとに付けた記号）の順に並べます。
 
 4つのリポジトリで、0.7.2と0.8.0の一覧を比べました。名前と数は見ず、並び方だけを見ています。0.7.2は4つとも、一番上が変更の最も多い人でした。0.8.0では、その人の行は、clickで467行中120行目、flaskで870行中280行目、httpxで258行中232行目、commander.jsで203行中15行目でした。
 
@@ -150,7 +150,7 @@ Griftが出すのは、傾向と、その根拠の件数と、見えなかった
 エンジニアの方が手元で確かめられるように、測った条件と数字をまとめます。
 
 - grift 0.8.0（定義版`tep-v0.8.0-2026-10-25`）。公開前のソース（開発用リポジトリの`87076c8`）を手元に入れました。公開した0.8.0の`src/`（プログラムの本体）は、このソースと同じです
-- 比べるために、当時の公開版の0.7.2も同じ4つにかけました
+- 比べるために、当時の公開版の[0.7.2](https://pypi.org/project/grift-cli/0.7.2/)も同じ4つにかけました
 - Apple M4 Max、macOS 26.7.1、Python 3.12.9、git 2.54.0
 - 対象は2026年9月2日にcloneしてから更新していない手元の4つです
 
@@ -172,7 +172,7 @@ grift repo click --format both --out out/click
 grift verify out/click/report.json --repo click
 ```
 
-`grift repo`は4つとも2.5秒以内に終わり、`grift verify`は4つとも`VERIFIED`でした。新しくcloneしたclickでも、実行した時刻のほかは同じ結果になりました。当時の公開版の0.7.2と同じソースでも、ここに載せた観測値は同じでした。
+`grift repo`は4つとも2.5秒以内に終わり、`grift verify`は4つとも`VERIFIED`でした。新しくcloneしたclickでも、実行した時刻のほかは同じ結果になりました。当時の公開版の[0.7.2](https://pypi.org/project/grift-cli/0.7.2/)と同じソースでも、ここに載せた観測値は同じでした。
 
 | リポジトリ | 人間のcommit / merge / bot |
 |---|---|
@@ -261,6 +261,7 @@ grift project click --requirements python-lib-maintenance.toml --format both --o
 
 - [grift-cli（GitHub、MIT）](https://github.com/Cor-Incorporated/grift-cli) - CLIのソースコード。測った時点の公開版は0.7.2で、0.8.0は2026年10月26日に公開
 - [grift-cli 0.8.0のリリースノート（GitHub）](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0) - 0.8.0の変更点
+- [grift-cli 0.7.2（PyPI）](https://pypi.org/project/grift-cli/0.7.2/) - 測った時点の公開版
 - [Grift](https://griftai.org) - 製品サイト
 - [TEPのページ（Grift）](https://griftai.org/tep) - TEPの詳しい説明
 - [griftレポートの読み方（metrics-guide）](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - 指標ごとの平易な解説

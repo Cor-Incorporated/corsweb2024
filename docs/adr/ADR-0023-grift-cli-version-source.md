@@ -21,6 +21,7 @@
 3. **記事（ja の blog・news・cases）は、版をその時点の記録として書く。**
    - 「この記事を書いた時点で公開していたv0.7.2」「測った時点の公開版」「当時の公開版の0.7.2」のように、いつの話かを同じ文に書く。
    - 「公開中」「公開版」「最新」「現在」「今の」と版を一緒に書かない。「次の版（0.8）」「まだリリースしていません」も、その版が出た日から誤りになるので書かない。書くなら、同じ文に「時点」か「当時」を入れる。
+   - 版を書いた所には、その版の情報源をリンクする。GitHub の Release があればそれ（`https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0`）、無ければ PyPI のその版のページ（`https://pypi.org/project/grift-cli/0.7.2/`。v0.7.2 以前は Release が無く tag だけ）。読み手が確かめられるようにするためで、記事全体の情報源の決まりは corsweb2024#423 で決める。
    - 出たあとの事実は日付つきで書き、リリースノートへリンクする（例: `src/content/blog/ja/grift-no-score-no-rank-in-code.md` の冒頭の引用）。最新の版を指したいときは、版のないリンク（`https://github.com/Cor-Incorporated/grift-cli/releases`、`https://pypi.org/project/grift-cli/`）にする。
    - 直すのは ja だけ。en・zh・ko・es は翻訳 CI が作る（ADR-0019）。日付つきのニュース（`src/content/news/ja/grift-cli-oss.md` の「2026年9月8日に PyPI で v0.7.2 を公開しました」など）は、そのままでよい。
 4. **CI の検査。** `scripts/check-grift-version-claims.mjs` が、Grift に触れている ja の記事と `src/i18n/locales/ja.json`・`src/pages/llms.txt.ts` を 1 文ずつ見て、次の 2 つを落とす。
@@ -79,7 +80,7 @@ Grift のリリースを進めるセッションか、照合の Issue を見た�
 3. 正本を書き換える: `node scripts/grift-cli-release-watch.mjs --write`
    - 「src/config/grift-cli-release.json: v0.8.0（2026-10-26）→ v0.9.0（2026-11-02）」のように出る。JSON は手で書かない。
 4. 記事を直す: `npm run check:grift-version`
-   - 出た行（`ファイル:行: current-claim: …`）を、決定 3 の形に直す。例: 「最新のv0.8.0では」→「この記事を書いた時点で公開していたv0.8.0では」。直すのは ja だけ。
+   - 出た行（`ファイル:行: current-claim: …`）を、決定 3 の形に直し、版に情報源をリンクする。例: 「最新のv0.8.0では」→「この記事を書いた時点で公開していた[v0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)では」。直すのは ja だけ。
    - 0 件になるまで繰り返す。日本語を直したら、yomiyasu と cor-voice のスキルで整える（CLAUDE.md）。
 5. 確かめる: `npm run test:run`、`npm run build`、`npm run test:dist`、`npm run security:audit:dist`
    - `grep 最新の公開版 dist/llms.txt` が新しい版の 1 行を出す。

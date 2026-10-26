@@ -21,7 +21,7 @@ isDraft: false
 
 ## 現場で起きたこと
 
-Grift CLIには、1つのリポジトリに関わった人を一覧にする出力があります（`actor-index`）。この記事を書いた時点で公開していたv0.7.2では、この一覧に「コミット数で抽出しただけで、品質の順位ではありません」という注記が付いています。
+Grift CLIには、1つのリポジトリに関わった人を一覧にする出力があります（`actor-index`）。この記事を書いた時点で公開していた[v0.7.2](https://pypi.org/project/grift-cli/0.7.2/)では、この一覧に「コミット数で抽出しただけで、品質の順位ではありません」という注記が付いています。
 
 ところが、表の行はコミット数の多い順に並んでいました。
 
@@ -79,13 +79,14 @@ Griftには、公開リポジトリの参照分布の中で、そのリポジト
 
 約束は文章に書くだけでは守れません。文章と実装が食い違っていたら、実装を直し、直した経緯を公開します。
 
-この記事を書いた時点では、0.8はまだリリースしていませんでした。並び順を変えると、以前の版で保存した一覧の検算結果が一致しなくなるため、定義の版数を上げる作業と一緒に出す予定でした。0.8.0は定義の版数を上げて、2026年10月26日に公開しました。
+この記事を書いた時点では、0.8はまだリリースしていませんでした。並び順を変えると、以前の版で保存した一覧の検算結果が一致しなくなるため、定義の版数を上げる作業と一緒に出す予定でした。[0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)は定義の版数を上げて、2026年10月26日に公開しました。
 
 ## 参考資料
 
 - [Grift](https://griftai.org) - 製品サイト。3つの約束と観測する項目
 - [grift-cli（GitHub、MIT）](https://github.com/Cor-Incorporated/grift-cli) - CLIのソースコード
 - [grift-cli 0.8.0のリリースノート（GitHub）](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0) - 2026年10月26日に公開した0.8.0の変更点
+- [grift-cli 0.7.2（PyPI）](https://pypi.org/project/grift-cli/0.7.2/) - この記事を書いた時点で公開していた版
 - [TEP利用規範（norms）](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - 第1条「不在を負に読まない」、第7条「重み付け・換算の禁止」、`--top N`と`grift align`の扱い
 - [griftレポートの読み方（metrics-guide）](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - 指標ごとの平易な解説と十分位の表記規約
 - [Griftの事例ページ](https://cor-jp.com/works/grift/) - cor-jp.comの実績紹介
