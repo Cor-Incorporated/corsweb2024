@@ -1,28 +1,38 @@
 /**
  * Markdown の「訳してはいけない部分」をプレースホルダで保護し、翻訳後に完全復元する。
  *
- * 保護するもの（ブロック = 1 行の ⟦Bn⟧、インライン = ⟦Pn⟧、社名 = ⟦Nn⟧、代表の氏名 = ⟦Fn⟧）:
+ * 保護するもの（ブロック = 1 行の ⟦Bn⟧、インライン = ⟦Pn⟧、社名 = ⟦Nn⟧、代表の氏名 = ⟦Fn⟧、Grift の用語 = ⟦Gn⟧）:
  *   ブロック: フェンスコード（``` / ~~~）、$ 数式、HTML ブロック・コメント、
  *             URL だけの行（remark-link-card-plus のリンクカード）、参照リンク定義
  *   インライン: インラインコード、$ 数式、<autolink>、インライン HTML、
  *             リンク・画像の宛先（テキスト / alt / "title" は訳す）、参照ラベル、脚注、{#id}、裸 URL
  *   名前: 社名「Cor.株式会社」と代表の氏名「寺田康佑」、その表記ゆれ（glossary.mjs の NAME_TOKENS）。
  *         復元時に翻訳先言語の正式表記へ置き換える
+ *   用語: Grift の記事（protect に griftTerms: true を渡したとき）の「作業領域」「検査値」など
+ *         （grift-terms.mjs の GRIFT_TERMS）。復元時に翻訳先言語の正式表記へ置き換える
  *
  * analyze() は同じ走査で構造メトリクス（見出し数・コードブロック・リンク・画像…）を数える。
  * 翻訳の前後を同じ関数で数えるので、保護と検証の判定がずれない。
  */
 import { endsWithPeriod, NAME_TOKENS, officialNameFor } from './glossary.mjs';
+import { GRIFT_TERM_TOKEN, griftTermForm, griftTermOutput } from './grift-terms.mjs';
 import { normalizeNewlines } from './util.mjs';
 
-// トークンの接頭辞: P（インライン）・B（ブロック）と、名前の表（N = 社名、F = 代表の氏名）
-const TOKEN_PREFIXES = `PB${NAME_TOKENS.map((entry) => entry.prefix).join('')}`;
+// トークンの接頭辞: P（インライン）・B（ブロック）と、名前の表（N = 社名、F = 代表の氏名）と、G（Grift の用語）
+const TOKEN_PREFIXES = `PB${[...NAME_TOKENS, GRIFT_TERM_TOKEN]
+  .map((entry) => entry.prefix)
+  .join('')}`;
 export const TOKEN_RE = new RegExp(`⟦([${TOKEN_PREFIXES}])(\\d+)⟧`, 'g');
 export const TOKEN_ANY_RE = new RegExp(`⟦[${TOKEN_PREFIXES}]\\d+⟧`, 'g');
 const HAS_TOKEN_RE = new RegExp(`⟦[${TOKEN_PREFIXES}]\\d+⟧`);
 const ORG_TOKEN_PERIOD_RE = /(⟦N(\d+)⟧)\.(?!\.)/g;
+const GRIFT_TERM_TOKEN_RE = new RegExp(`⟦${GRIFT_TERM_TOKEN.prefix}(\\d+)⟧`, 'g');
 const BLOCK_LINE_RE = /^((?:[ \t]*>)*[ \t]*)⟦B(\d+)⟧[ \t]*$/;
 const QUOTE_PREFIX_RE = /^((?:[ \t]*>)*[ \t]*)/;
+
+/** 保護トークンにする名前と用語の表（Grift の用語は griftTerms のときだけ。名前の後に適用する）。 */
+export const tokenTable = (griftTerms) =>
+  griftTerms ? [...NAME_TOKENS, GRIFT_TERM_TOKEN] : NAME_TOKENS;
 
 // ---- ブロック検出 -------------------------------------------------------------
 const FENCE_OPEN_RE = /^((?:[ \t]*>)*[ \t]*)(`{3,}|~{3,})(.*)$/;
@@ -195,7 +205,7 @@ function splitUrlTail(url) {
   return { core: url.slice(0, end), tail: url.slice(end) };
 }
 
-function protectInline(line, put) {
+function protectInline(line, put, tokens) {
   let s = protectCodeSpans(line, put('code-span'));
   s = s.replace(DISPLAY_MATH_INLINE_RE, put('math-inline'));
   s = s.replace(INLINE_MATH_RE, put('math-inline'));
@@ -213,8 +223,8 @@ function protectInline(line, put) {
     const { core, tail } = splitUrlTail(url);
     return /^https?:\/\/[A-Za-z0-9]/.test(core) ? put('bare-url')(core) + tail : url;
   });
-  // 名前（社名・代表の氏名）は最後に置き換える（コード・URL などの中にあるものは先にトークン化されているので触らない）
-  return NAME_TOKENS.reduce(
+  // 名前（社名・代表の氏名）と用語は最後に置き換える（コード・URL などの中にあるものは先にトークン化されているので触らない）
+  return tokens.reduce(
     (text, { kind, prefix, pattern }) => text.replace(pattern, put(kind, prefix)),
     s
   );
@@ -224,10 +234,11 @@ function protectInline(line, put) {
 export class ProtectionError extends Error {}
 
 /**
+ * @param {{ griftTerms?: boolean }} [options] griftTerms: Grift の用語もトークンにする（Grift の記事。translate.mjs が決める）
  * @returns {{ text: string, store: Map<string, { kind: string, original: string }> }}
- *   text は API に送る文字列。store は id（"P3" / "B0" / "N1"）→ 元の文字列。
+ *   text は API に送る文字列。store は id（"P3" / "B0" / "N1" / "G4"）→ 元の文字列。
  */
-export function protect(markdown) {
+export function protect(markdown, { griftTerms = false } = {}) {
   const source = normalizeNewlines(markdown);
   if (/[⟦⟧]/.test(source))
     throw new ProtectionError('本文に予約文字 ⟦ ⟧ が含まれているため安全に保護できません');
@@ -239,10 +250,11 @@ export function protect(markdown) {
     store.set(id, { kind, original });
     return `⟦${id}⟧`;
   };
+  const tokens = tokenTable(griftTerms);
   const text = segment(source)
     .map((seg) => {
       if (seg.kind === 'text') {
-        return protectInline(seg.text, (kind, prefix = 'P') => register(kind, prefix));
+        return protectInline(seg.text, (kind, prefix = 'P') => register(kind, prefix), tokens);
       }
       const prefix = seg.text.match(QUOTE_PREFIX_RE)[1];
       return `${prefix}${register(seg.kind, 'B')(seg.text)}`;
@@ -251,25 +263,38 @@ export function protect(markdown) {
   return { text, store };
 }
 
+const isGriftTerm = (entry) => entry?.kind === GRIFT_TERM_TOKEN.kind;
+
 /**
- * トークン（入れ子を含む）を元の文字列に戻す。lang を渡すと、名前（社名 org-name・代表の氏名 founder-name）は
- * 元の表記ではなくその言語の正式表記にする（翻訳結果の復元）。lang なしは完全な往復（構造の比較・テスト用）。
+ * トークン（入れ子を含む）を元の文字列に戻す。lang を渡すと、名前（社名 org-name・代表の氏名 founder-name）と
+ * Grift の用語（grift-term）は、元の表記ではなくその言語の正式表記にする（翻訳結果の復元。用語は en / es の
+ * 文の頭で 1 文字目を大文字にする）。lang なしは完全な往復（構造の比較・テスト用）。
  */
 export function expandTokens(text, store, lang) {
   const valueOf = (token, kind, n) => {
     const entry = store.get(`${kind}${n}`);
     if (!entry) return token;
+    if (lang && isGriftTerm(entry)) return griftTermForm(entry.original, lang);
     const official = lang ? officialNameFor(entry.kind, lang) : undefined;
     return official ?? entry.original;
   };
+  // 用語は前の文字列で大文字・小文字が決まるので、ほかのトークンを戻す前に、置かれた位置のまま戻す
+  const withTerms = lang
+    ? text.replace(GRIFT_TERM_TOKEN_RE, (token, n, offset, whole) => {
+        const entry = store.get(`${GRIFT_TERM_TOKEN.prefix}${n}`);
+        return isGriftTerm(entry)
+          ? griftTermOutput(entry.original, lang, whole.slice(0, offset))
+          : token;
+      })
+    : text;
   // 正式表記が「.」で終わる言語（en / es の Cor.Inc.）では、社名トークンの直後の文末の「.」を重ねない
   // （「⟦N0⟧.」→「Cor.Inc.」。省略記号の「...」は残す）。#339 最終レビュー LOW-2
   let current =
     lang && endsWithPeriod(lang)
-      ? text.replace(ORG_TOKEN_PERIOD_RE, (match, token, n) =>
+      ? withTerms.replace(ORG_TOKEN_PERIOD_RE, (match, token, n) =>
           store.get(`N${n}`)?.kind === 'org-name' ? token : match
         )
-      : text;
+      : withTerms;
   for (let depth = 0; depth < 32 && HAS_TOKEN_RE.test(current); depth += 1) {
     current = current.replace(TOKEN_RE, valueOf);
   }

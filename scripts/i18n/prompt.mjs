@@ -22,7 +22,19 @@ function glossaryLines(lang) {
   ].join('\n');
 }
 
-function commonRules(lang) {
+// Grift の記事では、Grift の用語もトークン ⟦G…⟧ で送る（grift-terms.mjs）。記事ごとに、どのトークンがどの語に
+// なるかを伝える（文法のため。韓国語の助詞は語の最後の音で変わる）。用語の無い記事のプロンプトは変えない。
+function griftTermLines(terms) {
+  if (terms.length === 0) return [];
+  return [
+    "- Tokens like ⟦G0⟧ stand for terms of Grift, the company's open-source CLI. Output each token itself",
+    '  exactly once, never the term; choose articles and particles as if the token were the term it will be',
+    '  replaced with:',
+    ...terms.map(({ tokens, form }) => `  ${tokens.join(' ')} → "${form}"`),
+  ];
+}
+
+function commonRules(lang, terms = []) {
   const language = LANGUAGE_NAMES[lang];
   return [
     'You are a professional localizer for the corporate website of Cor.Inc. (Cor.株式会社),',
@@ -34,12 +46,16 @@ function commonRules(lang) {
     'the same degree of certainty as the Japanese (e.g. "preparing for ISMS certification" must not become "ISMS certified").',
     'Glossary:',
     glossaryLines(lang),
+    ...griftTermLines(terms),
   ].join('\n');
 }
 
-/** 本文（保護済み Markdown）用のシステム指示。 */
-export function bodySystemInstruction(lang) {
-  return `${commonRules(lang)}
+/**
+ * 本文（保護済み Markdown）用のシステム指示。
+ * @param {{ tokens: string[], form: string }[]} [terms] この記事の Grift の用語のトークン（grift-terms.mjs の griftTermTokens）
+ */
+export function bodySystemInstruction(lang, terms = []) {
+  return `${commonRules(lang, terms)}
 
 The user message is a Markdown document. Return ONLY the translated Markdown document:
 no preface, no notes, and do not wrap the output in a code fence.
@@ -59,9 +75,9 @@ Markdown structure must stay identical:
 - do not create new headings, code fences, links, images or tables.`;
 }
 
-/** frontmatter フィールド（JSON）用のシステム指示。 */
-export function fieldsSystemInstruction(lang) {
-  return `${commonRules(lang)}
+/** frontmatter フィールド（JSON）用のシステム指示。terms は bodySystemInstruction と同じ。 */
+export function fieldsSystemInstruction(lang, terms = []) {
+  return `${commonRules(lang, terms)}
 
 The user message is a JSON object whose values are page metadata (title, description, tags, ...).
 Return a JSON object with exactly the same keys. Translate every value; never translate or rename keys.

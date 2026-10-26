@@ -16,6 +16,7 @@
  *   3. モデルが自分で書いた表記ゆれ（「Cor.」を「Cor. Inc.」に広げた、氏名を旧表記で書いた等）も正式表記にそろえる
  *      （normalizeNames）
  *   トークンの欠落・重複は既存のプレースホルダ検証（validate.mjs）で落とす。
+ * Grift の用語（「作業領域」「検査値」など）は grift-terms.mjs（Grift の記事でだけ、同じ手順で固定する）。
  */
 
 export const ORGANIZATION_NAMES = Object.freeze({
