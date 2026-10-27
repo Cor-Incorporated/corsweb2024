@@ -1,6 +1,6 @@
 ---
 title: "已在 Grift CLI 报告开头新增面谈中希望确认的事项（0.9.0）"
-description: "Grift CLI 0.9.0 已于2026年10月27日发布。仅在存在本人所声明 ID 的同意记录时，才会在报告开头以简短语句写明从记录中体现的工作推进方式以及面谈中希望确认的事项。与以往一样，不会显示分数、排名及类型名称。"
+description: "Grift CLI 0.9.0 已于 2026 年 10 月 27 日发布。仅当存在本人申报 ID 的同意记录时，才会在报告开头用简短的语句写明从记录中体现的工作推进方式以及面谈中希望确认的事项。与以往一样，不会显示分数、排名或类型名称。"
 publishedAt: 2026-10-27
 category: "update"
 tags: ["Grift", "OSS", "产品"]
@@ -8,27 +8,27 @@ source: "Grift"
 isDraft: false
 featured: false
 lang: "zh"
-translationSourceHash: "a7fe0fafe296a0da9774befadd179855e488c4514793080dd3360f94cbaa222b"
-translatedAt: "2026-10-27T13:35:50.064Z"
+translationSourceHash: "ee3b30cd8a4c623febd67cf1ddbe2d672fee01c19b0a7a0c71444603a2de58b7"
+translatedAt: "2026-10-27T13:44:01.358Z"
 translationModel: "gemini-3.8-flash"
 ---
 
-## 0.9.0 的变更内容
+## 0.9.0的变更内容
 
-Cor.株式会社于2026年10月27日发布了 Grift CLI 的 [0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0) 版本。一如既往，本版本不会输出评分、排名或类型名称。
+Cor.株式会社于2026年10月27日发布了Grift CLI的[0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0)。与以往相同，依然不会输出分数、排名和类型名称。
 
-在 `grift actor`、`grift project` 和 `grift align` 的 Markdown 开头，会用简短的语句描述从记录中反映出的工作推进方式。围绕修改部位的分类、变更节奏、测试添加方式以及参与方式，附带件数和时间段进行描述；紧接着以提问的形式列出该记录中无法反映的事项以及希望在面谈中确认的事项。语句基于已公开的[决策表](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md)由数值选定。不使用 AI，且不包含在 JSON 中。
+在`grift actor`、`grift project`、`grift align`的Markdown开头，会用简短的语句描述从记录中反映出的工作推进方式。附带件数和时间范围，写明修改部分的类别、变更节奏、测试添加方式以及参与方式；紧接着写明本记录中无法体现的内容，并以问题的形式列出希望在面谈中确认的事项。语句会依据已公开的[决策表](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md)由数值选择得出。不使用AI，也不写入JSON。
 
-关于个人的语句和提问，仅在以本人声明的 ID 且存在同意记录时才会输出。其他情况下，将用一句话说明未予输出的理由。面谈问题是用于具体落实向候选人本人询问内容的参考材料，并非用于决定录用与否或确定排名。
+关于个人的语句和问题，仅在为本人自称的ID且存在同意记录时才会输出。其他情况下，会用一句话写明未输出的理由。面谈的问题是用于使向候选人本人询问的内容更加具体的材料。并非用于决定录用与否或排名。
 
-倾向的“强度”行以及对照的“适合度”行已从 Markdown 中移除。这是因为当并列查看两份报告时，可能会被解读为“强势者/弱势者”或“合适的人/不合适的人”。同时，针对个人可能出现与事实不符数值的 4 处问题进行了修复。修复位置参见[发布说明](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0)。
+倾向的“强度”行与比对的“方向”行已从Markdown中移除。这是因为如果将两份报告并列，容易被解读为强势者与弱势者、合适者与不合适者。同时，修复了4处个人相关数据可能出现与事实不符数值的地方。修复之处请参见[发布说明](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0)。
 
-## 更新前须知
+## 升级前须知
 
-在 0.8.0 中保存的报告（`analyze`、`actor`、`repo`）及对照，由于定义版本发生变化，在 0.9.0 的 `grift verify` 中将变为“无法确认（`CANNOT_VERIFY`）”。project 的报告将变为“不一致（`MISMATCH`）”。请在 0.9.0 中重新生成。详情请参阅[迁移注意事项](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/migration-v090.md)。
+由于定义的版本已变更，在0.8.0中保存的报告（`analyze`、`actor`、`repo`）及比对，在0.9.0的`grift verify`中会显示为“无法确认（`CANNOT_VERIFY`）”。project的报告会显示为“不匹配（`MISMATCH`）”。请在0.9.0中重新生成。详情请参见[迁移注意事项](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/migration-v090.md)。
 
 ```bash
 pipx upgrade grift-cli
 ```
 
-有关 Grift 的理念与开发历程，已汇总于 [Grift 案例页面](/works/grift)。
+Grift的理念和开发背景整理在[Grift案例页面](/works/grift)中。
