@@ -14,7 +14,7 @@ lang: "ja"
 
 Cor.株式会社は2026年10月27日に、Grift CLIの[0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0)を公開しました。点数・順位・タイプ名はこれまでどおり出しません。
 
-`grift actor`・`grift project`・`grift align`のMarkdownの先頭に、記録から見える仕事の進め方を短い文で書きます。変えた部分の区分、変更のペース、テストの付け方、関わり方について、件数と期間を添えて書き、続けて、この記録では見えないことと、面談で確かめたいことを問いの形で並べます。文は公開した[決定表](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md)で数字から選びます。AIは使わず、JSONには入れません。
+`grift actor`・`grift project`・`grift align`のMarkdownの先頭に、記録から見える仕事の進め方を短い文で書きます。変えた部分の区分、変更のペース、テストの付け方、関わり方について、件数と期間を添えて書き、続けて、この記録では見えないことを書き、面談で確かめたいことを問いの形で並べます。文は公開した[決定表](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md)で数字から選びます。AIは使わず、JSONには入れません。
 
 人についての文と問いは、本人が名乗ったIDで、同意の記録があるときだけ出します。それ以外は、出していない理由を1文で書きます。面談の問いは候補者本人に聞くことを具体にするための材料です。合否や順位を決めるためのものではありません。
 
