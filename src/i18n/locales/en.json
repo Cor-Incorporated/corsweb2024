@@ -908,7 +908,7 @@
       },
       {
         "question": "What is Grift?",
-        "answer": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores or rankings and uses no AI (LLM) for measurement, so it gives the same result no matter who runs it, and whoever receives the output can verify it. The CLI is published free of charge as open source under the MIT License, and we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES (IT staffing) companies explain why they recommend a candidate, backed by evidence, and help hiring teams at companies that build their own software see, from the records a candidate chooses to share, what their work has actually involved."
+        "answer": "Grift is our own product that extracts verifiable facts from an engineer's development record (git history). It assigns no scores or rankings and uses no AI (LLM) for measurement, so it gives the same result no matter who runs it, and whoever receives the output can verify it. Only when the person has named their own identity and a consent record exists does the report open with short sentences on how the recorded work was done and with questions worth asking in an interview. The CLI is published free of charge as open source under the MIT License, and we are accepting inquiries about trials (PoCs) that help sales teams at recruiting agencies and SES (IT staffing) companies explain why they recommend a candidate, backed by evidence, and help hiring teams at companies that build their own software see, from the records a candidate chooses to share, what their work has actually involved."
       }
     ]
   },
