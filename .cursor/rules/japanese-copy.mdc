@@ -1,13 +1,32 @@
 ---
-description: 日本語のブログとニュースを書く・直すときは、推敲ゲートを通す
-globs: src/content/blog/ja/**/*.md,src/content/news/ja/**/*.md
+description: "日本語の公開文を書くときは、yomiyasu と cor-voice の SKILL.md を読み、検査を通します。"
+globs:
+  - "src/content/**/ja/**"
+  - "src/i18n/locales/ja.json"
+  - "src/pages/**"
+  - "src/components/**"
+  - "src/config/**"
 alwaysApply: false
 ---
 
-`src/content/blog/ja/` と `src/content/news/ja/` を書く・直すときは、規則の本文を写さず、次を読む。
+日本語の文章を書くとき、または直すときは、次のスキルを読んでから書きます。
 
-- `.claude/skills/yomiyasu/SKILL.md`
-- `.claude/skills/cor-voice/SKILL.md`
-- `skills/article-polish/SKILL.md`
+- 推敲は `.claude/skills/yomiyasu/SKILL.md` です。
+- 代表の文体とサイトの表現は `.claude/skills/cor-voice/SKILL.md` です。
 
-入口は `npm run polish`（`docs/polish-gate.md`）。文体は、人間の明示の指示が記録されていない限り変えない。翻訳ファイル（en / zh / ko / es）は直さない。
+規則の本文はそれぞれのスキルのファイルに置きます。
+
+`src/content/blog/ja/` と `src/content/news/ja/` を書く・直すときは、`skills/article-polish/SKILL.md` を読みます。入口は `npm run polish`（`docs/polish-gate.md`）です。文体は、人間の明示の指示が記録されていない限り変えません。翻訳ファイル（en / zh / ko / es）は直しません。
+
+提出の前に、次の `run` と `verify` を順に実行します。
+
+```bash
+python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py run --source <原文> --final <最終稿> --doc-type <種類>
+python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py verify --final <最終稿>
+```
+
+対外表現は次の ADR に従います。
+
+- `docs/adr/ADR-0007-external-expression-guardrails.md`
+- `docs/adr/ADR-0022-business-pillars-grift-cli.md`
+- `docs/adr/ADR-0023-grift-cli-version-source.md`

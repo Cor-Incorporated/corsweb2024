@@ -90,8 +90,11 @@ and the ADR disagree.
   commit messages), always proofread it with the yomiyasu skill
   (`.claude/skills/yomiyasu/`, nanaism/yomiyasu v2.1.3, MIT, vendored unchanged)
   and use the cor-voice skill (`.claude/skills/cor-voice/`) to pick the register
-  and keep the CEO's (寺田康佑) way of writing. Not needed for reports after code
-  changes. Keep `.claude/skills/cor-voice/` identical to the copy in
+  and keep the CEO's (寺田康佑) way of writing. Before you submit, run
+  `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py run` and
+  `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py verify`.
+  Cursor reads the same pointers from `.cursor/rules/japanese-copy.mdc`.
+  Not needed for reports after code changes. Keep `.claude/skills/cor-voice/` identical to the copy in
   Cor-Incorporated/griftai
 
 - **External expression guardrails** —
