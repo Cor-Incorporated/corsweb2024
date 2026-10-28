@@ -18,6 +18,7 @@ import {
   buildDeterministicSummary,
   canonicalizeSummaryText,
   buildConversationExcerpt,
+  containsTranscriptRoleLine,
   maskMessagesForLlm,
   maskSensitiveContent,
   normalizeSource,
@@ -27,10 +28,12 @@ import {
   CHAT_LIMIT,
   SUBMIT_LIMIT,
   clientIp,
-  isRateLimited,
+  consumeRateLimit,
   isSameOrigin,
   verifyTurnstile,
 } from './security';
+import { readJsonBody, type JsonBodyFailure } from './body';
+import { logContactFailure, notificationFailureCode } from './log';
 import { buildSystemPrompt, getProvider } from './llm';
 import { getEmailProvider, sendInquiryEmail, sendReceiptEmail } from './email';
 import {
@@ -48,10 +51,7 @@ import {
   upsertContactSession,
 } from './storage';
 
-// 最大リクエストボディサイズ（DoS/暴走入力対策）。会話＋サマリでも十分な余裕。
-const MAX_BODY_BYTES = 64 * 1024;
-
-const json = (data: unknown, status = 200): Response =>
+const json = (data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response =>
   new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -60,31 +60,34 @@ const json = (data: unknown, status = 200): Response =>
       'referrer-policy': 'no-referrer',
       // 認証なしの公開エンドポイントだがキャッシュさせない（応答に分類等が含まれるため）。
       'cache-control': 'no-store',
+      ...extraHeaders,
     },
   });
 
-// JSON ボディを上限つきで読む。Content-Type が JSON でない／不正JSON／過大は null。
-async function readJsonBody(req: Request): Promise<Record<string, unknown> | null> {
-  const ct = req.headers.get('content-type') || '';
-  if (!/application\/json/i.test(ct)) return null;
-  // Content-Length で早期に過大ボディを弾く（無い場合は読み取り後に長さ確認）。
-  const len = Number(req.headers.get('content-length') || '0');
-  if (len > MAX_BODY_BYTES) return null;
-  let text: string;
-  try {
-    text = await req.text();
-  } catch {
-    return null;
+function logBodyRejection(reason: JsonBodyFailure): void {
+  switch (reason) {
+    case 'too_large':
+      logContactFailure('body_too_large');
+      return;
+    case 'timeout':
+      logContactFailure('body_timeout');
+      return;
+    case 'not_json':
+    case 'invalid':
+      return;
+    default: {
+      const unexpected: never = reason;
+      return unexpected;
+    }
   }
-  // 読み取り後のサイズ確認はバイト数で行う（Content-Length はバイト、text.length は
-  // UTF-16コード単位。CJKでは1文字3バイト等になり、文字数だと上限がザルになる）。
-  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return null;
-  try {
-    const data = JSON.parse(text);
-    return data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
+}
+
+function tooManyRequests(retryAfterSeconds: number): Response {
+  return json(
+    { error: 'リクエストが多すぎます。少し待ってから再試行してください' },
+    429,
+    { 'retry-after': String(retryAfterSeconds) },
+  );
 }
 
 // LLM の出力（JSON文字列のはず）を厳格にパースし、ChatResult へ正規化する。
@@ -95,13 +98,14 @@ const EMPTY_SUMMARY = {
   ja: '要約未生成（受付内容を担当者が確認します）',
   en: 'Summary unavailable; the team will review the inquiry.',
 } as const;
-const SUMMARY_ROLE_LINE = /(?:^|\n)\s*(?:user|assistant|system|human|you|ai\s+assistant|ユーザー|あなた|アシスタント|AI\s*アシスタント|クラウディア)\s*(?:[:：]|[-—])\s*/im;
+const SUMMARY_ROLE_LINE = /(?:^|\n)\s*(?:user|assistant|system|human|you|visitor|cloudia|ai\s+assistant|ユーザー|あなた|アシスタント|AI\s*アシスタント|クラウディア|お客様|訪問者|人間)\s*(?:[:：]|[-—–])\s*/im;
 const SUMMARY_SECRET_RE = /(?:AIza[0-9A-Za-z_-]{20,}|(?:sk|ghp|xox[baprs]?)-[A-Za-z0-9_-]{16,}|-----BEGIN(?: [A-Z]+)* PRIVATE KEY-----)/;
 
 function isSafeChatSummary(candidate: string): boolean {
   return candidate.length > 0
     && candidate.length <= MAX_CHAT_SUMMARY_LEN
     && !SUMMARY_ROLE_LINE.test(candidate)
+    && !containsTranscriptRoleLine(candidate)
     && !SUMMARY_SECRET_RE.test(candidate)
     && candidate === maskSensitiveContent(candidate);
 }
@@ -258,8 +262,12 @@ function startReply(mode: ChatMode, locale: ChatLocale, intent: ContactIntent | 
 // レート制限＋同一オリジン＋（必須の）Cloudflare WAF レート制限ルールで担保する。
 // PII を扱う本命の濫用点である /submit でのみ Turnstile を要求する。
 async function handleChat(req: Request, env: Env, forceStart = false): Promise<Response> {
-  const body = await readJsonBody(req);
-  if (!body) return json({ error: 'リクエストボディが不正なJSONです' }, 400);
+  const parsed = await readJsonBody(req);
+  if (!parsed.ok) {
+    logBodyRejection(parsed.reason);
+    return json({ error: 'リクエストボディが不正なJSONです' }, 400);
+  }
+  const body = parsed.data;
 
   // intent/source はサーバ側で正規化して system に注入（messages は改ざんしない）。
   // 未知キーは空に落とす（400 にしない = 後方互換）。
@@ -308,8 +316,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
         summary: result.summary,
         conversationExcerpt: '',
       });
-    } catch (error) {
-      console.error('contact-chat session storage error:', error instanceof Error ? error.message : 'unknown');
+    } catch {
+      logContactFailure('session_storage_failed');
       if (env.DB) return json({ error: 'チャットを開始できません。時間をおいて再試行してください' }, 503);
     }
     return json(result);
@@ -334,8 +342,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
     // only masked messages to Vertex/Anthropic; the original browser transcript
     // is never persisted by the chat endpoint.
     raw = await provider.chat(system, maskMessagesForLlm(norm.messages));
-  } catch (e) {
-    console.error('contact-chat llm error:', e instanceof Error ? e.message : String(e));
+  } catch {
+    logContactFailure('llm_failed');
     return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください', fallback: true }, 503);
   }
 
@@ -372,8 +380,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
       summary: result.summary,
       conversationExcerpt: buildConversationExcerpt(norm.messages),
     });
-  } catch (error) {
-    console.error('contact-chat session storage error:', error instanceof Error ? error.message : 'unknown');
+  } catch {
+    logContactFailure('session_storage_failed');
     if (env.DB) return json({ error: 'チャットを保存できません。時間をおいて再試行してください' }, 503);
   }
   return json(result);
@@ -381,8 +389,12 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
 
 // POST /api/contact/submit — 最終送信。PIIはここで扱い、LLMには絶対渡さずメールにのみ送る。
 async function handleSubmit(req: Request, env: Env): Promise<Response> {
-  const body = await readJsonBody(req);
-  if (!body) return json({ error: 'リクエストボディが不正なJSONです' }, 400);
+  const parsed = await readJsonBody(req);
+  if (!parsed.ok) {
+    logBodyRejection(parsed.reason);
+    return json({ error: 'リクエストボディが不正なJSONです' }, 400);
+  }
+  const body = parsed.data;
 
   // Turnstile（シークレットがあれば検証）。
   const ip = clientIp(req);
@@ -399,7 +411,7 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   // fail closed: メール未設定なら 503（本物の問い合わせを握り潰さない）。
   const emailProvider = getEmailProvider(env);
   if (!emailProvider.ok) {
-    console.error('contact-chat email not configured (RESEND_API_KEY unset)');
+    logContactFailure('email_unconfigured');
     return json({ error: emailProvider.error }, emailProvider.status);
   }
 
@@ -449,12 +461,12 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
     let created;
     try {
       created = await createSubmission(env, inquiry, { idempotencyKey, sessionId });
-    } catch (error) {
-      console.error('contact-chat submission storage error:', error instanceof Error ? error.message : 'unknown');
+    } catch {
+      logContactFailure('submission_storage_failed');
       return json({ error: 'お問い合わせを受け付けられません。時間をおいて再試行してください' }, 503);
     }
     if (!env.CONTACT_NOTIFICATIONS) {
-      console.error('contact-chat notification queue not configured');
+      logContactFailure('notification_queue_unconfigured');
       return json({ error: 'お問い合わせを受け付けられません。時間をおいて再試行してください' }, 503);
     }
     try {
@@ -464,8 +476,8 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
         env.CONTACT_NOTIFICATIONS.send(queueMessage(created.submissionId, 'internal')),
         env.CONTACT_NOTIFICATIONS.send(queueMessage(created.submissionId, 'receipt')),
       ]);
-    } catch (error) {
-      console.error('contact-chat notification enqueue error:', error instanceof Error ? error.message : 'unknown');
+    } catch {
+      logContactFailure('notification_enqueue_failed');
       return json({ error: 'お問い合わせをキューへ登録できません。時間をおいて再試行してください' }, 503);
     }
     return json({ ok: true, receiptId: created.receiptId, status: 'queued', duplicate: created.duplicate });
@@ -476,8 +488,8 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
     const receiptId = newReceiptId();
     await sendReceiptEmail(env, emailProvider.provider, inquiry, receiptId);
     return json({ ok: true, receiptId, status: 'sent' });
-  } catch (e) {
-    console.error('contact-chat email send error:', e instanceof Error ? e.message : String(e));
+  } catch {
+    logContactFailure('email_send_failed');
     return json({ error: 'お問い合わせの送信に失敗しました。時間をおいて再試行してください' }, 502);
   }
 
@@ -496,30 +508,29 @@ export default {
 
     try {
       // 同一オリジン強制（CORSは開けない。cor-jp.com 上のウィジェットのみ）。
+      // POST など状態を変えるメソッドは Origin が無いと拒否する（#362）。
       if (!isSameOrigin(req)) {
         return json({ error: 'origin not allowed' }, 403);
       }
 
       if (req.method === 'POST' && (path === '/api/contact/chat' || path === '/api/contact/chat/start')) {
         const ip = clientIp(req);
-        if (isRateLimited(`chat:${ip}`, CHAT_LIMIT)) {
-          return json({ error: 'リクエストが多すぎます。少し待ってから再試行してください' }, 429);
-        }
+        const chatLimit = consumeRateLimit(`chat:${ip}`, CHAT_LIMIT);
+        if (chatLimit.limited) return tooManyRequests(chatLimit.retryAfterSeconds);
         return await handleChat(req, env, path === '/api/contact/chat/start');
       }
 
       if (req.method === 'POST' && path === '/api/contact/submit') {
         const ip = clientIp(req);
-        if (isRateLimited(`submit:${ip}`, SUBMIT_LIMIT)) {
-          return json({ error: 'リクエストが多すぎます。少し待ってから再試行してください' }, 429);
-        }
+        const submitLimit = consumeRateLimit(`submit:${ip}`, SUBMIT_LIMIT);
+        if (submitLimit.limited) return tooManyRequests(submitLimit.retryAfterSeconds);
         return await handleSubmit(req, env);
       }
 
       return json({ error: 'Not Found' }, 404);
-    } catch (e: unknown) {
+    } catch {
       // 詳細はサーバー側ログのみ。クライアントには汎用メッセージ（内部情報の漏洩防止）。
-      console.error('contact-chat error:', e instanceof Error ? e.message : String(e));
+      logContactFailure('unhandled');
       return json({ error: '処理中にエラーが発生しました' }, 500);
     }
   },
@@ -552,11 +563,12 @@ export default {
         await markOutboxSent(env, submissionId, messageType, sent.messageId, sent.deliveryStatus);
         message.ack();
       } catch (error) {
+        logContactFailure('notification_failed');
         await markOutboxFailed(
           env,
           submissionId,
           messageType,
-          error instanceof Error ? error.message : 'notification failed',
+          notificationFailureCode(error),
         );
         // Queue controls exponential retry and eventually routes to the configured DLQ.
         message.retry();
@@ -567,8 +579,8 @@ export default {
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     try {
       await purgeExpiredData(env);
-    } catch (error) {
-      console.error('contact-chat retention cleanup error:', error instanceof Error ? error.message : 'unknown');
+    } catch {
+      logContactFailure('retention_cleanup_failed');
     }
   },
 };

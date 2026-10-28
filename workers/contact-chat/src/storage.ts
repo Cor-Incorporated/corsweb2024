@@ -9,10 +9,11 @@ import type {
   NotificationMessage,
   NotificationType,
 } from './types';
+import { notificationFailureCode } from './log';
 import { MAX_CONVERSATION_EXCERPT_LEN, normalizeStructuredLead } from './validate';
 
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const SUBMISSION_TTL_SECONDS = 90 * 24 * 60 * 60;
+export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+export const SUBMISSION_TTL_SECONDS = 90 * 24 * 60 * 60;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const PHONE_PATTERN = /(?:\+?\d[\d\s().-]{6,}\d)/;
 
@@ -411,24 +412,32 @@ export async function markOutboxFailed(
   if (!env.DB) return;
   const messageType: NotificationType = messageTypeOrError === 'receipt' ? 'receipt' : 'internal';
   const errorMessage = maybeErrorMessage ?? messageTypeOrError;
-  // エラー本文はプロバイダや入力値を含み得るため保存しない。運用に必要なHTTP statusだけを
-  // 固定形式で残し、PII/秘密情報のD1・ログへの混入を防ぐ。
-  const status = /status\s+(\d{3})/.exec(errorMessage)?.[1];
-  const safeError = status ? `provider_status_${status}` : 'notification_failed';
+  // エラー本文はプロバイダや入力値を含み得るため保存しない。HTTP status だけを固定形式で残す。
+  const safeError = notificationFailureCode(errorMessage);
   await env.DB.prepare("UPDATE notification_outbox SET status='pending', delivery_status='failed', last_error=?, updated_at=? WHERE submission_id=? AND message_type=?").bind(safeError, nowSeconds(), submissionId, messageType).run();
 }
 
 export async function purgeExpiredData(env: Env): Promise<void> {
   if (!env.DB) return;
   const now = nowSeconds();
-  // Delete dependents first because D1 enforces the submission foreign key.
+  // 送信は 90 日、会話は 30 日で期限が切れる。期限内の送信が参照している会話を消すと
+  // 外部キー違反になり、D1 の batch は全体が取り消される（#430）。
+  // 期限切れの送信・通知・監査を先に消すので、その送信だけが参照していた会話は同じ回で消える。
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM audit_events WHERE submission_id IN (SELECT submission_id FROM submission_intake WHERE expires_at < ?)`)
       .bind(now),
     env.DB.prepare(`DELETE FROM notification_outbox WHERE submission_id IN (SELECT submission_id FROM submission_intake WHERE expires_at < ?)`)
       .bind(now),
     env.DB.prepare('DELETE FROM submission_intake WHERE expires_at < ?').bind(now),
-    env.DB.prepare('DELETE FROM contact_sessions WHERE expires_at < ?').bind(now),
+    env.DB.prepare(
+      `DELETE FROM contact_sessions
+       WHERE expires_at < ?
+         AND NOT EXISTS (
+           SELECT 1 FROM submission_intake
+           WHERE submission_intake.session_id = contact_sessions.session_id
+             AND submission_intake.expires_at >= ?
+         )`,
+    ).bind(now, now),
   ]);
 }
 

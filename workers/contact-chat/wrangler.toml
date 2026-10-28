@@ -92,6 +92,6 @@ dead_letter_queue = "cor-contact-notifications-preview-dlq"
 #   VERTEX_GATEWAY_URL  ... Cloud Run Gatewayの /generateContent URL
 #   VERTEX_GATEWAY_SECRET ... Gatewayと共有するHMAC secret
 #   RESEND_API_KEY      ... Resend のAPIキー（/submit の送信に必須。未設定なら 503 fail closed）
-#   TURNSTILE_SECRET    ... Cloudflare Turnstile のシークレット（任意。未設定なら検証スキップ＝fail open）
+#   TURNSTILE_SECRET    ... 置かない。Cloudia がトークンを送るまで未設定（検証スキップ）。入れるとトークン無しの /submit は 400。
 # ↑ 選択したプロバイダの認証情報が未設定だと /chat を拒否（fail closed）。
 #   RESEND_API_KEY 未設定だと /submit を 503（本物の問い合わせを握り潰さない）。

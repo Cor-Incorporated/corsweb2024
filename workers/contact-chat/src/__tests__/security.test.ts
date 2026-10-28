@@ -1,7 +1,9 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
   CHAT_LIMIT,
+  GRIFT_HTTP_CALL_CAP,
   SUBMIT_LIMIT,
+  consumeRateLimit,
   ctEq,
   isRateLimited,
   isSameOrigin,
@@ -15,8 +17,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const reqWithHeaders = (headers: Record<string, string | null>) =>
+const reqWithHeaders = (headers: Record<string, string | null>, method = 'GET') =>
   ({
+    method,
     headers: { get: (n: string) => headers[n.toLowerCase()] ?? null },
   }) as unknown as Request;
 
@@ -49,6 +52,20 @@ describe('isRateLimited — IP単位レート制限', () => {
       false,
     );
   });
+  it('超過時の Retry-After は残りの窓を秒で切り上げる', () => {
+    const now = 1_000_000;
+    for (let i = 0; i < CHAT_LIMIT.max; i++) {
+      expect(consumeRateLimit('chat:retry', CHAT_LIMIT, now).limited).toBe(false);
+    }
+    const blocked = consumeRateLimit('chat:retry', CHAT_LIMIT, now + 1500);
+    expect(blocked.limited).toBe(true);
+    expect(blocked.retryAfterSeconds).toBe(Math.ceil((CHAT_LIMIT.windowMs - 1500) / 1000));
+  });
+  it('コードが持つ上限は chat 20回/分、submit 5回/10分、Grift HTTP は 0 回', () => {
+    expect(CHAT_LIMIT).toEqual({ windowMs: 60_000, max: 20 });
+    expect(SUBMIT_LIMIT).toEqual({ windowMs: 10 * 60_000, max: 5 });
+    expect(GRIFT_HTTP_CALL_CAP).toBe(0);
+  });
   it('IP（キー）が違えば独立してカウントされる', () => {
     for (let i = 0; i < SUBMIT_LIMIT.max + 1; i++) isRateLimited('submit:a', SUBMIT_LIMIT);
     expect(isRateLimited('submit:a', SUBMIT_LIMIT)).toBe(true);
@@ -57,18 +74,36 @@ describe('isRateLimited — IP単位レート制限', () => {
 });
 
 describe('isSameOrigin — CORSを開けず cor-jp.com のみ許可', () => {
-  it('Origin が無ければ許可（同一オリジンfetch）', () => {
-    expect(isSameOrigin(reqWithHeaders({ origin: null }))).toBe(true);
+  it.each(['GET', 'HEAD'])('%s で Origin が無ければ許可', (method) => {
+    expect(isSameOrigin(reqWithHeaders({ origin: null }, method))).toBe(true);
   });
-  it.each(['https://cor-jp.com', 'https://www.cor-jp.com'])('自オリジン(%s)を許可', (o) => {
-    expect(isSameOrigin(reqWithHeaders({ origin: o }))).toBe(true);
-  });
-  it.each(['https://evil.example', 'https://cor-jp.com.evil.com', 'null'])(
-    '別オリジン(%s)を拒否',
-    (o) => {
-      expect(isSameOrigin(reqWithHeaders({ origin: o }))).toBe(false);
+  it.each(['POST', 'post', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
+    '%s で Origin が無ければ拒否（#362）',
+    (method) => {
+      expect(isSameOrigin(reqWithHeaders({ origin: null }, method))).toBe(false);
     },
   );
+  it.each(['', '   '])('POST の空の Origin（%j）は拒否', (origin) => {
+    expect(isSameOrigin(reqWithHeaders({ origin }, 'POST'))).toBe(false);
+  });
+  it('メソッドが無いリクエストは Origin 無しを拒否する', () => {
+    const req = {
+      headers: { get: () => null },
+    } as unknown as Request;
+    expect(isSameOrigin(req)).toBe(false);
+  });
+  it.each(['https://cor-jp.com', 'https://www.cor-jp.com'])('POST の自オリジン(%s)を許可', (o) => {
+    expect(isSameOrigin(reqWithHeaders({ origin: o }, 'POST'))).toBe(true);
+  });
+  it.each(['https://evil.example', 'https://cor-jp.com.evil.com', 'null', 'not a url'])(
+    'POST の別オリジン(%s)を拒否',
+    (o) => {
+      expect(isSameOrigin(reqWithHeaders({ origin: o }, 'POST'))).toBe(false);
+    },
+  );
+  it('GET でも別オリジンは拒否', () => {
+    expect(isSameOrigin(reqWithHeaders({ origin: 'https://evil.example' }, 'GET'))).toBe(false);
+  });
 });
 
 describe('verifyTurnstile', () => {

@@ -109,15 +109,21 @@ describe('translateDocument with a mocked Gemini client', () => {
       });
       const { text } = await run(client, { source: twoLinks });
       expect(bodyCalls).toBe(2);
-      expect(text).toContain('[lorem](https://cor-jp.com) lorem [GitHub](https://github.com/Cor-Incorporated)');
+      expect(text).toContain(
+        '[lorem](https://cor-jp.com) lorem [GitHub](https://github.com/Cor-Incorporated)'
+      );
     });
 
     it('取り違えが続くなら、検証に落ちたとして何も返さない', async () => {
       const client = createMockClient({ mutateBody: swapLinks });
       const error = await run(client, { source: twoLinks }).catch((e) => e);
       expect(error).toBeInstanceOf(TranslationError);
-      expect(error.errors.join('\n')).toMatch(/#1 リンク・画像などの行き先の順序が ja と一致しません/);
-      expect(error.errors.join('\n')).toMatch(/#2 リンク・画像などの行き先の順序が ja と一致しません/);
+      expect(error.errors.join('\n')).toMatch(
+        /#1 リンク・画像などの行き先の順序が ja と一致しません/
+      );
+      expect(error.errors.join('\n')).toMatch(
+        /#2 リンク・画像などの行き先の順序が ja と一致しません/
+      );
     });
   });
 
@@ -139,6 +145,81 @@ describe('translateDocument with a mocked Gemini client', () => {
       category: 'info',
     });
     expect(client.calls).toHaveLength(1);
+  });
+});
+
+describe('Grift の用語（grift-terms.mjs）: Grift の記事ではトークン ⟦G…⟧ で送り、正式表記で戻す', () => {
+  const JA_GRIFT_CASE = `---
+title: "Grift — 確かめられる事実を取り出すOSS"
+description: "点数ではなく確かめられる事実（検査値）を取り出す自社プロダクトGrift。"
+category: "grift"
+tags: ["Grift", "OSS"]
+publishedAt: 2026-06-30
+summary: "Griftは点数をつけません。"
+lang: "ja"
+---
+
+## 実装
+
+- 作業領域（\`surface_profile\`）: 11区分
+- テスト併修率: 本番コードと同じコミットでテストも変えた割合
+
+| サイトの言い方 | CLIの語 |
+|---|---|
+| コードの新しさ | survival |
+`;
+  const grift = parseDocument(JA_GRIFT_CASE);
+  const runCase = (client, lang = 'en') =>
+    run(client, { source: grift, collection: 'cases', lang });
+  const fieldsRequest = (client) => client.calls.find((c) => c.jsonSchema);
+  const bodyRequest = (client) => client.calls.find((c) => !c.jsonSchema);
+
+  it('用語はモデルに渡さず、各トークンの語をプロンプトで伝え、訳の後に正式表記で戻す', async () => {
+    const client = createMockClient();
+    const { text, data } = await runCase(client);
+    expect(bodyRequest(client).prompt).toMatch(/^- ⟦G\d+⟧（⟦P\d+⟧）: 11区分$/m);
+    expect(bodyRequest(client).prompt).not.toMatch(/作業領域|テスト併修率|コードの新しさ/);
+    expect(bodyRequest(client).system).toMatch(/⟦G\d+⟧ → "work surface"/);
+    expect(bodyRequest(client).system).toMatch(/⟦G\d+⟧ → "Code recency"/);
+    expect(fieldsRequest(client).prompt).toMatch(/確かめられる事実（⟦G\d+⟧）/);
+    expect(fieldsRequest(client).system).toMatch(/⟦G\d+⟧ → "observed values"/);
+    // 文の頭（行の頭・表のセルの頭）は大文字、文の途中は表記どおり
+    expect(text).toContain('- Work surfacelorem`surface_profile`lorem: 11lorem');
+    expect(text).toContain('- Test co-change: lorem');
+    expect(text).toContain('| Code recency | survival |');
+    expect(data.description).toBe('loremobserved valuesloremGriftlorem');
+    expect(
+      classify({ collection: 'cases', lang: 'en', source: grift, target: parseDocument(text) })
+        .status
+    ).toBe('ok');
+  });
+
+  it('ko / zh / es は各言語の表記で戻す（コードの新しさは未決のため en の表記）', async () => {
+    const ko = await runCase(createMockClient(), 'ko');
+    expect(ko.text).toContain('- 작업 영역lorem`surface_profile`lorem');
+    expect(ko.text).toContain('| Code recency | survival |');
+    const es = await runCase(createMockClient(), 'es');
+    expect(es.text).toContain('- Áreas de trabajolorem');
+    expect(es.data.description).toBe('loremvalores de inspecciónloremGriftlorem');
+  });
+
+  it('用語のトークンを落とした訳は、ほかのプレースホルダと同じく再試行のうえ拒否する', async () => {
+    const dropTerm = (t) => t.replace(/⟦G\d+⟧/, 'work area');
+    const error = await runCase(createMockClient({ mutateBody: dropTerm })).catch((e) => e);
+    expect(error).toBeInstanceOf(TranslationError);
+    expect(error.errors.join('\n')).toMatch(/#1 プレースホルダ ⟦G\d+⟧ が欠落しています/);
+    expect(error.errors.join('\n')).toMatch(/#2 プレースホルダ ⟦G\d+⟧ が欠落しています/);
+  });
+
+  it('tags に「Grift」の無い記事では、本文に「Grift」が出ても同じ語をトークンにしない（プロンプトも変えない）', async () => {
+    const generic = parseDocument(
+      JA_BLOG.replace('Second paragraph stays in English.', 'Griftの話はしない。作業領域を広げる。')
+    );
+    const client = createMockClient();
+    await run(client, { source: generic });
+    expect(bodyRequest(client).prompt).toContain('作業領域を広げる。');
+    expect(bodyRequest(client).prompt).not.toMatch(/⟦G\d+⟧/);
+    expect(bodyRequest(client).system).not.toMatch(/terms of Grift/);
   });
 });
 

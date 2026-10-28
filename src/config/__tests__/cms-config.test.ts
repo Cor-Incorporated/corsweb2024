@@ -1,8 +1,9 @@
 /**
  * CMS（Sveltia CMS, ADR-0018・#329）の設定 cms/public/config.yml と、サイト側の定義を結ぶリンクテスト。
  *
- * 同じ事実が 2 箇所にある:
- *   - カテゴリの選択肢      config.yml ↔ src/config/categories.ts（と blog-schema.ts の enum）
+ * 項目の正本は src/config/cms-contract.ts。config.yml は同じ値を置く。
+ * 同じ事実が次の箇所にある:
+ *   - カテゴリの選択肢      config.yml ↔ cms-contract ↔ src/config/categories.ts（と blog-schema.ts の enum）
  *   - 必須・任意の項目      config.yml ↔ src/config/blog-schema.ts（Zod）
  *   - 書き込み先・ブランチ  config.yml ↔ ADR-0018（ja のフォルダだけ・develop・PR 経由）
  *   - トークンを渡す先      wrangler.toml [vars] ALLOWED_DOMAINS ↔ cms/firebase.json hosting.site
@@ -17,6 +18,17 @@ import { z } from 'astro/zod';
 import { describe, expect, it } from 'vitest';
 import { blogFrontmatterSchema } from '../blog-schema';
 import { BLOG_CATEGORIES } from '../categories';
+import { CONTACT_INTENTS } from '../site';
+import {
+  authWorker,
+  blogCategoryOptions,
+  blogCtaIntentOptions,
+  blogFields as contractBlogFields,
+  cmsBackend,
+  cmsCollections,
+  cmsSite,
+  draftField,
+} from '../cms-contract';
 
 type CmsOption = string | { label: string; value: string };
 type CmsField = {
@@ -195,11 +207,11 @@ function checkJaOnly(config: CmsConfig): string[] {
 function checkBranch(config: CmsConfig): string[] {
   const { backend, publish_mode: publishMode } = config;
   const expected: Array<[string, unknown, unknown]> = [
-    ['backend.branch', 'develop', backend.branch],
-    ['backend.repo', 'Cor-Incorporated/corsweb2024', backend.repo],
-    ['publish_mode', 'editorial_workflow', publishMode],
-    ['backend.squash_merges', false, backend.squash_merges ?? false],
-    ['backend.open_authoring', false, backend.open_authoring ?? false],
+    ['backend.branch', cmsBackend.branch, backend.branch],
+    ['backend.repo', cmsBackend.repo, backend.repo],
+    ['publish_mode', cmsBackend.publishMode, publishMode],
+    ['backend.squash_merges', cmsBackend.squashMerges, backend.squash_merges ?? false],
+    ['backend.open_authoring', cmsBackend.openAuthoring, backend.open_authoring ?? false],
   ];
   return expected
     .filter(([, want, actual]) => want !== actual)
@@ -295,7 +307,7 @@ function checkAllowedDomains(wrangler: Wrangler, hosting: CmsHosting): string[] 
  * URL の形（https://<name>.<任意>.workers.dev）だけを見ると、タイプミスや第三者のアカウントにある同名の Worker でも
  * 通り、編集者の GitHub トークン（public_repo,user）をそこへ渡してしまう。だから完全一致で照合する。
  */
-const WORKERS_DEV_SUBDOMAIN = 'company-997';
+const WORKERS_DEV_SUBDOMAIN = authWorker.workersDevSubdomain;
 const workerUrlOf = (wrangler: Wrangler) =>
   `https://${wrangler.name}.${WORKERS_DEV_SUBDOMAIN}.workers.dev`;
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -413,7 +425,8 @@ describe('CMS 設定（cms/public/config.yml）とサイト定義の照合', () 
 
   it('(c) 書き込み先は ja のフォルダだけ', () => {
     expect(checkJaOnly(config)).toEqual([]);
-    expect(config.collections.map((c) => c.folder)).toEqual(['src/content/blog/ja']);
+    expect(config.collections.map((c) => c.folder)).toEqual(cmsCollections.map((c) => c.folder));
+    expect(cmsCollections.map((c) => c.delete)).toEqual([false]);
   });
 
   it('(d) develop への PR（editorial workflow・merge commit）で編集する', () => {
@@ -424,6 +437,27 @@ describe('CMS 設定（cms/public/config.yml）とサイト定義の照合', () 
     const keysByFile = readFrontmatterKeys(BLOG_JA_DIR);
     expect(keysByFile.size).toBeGreaterThan(0);
     expect(checkExistingKeys(config, keysByFile)).toEqual([]);
+  });
+
+  it('ブログ項目の名前は cms-contract の並びと一致し、カテゴリと ctaIntent はサイトの定義と同じ', () => {
+    expect(blogFields(config).map((field) => field.name)).toEqual(
+      contractBlogFields.map((field) => field.name)
+    );
+    expect(contractBlogFields.some((field) => field.name === draftField && field.widget === 'hidden')).toBe(
+      true
+    );
+    expect(blogCategoryOptions.map((option) => option.value)).toEqual(
+      BLOG_CATEGORIES.map((category) => category.id)
+    );
+    expect(blogCategoryOptions.map((option) => option.label)).toEqual(
+      BLOG_CATEGORIES.map((category) => category.label.ja)
+    );
+    expect(blogCtaIntentOptions.map((option) => option.value)).toEqual([...CONTACT_INTENTS]);
+    expect(cmsBackend.baseUrl).toBe(
+      `https://${authWorker.name}.${authWorker.workersDevSubdomain}.workers.dev`
+    );
+    expect(authWorker.allowedDomains).toBe(`${cmsSite.hostingSite}.web.app`);
+    expect(cmsCollections[0]?.delete).toBe(false);
   });
 });
 
@@ -522,6 +556,9 @@ describe('CMS の配信と認証 Worker（cms/firebase.json ↔ wrangler.toml �
   it('(f) ALLOWED_DOMAINS は CMS のホスト（hosting.site + .web.app）だけ', () => {
     expect(checkAllowedDomains(loadWrangler(), loadCmsHosting())).toEqual([]);
     expect(loadWrangler().allowedDomains).toBe(`${loadCmsHosting().site}.web.app`);
+    expect(loadCmsHosting().site).toBe(cmsSite.hostingSite);
+    expect(loadWrangler().name).toBe(authWorker.name);
+    expect(loadWrangler().allowedDomains).toBe(authWorker.allowedDomains);
   });
 
   it("(f') wrangler.toml に [env.*] が無く、ALLOWED_DOMAINS は [vars] の 1 か所だけ", () => {

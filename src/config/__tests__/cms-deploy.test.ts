@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { describe, expect, it } from 'vitest';
+import { cmsBackend, cmsSite } from '../cms-contract';
 
 type Step = {
   name?: string;
@@ -46,7 +47,7 @@ type Inputs = { workflow: string; docs: string; site: string; ci: string };
 
 const ROOT = process.cwd();
 const WORKFLOW_FILE = '.github/workflows/deploy-cms.yml';
-const REPOSITORY = 'Cor-Incorporated/corsweb2024';
+const REPOSITORY = cmsBackend.repo;
 const read = (file: string) => readFileSync(path.join(ROOT, file), 'utf8');
 const loadInputs = (): Inputs => ({
   workflow: read(WORKFLOW_FILE),
@@ -425,6 +426,13 @@ const checkAll = (inputs: Inputs): string[] => {
 describe('CMS の配信（deploy-cms.yml ↔ docs の GCP 側の値 ↔ cms/firebase.json）', () => {
   it('鍵を使わず、main・Environment・WIF の条件がそろい、deploy ジョブは許可したものだけを使う', () => {
     expect(checkAll(loadInputs())).toEqual([]);
+  });
+
+  it('配信先のサイト名は cms-contract の hostingSite と一致する', () => {
+    const site = loadInputs().site;
+    expect(site, `hosting.site ${site} / cms-contract ${cmsSite.hostingSite}`).toBe(
+      cmsSite.hostingSite
+    );
   });
 
   it('コマンドの取り出しは、引用符の中を無視し、$( ) の中も読む', () => {

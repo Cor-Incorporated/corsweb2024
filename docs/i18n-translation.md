@@ -46,7 +46,7 @@ translatedAt: "2026-09-27T12:00:00.000Z"
 translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は "adopted-legacy"
 ```
 
-`translationSourceHash` の入力は ja の「翻訳対象部分」だけ（上表の翻訳フィールド、cases / news は tags、そして本文）。`pubDate` などコピー対象の変更や、YAML のクォート・キー順・改行コードの違いではハッシュは変わりません。
+`translationSourceHash` の入力は ja の「翻訳対象部分」だけ（上表の翻訳フィールド、cases / news は tags、そして本文）。`pubDate` などコピー対象の変更や、YAML のクォート・キー順・改行コードの違いではハッシュは変わりません。Grift の記事で Grift の用語が出るときは、その用語と各言語の正式表記（4 章）も入力に入ります（用語の表を変えると、その用語を含む記事の訳だけが `stale` になる）。
 
 ## 3. 状態と、`--write` がすること
 
@@ -73,7 +73,7 @@ frontmatter は分類の時点で `src/content/config.ts` と同じ制約（Zod 
 
 ## 4. 翻訳で守るもの（保護）と検証
 
-API に送る前に、訳してはいけない部分をプレースホルダ（`⟦B3⟧` / `⟦P12⟧` / `⟦N0⟧` / `⟦F0⟧`）に置き換え、翻訳後に元へ戻します。
+API に送る前に、訳してはいけない部分をプレースホルダ（`⟦B3⟧` / `⟦P12⟧` / `⟦N0⟧` / `⟦F0⟧` / `⟦G0⟧`）に置き換え、翻訳後に元へ戻します。
 
 - ブロック: フェンスコード（```` ``` ```` / `~~~`、コメントも訳さない）、`$$` 数式、HTML ブロック・コメント、URL だけの行（リンクカード）、参照リンク定義
 - インライン: インラインコード、`$...$` 数式、`<https://...>`、インライン HTML、リンクと画像の**宛先**（リンクテキスト・alt・`"title"` は訳す。例: `![説明](/img.avif "タイトル")` はパスだけを保護）、脚注、`{#id}`、本文中の URL
@@ -87,11 +87,47 @@ API に送る前に、訳してはいけない部分をプレースホルダ（`
 
 用語集は [`scripts/i18n/glossary.mjs`](../scripts/i18n/glossary.mjs)。正本は `src/config/organization.ts` の `ORGANIZATION_NAMES`（PR #335）で、同じ値にしてあります。両者は `scripts/i18n/__tests__/organization-link.test.mjs` が照合します（片方だけ変えると両側の値を出して落ちる。正本がまだ無い間は理由を出して skip し、#335 がマージされた時点から強制される）。代表の氏名は `src/config/author.ts` の `KOUSUKE_TERADA.names` が正本で、`scripts/i18n/__tests__/founder-link.test.mjs` が照合します。`names` は片方だけ変えると両側の値を出して落ち、`alternateNames` に別表記を足したときは、用語集がその表記を扱えないと落ちます。
 
+Grift の用語: Grift の記事（ja の frontmatter の `tags` に「Grift」がある記事）では、Grift の用語も `⟦G0⟧` にしてモデルに渡さず、翻訳後に**翻訳先言語の正式表記**に置き換えます。モデルには、どのトークンがどの語になるかだけを伝えます（冠詞・助詞を選ぶため）。2026-10-26 に「定着率」を「コードの新しさ」に改めたとき、翻訳 CI が en を「Code freshness」と訳し、grift-cli の英語の文書（Code recency）とずれたため足しました（同じ「テスト併修率」も、en で記事ごとに 3 通りに訳されていた）。
+
+| ja（正本: griftai の `src/config/tep.ts`） | en（正本: grift-cli の docs） | es | ko | zh |
+|---|---|---|---|---|
+| 検査値 | observed values | valores de inspección | 검사값 | 检查值 |
+| テスト併修率 | test co-change | tasa de modificación conjunta de pruebas | 테스트 동시 수정률 | 测试伴随修改率 |
+| 手戻り率 | corrective rework | tasa de retrabajo | 재작업률 | 返工率 |
+| 磨き直し | path retouch | retoque | 재접촉 | 修缮重触 |
+| コードの新しさ | Code recency | （未決: en の表記を使う） | （未決: en の表記を使う） | （未決: en の表記を使う） |
+| 作業領域 | work surface | áreas de trabajo | 작업 영역 | 工作领域 |
+| 変更リズム | change rhythm | ritmo de cambios | 변경 리듬 | 变更节奏 |
+| 検証の形 | verification profile | forma de verificación | 검증 형태 | 验证形态 |
+
+- en は grift-cli の英語の語です（`docs/en/metrics-guide.md` の表の Site term と survival の節、`docs/metrics-guide.md` の対応表の CLI の語）。en / es は文の途中の形で持ち、行の頭・表のセルの頭・文末の句読点の後（en はコロンの後も）でだけ 1 文字目を大文字にします。大文字で持つ語（Code recency）は文の途中でも大文字のままです
+- es / ko / zh には正本がありません。事例ページ（`cases/grift`）の対応表と本文の訳（2026-10-26 時点の翻訳 CI の訳）を固定しました。「コードの新しさ」の ko「코드의 신선도」・zh「代码新鲜度」は freshness の意味で、「定着率」を改めたときに退けた読みなので固定せず、（未決）として en の表記を使います
+- Grift の記事以外では固定しません（「作業領域」「検査値」などは一般の言葉としても使うため）。Grift の記事かどうかは `tags` で決め、本文に「Grift」が出るかでは決めません（記事の末尾の事業の一覧で Grift に触れるだけの記事まで当たるため。2026-10-27 に改めた）。Grift の記事を書くときは `tags` に「Grift」を付けてください（完全一致で、大文字・小文字も区別します。「grift」「Grift CLI」は当たりません）。`grift-terms-link.test.mjs` は、タイトルに「Grift」がある記事に tag が無いときと、tag が無いのに「Grift」と用語が両方出る記事があるときに落ちます。後者が一般の意味で用語を使う記事なら、テストの `UNTAGGED_WITH_TERMS` に理由と一緒に足してください
+- 「検証の形式」「作業領域内」のように後ろに漢字・カタカナが続くものは、どの語も用語として扱いません。「磨き直した」「磨き直して」「磨き直します」のような動詞の活用は「磨き直し」でだけ外します（「作業領域までを見る」「検査値または」の「作業領域」「検査値」は用語のまま）
+- モデルが自分で書いた訳語はそろえません（言い換えに際限が無いため）。トークンが全部・1 回ずつ残っていることを検証で確かめます
+- 用語の表は [`scripts/i18n/grift-terms.mjs`](../scripts/i18n/grift-terms.mjs)。`scripts/i18n/__tests__/grift-terms-link.test.mjs` が、griftai の `tep.ts` と grift-cli の docs（別のリポジトリなので、値と出典の path・commit をテストに写してある）、事例ページの「サイトの言い方 | CLIの語」の表と照合します。正本が変わったら、テストの値と commit を写し直し、表も直します
+- 表の値を変えると、その用語を含む記事の訳が `stale` になります（2 章）。PR の i18n-check は PR で変わった記事しか見ないので、表だけを変えた PR では気づけません。表を変えた PR では、下の手順で訳を付け直し、できた翻訳コミットをその PR に入れてください
+
+表を変えた PR での訳の付け直し（2026-10-26 にこの手順で付け直した: run 40331030446 → 翻訳コミット 4a536d6、16 ファイル）。PR のブランチを checkout した worktree で実行します。
+
+```bash
+npm run i18n:check   # stale になった記事を確かめる（値を変えた用語を含む記事が、4 言語ずつ stale になる）
+branch="$(git branch --show-current)"
+url="$(gh workflow run translate-content.yml -R Cor-Incorporated/corsweb2024 --ref "$branch" -f mode=translate 2>&1 | grep -oE 'https://github.com/[^ ]+/actions/runs/[0-9]+')"
+run="${url##*/}"
+gh run watch "$run" -R Cor-Incorporated/corsweb2024 --exit-status
+# push されたブランチ（同じ日に 2 回目なら末尾に -<run の ID> が付く）を、PR のブランチに早送りで取り込んで push する
+backfill="$(gh run view "$run" -R Cor-Incorporated/corsweb2024 --log | grep -oE 'chore/i18n-backfill-[0-9]{8}(-[0-9]+)?' | sort -u)"
+git fetch origin "refs/heads/$backfill" && git merge --ff-only FETCH_HEAD && git push
+```
+
+`git merge --ff-only` が失敗したら、dispatch のあとに PR のブランチへコミットが積まれています。もう一度 dispatch からやり直してください。
+
 title と本文の見出しの一致: ja で frontmatter の `title` と本文の最初の `# ` 見出し（H1）が同じ文言なら、訳文の H1 を訳した `title` に置き換えます（モデルは両者を別々に訳すため、同じ文言でも訳が割れることがあるため。PR #344 の実 API 検証で en / zh / ko に発生）。
 
 翻訳結果は次をすべて満たしたときだけ書き込みます（1 回だけ自動で再生成し、それでも駄目なら書かずに失敗を報告）。
 
-- プレースホルダ（社名の `⟦N…⟧` と代表の氏名の `⟦F…⟧` を含む。frontmatter はフィールドごと）が全部・1 回ずつ・壊れずに残っている／ブロックは単独行のまま
+- プレースホルダ（社名の `⟦N…⟧`、代表の氏名の `⟦F…⟧`、Grift の用語の `⟦G…⟧` を含む。frontmatter はフィールドごと）が全部・1 回ずつ・壊れずに残っている／ブロックは単独行のまま
 - 見出し（レベル別の数）、コードブロック（数と内容が完全一致）、リンク・画像の宛先、数式、HTML、リンクカード、表の行数と各行（見出し行・区切り行・本文の行）のセルの数、空行で区切られたブロック（段落・リスト・表など）の数、リスト項目の数が ja と一致（段落 1 つ・リスト項目 1 つの欠落や、2 段落の結合も落とす）
 - リンク・画像などの行き先（リンク・画像の宛先、URL、参照リンクのラベル、脚注、リンクカード行、`href` / `src` を持つインライン HTML）のプレースホルダの出現順が、見出し・表のセル・リスト項目・段落ごとに ja と一致（行き先だけを入れ替えた訳や、行き先を別のリスト項目へ移した訳を落とす。訳では語順が変わるのでラベルとは照合しない）。2026-09-28 時点の実記事で確かめた結果: 全 95 本の往復で拒否 0 件、既存の翻訳 70 組（PR #344 の実 Gemini 訳を含む）で、行き先を持つ単位 154 個のうち順序が ja と違うものは 0 個
 - 日本語が残っていない（本文は日本語文字が 10% 以下、frontmatter は 30% 以下。zh は仮名だけで判定）
@@ -270,7 +306,7 @@ PR #339 の時点の `npm run i18n:check`: `missing=40`（blog 10 本 × 4 言�
 | 症状（ログの文言） | 原因 | 対処 |
 |---|---|---|
 | `GEMINI_API_KEY が未設定です` / translate ジョブが `GEMINI_API_KEY が未設定のため自動翻訳をスキップ` | secret が無い | 7 章の手順で登録 |
-| `プレースホルダ ⟦B3⟧ が欠落しています`（または `⟦P..⟧` / 社名の `⟦N..⟧` / 代表の氏名の `⟦F..⟧`） | モデルがコード・URL 等の保護部分を落とした | 自動で 1 回再生成済み。PR に空コミットを push して再実行、それでも駄目なら ja の該当箇所（長い表・入れ子の多いリスト等）を見直す |
+| `プレースホルダ ⟦B3⟧ が欠落しています`（または `⟦P..⟧` / 社名の `⟦N..⟧` / 代表の氏名の `⟦F..⟧` / Grift の用語の `⟦G..⟧`） | モデルがコード・URL 等の保護部分を落とした | 自動で 1 回再生成済み。PR に空コミットを push して再実行、それでも駄目なら ja の該当箇所（長い表・入れ子の多いリスト等）を見直す |
 | `見出し H2 の数が一致しません` / `表の行数が一致しません` / `表の N 行目のセルの数が一致しません` / `画像の数が一致しません` | 翻訳で Markdown の構造が変わった | 同上（再実行）。繰り返すなら記事を分割する |
 | `見出し（H1）をタイトルにそろえると構造が ja と一致しません` | ja の `title` にコードなどのマークダウン記法があり、訳した `title` でそれが変わった | ja の `title` からマークダウン記法を外す（`title` はページのタイトルとして文字のまま表示されるので、記法は不要） |
 | `段落などのブロック数が一致しません` / `リスト項目の数が一致しません` | 翻訳で段落・リスト項目が落ちた、または段落が結合・分割された | 同上（再実行）。繰り返すなら、ja 側で空行の入れ方（段落の区切り）を見直す |

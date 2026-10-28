@@ -1,7 +1,7 @@
 ---
-title: "Years of Experience on a Résumé Don't Reveal How Someone Works: Measuring 4 Real-World OSS Projects with Grift, a Score-Free Tool"
-description: "Years of experience and person-months on a résumé alone do not reveal how a person actually works. Written for staffing agencies, SES sales representatives, and engineers, this article explains why Cor. created Grift—a tool that assigns neither scores nor rankings—how it differs from the MBTI, and what we could and could not see by measuring four real-world OSS projects."
-summary: "Grift derives work style tendencies and the underlying counts that support them from change records preserved in git. Unlike the MBTI, where individuals answer questions to determine their type, Grift's evidence is based on actual records rather than self-reporting, yielding the exact same values regardless of who counts them from the same history. When we measured four real-world OSS projects, differences in areas of work and intervals between changes became visible, whereas review quality, meetings, and experiences without the individual's consent remained out of view. Numbers must be interpreted alongside their denominators and rules; judgment ultimately rests with humans."
+title: "Years on a Resume Don't Show How Someone Works: Measuring 4 Real-World OSS Projects with Grift, Without Assigning Scores"
+description: "Years of experience and person-months on a resume alone do not reveal how a person actually works. For recruiting agencies, SES sales representatives, and engineers, this article explains why Cor. created Grift—a tool that assigns neither scores nor rankings—along with how it differs from MBTI, and what became visible and remained invisible when measuring four real-world OSS projects."
+summary: "Grift derives work tendencies and the underlying counts that support them directly from commit history recorded in git. Unlike MBTI, where individuals answer questions to determine their type, the basis comes from records rather than self-reporting, meaning anyone counting the same records will arrive at the exact same values. When measuring four real-world OSS projects, differences in areas of work and intervals between changes were visible, while review quality, meetings, and experiences lacking the individual's consent were not. Numbers must be read alongside their denominators and rules, and the final judgment rests with humans."
 pubDate: 2026-10-25
 updatedDate: 2026-10-26
 author: "Terisuke"
@@ -11,153 +11,153 @@ tags: ["Grift", "OSS", "CLI", "git", "実測"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "b6c9b7d77d676cc7d362bd1bf2a315d0eb07c6a72f8dd4d50288ab08761e0456"
-translatedAt: "2026-10-26T12:21:02.749Z"
+translationSourceHash: "b44f7e8456ab016f75a19cebd16e68f08f1dd0d7ff7409e14f2d35c261b63b91"
+translatedAt: "2026-10-26T13:30:44.576Z"
 translationModel: "gemini-3.8-flash"
 ---
 
-Even if a résumé says "5 years of Python," it does not reveal what kind of work was done during those five years.
+Even if a resume says "Python: 5 years," it does not tell you what kind of work was done during those 5 years.
 
-Years of experience and person-months serve as rough measures of the volume of work. However, they do not tell us how a person actually works: Do they write tests to verify behavior as they go? Do they organize and maintain documentation? Do they ship small changes frequently?
+Years of experience and person-months serve as rough indicators of the volume of work. However, they do not reveal a person's work style: whether they move forward while writing tests to verify functionality, whether they keep documentation organized, or whether they ship small changes frequently.
 
-Staffing and engineering placement sales representatives often find themselves unable to provide concrete grounds for their recommendations, bringing conversations to a halt. At Cor.Inc., we believe one of the root causes lies within this gap.
+Staffing agency and SES (System Engineering Service) sales representatives often find themselves stuck, unable to state the basis for their recommendations with solid evidence. At Cor.Inc., we believe one cause lies in this gap.
 
 ## Why We Do Not Assign Scores
 
-Grift is an in-house product built to bridge this gap. From records left behind in git (a system that records software changes one by one), it extracts work tendencies alongside the counts that serve as evidence for them. It outputs neither scores nor rankings.
+Grift is an in-house product we built to bridge this gap. From records left in git (a system that records software changes one by one), it extracts work tendencies alongside the counts that serve as the evidence behind them. It produces neither scores nor rankings.
 
-When our CEO, Kousuke Terada, worked in recruitment advertising sales at Recruit, he experienced the frustration of words failing to convey reality. Regarding Grift, he writes: "You can pad a résumé. You cannot pad the evidence."
+When our representative, Kousuke Terada, was in recruitment advertising sales at Recruit, he experienced the frustration of words failing to get through. Regarding Grift, he writes: "A resume can be embellished. Evidence cannot."
 
-What happens when you reduce people to scores? Rolling up different types of records into a single number erases what was counted and what could not be counted. Moreover, once scores exist, individuals with higher scores appear to be better. Line them up, and you have a ranking.
+What happens when you reduce things to a score? Rounding different types of records into a single number erases what was counted and what could not be counted. Furthermore, once a score exists, whoever has a higher score looks like the better candidate. Line them up, and it becomes a ranking.
 
-What we want to achieve with Grift is not ranking people. It is connecting people with projects that align with their work tendencies. To that end, we present only verifiable facts. Humans are the ones who make the judgments.
+What we want to do with Grift is not to rank people. It is to connect people with projects that match their work tendencies. To that end, we only present verifiable facts. The decision-making is left to humans.
 
-## How It Differs from MBTI
+## How It Differs from the MBTI
 
-Hearing that we do not rank people, some might think of MBTI.
+Hearing "we do not assign rankings," some might think of the MBTI.
 
-In MBTI, respondents answer questions, and 16 types are derived from combinations of four preferences. The Myers & Briggs Foundation states that every type has value and that MBTI was not designed for hiring purposes.
+In the MBTI, respondents answer questions, and 16 types are derived from combinations of four preferences. The Myers & Briggs Foundation states that every type is valuable and that it was not designed for hiring purposes.
 
-Grift asks no questions. It assigns no type names. It is not a personality assessment tool. It counts records left in git and outputs tendencies alongside the underlying counts that serve as their evidence.
+Grift asks no questions. It does not assign type names. Nor is it a tool for personality assessment. It counts records left in git, presenting tendencies along with the counts that serve as their evidence.
 
-The difference becomes clearer when mapped onto the challenges faced by sales representatives.
+The difference becomes easier to understand when applied to the challenges sales representatives face.
 
-"We don't know how far we can trust self-reported résumés." MBTI results, like résumés, stem from self-reported answers. Grift’s evidence comes from records. Given the same records, anyone who counts will get the exact same values.
+*Not knowing how far to trust self-reported statements on a resume.* MBTI results, like resumes, are derived from the individual's own answers. Grift's basis is records. Given the same records, anyone will arrive at the exact same numbers.
 
-"Years of experience and person-months do not reveal how someone works." Grift provides counts showing which areas an engineer touched (tests, documentation, core program code, etc.), the intervals at which they released changes, and whether tests accompanied their fix commits.
+*Not knowing a person's work style from years of experience or person-months.* Grift presents counts showing which areas they have touched (tests, documentation, core program code, etc.), the intervals at which they ship changes, and whether tests accompany fix changes.
 
-However, things not captured in records are not shown. Contributions in meetings, the quality of code reviews, and private, unpublished work cannot be seen. Without an individual's consent, we do not output personal experience or roles either.
+However, things not captured in records are not shown. Meeting contributions, the quality of code reviews, and unreleased work are not visible. Without the individual's consent, personal experience and roles are not displayed either.
 
-## The Procedure Called TEP
+## The TEP Process
 
-Grift refers to the process of extracting facts from records as TEP (Technical Evidence Pipeline). It consists of four stages:
+Grift calls the procedure for extracting facts from records the TEP (Technical Evidence Pipeline). It consists of four stages:
 
-1. Read git records, without relying on AI inference.
-2. Count according to fixed rules. For example, classify files as tests or documentation based on file paths and names.
-3. Attach denominators and the reasons for anything that could not be counted to the resulting values.
-4. Enable anyone to recount using the exact same procedure.
+1. Read the git records. No AI speculation is used
+2. Count according to fixed rules. For example, classify files as tests or documentation based on their location and name
+3. Attach denominators and reasons for uncounted items to the calculated values
+4. Enable anyone to recount using the exact same procedure
 
-At Grift, we call this fourth step of recounting "verification" (re-calculation). A detailed explanation of TEP can be found on the [TEP page](https://griftai.org/tep) of the Grift website.
+At Grift, we call this fourth step of recounting "verification." A detailed explanation of TEP can be found on the [TEP page](https://griftai.org/tep) on the Grift website.
 
 ## Testing with Real-World OSS
 
-Can this procedure truly reveal work tendencies? On October 25, 2026, we verified this using Grift CLI (Grift's command-line tool) version 0.8.0. As of that day, 0.8.0 was still being prepared for release; it was published the following day, October 26 ([release notes](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)).
+Can this procedure truly reveal work tendencies? On October 25, 2026, we verified this using Grift CLI (Grift's command-line tool) version 0.8.0. As of that day, 0.8.0 was still being prepared for release; it was released the following day, October 26 ([Release Notes](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)).
 
-To avoid measuring real people without consent, we measured open-source software (OSS) repositories (places where records for a single software project are kept). Not a single individual-level figure is included in this article.
+To avoid measuring real individuals without consent, we measured open-source software (OSS) repositories (locations where records for a single piece of software are kept) as units. Not a single person-specific number is included in this article.
 
-We measured four repositories with distinct characteristics:
+We measured four repositories with differing characteristics:
 
-- click: A Python library for building command-line tools (components used by other programs)
-- flask: A Python library for building web services
-- httpx: A Python library for communicating over the web
-- commander.js: A JavaScript library for building command-line tools
+- click: A library for building command-line tools in Python (a component used by other programs)
+- flask: A library for building web services in Python
+- httpx: A library for web communication in Python
+- commander.js: A library for building command-line tools in JavaScript
 
-## What We Observed
+## What We Found
 
-For all four repositories, both measurement and verification finished within 2.5 seconds. The verification results matched across all items for all four repositories.
+For all four, both measurement and verification were completed in under 2.5 seconds. The verification results matched across all items for all four.
 
-Differences in repository characteristics also became visible.
+Differences in the character of each repository were also visible.
 
-In click, there were 187 changes across the 180 days leading up to the final recorded date. The median interval between changes was approximately 2 hours. Changes continued at short intervals.
+In click, there were 187 changes across the 180 days leading up to the final date in the record. The median interval between changes was about 2 hours. Changes were continuous at short intervals.
 
-In flask, 1,841 changes touched documentation, outnumbering changes that touched core program code (1,765).
+In flask, there were 1,841 changes touching documentation, exceeding the changes touching core program code (1,765).
 
 In httpx, 575 out of 1,335 changes included test files.
 
-In commander.js, core JavaScript files were not counted under "core program code" and fell under "other." This is a gap in Grift's rules: JavaScript's `.js` was not included among the file extensions counted as core program code.
+In commander.js, core JavaScript files were not counted as "core program code" and ended up in "other." This is a gap in Grift's rules: JavaScript's `.js` was not included among the file extensions counted as core program code.
 
-## Misinterpreting Numbers
+## Misreading the Numbers
 
-What we realized through testing was that simply lining up numbers quickly leads to misinterpretations. Here are five examples:
+What we learned from taking these measurements was that simply lining up numbers immediately leads to misinterpretations. Here are five examples.
 
 ### Number of Changes
 
-A repository with a high number of changes is not necessarily a better repository. flask had 3,674 changes, while httpx had 1,335. The history length was 5,976 days for flask and 2,517 days for httpx. Commit counts vary depending on the length of history and whether changes are merged in batches.
+A repository with a high number of changes is not necessarily a good repository. flask had 3,674 changes, while httpx had 1,335. The history spans 5,976 days for flask and 2,517 days for httpx. The number of changes varies with the length of history and whether changes are squashed when merged.
 
 ### Documentation Changes
 
-A high volume of documentation changes does not necessarily mean a strong enthusiasm for documentation. In click, for about 40% of the changes counted as documentation, the only documentation file touched was the changelog file. In repositories where changelogs are updated with every change, documentation counts increase.
+A high number of documentation changes does not necessarily mean a team is dedicated to documentation. In click, about 40% of the changes counted as documentation touched only changelog files. In repositories where changelogs are updated with every change, documentation counts increase.
 
 ### Fix Changes
 
-The fact that changes starting with "fix" do not include tests does not mean tests are never written. Recounting changes starting with "fix" in flask revealed that 198 out of 407 changes were modifications solely to documentation or configuration files, with subjects such as "fix typo."
+The fact that changes with subject lines starting with "fix" do not include tests does not mean tests are not being written. Recounting changes starting with "fix" in flask revealed that 198 out of 407 changes touched only documentation or configuration files. Their subject lines included things like "fix typo."
 
 ### Few Changes
 
-Having few changes does not mean development has stalled. In httpx, there were only 11 changes within the 180-day observation window, resulting in the interval being labeled "unobserved" (could not be measured). What was measured were records cloned locally on September 2, not its current state.
+Few changes do not mean development has stalled. In httpx, there were only 11 changes within the observed 180-day window, resulting in an interval marked as "unobserved" (could not be measured). The measurement was taken on a local copy cloned on September 2, not its current state.
 
 ### Active Days
 
-Active days (the number of days with changes) can be inflated depending on how commits are sliced. We created two small repositories for testing and added the same five lines. Adding them all at once yielded 2 active days; splitting them over five days at one line per day yielded 6 active days (both include the initial commit). The actual content was identical.
+Active days (the number of days with changes) can be inflated depending on how changes are split. We created two small repositories for testing and added the exact same five lines. Adding them all at once resulted in 2 active days, while splitting them across 5 days at one line per day resulted in 6 days (both include the initial commit). The contents are identical.
 
-Grift does not adjust these numbers. Instead, next to the metric, it displays: "Increases by placing 1 small commit daily; decreases when combining identical changes into 1 day."
+Grift does not adjust this number. Instead, it places a note next to the number: "Increases if a small commit is placed every day, and decreases if the same changes are combined into a single day."
 
-## What Could Not Be Observed
+## What Was Not Visible
 
-Grift labels items it could not measure as "unobserved." "Unobserved" means "could not be measured," not "there was no track record." Across the four repositories, the following could not be observed:
+Grift marks things that could not be measured as "unobserved." "Unobserved" means "could not be measured," not "there was no track record." Across the four repositories, the following were not visible:
 
-- Reviews and issue tracking: Unobserved because records like GitHub were not provided
-- Personal experience and roles: Unobserved because individual consent was not provided
-- Whether changes were internal: Marked entirely as "undetermined" because internal company email addresses were not defined
+- Reviews and issue tracking: Unobserved because records from platforms like GitHub were not provided
+- Personal experience and roles: Unobserved because individual consent was not given
+- Whether changes were made internally: All marked as "undetermined" because internal company email addresses were not defined
 
-We also document what did not go well. The core files of commander.js falling under "other" was, as mentioned earlier, a gap in our rules. Additionally, in an article published on the same day, we noted that "the co-committed test rate (the proportion of commits modifying tests alongside core code) can also be inflated by superficial test edits." In 0.8.0, this warning is not yet shown next to the metric. The only warning included is the single sentence for active days.
+We will also share what did not work well. As mentioned earlier, commander.js's core code falling into "other" was a gap in our rules. Additionally, in an article published the same day, we noted that "test co-change (the proportion of commits changing tests alongside core code) also increases with superficial test changes." In 0.8.0, this cautionary note does not yet appear alongside the number. Only the single sentence regarding active days was included.
 
-## Fixes in 0.8.0
+## What Was Fixed in 0.8.0
 
-In [0.7.2](https://pypi.org/project/grift-cli/0.7.2/) (the public release at the time of testing), the list of contributors to a repository was sorted in descending order of commit count. This made it possible to interpret the person at the very top as the "top performer." In 0.8.0, they are sorted by ID (the identifier assigned to each person).
+In [0.7.2](https://pypi.org/project/grift-cli/0.7.2/) (the public release at the time of measurement), the list of contributors to a repository was sorted in descending order of changes. This allowed the top person to be interpreted as "the person who contributed the most." In 0.8.0, they are sorted by ID (a identifier assigned to each person).
 
-We compared the contributor lists between 0.7.2 and 0.8.0 across the four repositories. We looked only at the ordering, without looking at names or counts. In 0.7.2, the contributor with the highest number of changes was at the top in all four. In 0.8.0, that person's row appeared on line 120 out of 467 for click, line 280 out of 870 for flask, line 232 out of 258 for httpx, and line 15 out of 203 for commander.js.
+We compared the lists between 0.7.2 and 0.8.0 across the four repositories. We looked only at the ordering, without considering names and counts. In 0.7.2, the person with the most changes was at the top in all four. In 0.8.0, that person's row was at line 120 of 467 in click, line 280 of 870 in flask, line 232 of 258 in httpx, and line 15 of 203 in commander.js.
 
-If the 0.8.0 list is resorted by commit count, verification fails. All other values were identical between 0.7.2 and 0.8.0.
+If the 0.8.0 list is resorted by commit count, it fails verification. All other values remained identical between 0.7.2 and 0.8.0.
 
-## Comparing with Project Declarations
+## Aligning with Project Requirements
 
-When matching with projects, the requirements sought by the project side are written down in advance. In Grift, we call this a declaration. These are displayed side by side with observations extracted from git, without rendering pass/fail judgments.
+When matching with projects, the project's requirements are written down in advance. In Grift, we call this a declaration. It is presented alongside what was observed from git (observations) in a separate column, without issuing a pass or fail grade.
 
-As an experiment, we created a fictional declaration for a small project: "Python Library Maintenance." The declaration specified: at least 12 active days within 180 days, a median change interval of 7 days or fewer, modifications touching both core program code and tests, the presence of unit tests, and examining records like GitHub.
+As an experiment, we declared a hypothetical small project: "Python Library Maintenance." The declaration required: 12 or more active days within 180 days, a median change interval of 7 days or fewer, touching core program code and tests, the presence of unit tests, and review of records such as GitHub.
 
-When mapped against click, the observed "62 days" appears alongside the declaration's "12 days or more." Because GitHub records were not provided, that section remains unobserved.
+When applied to click, the observed "62 days" appears alongside the declaration's "12 days or more." Because records such as GitHub were not provided, that column remains unobserved.
 
-Even when aligned side by side, the misinterpretations described in the previous section remain. The "0" core program commits for commander.js stems from a rule gap, and httpx's interval is unobserved due to insufficient commit volume. How to interpret these aligned values is left to human judgment.
+Even side by side, the misinterpretations discussed in the previous section remain. The "0" for core program code in commander.js is due to a rule gap, and httpx's interval is unobserved due to insufficient records. How to interpret these aligned values is up to humans to decide.
 
-Another use case is aligning an individual engineer's records with a project. In that scenario, only records for which the engineer has consented are used. Because that involves measuring real individuals, we did not test it in this article.
+There is also a use case for aligning an individual engineer's records with a project. In that case, only records with the individual's consent are used. Because this involves measuring real individuals, it was not tested in this article.
 
 ## Conclusion
 
-Git records serve as material to verify the statements on a résumé. However, there is also work that leaves no trace in git records.
+Git records provide material to verify the statements on a resume. However, there is also work that leaves no trace in records.
 
-What Grift outputs are tendencies, the counts serving as evidence, and the reasons for what could not be observed. What to deduce from that data is for the reader to decide.
+What Grift presents are tendencies, the counts that serve as their evidence, and the reasons for what could not be seen. What conclusions to draw from them is for the reader to decide.
 
-## Underlying Figures
+## Supporting Figures
 
-To allow engineers to verify the data locally, here is a summary of the measurement conditions and numbers:
+To allow engineers to verify this on their own machines, the conditions and figures from our measurements are summarized below.
 
-- grift 0.8.0 (definitions version `tep-v0.8.0-2026-10-25`). Pre-release source code (`87076c8` in the development repository) was installed locally. The published 0.8.0 `src/` (program core) is identical to this source.
-- For comparison, the public release at the time, [0.7.2](https://pypi.org/project/grift-cli/0.7.2/), was also run against the same four repositories.
-- Apple M4 Max, macOS 26.7.1, Python 3.12.9, git 2.54.0.
-- Targets were the four local repositories cloned on September 2, 2026, without subsequent updates.
+- grift 0.8.0 (definition version `tep-v0.8.0-2026-10-25`). We installed the unreleased source (`87076c8` from the development repository) locally. The published 0.8.0 `src/` (program core) is identical to this source
+- For comparison, the then-public version [0.7.2](https://pypi.org/project/grift-cli/0.7.2/) was also run on the same four repositories
+- Apple M4 Max, macOS 26.7.1, Python 3.12.9, git 2.54.0
+- The targets were the four local repositories cloned on September 2, 2026, and left un-updated
 
-The measured commit (single-change record) SHAs (unique commit identifiers) and their dates are as follows:
+The commit (record of a single change) SHAs (identifiers attached to each commit) measured and their dates are as follows:
 
 ```text
 pallets/click    36baa15ff831b939a22bc527cd76ce653ef6f66d  2026-08-26
@@ -166,7 +166,7 @@ encode/httpx     b5addb64f0161ff6bfe94c124ef76f6a1fba5254  2026-02-23
 tj/commander.js  ba6d13ddb4243e5913367734f8c159089ffe7834  2026-05-29
 ```
 
-Example command using click:
+Commands using click as an example:
 
 ```bash
 git clone https://github.com/pallets/click
@@ -175,18 +175,18 @@ grift repo click --format both --out out/click
 grift verify out/click/report.json --repo click
 ```
 
-`grift repo` completed within 2.5 seconds for all four repositories, and `grift verify` returned `VERIFIED` for all four. A freshly cloned copy of click yielded identical results, except for the execution timestamp. Running against the source of [0.7.2](https://pypi.org/project/grift-cli/0.7.2/), the public release at the time, also produced the exact same observed values listed here.
+`grift repo` completed within 2.5 seconds for all four, and `grift verify` was `VERIFIED` across all four. A newly cloned click yielded identical results except for execution timestamps. Even using the same source as the then-public version [0.7.2](https://pypi.org/project/grift-cli/0.7.2/), the observed values listed here were identical.
 
-| Repository | Human commits / merge / bot |
+| Repository | Human commits / merges / bots |
 |---|---|
 | click | 2,000 / 1,131 / 200 |
 | flask | 3,674 / 1,691 / 191 |
 | httpx | 1,335 / 41 / 147 |
 | commander.js | 1,095 / 284 / 138 |
 
-Human commits exclude merge commits (records integrating changes from another branch). Changes by bots (automated programs making changes) are excluded.
+Human commits exclude merges (records incorporating changes from another branch). Changes by bots (automated commit programs) are excluded.
 
-Work domains (`surface_profile`) are categorized by file path and extension, and commits are counted per category. Since a single commit can touch multiple categories, the sum exceeds the denominator.
+The work surface (`surface_profile`) categorizes commits by file location and extension, counting commits per category. Because a single commit can touch multiple categories, the total exceeds the denominator.
 
 | Repository | Denominator | test / docs / backend / other |
 |---|---|---|
@@ -195,7 +195,7 @@ Work domains (`surface_profile`) are categorized by file path and extension, and
 | httpx | 1,333 | 575 / 501 / 874 / 112 |
 | commander.js | 1,094 | 286 / 468 / 0 / 530 |
 
-Change intervals (`change_rhythm`) use the HEAD commit date as the observation date, counting the 180 days leading up to it. The observation dates are those listed to the right of the SHAs above.
+Change intervals (`change_rhythm`) use the HEAD date as the observation date, counting within the preceding 180 days. Observation dates correspond to the dates listed to the right of the SHAs above.
 
 | Repository | Commits / Active days | Median interval / p90 |
 |---|---|---|
@@ -204,36 +204,36 @@ Change intervals (`change_rhythm`) use the HEAD commit date as the observation d
 | httpx | 11 / 8 days | Unobserved |
 | commander.js | 22 / 18 days | 2.88 days / 17.89 days |
 
-The reason for httpx being unobserved is `insufficient_population`. With only 11 commits in the window, it fell short of the 20-commit minimum threshold required to calculate the rate.
+The reason for httpx being unobserved is `insufficient_population`. There were 11 commits in the window, falling short of the 20-commit threshold required to calculate a rate.
 
-Verification patterns (`verification_profile`) count commits touching test file paths.
+The verification profile (`verification_profile`) counts commits that touched test locations.
 
-| Repository | Commits containing tests | Fix commits that also changed tests |
+| Repository | Commits including tests | Commits modifying tests with fix subject |
 |---|---|---|
 | click | 562 / 2,000 | 80 / 249 |
 | flask | 627 / 3,674 | 58 / 408 |
 | httpx | 575 / 1,335 | 46 / 114 |
 | commander.js | 286 / 1,095 | 30 / 106 |
 
-The breakdown of test types was: click had 555 unit and 23 unknown; flask had 484 unit and 204 unknown; httpx had 554 unit and 101 unknown; commander.js had 286 unknown.
+Test types were: click had 555 unit, 23 unknown; flask had 484 unit, 204 unknown; httpx had 554 unit, 101 unknown; commander.js had 286 unknown.
 
-Unobserved items totaled 23 for click, flask, and commander.js, and 27 for httpx. The primary reasons include:
+Unobserved items totaled 23 for click, flask, and commander.js, and 27 for httpx. The primary reasons are as follows:
 
 - `forge_export_not_provided`, `tracker_export_not_provided`: Reviews, issue tracking, events
 - `consenting_actor_required`: Experience, roles, library context
-- `no_upstream_lineage`, `parent_repo_not_provided`, `template_not_provided`: Upstream relationship, inheritance from templates
-- `no_tenant_commits`: Period containing 80% of internal commits
-- `survival_scan_disabled`: Code freshness (how recently the existing code was written)
-- `outcome_declaration_not_provided`: Declarations of post-work outcomes
-- `deferred_to_v0.6`: Line-level rework (retains the name from version 0.6 even in 0.8.0)
+- `no_upstream_lineage`, `parent_repo_not_provided`, `template_not_provided`: Relationship with upstream, inheritance from templates
+- `no_tenant_commits`: Period covering 80% of internal commits
+- `survival_scan_disabled`: Code recency (how recently the current code was written)
+- `outcome_declaration_not_provided`: Declarations of post-work occurrences
+- `deferred_to_v0.6`: Line-level rework (retained under its 0.6-era name even in 0.8.0)
 
-Origin (`origin`) returned `unresolved` for all non-bot commits across all four repositories, as neither identity.toml (defining internal email addresses) nor fork parents were provided.
+Origin (`origin`) showed that for all four repositories, all non-bot commits were `unresolved`. This is because neither an identity.toml defining internal company email addresses nor fork parents were provided.
 
-The breakdown of documentation commits for click and fix commits for flask are not native Grift outputs. They are approximate figures recounted locally by applying the same rules to git log. For click, 414 out of 1,025 commits touched only `CHANGES.rst` as documentation. For flask, 198 out of 407 fix commits modified only documentation or configuration files.
+The breakdown of commits counted as documentation in click and fix commits in flask are not Grift outputs. They are rough counts recalculated locally by applying the same rules to git log. For click, 414 out of 1,025 commits touched only `CHANGES.rst` under documentation. For flask, 198 out of 407 commits with a fix subject modified only documentation or configuration files.
 
-Regarding contributor list sorting (`actor_directory`), sorting the 0.8.0 rows by commit count in descending order and running `grift verify` resulted in exit code 1 with `MISMATCH: 1 field(s) differ`. Verifying a report saved in 0.7.2 using 0.8.0 yields `CANNOT_VERIFY` due to the differing definitions version. The warning note on active days appeared in `activity.limitations` and `change_rhythm.limitations` in 0.8.0, but was absent in 0.7.2.
+Regarding list ordering (`actor_directory`), resorting the 0.8.0 rows by commit count in descending order and passing them to `grift verify` resulted in exit code 1 with `MISMATCH: 1 field(s) differ`. Verifying a report saved in 0.7.2 against 0.8.0 results in `CANNOT_VERIFY` due to differing definition versions. The cautionary note regarding active days appeared in `activity.limitations` and `change_rhythm.limitations` in 0.8.0, but was absent in 0.7.2.
 
-The following file was used for project declarations:
+The following files were used for the project declaration:
 
 ```toml
 schema_version = "tep-project-v1"
@@ -258,20 +258,20 @@ required = ["git", "forge"]
 grift project click --requirements python-lib-maintenance.toml --format both --out project/click
 ```
 
-The output is split into two sections: "Project Declarations" and "Observed Values." Unspecified items were marked as `not_declared` (not specified by the project; not a deficiency). Matching declarations against observations per axis is handled by `grift align`, which outputs five statuses: overlap, out of range, zero commits, unobserved, or not requested.
+The output is divided into two sections, "Project Declaration" and "Observed Values," with undeclared items showing `not_declared` (not specified by project; not a deficiency). Reconciling declaration and observation across each axis is handled by `grift align`, presenting one of five outcomes: overlap, out of bounds, zero count, unobserved, or no requirement.
 
 ## References
 
-- [grift-cli (GitHub, MIT)](https://github.com/Cor-Incorporated/grift-cli) - CLI source code. Version 0.7.2 was public at the time of testing; 0.8.0 was released on October 26, 2026.
+- [grift-cli (GitHub, MIT)](https://github.com/Cor-Incorporated/grift-cli) - CLI source code. Public release at the time of measurement was 0.7.2; 0.8.0 released on October 26, 2026
 - [grift-cli 0.8.0 Release Notes (GitHub)](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0) - Changes in 0.8.0
-- [grift-cli 0.7.2 (PyPI)](https://pypi.org/project/grift-cli/0.7.2/) - The public release at the time of testing
+- [grift-cli 0.7.2 (PyPI)](https://pypi.org/project/grift-cli/0.7.2/) - Public release at the time of measurement
 - [Grift](https://griftai.org) - Product website
-- [TEP Page (Grift)](https://griftai.org/tep) - Detailed description of TEP
-- [How to Read Grift Reports (metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - Plain-language guide to each metric
-- [TEP Usage Norms (norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - Do not treat absence as negative; prohibition of weighting and conversions
-- [Enforcing "No Scores, No Rankings" in Implementation (Cor.Inc. Blog, October 25, 2026)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - Five conditions established in 0.8
-- [I Founded a Company to Make "Ah, They Understood" an Everyday Experience (Cor.Inc. Blog)](https://cor-jp.com/blog/founder-story/) - The CEO's story and the thinking behind Grift
-- [Ethical Use of the MBTI (The Myers & Briggs Foundation)](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - MBTI usage guidelines (voluntary nature, not for hiring)
+- [TEP Page (Grift)](https://griftai.org/tep) - Detailed explanation of TEP
+- [Reading Grift Reports (metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - Plain-language guide to each metric
+- [TEP Code of Conduct (norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - Do not treat absence as negative; prohibition of weighting and conversion
+- [How to Enforce "No Scores, No Rankings" in Implementation (Cor.Inc. Blog, October 25, 2026)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - The five conditions established in 0.8
+- [To Make "Ah, I Got Through" an Everyday Reality, I Founded a Company (Cor.Inc. Blog)](https://cor-jp.com/blog/founder-story/) - Representative's story and the thinking behind Grift
+- [Ethical Use of the MBTI (The Myers & Briggs Foundation)](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - MBTI usage guidelines (voluntary nature, not for hiring purposes)
 - [MBTI Basics (The Myers & Briggs Foundation)](https://www.myersbriggs.org/my-mbti-personality-type/mbti-basics/) - The four preferences and 16 types
 - [pallets/click](https://github.com/pallets/click) - Measured OSS (HEAD `36baa15`)
 - [pallets/flask](https://github.com/pallets/flask) - Measured OSS (HEAD `d318b68`)

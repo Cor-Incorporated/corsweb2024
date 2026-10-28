@@ -7,6 +7,12 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 - 仕組み: 保存すると GitHub に develop 宛の PR（プルリクエスト）ができ、「公開」でその PR が develop に取り込まれます。本番（cor-jp.com）には、次の develop → main のリリースで反映されます。
 - 前提の PR とマージ順: #329（ADR）→ #341（develop 宛 PR のプレビュー）→ #342（この CMS）。
 
+項目の正本は `src/config/cms-contract.ts` です。`cms/public/config.yml` は、その契約と同じ値を置いたファイルです。ずれは `npm run check:cms` が止めます。`cms-config.test.ts` も同じ契約を読みます。このリポジトリに、検査をまとめて走らせる `npm run check` はありません。CI の verify が `npm run test:run` と `npm run check:cms` を実行します。
+
+契約の並び（backend、認証 Worker の公開メタデータ、サイト、メディア、スラッグ、出力、コミットメッセージ、コレクション、下書き欄 `isDraft`）は、griftai.org の CMS と同じ形です。cor-jp.com と griftai.org でこの形を共有するときの正本は、`src/config/cms-contract.ts` の並びです。共有パッケージはまだ置いていません。
+
+手元の管理画面は `npm run cms:dev` で開きます（http://localhost:5174/）。本番のログインと配信は、下の「管理者向けセットアップ」のままです。
+
 ---
 
 ## 1. 編集者向け
@@ -65,6 +71,14 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
    ステータスが「**下書き**」の間は、`*` の欄が空でも保存できます（Sveltia CMS の仕様。途中まで書いて置いておけるように）。ただし **カテゴリ・タイトル・概要・公開日** のどれかが空だと、下書きの PR のチェック（`verify` など）が失敗します（ビルドが止めるため。ログに空の欄の名前が出ます）。「**レビュー中**」「**公開可**」に進めるときは、CMS が空の `*` の欄を止めます。編集画面でステータスを変えるときは、CMS は画面に入っている値で確かめるので、**欄を埋めたら先に「保存」してから** 変えてください（保存せずにステータスを変えると、空のままの記事がレビューに回ります）。
 
 > 既存の記事を直すときは、本文を **Markdown のまま** 直してください。リッチテキストに切り替えると、数式・リンクカード・表などの書き方が自動で書き換わることがあります。
+
+### 1-4a. 推敲してからレビューに出す
+
+管理画面の保存は下書きの PR を作るところまでです。日本語の推敲は、記事のファイルに対して `npm run polish` を実行します（`docs/polish-gate.md`、ADR-0027）。ニュースの ja も同じコマンドです。
+
+Cursor、Codex、Claude Code、Pi、dsh、OpenCode、Grok のどれで書いても、コマンドは同じです。場面（会社として書く、代表の名前で書く、技術の記事）は人間が明示しない限り変えません。
+
+管理画面には推敲のボタンはありません。作成と更新はこれまでどおりこの CMS で行い、削除はまだできません（ADR-0026）。
 
 ### 1-5. 本文に書けないもの（PR のチェックで止まる）
 
@@ -134,7 +148,7 @@ gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main
 
 | # | 項目 | 値 | 状態 |
 |---|---|---|---|
-| 1 | GCP / Firebase プロジェクト | `cor-jp-cms-admin`（プロジェクト番号 `60287323048`、組織 cor-jp.com `460639040363`） | 済 |
+| 1 | GCP / Firebase プロジェクト | `cor-jp-cms-admin`（組織 cor-jp.com） | 済 |
 | 2 | Hosting サイト | `cor-jp-cms-admin`（既定サイト）→ https://cor-jp-cms-admin.web.app/ 。配信のたびにプレビューチャネル `candidate`（1 時間で失効）も使う | 済 |
 | 3 | 有効な API | firebasehosting、iam、iamcredentials、sts | 済 |
 | 4 | 配信用サービスアカウント | `cms-deployer@cor-jp-cms-admin.iam.gserviceaccount.com`（ロールは `roles/firebasehosting.admin` だけ。**JSON 鍵なし**） | 済 |
@@ -142,7 +156,7 @@ gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main
 | 6 | プロバイダの issuer / audience | issuer `https://token.actions.githubusercontent.com`。allowedAudiences は空（既定の audience = プロバイダの完全な名前） | 済 |
 | 7 | プロバイダの条件（attribute-condition） | `assertion.repository_id=='799991752' && assertion.repository_owner_id=='233881863' && assertion.ref=='refs/heads/main' && assertion.job_workflow_ref=='Cor-Incorporated/corsweb2024/.github/workflows/deploy-cms.yml@refs/heads/main' && assertion.environment=='cms-production' && assertion.event_name in ['push', 'workflow_dispatch']` | 済 |
 | 8 | サービスアカウントの利用許可 | `roles/iam.workloadIdentityUser` を `principal://iam.googleapis.com/projects/60287323048/locations/global/workloadIdentityPools/github/subject/repo:Cor-Incorporated/corsweb2024:environment:cms-production` の 1 つだけに付与（OIDC の sub は既定の形式: `use_default: true`） | 済 |
-| 9 | 公開サイトの SA に権限が無いこと | `cor-jp-cms-admin` の祖先（プロジェクトと組織 460639040363）の IAM のメンバー 39 件に、cor-jp-web の SA は 0 件（継承による権限も無い） | 済 |
+| 9 | 公開サイトの SA に権限が無いこと | `cor-jp-cms-admin` の祖先（プロジェクトと組織 cor-jp.com）の IAM のメンバー 39 件に、cor-jp-web の SA は 0 件（継承による権限も無い） | 済 |
 | 10 | GitHub Environment | `cms-production`。deployment branch policy は custom で `main`（branch）だけ。secret は入れない | 済 |
 | 11 | リポジトリ変数 | `CMS_DEPLOY_ENABLED` = `true`（2026-09-27T17:14:23Z） | 済 |
 | 12 | ブランチ保護 | develop: PR 必須・承認 0・必須チェック 3 本（`h5-admission`・`Chromium visual text audit`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ。main: 承認 1・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）・enforce_admins・push は terisuke と cloudia-Cor だけ | 済 |
@@ -357,7 +371,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | 「公開」したのに cor-jp.com に出ない | 公開は develop への取り込み | 次の develop → main のリリースを待つ（develop のプレビューでは見える） |
 | スラッグで「英小文字・数字・ハイフンだけで入力してください」 | 大文字・日本語・空白・記号が入っている | `ai-adoption-roadmap` の形にする |
 | `config.yml` を直したのに管理画面が古いまま | main への反映と `deploy-cms.yml` がまだ、またはブラウザのキャッシュ | Actions の `Deploy CMS admin (cor-jp-cms-admin)` の完了を確認し、強制再読み込み（Windows: Ctrl+Shift+R、Mac: Cmd+Shift+R） |
-| `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
+| `npm run check:cms` または `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `cms-contract.ts`・`config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 | `npm run test:run` の `cms-pr-status.test.ts` が落ちる | `cms-pr-status.yml`・`scripts/cms/pr-status-core.mjs`・ほかのワークフローの `name` やジョブ名・`translate-content.yml` の paths・`firebase.json` のサイト名の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 
 ### 3-1. 配信の e2e の失敗の記録を開く
@@ -392,8 +406,10 @@ gh run view "$FAILED" --repo Cor-Incorporated/corsweb2024 --log-failed
 | ファイル | 役割 |
 |---|---|
 | `cms/index.html`・`cms/main.js` | 管理画面の HTML と起動コード。CMS 本体（npm の `@sveltia/cms`、版固定）を Vite で同梱する |
-| `cms/vite.config.mjs` | CMS のビルド（`npm run build:cms` → `cms/dist`）。公開サイトの Astro とは独立 |
-| `cms/public/config.yml` | CMS の設定（GitHub・develop・編集ワークフロー・項目定義） |
+| `cms/vite.config.mjs` | CMS のビルド（`npm run build:cms` → `cms/dist`）と、手元の `npm run cms:dev`。公開サイトの Astro とは独立 |
+| `src/config/cms-contract.ts` | CMS の項目の正本。`npm run check:cms` が `config.yml` とのずれを止める |
+| `scripts/check-cms.mjs` | 正本と `config.yml`・認証 Worker の公開メタデータ・`@sveltia/cms` の版の照合 |
+| `cms/public/config.yml` | CMS の設定（GitHub・develop・編集ワークフロー・項目定義）。値の正本は `cms-contract.ts` |
 | `cms/public/robots.txt` | 全体を `Disallow: /` |
 | `cms/firebase.json` | CMS サイト `cor-jp-cms-admin` の配信設定とヘッダー（CSP など） |
 | `cms/scripts/serve.mjs` | `cms/firebase.json` のヘッダーを付けて `cms/dist` を配信するローカルサーバー（e2e 用） |
