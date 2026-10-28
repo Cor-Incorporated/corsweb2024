@@ -1,16 +1,16 @@
 ---
-title: "Grift: el currículum se puede exagerar, pero las pruebas no. El software de código abierto que extrae hechos verificables del historial de git"
-description: "Grift es nuestro producto propio para extraer hechos verificables (valores de inspección) y no puntuaciones a partir del historial de git de los ingenieros. Presentamos el diseño y el proceso que nos llevó a pivotar de una aplicación web de apoyo a presupuestos hacia una CLI de código abierto y una solución de soporte para recomendaciones destinada a agencias de empleo y empresas de SES."
+title: "Grift: el currículum se puede exagerar; las pruebas, no. La herramienta de código abierto que extrae hechos verificables del historial de git"
+description: "Grift, un producto propio que extrae hechos verificables (valores de inspección) en lugar de puntuaciones a partir del historial de git de los ingenieros. Presentamos el diseño y el proceso que nos llevó a cambiar el rumbo: de una aplicación web para la estimación de presupuestos a una CLI de código abierto y apoyo a la recomendación para agencias de empleo y empresas de SES."
 category: "grift"
 tags: ["Grift", "OSS", "CLI", "git", "Agencias de empleo", "SES", "Contratación"]
 publishedAt: 2026-06-30
 updatedAt: 2026-10-28
-summary: "Grift es un producto propio que extrae «hechos verificables» del historial de git de los ingenieros. No asigna puntuaciones ni clasificaciones. Al no utilizar IA (LLM) para la medición, genera el mismo resultado sin importar quién lo ejecute, lo que permite que el receptor verifique los datos. La CLI está disponible como software de código abierto bajo la licencia MIT."
+summary: "Grift es un producto propio que extrae «hechos verificables» del historial de git de los ingenieros. No asigna puntuaciones ni clasificaciones. Al no utilizar IA (LLM) para la medición, produce los mismos resultados independientemente de quién lo ejecute y permite que el receptor verifique los cálculos. La CLI está disponible públicamente como software de código abierto bajo la licencia MIT."
 isDraft: false
 featured: true
 lang: "es"
-translationSourceHash: "ed8b2d807036f1d1157b45ef4600db884b5b4e3ba81d095feec7e68f891ccb08"
-translatedAt: "2026-10-27T17:18:04.889Z"
+translationSourceHash: "4ca681c34432675973331e8114ce197a04fd07b1460e509367b26bbd93cf1d4e"
+translatedAt: "2026-10-28T05:33:11.474Z"
 translationModel: "gemini-3.8-flash"
 ---
 
@@ -29,79 +29,79 @@ NDA・機密案件では具体名や数値をぼかし、frontmatter の securit
 2026-10-28: 0.9.1 の公開を「成果」に足した（日付は PyPI に上げた日。#446 の手順で確かめる）。
 -->
 
-## El reto
+## El problema
 
-Las agencias de contratación y los comerciales de SES necesitan explicar por qué recomiendan a un candidato concreto al presentarlo a las empresas cliente. Sin embargo, el material del que disponen se limita casi por completo al currículum y a las impresiones de la entrevista. Aunque el documento indique «5 años de experiencia en Java», no transmite la naturaleza real de su trabajo: qué cambios realizaba ni cómo los verificaba a medida que avanzaba.
+Las agencias de colocación y los representantes comerciales de SES necesitan explicar por qué recomiendan a un candidato concreto a una empresa. Sin embargo, el material del que disponen se reduce casi siempre al currículum y a las impresiones de la entrevista. Aunque figure «5 años de Java», no se transmite la naturaleza real de su trabajo: qué tipo de modificaciones ha realizado y de qué manera las ha ido verificando a lo largo del proceso.
 
-Por otro lado, la «cantidad de actividad» —como el gráfico de contribuciones de GitHub o el número de commits— ahora puede inflarse fácilmente utilizando IA generativa y agentes. Un volumen elevado ha dejado de servir como base sólida para una recomendación. Al mismo tiempo, reducir todo a una única puntuación borra qué se midió, en qué período y sobre qué muestra base, convirtiéndose en una mera herramienta de criba. Tanto a quienes recomiendan como a quienes son recomendados les faltaban «pruebas contrastables».
+Por otra parte, indicadores de «volumen de actividad» como la gráfica de contribuciones de GitHub o el recuento de commits se inflan hoy con facilidad mediante IA generativa y agentes. Un volumen elevado ya difícilmente sirve como base para una recomendación. Al mismo tiempo, condensarlo todo en una única puntuación borra qué se midió, en qué periodo y con qué muestra base, convirtiéndose en una mera herramienta de criba. Faltaba «material verificable», tanto para la parte que recomienda como para quien es recomendado.
 
 ## El enfoque
 
-Grift nació en febrero de 2026 como una aplicación web destinada a respaldar las estimaciones en proyectos de desarrollo por encargo. Al buscar fundamentos sólidos para esas estimaciones, nos dimos cuenta de que la prueba más fiable era el propio historial de git acumulado por los desarrolladores. En agosto de 2026, aislamos la parte de medición y la convertimos en una herramienta de línea de comandos. En septiembre suspendimos la oferta de la antigua aplicación web y reorientamos el enfoque para apoyar la labor comercial de agencias de contratación y empresas de SES.
+Grift comenzó en febrero de 2026 como una aplicación web concebida para respaldar las estimaciones en proyectos de desarrollo por encargo. Al indagar en la base de dichas estimaciones, nos percatamos de que el material más fidedigno era el propio historial de Git que los ingenieros van construyendo con el tiempo, y en agosto de 2026 segregamos la parte de medición en forma de herramienta de línea de comandos. En septiembre suspendimos la antigua aplicación web y reorientamos el rumbo hacia el apoyo a las agencias de colocación y a los representantes comerciales de SES.
 
-En el diseño, establecimos tres compromisos previos:
+En el diseño establecimos tres compromisos previos:
 
-- No convertir en puntuaciones: proporcionamos valores de inspección y las personas toman las decisiones. No generamos puntuaciones compuestas, clasificaciones, aptos/no aptos ni rangos; las cifras van siempre acompañadas de numerador y denominador.
-- Mismo resultado en cada ejecución: no utilizamos IA (LLM) en la medición. Con el mismo repositorio y la misma versión, cualquier persona que lo ejecute obtendrá exactamente las mismas cifras.
-- No se envía a ninguna parte: funciona exclusivamente en el ordenador local. La persona decide libremente si desea compartirlo y qué repositorios mostrar.
+- No puntuar: lo que se emite son valores de inspección y quien juzga es una persona. No se generan puntuaciones compuestas, clasificaciones, aptos/no aptos ni rangos de nivel; todo valor numérico va acompañado necesariamente de numerador y denominador.
+- Mismo resultado en cada ejecución: no se utiliza IA (LLM) en la medición. Con el mismo repositorio y la misma versión, cualquiera que lo ejecute obtendrá exactamente los mismos valores numéricos.
+- No se envía a ningún sitio: opera únicamente en el equipo local. Si se comparte o no, y qué repositorios se muestran, lo decide la propia persona interesada.
 
-Asimismo, establecimos 7 normas de uso que incluyen principios como «no interpretar la ausencia como algo negativo», «no cribar únicamente por cifras» y «no medir a terceros sin su consentimiento». Determinamos que cualquier uso que infrinja estas pautas no podrá denominarse con el nombre del método (TEP: Technical Evidence Pipeline).
+Paralelamente, fijamos siete normas de uso —entre ellas «no interpretar la ausencia como algo negativo», «no cribar únicamente por valores numéricos» y «no medir a terceros sin su consentimiento»—, con la regla de no denominar con el nombre de la metodología (TEP: Technical Evidence Pipeline) a aquellos usos que no las respeten.
 
 ## Implementación
 
-Grift CLI extrae observaciones como las siguientes exclusivamente a partir del historial de git:
+Grift CLI extrae del historial de Git, de forma exclusiva, observaciones como las siguientes:
 
-- Distinción de autoría: clasifica de quién es el trabajo en 11 categorías, como commits propios del desarrollador, trabajo ajeno, bots, artefactos de proveedores/generados e historiales heredados del repositorio bifurcado (fork).
-- Tasa de modificación conjunta de pruebas: porcentaje de commits en los que se modifican las pruebas junto con los cambios en el código de producción.
-- Tasa de retrabajo y retoque: porcentaje de reintentos o modificaciones adicionales sobre los archivos tocados recientemente (registra una tendencia, no se utiliza para evaluar aptitud).
-- Contexto del repositorio: días de actividad real, número de personas implicadas y cuota del autor principal, porcentaje de contribuciones mediante revisión de código, entre otros.
+- Distinción de autoría: categoriza de quién es el trabajo en 11 clasificaciones, tales como commits propios de la persona, trabajo de terceros, bots, artefactos generados o de proveedores e historial heredado del fork de origen.
+- Tasa de modificación conjunta de pruebas: porcentaje en el que, en el mismo commit de modificación del código de producción, también se modifican las pruebas.
+- Tasa de retrabajo y retoque: porcentaje de repetición de trabajo o de nuevo contacto con archivos modificados recientemente (se trata del registro de una tendencia, no se utiliza para determinar aptitud).
+- Contexto del repositorio: días de trabajo efectivo, número de participantes y cuota de participación del autor mayoritario, porcentaje a través de revisiones de código, entre otros.
 
-En `report-v2`, añadido en la v0.6, se amplía la capa para observar la forma de trabajo individual del desarrollador. Todos los indicadores incluyen numerador y denominador, y no constituyen una evaluación del perfil ni de la capacidad profesional:
+En `report-v2`, añadido en la versión v0.6, se amplía la capa para observar la forma de trabajar de un ingeniero individual. Todas las métricas incorporan numerador y denominador, y no constituyen una valoración del puesto ni de la capacidad:
 
-- Áreas de trabajo (`surface_profile`): número de cambios realizados clasificados en 11 áreas: test / docs / CI/CD / platform / data / observability / frontend / backend / config / generados y proveedores / otros.
-- Ritmo de cambios (`change_rhythm`): días con envíos de cambios en los últimos 180 días e intervalos entre entregas (mediana y percentil 90, porcentaje de entregas consecutivas en 2 días o menos, y porcentaje de pausas de 30 días o más). No mide horas de trabajo ni nivel de motivación.
-- Forma de verificación (`verification_profile`): porcentaje de commits que modificaron pruebas y sus tipos (unit / integration / e2e / contract / desconocido), así como el porcentaje de commits de corrección (fix) acompañados de pruebas.
-- Cuatro dimensiones del rol (`role_profile`): se limita a cuatro ejes (domain / work_type / time / process_position) sin encasillarlos en una única categoría profesional. Solo se genera cuando existe una identidad con el consentimiento registrado de la persona.
+- Áreas de trabajo (`surface_profile`): número de modificaciones en cada una de las 11 categorías: test / docs / CI/CD / platform / data / observability / frontend / backend / config / generados o proveedores / otros.
+- Ritmo de cambios (`change_rhythm`): número de días en los que se enviaron cambios dentro de los últimos 180 días e intervalos entre dichos envíos (mediana y percentil 90, porcentaje de envíos sucesivos en un plazo de 2 días, porcentaje con intervalos de 30 días o más). No representa horas de trabajo ni grado de motivación.
+- Forma de verificación (`verification_profile`): proporción de commits en los que se modificaron pruebas y su tipología (unit / integration / e2e / contract / desconocida), así como la proporción de commits de corrección (fix) acompañados de pruebas.
+- Cuatro dimensiones del rol (`role_profile`): se limita exclusivamente a cuatro aspectos: domain / work_type / time / process_position, sin sintetizarlos en un único perfil profesional. Se muestra únicamente cuando existe una identidad en la que consta el consentimiento de la persona interesada.
 
-El cotejo con los requisitos del puesto también se realiza sin clasificaciones ni rankings. El proyecto declara las áreas, la verificación, el ritmo y las entradas que busca mediante `grift project`, y `grift align` alinea las observaciones del candidato por cada eje. Dicha alineación se limita estrictamente a cinco resultados: superposición (overlap), fuera de rango (outside_declared_range), cero casos (observed_zero), no observado (not_observed) y no declarado (not_declared), sin calcular notas globales, clasificaciones ni resultados de apto/no apto. Al analizarse por equipos con `--team`, solo se muestra el número de personas que satisfacen los requisitos; si hay menos de 3 personas, no se agrega para evitar la identificación individual.
+El cotejo con los proyectos también se realiza sin establecer clasificaciones ordenadas. Por parte del proyecto se declaran las áreas, verificación, ritmo y entradas requeridas mediante `grift project`, y `grift align` las dispone eje por eje junto a las observaciones del candidato. Dicha alineación se limita estrictamente a cinco posibilidades: solapamiento (overlap), fuera del rango declarado (outside_declared_range), cero casos observados (observed_zero), no observado (not_observed) y sin requerimiento declarado (not_declared), sin calcular puntuaciones globales, clasificaciones ni aptitud. Cuando se analiza a nivel de equipo con `--team`, se indica únicamente el número de personas que satisfacen los requerimientos, y no se realiza agregación si son menos de 3 personas para evitar la identificación individual.
 
-Cuando el tamaño de la muestra base es inferior a 20, se muestra únicamente el recuento de casos sin porcentajes. Aquello que no pudo observarse se indica como «no observado» detallando el motivo, nunca como «sin historial». El comando `grift verify` recalcula el informe guardado bajo las mismas condiciones y devuelve coincidencia, discrepancia o imposibilidad de verificación, lo que permite al receptor comprobar si ha habido manipulaciones o incongruencias.
+Cuando la muestra base es inferior a 20, no se muestran porcentajes sino únicamente el número de casos, y lo que no pudo observarse no se presenta como «sin historial», sino como «no observado» acompañado de su motivo. `grift verify` recalcula los informes guardados bajo las mismas condiciones y devuelve coincidencia, discrepancia o imposibilidad de verificación, lo que permite a la parte receptora comprobar posibles alteraciones o divergencias.
 
-A partir de la versión 0.9.0, al inicio del Markdown generado por `grift actor` se redacta una breve descripción del método de trabajo deducido de los registros. Se detallan, junto con el número de casos y el período, las áreas modificadas, el ritmo de cambios, la cobertura de pruebas y la forma de implicación; a continuación se indica qué aspectos no pueden apreciarse a través de estos registros y se sugieren preguntas para profundizar en la entrevista. En `grift project` se describe la dinámica de trabajo del repositorio del proyecto con las mismas pautas, sin incluir métricas individuales ni la forma de implicación por persona. En `grift align` se complementa la comparativa entre requisitos y registros con preguntas orientadas a la entrevista. Tanto las descripciones como las preguntas se seleccionan a partir de cifras mediante una [tabla de decisión](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md) pública, sin recurrir a la IA. No se incluyen en el JSON, por lo que lo verificable mediante `grift verify` son los datos numéricos que originaron el texto.
+A partir de la versión 0.9.0, al inicio del Markdown de `grift actor` se redacta una breve descripción del modo en que se aborda el trabajo a partir de los registros. Se describe la distribución de las áreas modificadas, el ritmo de los cambios, la forma de incorporar pruebas y la modalidad de participación, indicando el número de casos y el periodo de tiempo; a continuación, se señala lo que no puede apreciarse a través de dicho registro y se enumeran, en forma de preguntas, aquellos aspectos que conviene contrastar en la entrevista. `grift project` describe la dinámica del repositorio del proyecto siguiendo las mismas reglas, sin mostrar las cifras individuales por persona ni la modalidad de participación. `grift align` acompaña la correlación entre requerimientos y registros con preguntas orientadas a contrastar información en la entrevista. Los textos y las preguntas se seleccionan a partir de las cifras mediante una [tabla de decisión](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md) publicada, sin recurrir a la IA. No se incluyen en el JSON, por lo que lo verificable mediante `grift verify` son las cifras que sirven de base a dichos textos.
 
-Los textos y preguntas sobre una persona solo se muestran si corresponden a una identidad declarada por ella misma y si consta su consentimiento. En cualquier otro caso, se incluye una frase explicando el motivo por el que no se muestran. Cuando se visualizan varias personas de forma conjunta (`--all`, `--top`), no se incluyen estos textos.
+Los textos y las preguntas relativas a una persona se muestran únicamente cuando se trata de un identificador declarado por ella misma y consta el registro de su consentimiento. En los demás casos, se explica el motivo de su omisión en una única frase. Cuando se presenta a varias personas de forma conjunta (`--all`, `--top`), no se emiten estos textos.
 
-El método se denomina TEP (Technical Evidence Pipeline, flujo de extracción de pruebas técnicas). Consta de cuatro fases: leer el historial de git, contar según reglas predefinidas, añadir a los valores calculados su denominador y los motivos de lo que no pudo contabilizarse, y garantizar que cualquier persona pueda repetir el cálculo siguiendo el mismo procedimiento. La explicación detallada se encuentra en la [página sobre TEP](https://griftai.org/tep) del sitio web de Grift.
+El nombre del método es TEP (Technical Evidence Pipeline, flujo de extracción de evidencias técnicas). Consta de cuatro etapas: leer los registros de Git, cuantificar conforme a reglas fijas, añadir a los valores obtenidos el denominador y los motivos de aquello que no pudo cuantificarse, y hacer posible que cualquiera pueda recalcularlo siguiendo el mismo procedimiento. Encontrará una explicación detallada en la [página sobre TEP](https://griftai.org/tep) del sitio web de Grift.
 
-La correspondencia entre los términos empleados en esta página y en griftai.org y los utilizados en la salida de la CLI es la siguiente:
+La correspondencia entre la terminología utilizada en esta página y en griftai.org y los términos que emite la CLI es la siguiente:
 
-| Término en el sitio | Término en la CLI |
+| Terminología del sitio web | Término en la CLI |
 |---|---|
-| Valores de inspección | observed value (`kind: observed`; incluye valor, unidad y denominador) |
+| Valores de inspección | observed value (`kind: observed`; se acompaña de valor, unidad y denominador) |
 | Tasa de modificación conjunta de pruebas | test co-change |
 | Tasa de retrabajo | corrective rework |
 | Retoque | path retouch |
-| Code recency | survival (solo al especificar `--survival`) |
+| Code recency | survival (únicamente al especificar `--survival`) |
 | Contexto del repositorio | context profile |
 | Áreas de trabajo, ritmo de cambios y forma de verificación | surface_profile / change_rhythm / verification_profile |
 
-A partir de la versión 0.9.0, el Markdown de la CLI también utiliza la misma terminología que griftai.org para las cuatro perspectivas: áreas modificadas (áreas de trabajo), ritmo de cambios (ritmo de cambios), cobertura de pruebas (forma de verificación) y forma de implicación. Las claves del JSON permanecen sin cambios.
+A partir de la versión 0.9.0, el formato Markdown de la CLI designa también las cuatro perspectivas —la clasificación de las áreas modificadas (áreas de trabajo), el ritmo de los cambios (ritmo de cambios), la forma de incorporar pruebas (forma de verificación) y la modalidad de participación— con las mismas denominaciones que en griftai.org. Las claves del JSON no sufren modificaciones.
 
 - Repositorio: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
-- Distribución: PyPI «grift-cli» (`pipx install grift-cli`, Python 3.11 o superior)
+- Distribución: PyPI «grift-cli» (`pipx install grift-cli`, compatible con Python 3.11 o superior)
 - Licencia: MIT
-- Notas de la versión: [github.com/Cor-Incorporated/grift-cli/releases](https://github.com/Cor-Incorporated/grift-cli/releases) (cambios entre versiones)
+- Notas de la versión: [github.com/Cor-Incorporated/grift-cli/releases](https://github.com/Cor-Incorporated/grift-cli/releases) (cambios en cada versión)
 
 ## Resultados
 
-El 8 de septiembre de 2026 publicamos la [v0.7.2](https://pypi.org/project/grift-cli/0.7.2/) en PyPI. Las métricas se validaron en 117 repositorios públicos, y publicamos en GitHub tanto las comparaciones que permitieron establecer diferencias como aquellas en las que todavía no fue posible (mediciones internas, sin auditoría de terceros).
+El 8 de septiembre de 2026 publicamos la versión [v0.7.2](https://pypi.org/project/grift-cli/0.7.2/) en PyPI. Las métricas se validaron en 117 repositorios públicos, y tanto las comparaciones en las que se apreciaron diferencias como aquellas en las que aún no ha sido posible distinguirlas se encuentran publicadas en GitHub (se trata de mediciones internas, sin auditoría por parte de terceros).
 
-El 25 de octubre de 2026 cotejamos línea por línea el contenido del sitio web con la salida de la CLI. Detectamos que el listado de múltiples personas (`actor-index`) se ordenaba de mayor a menor número de commits, a pesar de que la nota aclaratoria indicaba «no constituye una clasificación». Por ello, en la versión [0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0), publicada el 26 de octubre de 2026, modificamos el orden alfabético por ID, manteniendo el valor del número de commits. Los antecedentes y los cinco criterios de aceptación fijados para la serie 0.8 se detallan en esta [entrada del blog](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/).
+El 25 de octubre de 2026 cotejamos línea por línea el redactado del sitio web con los resultados de la CLI. Dado que la lista con varias personas (`actor-index`) se mostraba ordenada de mayor a menor número de commits a pesar de que en las notas se indicaba que «no constituye una clasificación», en la versión [0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0), publicada el 26 de octubre de 2026, modificamos la ordenación a un orden lexicográfico por identificador, conservando el valor del recuento de commits. Las circunstancias y los cinco criterios de aceptación fijados para la serie 0.8 se detallan en el [artículo del blog](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/).
 
-En la versión [0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0), publicada el 27 de octubre de 2026, incorporamos el texto inicial y las preguntas para la entrevista en los informes antes descritos. Asimismo, retiramos del Markdown la línea referida a la «intensidad» de las tendencias y la línea de «adecuación» en el cotejo, ya que al comparar dos informes podían interpretarse erróneamente como personas más o menos capaces, o personas adecuadas o no adecuadas. También corregimos cuatro puntos en los que podían generarse cifras inexactas sobre las personas.
+En la versión [0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0), publicada el 27 de octubre de 2026, incorporamos el texto inicial de los informes y las preguntas para la entrevista mencionados anteriormente. Al mismo tiempo, retiramos del Markdown la línea correspondiente a la «intensidad» de la tendencia y la relativa a la «orientación» del cotejo, puesto que al contrastar dos informes podían interpretarse erróneamente como personas más o menos competentes, o bien como personas idóneas o no idóneas. También se corrigieron cuatro puntos en los que podían generarse cifras discordantes con la realidad respecto a una persona.
 
-En la versión [0.9.1](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.1), publicada el 28 de octubre de 2026, corregimos fallos detectados tras la 0.9.0 que podían dar lugar a cifras inexactas relativas a personas o proyectos. No se añadieron nuevos comandos y se mantiene la política de no emitir puntuaciones, clasificaciones ni etiquetas de perfil. Debido al cambio en la versión de las definiciones, los informes guardados con la 0.9.0 no pueden verificarse mediante el `grift verify` de la versión 0.9.1.
+En la versión [0.9.1](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.1), publicada el 28 de octubre de 2026, subsanamos los puntos detectados con posterioridad a la 0.9.0 en los que podían producirse cifras no conformes a la realidad respecto a personas o proyectos. No se incorporan nuevos comandos y se mantiene intacto el principio de no emitir puntuaciones, clasificaciones ni denominaciones de perfiles tipológicos. Debido al cambio en la versión de las definiciones, los informes y cotejos guardados con la versión 0.9.0 ya no pueden ser verificados con el comando `grift verify` de la versión 0.9.1 (las excepciones, como los informes de proyectos elaborados exclusivamente a partir de requerimientos, se recogen en las [notas de migración](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.1/docs/migration-v091.md)).
 
-Actualmente estamos preparando pruebas piloto (PoC) en colaboración con agencias de contratación y empresas de SES para concretar las razones de recomendación a partir de registros generados localmente por los propios candidatos. También atendemos consultas de responsables de selección de empresas de desarrollo propio interesados en realizar pruebas piloto (PoC) para verificar la trayectoria profesional a partir de los datos compartidos por los candidatos. Con base en los resultados de estas pruebas piloto, nuestro objetivo es poner en marcha el servicio oficial en 2027. Grift también se presenta en [griftai.org](https://griftai.org).
+Actualmente estamos preparando, conjuntamente con agencias de intermediación y empresas de SES, pruebas de concepto (PoC) orientadas a dotar de concreción a los motivos de recomendación a partir de los registros ejecutados localmente por los propios candidatos. Asimismo, atendemos consultas de responsables de selección de empresas de desarrollo interno interesadas en realizar pruebas de concepto (PoC) para contrastar el trabajo que ha desempeñado el candidato a partir de los registros compartidos por él mismo. De cara a la versión oficial, prevemos iniciar su disponibilidad en 2027 tomando en consideración los resultados de estas pruebas piloto. Puede consultar también la presentación de Grift en [griftai.org](https://griftai.org).
 
-Asimismo, explicamos la filosofía de Grift en nuestros artículos de [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) y [note](https://note.com/cor_instrument/n/nd58ba0955317).
+La filosofía que fundamenta a Grift se expone igualmente en artículos publicados en [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) y [note](https://note.com/cor_instrument/n/nd58ba0955317).
