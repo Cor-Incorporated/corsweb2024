@@ -33,6 +33,7 @@
 | [ADR-0023](./ADR-0023-grift-cli-version-source.md) | Grift CLI の版は 1 か所（`src/config/grift-cli-release.json`）に書き、記事はその時点の記録として書く。CI の検査と、PyPI との毎日の照合（Issue） | Accepted (2026-10-27)（Proposed 2026-10-26） |
 | [ADR-0024](./ADR-0024-service-pages.md) | サービスのページ（診断・PoC・AI受託）を作り、ヘッダーの「サービス」を説明のページへ向ける（ADR-0011 のサービス導線を置き換え） | Accepted (2026-10-27)（Proposed 2026-10-26） |
 | [ADR-0025](./ADR-0025-contact-channels-beyond-chat.md) | チャット以外の連絡の手段: Cloudia に「AI と話さずに伝言だけ残す」入口を足し、日程調整は測ってから足す（調査: `docs/contact-channels-research-2026-10.md`） | Proposed (2026-10-26) |
+| [ADR-0026](./ADR-0026-voice-skills-upkeep-and-cms.md) | 文体の仕組み（yomiyasu・cor-voice）を定期的に更新し、どのエージェントでも使え、CMS で書いた記事にも検査がかかるようにする（Epic #452） | Proposed (2026-10-28) |
 
 ## フェーズ対応
 
@@ -41,7 +42,7 @@
 - **Phase3（公開前・導線真実性・有料入口・証拠）**: ADR-0010／ADR-0011／ADR-0007 証拠ルール。
 - **Phase4（Cloudia 統合）**: ADR-0005 rev／ADR-0012（org 移管・Cloudflare・フォーム代用カットオーバー）。
 - **2026Q4（HP リニューアル、Epic #330）**: ADR-0017（静的 Astro の継続）／ADR-0018（CMS: Sveltia、2026-10-27 に Accepted）／ADR-0019（翻訳パイプライン、Accepted）／ADR-0020（ブログ CTA と intent、2026-10-27 に Accepted）。同時期に ADR-0001〜0003・0006 を Superseded、ADR-0008・0009（yomimono 部分）を Deprecated とした。
-- **2026-09〜10（問い合わせの回帰ガード・事業の柱・Grift の版・サービスのページ・連絡の手段）**: ADR-0021（/contact の電話検出、Accepted）／ADR-0022（事業の柱と Grift）／ADR-0023（Grift CLI の版）／ADR-0024（サービスのページ）（3 本とも 2026-10-27 に Accepted）／ADR-0025（チャット以外の連絡の手段、Proposed。#428 で判断待ち）。2026-10-27 に、ADR-0010・0011・0014・0020 に残っていた Team Beta・Estimate Audit・Grift への自動ハンドオフの記述を今に合わせた。
+- **2026-09〜10（問い合わせの回帰ガード・事業の柱・Grift の版・サービスのページ・連絡の手段）**: ADR-0021（/contact の電話検出、Accepted）／ADR-0022（事業の柱と Grift）／ADR-0023（Grift CLI の版）／ADR-0024（サービスのページ）（3 本とも 2026-10-27 に Accepted）／ADR-0025（チャット以外の連絡の手段、Proposed。#428 で判断待ち）。ADR-0026（文体の仕組みの定期更新・ほかのエージェント・CMS の範囲、Proposed。Epic #452）。2026-10-27 に、ADR-0010・0011・0014・0020 に残っていた Team Beta・Estimate Audit・Grift への自動ハンドオフの記述を今に合わせた。
 
 ## intent 正本（他リポ共通・7 キー、ADR-0014）
 
