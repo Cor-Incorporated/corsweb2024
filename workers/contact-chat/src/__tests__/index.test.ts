@@ -162,10 +162,11 @@ const ENV = {
   CONTACT_FROM_EMAIL: 'noreply@cor-jp.com',
 } as unknown as Env;
 
+// ブラウザの fetch POST は Origin を付ける。正規の呼び出しはこのヘッダー付きで表す（#362）。
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
   new Request('https://cor-jp.com' + path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
+    headers: { 'content-type': 'application/json', origin: 'https://cor-jp.com', ...headers },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   });
 
@@ -277,7 +278,7 @@ describe('worker.fetch — ハンドラレベル', () => {
   it('JSON でない content-type は 400', async () => {
     const req = new Request('https://cor-jp.com/api/contact/chat', {
       method: 'POST',
-      headers: { 'content-type': 'text/plain' },
+      headers: { 'content-type': 'text/plain', origin: 'https://cor-jp.com' },
       body: 'hello',
     });
     const res = await worker.fetch(req, ENV);
@@ -291,9 +292,44 @@ describe('worker.fetch — ハンドラレベル', () => {
     expect(res.status).toBe(400);
   });
 
+  it.each([
+    '/api/contact/chat',
+    '/api/contact/chat/start',
+    '/api/contact/submit',
+  ])('Origin の無い POST %s は 403 で、上流を呼ばない（#362）', async (path) => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await worker.fetch(
+      new Request(`https://cor-jp.com${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }),
+      }),
+      ENV,
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'origin not allowed' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it.each(['https://cor-jp.com', 'https://www.cor-jp.com'])(
+    'ブラウザと同じ Origin（%s）の POST は origin 検査を通過する',
+    async (origin) => {
+      const res = await worker.fetch(
+        post('/api/contact/chat', { messages: [{ role: 'user', content: 'hi' }] }, {
+          origin,
+          'cf-connecting-ip': '198.51.100.30',
+        }),
+        ENV,
+      );
+      expect(res.status).not.toBe(403);
+      expect(res.status).toBe(503);
+    },
+  );
+
   it('クロスオリジンの Origin は 403', async () => {
-    // undici/vitest 環境は Request 構築時に Origin を禁止ヘッダとして落とすため、
-    // ヘッダを確実に持たせる最小モックで渡す（yomimono の Cookie モックと同方針）。
+    // Origin はモックで持たせる。Request が禁止ヘッダとして Origin を落とすと、
+    // 落ちた POST は「Origin 無し」と同じ 403 になり、別オリジンの拒否と区別できない。
     const headers: Record<string, string> = {
       'content-type': 'application/json',
       origin: 'https://evil.example',
@@ -306,6 +342,15 @@ describe('worker.fetch — ハンドラレベル', () => {
     } as unknown as Request;
     const res = await worker.fetch(req, ENV);
     expect(res.status).toBe(403);
+  });
+
+  it('Origin の無い PUT は 403（GET / HEAD 以外は Origin 必須）', async () => {
+    const res = await worker.fetch(
+      new Request('https://cor-jp.com/api/contact/submit', { method: 'PUT' }),
+      ENV,
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'origin not allowed' });
   });
 
   it('未知メソッド/パスは 404', async () => {
