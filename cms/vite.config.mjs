@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
+import { cmsSite } from '../src/config/cms-contract.ts';
 
 // config.yml の logo.src（/logo.png）に、公開サイトのロゴ public/logo.png を使う。
 // 画像を cms/ に複製しないよう、ビルド時に出力へ加える。
@@ -20,6 +21,11 @@ export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
   publicDir: 'public',
   plugins: [siteLogo()],
+  server: {
+    host: 'localhost',
+    port: cmsSite.devPort,
+    strictPort: true,
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

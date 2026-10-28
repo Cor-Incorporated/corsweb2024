@@ -9,6 +9,8 @@
     "preview": "./node_modules/.bin/astro preview",
     "preview:ci": "./node_modules/.bin/astro preview --host 127.0.0.1 --port 4322",
     "build:cms": "./node_modules/.bin/vite build --config cms/vite.config.mjs",
+    "cms:dev": "./node_modules/.bin/vite --config cms/vite.config.mjs",
+    "check:cms": "node scripts/check-cms.mjs",
     "astro": "./node_modules/.bin/astro",
     "i18n:check": "node scripts/i18n/translate-content.mjs --check",
     "i18n:translate": "node scripts/i18n/translate-content.mjs --write",
