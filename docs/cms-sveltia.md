@@ -1,9 +1,10 @@
-# ブログ CMS（Sveltia CMS）の使い方とセットアップ
+# コンテンツ管理（Sveltia CMS）の使い方とセットアップ
 
 ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方と、管理者向けのセットアップ手順です。
 
 - 管理画面: **https://cor-jp-cms-admin.web.app/** （公開サイトとは別の Firebase プロジェクト `cor-jp-cms-admin`。main からだけ配信）
-- 編集できるもの: ブログの **日本語の記事だけ**（`src/content/blog/ja/`）。英語・中国語・韓国語・スペイン語は、翻訳 CI（#339 のマージ後）が自動で作ります（ADR-0019）。
+- 画面の名前: **Cor.株式会社 コンテンツ管理**（`app_title` と HTML のタイトル）。GitHub OAuth App の登録名は別の設定です。
+- 編集できるもの: ブログ・ニュース・実績の **日本語の記事だけ**（`src/content/{blog,news,cases}/ja/`）。英語・中国語・韓国語・スペイン語は、翻訳 CI が自動で作ります（ADR-0019）。
 - 仕組み: 保存すると GitHub に develop 宛の PR（プルリクエスト）ができ、「公開」でその PR が develop に取り込まれます。本番（cor-jp.com）には、次の develop → main のリリースで反映されます。
 - 前提の PR とマージ順: #329（ADR）→ #341（develop 宛 PR のプレビュー）→ #342（この CMS）。
 
@@ -11,7 +12,7 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 契約の並び（backend、認証 Worker の公開メタデータ、サイト、メディア、スラッグ、出力、コミットメッセージ、コレクション、下書き欄 `isDraft`）は、griftai.org の CMS と同じ形です。cor-jp.com と griftai.org でこの形を共有するときの正本は、`src/config/cms-contract.ts` の並びです。共有パッケージはまだ置いていません。
 
-手元の管理画面は `npm run cms:dev` で開きます（http://localhost:5174/）。本番のログインと配信は、下の「管理者向けセットアップ」のままです。
+手元の管理画面は `npm run cms:dev` で開きます（http://localhost:5174/）。本番のログインと配信は、下の「管理者向けセットアップ」のままです。ニュース・実績と削除の設定が本番の管理画面に届くのは、develop → main のリリースと CMS の配信の後です。#451 の実装だけでは本番に反映されません。
 
 ---
 
@@ -42,16 +43,16 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 1. 管理画面を開き、「**GitHub にログイン**」を押す。
 2. 小さなウィンドウで GitHub の確認画面が出たら「Authorize」を押す（初回だけ）。
-3. 左に「ブログ」と記事の一覧が出れば完了。
+3. 左に「ブログ」「ニュース」「実績」が出ることを確かめ、編集するものを選ぶ。
 
 ウィンドウが開かないときは、ブラウザのポップアップブロックでこのサイトを許可してください。
 
 ### 1-4. 記事を書く
 
-1. 左の「**ブログ**」→ 右上の「**新規作成**」。
+1. 左の「**ブログ**」「**ニュース**」「**実績**」から選び、右上の「**新規作成**」。
 2. 右側の「**スラッグ**」欄に、記事の URL の末尾を **英小文字・数字・ハイフン** で入れる。
    例: `ai-adoption-roadmap` → 公開後の URL は `https://cor-jp.com/blog/ai-adoption-roadmap/`。**作成後は変更できません。**
-3. 左の欄を埋める（`*` は必須）。
+3. 左の欄を埋める（`*` は必須）。ブログの主な欄は次のとおりです。
 
    | 欄 | 書き方 |
    |---|---|
@@ -66,9 +67,18 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
    | おすすめに表示 | トップ等のおすすめに出したいときだけ ON |
    | 本文 `*` | Markdown（`## 見出し`、`- 箇条書き` など）で書く（最初は「マークダウンで編集」が ON）。OFF にすると、Word のようなボタンでも書ける |
 
+   ニュース・実績では、次の欄を使います。項目と必須・任意の区別は `src/content/config.ts` に合わせています。
+
+   | 種類 | 必須の内容 | 主な任意項目 | 公開後の URL |
+   |---|---|---|---|
+   | ニュース | タイトル・概要・公開日（`publishedAt`）・カテゴリ・本文 | 更新日、タグ、外部記事の URL、掲載元、OGP 画像 | `/news/<スラッグ>/` |
+   | 実績 | タイトル・概要・公開日（`publishedAt`）・カテゴリ・リード文（`summary`）・本文 | 更新日、タグ、アイキャッチ画像と代替テキスト、OGP 画像、機密情報の注記、CTA の種類、関連記事のスラッグ | `/works/<スラッグ>/` |
+
+   ニュースのカテゴリは「お知らせ・メディア・アップデート・イベント・受賞・プレスリリース」です。実績のカテゴリと CTA の種類は `grift`・`confidential-ai`・`local-llm`・`ai-contract`・`tech-culture` の 5 つです。CTA の種類が空ならカテゴリに従います。画像は 1-6 と同じ場所へ保存します。
+
 4. 右上の「**保存**」。ここで **下書きの PR** ができます（まだ公開されません）。
 
-   ステータスが「**下書き**」の間は、`*` の欄が空でも保存できます（Sveltia CMS の仕様。途中まで書いて置いておけるように）。ただし **カテゴリ・タイトル・概要・公開日** のどれかが空だと、下書きの PR のチェック（`verify` など）が失敗します（ビルドが止めるため。ログに空の欄の名前が出ます）。「**レビュー中**」「**公開可**」に進めるときは、CMS が空の `*` の欄を止めます。編集画面でステータスを変えるときは、CMS は画面に入っている値で確かめるので、**欄を埋めたら先に「保存」してから** 変えてください（保存せずにステータスを変えると、空のままの記事がレビューに回ります）。
+   ステータスが「**下書き**」の間は、`*` の欄が空でも保存できます（Sveltia CMS の仕様。途中まで書いて置いておけるように）。ただしブログでは **カテゴリ・タイトル・概要・公開日** のどれかが空だと、下書きの PR のチェック（`verify` など）が失敗します。ニュース・実績も、スキーマの必須項目の欠落や、カテゴリ・日付の不正な値はビルドが止めます。ただし `z.string()` の項目は空文字を許すため、CMS の必須欄も確認してください。「**レビュー中**」「**公開可**」に進めるときは、CMS が空の `*` の欄を止めます。編集画面でステータスを変えるときは、CMS は画面に入っている値で確かめるので、**欄を埋めたら先に「保存」してから** 変えてください（保存せずにステータスを変えると、空のままの記事がレビューに回ります）。
 
 > 既存の記事を直すときは、本文を **Markdown のまま** 直してください。リッチテキストに切り替えると、数式・リンクカード・表などの書き方が自動で書き換わることがあります。
 
@@ -78,7 +88,7 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 
 Cursor、Codex、Claude Code、Pi、dsh、OpenCode、Grok のどれで書いても、コマンドは同じです。場面（会社として書く、代表の名前で書く、技術の記事）は人間が明示しない限り変えません。
 
-管理画面には推敲のボタンはありません。作成と更新はこれまでどおりこの CMS で行い、削除はまだできません（ADR-0026）。
+管理画面には推敲のボタンはありません。作成と更新はこの CMS で行い、削除は 1-8 の条件と確認手順に従います（ADR-0026、#451）。
 
 ### 1-5. 本文に書けないもの（PR のチェックで止まる）
 
@@ -110,7 +120,7 @@ PR のチェック（`content-safety.test.ts`）は、記事をサイトと同�
 | プレビューを見る | 保存から数分後、「プレビューを確認中」が「**プレビューを見る**」に変わったら押す（#341 のマージ後） | PR ごとのプレビューサイト（Firebase、30 日で失効）で記事が開く |
 | 翻訳が付く | 何もしなくてよい（#339 のマージ後） | 翻訳 CI が同じ PR に英・中・韓・西のファイルを追加する。このコミットのあとはチェックが自動では始まらないので、**terisuke か cloudia-Cor** が PR の画面の「Approve workflows to run」で承認する（PR のコメントとメールで知らせる） |
 | チェックを待つ | PR の必須チェック 3 本（`h5-admission`・`verify`・`Chromium visual text audit`）が緑になるまで待つ（visual text audit は約 13 分） | 緑になるまで develop に取り込めない。チェックと翻訳の検査がすべて終わると、PR のコメントとメールで結果（「公開できます」か「チェックが失敗しました」）を知らせる |
-| 公開 | **terisuke か cloudia-Cor** がステータスを「**公開可**」にして「**エントリーを公開**」 | PR が develop に merge commit で取り込まれ、作業ブランチ（`cms/blog/<スラッグ>`）は削除される |
+| 公開 | **terisuke か cloudia-Cor** がステータスを「**公開可**」にして「**エントリーを公開**」 | PR が develop に merge commit で取り込まれ、作業ブランチ（`cms/<コレクション>/<スラッグ>`）は削除される |
 
 **通知（PR のコメントとメール）**: CMS の画面には、翻訳が付いたか・チェックが通ったかが出ません（2026-10-01 の通しの確認で分かった）。そのため `.github/workflows/cms-pr-status.yml` が、CMS の PR のワークフロー（CI・Responsive visual text・H5 Admission・Deploy to Firebase Hosting・Translate content (i18n)）が終わるたびに状態を見直し、次の場面でコメントします。GitHub はそれを PR の作成者（CMS で書いた人）と @メンションした人にメールで知らせます（各自の GitHub の通知設定で、Participating と @mentions の Email が有効な場合）。最後に書いた状態・コミットと同じなら書きません。
 
@@ -132,11 +142,35 @@ gh workflow run cms-pr-status.yml --repo Cor-Incorporated/corsweb2024 --ref main
 - 公開（develop への取り込み）ができるのは **terisuke と cloudia-Cor の 2 アカウントだけ** です。develop のブランチ保護の push 制限で強制されていて、enforce_admins=true のため admin にも適用されます。ほかのアカウントで「エントリーを公開」を押すと失敗します。
 - 公開 = develop への取り込みです。**cor-jp.com に出るのは、次の develop → main のリリースの後** です。main への取り込みも、push 制限（terisuke・cloudia-Cor）・承認 1 件・必須チェック 5 本（`build_and_deploy`・`Chromium visual text audit`・`guard`・`h5-admission`・`verify`）付きです。
 
-### 1-8. この CMS でできないこと（PoC の範囲）
+### 1-8. 記事の削除と翻訳ファイル
 
-- 記事の削除（翻訳ファイルと一緒に消す必要があるため、エンジニアに依頼）
+ブログ・ニュース・実績はいずれも `delete: true` です。CMS が編集するのは日本語だけで、翻訳を CMS から直接消す設定にはしません。
+
+公開済みの記事（develop に存在する記事）を選んで「削除」を確定すると、削除待ち（`pending_deletion`）の PR が develop 宛に作られます。既存の CMS PR がある場合は、その PR に削除を保存します。この段階では develop から記事は消えません。
+
+PR の差分と翻訳の検査を確認した後、削除待ちの記事の最後の「削除」を確定すると、PR を取り込んで develop から削除します。作成・更新の「公開」と同じく、取り込めるのは terisuke か cloudia-Cor です。本番に反映されるのは develop → main のリリース後です。
+
+新規作成した未公開の下書きは、まだ develop に存在しません。この下書きの削除は、CMS PR を閉じて作業ブランチを破棄する処理です。公開済み記事の削除待ち PR とは異なり、日本語の削除差分や翻訳の orphan は発生しません。
+
+これらの流れは、固定した Sveltia CMS 0.221.7 の `delete-entries-dialog.svelte`、`workflow/save.js`、GitHub バックエンドの `workflow.js` で確認しています。**GitHub にログインした実地確認は代表同席で行います（未検証）。** 手元の一時データで行う作成・保存・再編集・削除と、GitHub 上の確認を分けて記録します。
+
+GitHub 上では、新規下書きの作成・保存・再編集・破棄を確認します。翻訳の削除は、代表が選んだ公開済み記事で削除待ち PR を作り、差分と翻訳の検査を確認します。確認後は CMS で削除待ちを取り消し、PR を取り込まずに閉じて、作業ブランチを破棄します。最後の「削除」（PR の取り込み）は押さず、develop 上の記事を残します。
+
+日本語の削除が develop 宛 PR の差分に入った後は、既存の翻訳 CI が次の順に処理します。
+
+1. `.github/workflows/translate-content.yml` が `src/content/**` の変更を検出し、`--write --since <PRのbase SHA>` で翻訳処理を動かす。
+2. `scripts/i18n/plan.mjs` が差分にある日本語の削除を `deleted` として記録する。
+3. `scripts/i18n/prune.mjs` が、削除が差分にあり、かつ `translationSourceHash` の来歴を持つ翻訳だけを削除候補にする。
+4. 翻訳ファイルの削除パッチを、同じ CMS PR に追加する。PR の差分と `i18n-check` を見てから取り込む。
+
+日本語の削除が差分にない翻訳、来歴のない翻訳、削除後に日本語のフォルダが空になるコレクションの翻訳は、自動では消しません。削除件数にもコレクションごとの上限があります（翻訳数の 25% と、記事 1 本分の対象言語数のうち大きい方）。止められた orphan は翻訳の検査が失敗として知らせます。エンジニアが対象と理由を確認し、来歴のない旧翻訳の削除には `--prune-untracked` を明示します。
+
+現行の翻訳ワークフローは、削除だけの PR でも `GEMINI_API_KEY` が未設定なら翻訳ジョブをスキップします。自動削除が入ったと決めつけず、PR の差分とチェック結果を確かめてください。この手順のローカル検査と、GitHub にログインした実地確認は分けて記録します。
+
+### 1-9. この CMS でできないこと
+
 - 公開後のスラッグ（URL）の変更
-- 英語などほかの言語の記事、ニュース・事例の編集
+- 英語などほかの言語の記事の直接編集・削除
 
 ---
 
@@ -324,10 +358,12 @@ Write の編集者は記事を書いてレビューに送れますが、公開�
 | 確認 | 期待 |
 |---|---|
 | 最初の配信（deploy-cms.yml の run） | build・deploy とも成功し、「Check the candidate …」と「Check live …」が OK |
-| 日本語のブラウザで https://cor-jp-cms-admin.web.app/ を開く | 画面が日本語。ブログの件数 = `ls src/content/blog/ja/*.md \| wc -l` の数 |
+| 日本語のブラウザで https://cor-jp-cms-admin.web.app/ を開く | 画面が日本語で、名前は「Cor.株式会社 コンテンツ管理」。ブログ・ニュース・実績が出て、それぞれの件数が `src/content/<コレクション>/ja/*.md` と一致する |
 | 初回ログインの直後に、ブラウザの開発者ツールの Console を見る | CSP 違反（`Refused to ... because it violates the following Content Security Policy directive`）が 0 件。ログイン後の通信（api.github.com など）は e2e では確かめていないので、ここで確かめる |
-| 記事を作って「レビューを依頼」 | base が develop の PR ができ、差分が `src/content/blog/ja/*.md` と `public/images/blog/*` だけ |
-| その PR | 必須チェックとプレビューが成功し、「プレビューを見る」で記事が開く |
+| 各コレクションで記事を作って「レビューを依頼」 | base が develop の PR ができ、CMS の差分が `src/content/{blog,news,cases}/ja/*.md` と `public/images/blog/*` だけ |
+| 代表同席で各コレクションの新規下書きを作り、保存・再編集・破棄する（#451 の実地確認、未検証） | 作成・更新の差分を確認し、破棄後は CMS PR が閉じて作業ブランチが消える。develop には新規記事を取り込まない。この確認では orphan の削除は検査できない |
+| 代表が選んだ公開済み記事の削除待ち PR を作る（#451 の実地確認、未検証） | 日本語の削除が develop 宛 PR に入り、来歴つき翻訳の削除が同じ PR に追加される。PR の base・対象パス・画面と安全装置の結果を記録し、CMS で削除待ちを取り消して PR を閉じ、作業ブランチを破棄する。最後の「削除」は押さず、develop 上の記事を残す |
+| 新規作成・更新の PR | 必須チェックとプレビューが成功し、「プレビューを見る」で記事が開く |
 | 翻訳 CI が他言語を追加した後に ja を再保存 | 他言語のファイルが変わらない（#339 のマージ後） |
 | 翻訳 CI が他言語を追加した後の PR（cms-pr-status.yml が main に入った後） | PR に github-actions[bot] の「チェックの実行に承認が必要です」が付き、メールが届く。承認してチェックがすべて終わると「公開できます」が付き、メールが届く（来なければ 1-7 の Run workflow で知らせ直し、3 の「通知が来ない」を見る） |
 | terisuke か cloudia-Cor で「エントリーを公開」 | develop に merge commit で入り、`cms/blog/<スラッグ>` ブランチが消える |
@@ -415,7 +451,9 @@ gh run view "$FAILED" --repo Cor-Incorporated/corsweb2024 --log-failed
 | `cms/scripts/serve.mjs` | `cms/firebase.json` のヘッダーを付けて `cms/dist` を配信するローカルサーバー（e2e 用） |
 | `.github/workflows/deploy-cms.yml` | main から CMS を配信する（build ジョブと、WIF・Environment 付きの deploy ジョブ） |
 | `.github/workflows/visual-text.yml` | develop の必須チェック。vitest（照合・記事の安全性）と CMS の e2e も実行する |
-| `src/config/blog-schema.ts` | 記事の frontmatter のスキーマ（`src/content/config.ts` が使う） |
+| `src/config/blog-schema.ts`・`src/content/config.ts` | ブログ・ニュース・実績の frontmatter のスキーマ |
+| `scripts/i18n/prune.mjs` | 日本語削除後の翻訳の孤立（orphan）を判定し、来歴・差分・件数に応じて削除を許可または抑止する |
+| `.github/workflows/translate-content.yml` | CMS PR の日本語の変更を翻訳処理へ渡し、検査した翻訳の追加・更新・削除パッチを同じ PR に積む |
 | `src/config/__tests__/cms-config.test.ts` | `config.yml` ↔ スキーマ・カテゴリ定義・ADR-0018、`wrangler.toml` ↔ `cms/firebase.json` の照合 |
 | `src/config/__tests__/cms-deploy.test.ts` | `deploy-cms.yml` ↔ この文書（WIF・サービスアカウント）・`cms/firebase.json` の照合 |
 | `src/config/__tests__/content-safety.test.ts` | 記事をサイトと同じパイプラインで描画し、スクリプトが動く要素・属性・URL と SVG を検査する |
