@@ -370,11 +370,16 @@ describe('worker.fetch — ハンドラレベル', () => {
     // ANTHROPIC_API_KEY 未設定なので各回 503 になるが、レート制限はその手前で評価される。
     // 上限(20)+1 回叩いて最後が 429 になることを確認。
     let last = 200;
+    let retryAfter = '';
     for (let i = 0; i < 21; i++) {
       const res = await worker.fetch(mk(), ENV);
       last = res.status;
+      retryAfter = res.headers.get('retry-after') || '';
     }
     expect(last).toBe(429);
+    const seconds = Number(retryAfter);
+    expect(seconds).toBeGreaterThanOrEqual(1);
+    expect(seconds).toBeLessThanOrEqual(60);
   });
 
   it('LLM 未設定（ANTHROPIC_API_KEY 空）は 503 fail closed', async () => {
