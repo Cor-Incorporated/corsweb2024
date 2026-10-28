@@ -1,0 +1,13 @@
+---
+description: 日本語のブログとニュースを書く・直すときは、推敲ゲートを通す
+globs: src/content/blog/ja/**/*.md,src/content/news/ja/**/*.md
+alwaysApply: false
+---
+
+`src/content/blog/ja/` と `src/content/news/ja/` を書く・直すときは、規則の本文を写さず、次を読む。
+
+- `.claude/skills/yomiyasu/SKILL.md`
+- `.claude/skills/cor-voice/SKILL.md`
+- `skills/article-polish/SKILL.md`
+
+入口は `npm run polish`（`docs/polish-gate.md`）。文体は、人間の明示の指示が記録されていない限り変えない。翻訳ファイル（en / zh / ko / es）は直さない。

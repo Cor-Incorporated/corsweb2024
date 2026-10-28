@@ -13,6 +13,7 @@
     "i18n:check": "node scripts/i18n/translate-content.mjs --check",
     "i18n:translate": "node scripts/i18n/translate-content.mjs --write",
     "blog:check": "node scripts/blog-guardrails.mjs",
+    "polish": "node scripts/polish/cli.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
