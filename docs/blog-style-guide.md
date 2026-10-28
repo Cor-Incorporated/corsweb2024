@@ -3,6 +3,7 @@
 このファイルは、会社の名前で書くブログ記事（ai・engineering カテゴリの解説記事）の書き方です。
 代表・寺田康佑の書き方の特徴と、場面ごとの文体（代表の名前で書く記事、技術の記事を含む）は cor-voice スキル（`.claude/skills/cor-voice/SKILL.md`）にまとめています。
 書いたあとは yomiyasu スキル（`.claude/skills/yomiyasu/`）で推敲します。
+ブログとニュースの ja は `npm run polish` を通します（`docs/polish-gate.md`）。場面は人間の明示の指示が無い限り変えません。
 
 ## 読者
 日本の中小企業の経営者・管理部門・現場リーダー。ITやAIの専門家ではないが、現場の課題感は強い人。

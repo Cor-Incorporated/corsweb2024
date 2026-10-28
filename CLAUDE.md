@@ -43,6 +43,7 @@ npm run security:audit           # security:audit:firebase + security:audit:work
 npm run i18n:check        # Missing/outdated content translations (no API key; exit 1 if any)
 npm run check:links       # scripts/check-external-links.mjs: no hard-coded griftai.org, no unbacked "30秒" / multipliers in pages, components, i18n
 npm run blog:check -- src/content/blog/ja/your-post.md   # scripts/blog-guardrails.mjs on one article (ADR-0007 wording)
+npm run polish -- prepare --file src/content/blog/ja/your-post.md   # yomiyasu + cor-voice gate for ja blog and news (docs/polish-gate.md)
 npm run check:grift-version  # ja articles that call an old Grift CLI version "公開中/最新/現在" (ADR-0023; also run by test:run)
 npm run seo:snapshot -- --out snapshot.json   # SEO/AIO snapshot of dist (see scripts/seo-snapshot.mjs for --compare)
 ```
@@ -70,8 +71,8 @@ What CI runs (`.github/workflows/`):
   `claude-code-review.yml` (manual only since 2026-08-16, until its
   credentials exist)
 
-`check:links` and `blog:check` are not run by CI — run them yourself when you
-touch public copy or articles.
+`check:links`, `blog:check`, and `polish` are not run by CI — run them yourself when you
+touch public copy or articles. `polish` is the yomiyasu and cor-voice gate (`docs/polish-gate.md`).
 
 ### Branches and Pull Requests
 
@@ -443,10 +444,11 @@ to `develop`.
    ```
 
 3. **Check wording**: `npm run blog:check -- src/content/blog/ja/your-post-name.md`
-4. **Auto-translate**: open a PR to `develop`; CI translates to en/zh/ko/es and
+4. **Polish gate**: `npm run polish -- prepare --file src/content/blog/ja/your-post-name.md`, rewrite, then `npm run polish -- check --file <ja.md> --final <draft.md>` (`docs/polish-gate.md`). News uses the same command. Do not switch voice unless the human recorded an explicit instruction.
+5. **Auto-translate**: open a PR to `develop`; CI translates to en/zh/ko/es and
    commits the translations to the PR (local runs: `npm run i18n:translate`,
    see `docs/i18n-translation.md`)
-5. **Build**: `npm run build` must pass (invalid frontmatter fails the build)
+6. **Build**: `npm run build` must pass (invalid frontmatter fails the build)
 
 ### Rich Content Support
 

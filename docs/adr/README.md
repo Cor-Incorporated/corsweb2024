@@ -34,6 +34,7 @@
 | [ADR-0024](./ADR-0024-service-pages.md) | サービスのページ（診断・PoC・AI受託）を作り、ヘッダーの「サービス」を説明のページへ向ける（ADR-0011 のサービス導線を置き換え） | Accepted (2026-10-27)（Proposed 2026-10-26） |
 | [ADR-0025](./ADR-0025-contact-channels-beyond-chat.md) | チャット以外の連絡の手段: Cloudia に「AI と話さずに伝言だけ残す」入口を足し、日程調整は測ってから足す（調査: `docs/contact-channels-research-2026-10.md`） | Proposed (2026-10-26) |
 | [ADR-0026](./ADR-0026-voice-skills-upkeep-and-cms.md) | 文体の仕組み（yomiyasu・cor-voice）を定期的に更新し、どのエージェントでも使え、CMS で書いた記事にも検査がかかるようにする（Epic #452） | Proposed (2026-10-28) / 改訂 2026-10-28（指示は公開の Issue、反響と文体は Grok、実装は Claude Code 以外のエージェント） |
+| [ADR-0027](./ADR-0027-article-polish-gate.md) | 記事とニュースの推敲を、ツールに依存しないゲートにする | Proposed (2026-10-28) |
 
 ## フェーズ対応
 
