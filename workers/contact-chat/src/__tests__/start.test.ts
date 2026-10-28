@@ -18,7 +18,7 @@ describe('chat start contract', () => {
   it('intent_selected starts a session without an empty LLM request', async () => {
     const response = await worker.fetch(new Request('https://cor-jp.com/api/contact/chat/start', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: 'https://cor-jp.com' },
       body: JSON.stringify({ event: 'intent_selected', intent: 'contract-dev', locale: 'ja' }),
     }), env);
     expect(response.status).toBe(200);
@@ -32,7 +32,7 @@ describe('chat start contract', () => {
   it('ambassador start uses a conversational company-information greeting', async () => {
     const response = await worker.fetch(new Request('https://cor-jp.com/api/contact/chat/start', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: 'https://cor-jp.com' },
       body: JSON.stringify({ start: true, mode: 'ambassador', locale: 'ja' }),
     }), env);
     expect(response.status).toBe(200);
@@ -52,7 +52,7 @@ describe('chat start contract', () => {
   ] as const)('%s press intent starts with an outreach-specific question', async (locale, intentLabel, typeLabel) => {
     const response = await worker.fetch(new Request('https://cor-jp.com/api/contact/chat/start', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', origin: 'https://cor-jp.com' },
       body: JSON.stringify({ start: true, mode: 'intake', locale, intent: 'press-speaking-other' }),
     }), env);
     expect(response.status).toBe(200);

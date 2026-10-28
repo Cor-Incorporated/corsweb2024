@@ -96,12 +96,15 @@ export async function verifyTurnstile(
 }
 
 // --- 同一オリジンチェック（CORSを開けず、cor-jp.com 上のウィジェットのみ許可） ---
-// Origin ヘッダが付いていて別オリジンなら拒否。同一オリジン fetch は Origin が無いか自オリジン。
+// Fetch 標準では、ブラウザは GET / HEAD 以外に必ず Origin を付ける。
+// 状態を変えるリクエストで Origin が無いものは curl などの非ブラウザなので拒否する（#362）。
+// GET / HEAD は同一オリジンでも Origin を付けないことがある（死活確認など）。
 const ALLOWED_HOSTS = new Set(['cor-jp.com', 'www.cor-jp.com']);
+const METHODS_WITHOUT_ORIGIN = new Set(['GET', 'HEAD']);
 
 export function isSameOrigin(req: Request): boolean {
-  const origin = req.headers.get('Origin');
-  if (!origin) return true; // 同一オリジンの fetch は Origin を付けない場合がある（許可）
+  const origin = req.headers.get('Origin')?.trim() ?? '';
+  if (!origin) return METHODS_WITHOUT_ORIGIN.has((req.method ?? '').toUpperCase());
   try {
     const host = new URL(origin).hostname;
     return ALLOWED_HOSTS.has(host);

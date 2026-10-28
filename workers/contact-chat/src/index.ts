@@ -496,6 +496,7 @@ export default {
 
     try {
       // 同一オリジン強制（CORSは開けない。cor-jp.com 上のウィジェットのみ）。
+      // POST など状態を変えるメソッドは Origin が無いと拒否する（#362）。
       if (!isSameOrigin(req)) {
         return json({ error: 'origin not allowed' }, 403);
       }
