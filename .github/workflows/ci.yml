@@ -88,7 +88,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          # workers/contact-edge は独自の package-lock.json を持つので、キャッシュの鍵に含める。
+          # workers/contact-edge と workers/contact-chat は独自の package-lock.json を持つので、キャッシュの鍵に含める。
           cache-dependency-path: |
             package-lock.json
             workers/contact-chat/package-lock.json
@@ -107,7 +107,8 @@ jobs:
       # workers/contact-chat と contact-edge は独自の package.json を持ち、ルートの vitest には含まれない。
       # テストの実行に依存パッケージのインストールスクリプトは不要なので --ignore-scripts で入れる
       # （wrangler / workerd の postinstall を走らせない）。
-      # contact-chat では Origin の無い POST を拒否する検査（#362）が走る。
+      # contact-chat では Origin の無い POST を拒否する検査（#362）と、
+      # 保持期限の削除が外部キーを強制する SQLite で落ちると暗号化した個人情報が残る検査（#430）が走る。
       - name: contact-chat worker tests
         run: |
           npm ci --prefix workers/contact-chat --ignore-scripts --no-audit --no-fund
