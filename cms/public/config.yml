@@ -2,11 +2,12 @@
 # 配信は cms/（npm run build:cms → cms/dist）。main に入ると deploy-cms.yml が cor-jp-cms-admin サイトへデプロイする。
 # この設定の変更が編集画面に届くのは、develop → main のリリースと、そのデプロイの後。
 #
-# 二重管理に注意: ここのフィールド定義は src/config/blog-schema.ts（Zod スキーマ）と、
-# カテゴリの選択肢は src/config/categories.ts と、base_url は workers/sveltia-cms-auth/wrangler.toml と
-# 同じ事実を持つ。src/config/__tests__/cms-config.test.ts が両側を照合し、片方だけ変えると両側の値を出して落ちる。
+# 項目の正本は src/config/cms-contract.ts。このファイルは同じ値を手で置いている。
+# npm run check:cms（scripts/check-cms.mjs）がずれを止める。カテゴリの表示名は categories.ts、
+# 必須の区別は blog-schema.ts、base_url は workers/sveltia-cms-auth/wrangler.toml とも一致させる。
+# src/config/__tests__/cms-config.test.ts が両側を照合し、片方だけ変えると両側の値を出して落ちる。
 #
-# 設定項目の正本は、固定した版の型定義 node_modules/@sveltia/cms/types/public.d.ts と
+# 設定キーの意味は、固定した版の型定義 node_modules/@sveltia/cms/types/public.d.ts と
 # https://sveltiacms.app/en/docs 。UI の言語はブラウザの言語に従う（設定項目は無い）。
 
 backend:

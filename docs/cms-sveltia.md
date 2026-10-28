@@ -7,6 +7,12 @@ ADR-0018（#329）で採用した Sveltia CMS の、編集者向けの使い方�
 - 仕組み: 保存すると GitHub に develop 宛の PR（プルリクエスト）ができ、「公開」でその PR が develop に取り込まれます。本番（cor-jp.com）には、次の develop → main のリリースで反映されます。
 - 前提の PR とマージ順: #329（ADR）→ #341（develop 宛 PR のプレビュー）→ #342（この CMS）。
 
+項目の正本は `src/config/cms-contract.ts` です。`cms/public/config.yml` は、その契約と同じ値を置いたファイルです。ずれは `npm run check:cms` が止めます。`cms-config.test.ts` も同じ契約を読みます。このリポジトリに、検査をまとめて走らせる `npm run check` はありません。CI の verify が `npm run test:run` と `npm run check:cms` を実行します。
+
+契約の並び（backend、認証 Worker の公開メタデータ、サイト、メディア、スラッグ、出力、コミットメッセージ、コレクション、下書き欄 `isDraft`）は、griftai.org の CMS と同じ形です。cor-jp.com と griftai.org でこの形を共有するときの正本は、`src/config/cms-contract.ts` の並びです。共有パッケージはまだ置いていません。
+
+手元の管理画面は `npm run cms:dev` で開きます（http://localhost:5174/）。本番のログインと配信は、下の「管理者向けセットアップ」のままです。
+
 ---
 
 ## 1. 編集者向け
@@ -357,7 +363,7 @@ CSP 違反が出たら、違反した送信元を `cms/firebase.json` の CSP �
 | 「公開」したのに cor-jp.com に出ない | 公開は develop への取り込み | 次の develop → main のリリースを待つ（develop のプレビューでは見える） |
 | スラッグで「英小文字・数字・ハイフンだけで入力してください」 | 大文字・日本語・空白・記号が入っている | `ai-adoption-roadmap` の形にする |
 | `config.yml` を直したのに管理画面が古いまま | main への反映と `deploy-cms.yml` がまだ、またはブラウザのキャッシュ | Actions の `Deploy CMS admin (cor-jp-cms-admin)` の完了を確認し、強制再読み込み（Windows: Ctrl+Shift+R、Mac: Cmd+Shift+R） |
-| `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
+| `npm run check:cms` または `npm run test:run` の `cms-config.test.ts`・`cms-deploy.test.ts` が落ちる | `cms-contract.ts`・`config.yml`・スキーマ・カテゴリ定義・`wrangler.toml`・`cms/firebase.json`・`deploy-cms.yml`・この文書の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 | `npm run test:run` の `cms-pr-status.test.ts` が落ちる | `cms-pr-status.yml`・`scripts/cms/pr-status-core.mjs`・ほかのワークフローの `name` やジョブ名・`translate-content.yml` の paths・`firebase.json` のサイト名の片方だけを変えた | メッセージに出る両側の値を見て、もう片方も直す |
 
 ### 3-1. 配信の e2e の失敗の記録を開く
@@ -392,8 +398,10 @@ gh run view "$FAILED" --repo Cor-Incorporated/corsweb2024 --log-failed
 | ファイル | 役割 |
 |---|---|
 | `cms/index.html`・`cms/main.js` | 管理画面の HTML と起動コード。CMS 本体（npm の `@sveltia/cms`、版固定）を Vite で同梱する |
-| `cms/vite.config.mjs` | CMS のビルド（`npm run build:cms` → `cms/dist`）。公開サイトの Astro とは独立 |
-| `cms/public/config.yml` | CMS の設定（GitHub・develop・編集ワークフロー・項目定義） |
+| `cms/vite.config.mjs` | CMS のビルド（`npm run build:cms` → `cms/dist`）と、手元の `npm run cms:dev`。公開サイトの Astro とは独立 |
+| `src/config/cms-contract.ts` | CMS の項目の正本。`npm run check:cms` が `config.yml` とのずれを止める |
+| `scripts/check-cms.mjs` | 正本と `config.yml`・認証 Worker の公開メタデータ・`@sveltia/cms` の版の照合 |
+| `cms/public/config.yml` | CMS の設定（GitHub・develop・編集ワークフロー・項目定義）。値の正本は `cms-contract.ts` |
 | `cms/public/robots.txt` | 全体を `Disallow: /` |
 | `cms/firebase.json` | CMS サイト `cor-jp-cms-admin` の配信設定とヘッダー（CSP など） |
 | `cms/scripts/serve.mjs` | `cms/firebase.json` のヘッダーを付けて `cms/dist` を配信するローカルサーバー（e2e 用） |

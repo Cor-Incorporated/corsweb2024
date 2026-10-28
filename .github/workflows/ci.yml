@@ -99,6 +99,10 @@ jobs:
       - name: Unit tests
         run: npm run test:run
 
+      # config.yml と cms-contract.ts のずれ。vitest も同じ照合を呼ぶ。Node 22 で .ts を読む。
+      - name: CMS contract
+        run: npm run check:cms
+
       # workers/contact-edge（/contact/chat/ を配信する Worker）は独自の package.json を持ち、ルートの
       # vitest には含まれない。テストの実行に依存パッケージのインストールスクリプトは不要なので
       # --ignore-scripts で入れる（wrangler / workerd の postinstall を走らせない）。
