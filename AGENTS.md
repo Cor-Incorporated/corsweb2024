@@ -89,8 +89,11 @@ and the ADR disagree.
   text (pages, components, `src/i18n/locales/ja.json`, articles, PR descriptions,
   commit messages), follow `.claude/skills/yomiyasu/SKILL.md` (nanaism/yomiyasu
   v2.1.3, MIT, vendored unchanged) and `.claude/skills/cor-voice/SKILL.md`
-  (register and the CEO's way of writing). Not needed for reports after code
-  changes. Keep `.claude/skills/cor-voice/` identical to the copy in
+  (register and the CEO's way of writing). Before you submit, run
+  `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py run` and
+  `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py verify`.
+  Cursor reads the same pointers from `.cursor/rules/japanese-copy.mdc`.
+  Not needed for reports after code changes. Keep `.claude/skills/cor-voice/` identical to the copy in
   Cor-Incorporated/griftai
 
 - **External expression guardrails** —
