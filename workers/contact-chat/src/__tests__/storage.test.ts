@@ -4,6 +4,7 @@ import {
   decryptText,
   encryptText,
   getSubmissionForNotification,
+  markOutboxFailed,
   newReceiptId,
   newSessionId,
   normalizeIdempotencyKey,
@@ -55,6 +56,17 @@ describe('encrypted contact storage primitives', () => {
     expect(queueMessage('submission-id', 'internal')).toEqual({ submissionId: 'submission-id', messageType: 'internal' });
     expect(queueMessage('submission-id', 'receipt')).toEqual({ submissionId: 'submission-id', messageType: 'receipt' });
     expect(JSON.stringify(queueMessage('submission-id', 'receipt'))).not.toContain('@');
+  });
+
+  it('last_error は固定コードだけで、本文の URL や PII を残さない', async () => {
+    const db = mockDb();
+    const leak = 'status 502 https://tenant.example/acme/cases/CASE-9 token sk-live-secret 山田太郎 yamada@example.com submission 11111111-1111-1111-1111-111111111111';
+    await markOutboxFailed({ DB: db } as unknown as Env, 'submission-1', 'internal', leak);
+    const update = db.calls.find((call) => call.sql.includes('last_error'));
+    expect(update?.bindings[0]).toBe('provider_status_502');
+    expect(String(update?.bindings[0])).not.toContain('tenant.example');
+    expect(String(update?.bindings[0])).not.toContain('山田');
+    expect(String(update?.bindings[0])).not.toContain('sk-live');
   });
 
   it('creates a non-PII receipt identifier', () => {

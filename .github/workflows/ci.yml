@@ -107,8 +107,9 @@ jobs:
       # workers/contact-chat と contact-edge は独自の package.json を持ち、ルートの vitest には含まれない。
       # テストの実行に依存パッケージのインストールスクリプトは不要なので --ignore-scripts で入れる
       # （wrangler / workerd の postinstall を走らせない）。
-      # contact-chat では Origin の無い POST を拒否する検査（#362）と、
-      # 保持期限の削除が外部キーを強制する SQLite で落ちると暗号化した個人情報が残る検査（#430）が走る。
+      # contact-chat では Origin の無い POST を拒否する検査（#362）、
+      # 保持期限の削除が外部キーで落ちると暗号化した個人情報が残る検査（#430）、
+      # 本文の 64KiB 打ち切りと失敗ログの固定コードが走る。
       - name: contact-chat worker tests
         run: |
           npm ci --prefix workers/contact-chat --ignore-scripts --no-audit --no-fund

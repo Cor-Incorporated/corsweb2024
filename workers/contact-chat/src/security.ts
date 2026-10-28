@@ -17,16 +17,36 @@ export interface RateLimitConfig {
 export const CHAT_LIMIT: RateLimitConfig = { windowMs: 60 * 1000, max: 20 }; // 1分20回
 export const SUBMIT_LIMIT: RateLimitConfig = { windowMs: 10 * 60 * 1000, max: 5 }; // 10分5回
 
-// true を返したらレート制限超過（429を返すべき）。
-export function isRateLimited(key: string, cfg: RateLimitConfig, now: number = Date.now()): boolean {
+// この Worker は Grift へ HTTP で呼ばない。0 は「無制限」ではなく、許可する呼び出し回数。
+// ハンドオフの定数（AUTO_HANDOFF_INTENTS）を残していても、ここから先の呼び出しは増やさない。
+export const GRIFT_HTTP_CALL_CAP = 0;
+
+export interface RateLimitDecision {
+  limited: boolean;
+  retryAfterSeconds: number;
+}
+
+// limited が true のとき、retryAfterSeconds は残りの窓（秒、切り上げ、最短 1）。429 の Retry-After に使う。
+export function consumeRateLimit(key: string, cfg: RateLimitConfig, now: number = Date.now()): RateLimitDecision {
   if (buckets.size > 10000) buckets.clear(); // 暴走防止（best-effort）
   const b = buckets.get(key);
   if (!b || b.resetAt <= now) {
     buckets.set(key, { n: 1, resetAt: now + cfg.windowMs });
-    return false;
+    return { limited: false, retryAfterSeconds: 0 };
   }
   b.n += 1;
-  return b.n > cfg.max;
+  if (b.n > cfg.max) {
+    return {
+      limited: true,
+      retryAfterSeconds: Math.max(1, Math.ceil((b.resetAt - now) / 1000)),
+    };
+  }
+  return { limited: false, retryAfterSeconds: 0 };
+}
+
+// true を返したらレート制限超過（429を返すべき）。
+export function isRateLimited(key: string, cfg: RateLimitConfig, now: number = Date.now()): boolean {
+  return consumeRateLimit(key, cfg, now).limited;
 }
 
 // テスト用にバケットを初期化。
@@ -47,8 +67,10 @@ export function ctEq(a: string, b: string): boolean {
 }
 
 // --- Cloudflare Turnstile 検証（reCAPTCHA 代替） ---
-// TURNSTILE_SECRET 未設定なら検証スキップ（turnstile のみ fail open。READMEに明記）。
-// 設定済みなら token を siteverify へ送り、success:false なら拒否（fail closed）。
+// Cloudia の画面はまだトークンを送らない（ADR-0025）。TURNSTILE_SECRET を入れると、
+// トークンの無い /submit は 400 になり、正規の問い合わせが届かなくなる。
+// ウィジェットが本番に出るまで秘密情報は置かない。必須フラグは置かない。
+// 未設定なら検証スキップ（turnstile のみ fail open）。設定済みなら success:false を拒否する。
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 export type TurnstileResult =

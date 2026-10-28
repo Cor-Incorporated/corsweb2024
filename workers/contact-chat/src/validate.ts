@@ -85,6 +85,11 @@ const PII_POSTAL_RE = /(?:〒\s*)?\d{3}[-ー－ ]?\d{4}/g;
 const PII_CARD_RE = /(?<!\d)(?:\d[ -]?){13,19}(?!\d)/g;
 const PII_OTP_RE = /(?:otp|one[- ]time|認証コード|確認コード|ワンタイム)[^\d]{0,20}\d{4,8}/gi;
 const SECRET_TOKEN_RE = /(?:AIza[0-9A-Za-z_-]{20,}|(?:sk|ghp|xox[baprs]?)-[A-Za-z0-9_-]{16,}|-----BEGIN(?: [A-Z]+)* PRIVATE KEY-----)/g;
+const JA_PREFECTURE = '(?:北海道|東京都|京都府|大阪府|青森県|岩手県|宮城県|秋田県|山形県|福島県|茨城県|栃木県|群馬県|埼玉県|千葉県|神奈川県|新潟県|富山県|石川県|福井県|山梨県|長野県|岐阜県|静岡県|愛知県|三重県|滋賀県|兵庫県|奈良県|和歌山県|鳥取県|島根県|岡山県|広島県|山口県|徳島県|香川県|愛媛県|高知県|福岡県|佐賀県|長崎県|熊本県|大分県|宮崎県|鹿児島県|沖縄県)';
+const PII_JA_ADDRESS_RE = new RegExp(`${JA_PREFECTURE}(?:[\\s　]*)(?:[一-龥々]{1,12}[市区町村])[^\\n]{0,40}`, 'g');
+const PII_JA_ADDRESS_LABEL_RE = /(?:住所|所在地)\s*[:：]\s*[^\n、。]{4,80}/g;
+const PII_JA_ACCOUNT_RE = /(?:顧客番号|お客様番号|会員番号|契約番号|証券番号|受付番号|問合せ番号|問い合わせ番号|マイナンバー|個人番号)\s*[:：]?\s*[A-Za-z0-9-]{4,64}/g;
+const PII_JA_NAME_RE = /(?:氏名|お名前|ご氏名|フルネーム|名前)\s*[:：]\s*[^\s、,。\n]{1,40}/g;
 
 export function maskSensitiveContent(content: string): string {
   return content
@@ -93,7 +98,11 @@ export function maskSensitiveContent(content: string): string {
     .replace(PII_OTP_RE, '[redacted-code]')
     .replace(PII_POSTAL_RE, '[redacted-postal]')
     .replace(PII_PHONE_RE, '[redacted-phone]')
-    .replace(PII_CARD_RE, '[redacted-number]');
+    .replace(PII_CARD_RE, '[redacted-number]')
+    .replace(PII_JA_ADDRESS_LABEL_RE, '[redacted-address]')
+    .replace(PII_JA_ADDRESS_RE, '[redacted-address]')
+    .replace(PII_JA_ACCOUNT_RE, '[redacted-account]')
+    .replace(PII_JA_NAME_RE, '[redacted-name]');
 }
 
 export function maskMessagesForLlm(messages: ChatMessage[]): ChatMessage[] {
@@ -206,7 +215,11 @@ export type SummaryValidation =
 // summaryText は会話全文ではなく、Cloudiaが確定した要約だけを受け付ける。
 // 旧クライアントの文字列入力を壊さないため、明らかな role ラベル行だけを除去し、
 // 全文トランスクリプトが渡された場合は空文字へ落として決定的fallbackへ進める。
-const TRANSCRIPT_ROLE_LINE = /^(?:user|assistant|system|human|ユーザー|あなた|アシスタント|クラウディア)\s*(?:[:：]|[-—])\s*/i;
+const TRANSCRIPT_ROLE_LINE = /^(?:user|assistant|system|human|visitor|cloudia|ユーザー|あなた|アシスタント|クラウディア|お客様|訪問者|人間)\s*(?:[:：]|[-—–])\s*/i;
+
+export function containsTranscriptRoleLine(value: string): boolean {
+  return value.split('\n').some((line) => TRANSCRIPT_ROLE_LINE.test(line.trim()));
+}
 const SUMMARY_PREFIX_LINE = /^(?:you|ai\s+assistant|AI\s*アシスタント)\s*(?:[:：]|[-—])\s*/i;
 
 export function canonicalizeSummaryText(raw: string): string {

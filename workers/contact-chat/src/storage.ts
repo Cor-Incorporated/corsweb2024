@@ -9,6 +9,7 @@ import type {
   NotificationMessage,
   NotificationType,
 } from './types';
+import { notificationFailureCode } from './log';
 import { MAX_CONVERSATION_EXCERPT_LEN, normalizeStructuredLead } from './validate';
 
 export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -411,10 +412,8 @@ export async function markOutboxFailed(
   if (!env.DB) return;
   const messageType: NotificationType = messageTypeOrError === 'receipt' ? 'receipt' : 'internal';
   const errorMessage = maybeErrorMessage ?? messageTypeOrError;
-  // エラー本文はプロバイダや入力値を含み得るため保存しない。運用に必要なHTTP statusだけを
-  // 固定形式で残し、PII/秘密情報のD1・ログへの混入を防ぐ。
-  const status = /status\s+(\d{3})/.exec(errorMessage)?.[1];
-  const safeError = status ? `provider_status_${status}` : 'notification_failed';
+  // エラー本文はプロバイダや入力値を含み得るため保存しない。HTTP status だけを固定形式で残す。
+  const safeError = notificationFailureCode(errorMessage);
   await env.DB.prepare("UPDATE notification_outbox SET status='pending', delivery_status='failed', last_error=?, updated_at=? WHERE submission_id=? AND message_type=?").bind(safeError, nowSeconds(), submissionId, messageType).run();
 }
 

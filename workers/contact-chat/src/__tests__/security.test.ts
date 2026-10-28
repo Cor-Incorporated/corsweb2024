@@ -1,7 +1,9 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
   CHAT_LIMIT,
+  GRIFT_HTTP_CALL_CAP,
   SUBMIT_LIMIT,
+  consumeRateLimit,
   ctEq,
   isRateLimited,
   isSameOrigin,
@@ -49,6 +51,20 @@ describe('isRateLimited — IP単位レート制限', () => {
     expect(isRateLimited('submit:5.5.5.5', SUBMIT_LIMIT, now + SUBMIT_LIMIT.windowMs + 1)).toBe(
       false,
     );
+  });
+  it('超過時の Retry-After は残りの窓を秒で切り上げる', () => {
+    const now = 1_000_000;
+    for (let i = 0; i < CHAT_LIMIT.max; i++) {
+      expect(consumeRateLimit('chat:retry', CHAT_LIMIT, now).limited).toBe(false);
+    }
+    const blocked = consumeRateLimit('chat:retry', CHAT_LIMIT, now + 1500);
+    expect(blocked.limited).toBe(true);
+    expect(blocked.retryAfterSeconds).toBe(Math.ceil((CHAT_LIMIT.windowMs - 1500) / 1000));
+  });
+  it('コードが持つ上限は chat 20回/分、submit 5回/10分、Grift HTTP は 0 回', () => {
+    expect(CHAT_LIMIT).toEqual({ windowMs: 60_000, max: 20 });
+    expect(SUBMIT_LIMIT).toEqual({ windowMs: 10 * 60_000, max: 5 });
+    expect(GRIFT_HTTP_CALL_CAP).toBe(0);
   });
   it('IP（キー）が違えば独立してカウントされる', () => {
     for (let i = 0; i < SUBMIT_LIMIT.max + 1; i++) isRateLimited('submit:a', SUBMIT_LIMIT);

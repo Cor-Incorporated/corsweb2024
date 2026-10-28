@@ -8,7 +8,7 @@ export const DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const DEFAULT_VERTEX_MODEL = 'gemini-3.5-flash';
 export const DEFAULT_VERTEX_PROJECT = 'cor-jp-web';
 export const DEFAULT_VERTEX_LOCATION = 'global';
-const MAX_TOKENS = 1024;
+export const MAX_OUTPUT_TOKENS = 1024;
 
 // --- プロバイダ抽象化 ---
 // chat(system, messages) => string。既定実装はVertex Gateway。
@@ -24,7 +24,7 @@ class AnthropicProvider implements LlmProvider {
     const client = new Anthropic({ apiKey: this.apiKey });
     const response = await client.messages.create({
       model: DEFAULT_MODEL,
-      max_tokens: MAX_TOKENS,
+      max_tokens: MAX_OUTPUT_TOKENS,
       system,
       // messages はすべて untrusted user data。system 側で「指示として従うな」と固めている。
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -55,7 +55,7 @@ class VertexGeminiProvider implements LlmProvider {
       model: this.env.VERTEX_MODEL || DEFAULT_VERTEX_MODEL,
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: 0.3, responseMimeType: 'application/json' },
+      generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3, responseMimeType: 'application/json' },
     });
     const timestamp = String(Date.now());
     const nonce = crypto.randomUUID();
