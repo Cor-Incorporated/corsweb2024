@@ -40,7 +40,7 @@ backend:
 # 下書き = PR、レビュー = PR のラベル、公開 = PR の merge（base は上の branch）。
 publish_mode: editorial_workflow
 
-app_title: Cor.inc コンテンツ管理
+app_title: Cor.株式会社 コンテンツ管理
 logo:
   src: /logo.png
 site_url: https://cor-jp.com
@@ -83,8 +83,8 @@ collections:
     extension: md
     format: yaml-frontmatter
     create: true
-    # 削除は CMS ではさせない（翻訳ファイルが孤立するため、エンジニアが PR で行う）。
-    delete: false
+    # ja の削除は翻訳 CI が PR の差分と来歴を照合し、条件を満たす訳だけを同じ PR から消す。
+    delete: true
     slug:
       # 新規作成時に URL 名を手入力する（日本語タイトルから自動生成しない）。公開後は変えない。
       editable: [create]
@@ -188,4 +188,200 @@ collections:
         widget: markdown
         # 既定は Markdown のまま編集するモード。既存記事の本文（数式・リンクカード・表など）を
         # リッチテキスト変換で書き換えないため。右上の切り替えでリッチテキストも使える。
+        modes: [raw, rich_text]
+
+  - name: news
+    label: ニュース
+    label_singular: ニュース記事
+    description: 日本語のニュースを編集します。翻訳は CI が PR に追加します。削除時は訳の削除も PR で確認してください。
+    icon: newspaper
+    folder: src/content/news/ja
+    extension: md
+    format: yaml-frontmatter
+    create: true
+    delete: true
+    slug:
+      editable: [create]
+      hint: 記事の URL の末尾になります。例 company-news → https://cor-jp.com/news/company-news/ 。英小文字・数字・ハイフンだけ。作成後は変更できません。
+      pattern: ['^[a-z0-9]+(?:-[a-z0-9]+)*$', '英小文字・数字・ハイフンだけで入力してください（例: ai-adoption-roadmap）']
+    aliases_field: false
+    preview_path: /news/{{slug}}/
+    sortable_fields:
+      fields: [publishedAt, title]
+      default:
+        field: publishedAt
+        direction: descending
+    fields:
+      - name: title
+        label: タイトル
+        widget: string
+      - name: description
+        label: 概要
+        widget: text
+      - name: publishedAt
+        label: 公開日
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        default: '{{now}}'
+      - name: updatedAt
+        label: 更新日
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        required: false
+      - name: author
+        label: 著者
+        widget: string
+        default: Terisuke
+      - name: category
+        label: カテゴリ
+        widget: select
+        options:
+          - { label: お知らせ, value: info }
+          - { label: メディア, value: media }
+          - { label: アップデート, value: update }
+          - { label: イベント, value: event }
+          - { label: 受賞, value: award }
+          - { label: プレスリリース, value: press }
+      - name: tags
+        label: タグ
+        widget: list
+        required: false
+      - name: externalUrl
+        label: 外部記事の URL
+        widget: string
+        required: false
+      - name: source
+        label: 掲載元
+        widget: string
+        required: false
+      - name: ogImage
+        label: SNS 用画像
+        widget: image
+        accept: image/avif,image/webp,image/jpeg,image/png,image/heic
+        required: false
+      - name: isDraft
+        label: 下書き
+        widget: hidden
+        default: false
+      - name: featured
+        label: おすすめに表示
+        widget: boolean
+        default: false
+      - name: lang
+        label: 言語
+        widget: hidden
+        default: ja
+      - name: body
+        label: 本文
+        widget: markdown
+        modes: [raw, rich_text]
+
+  - name: cases
+    label: 実績
+    label_singular: 実績記事
+    description: 日本語の実績を編集します。翻訳は CI が PR に追加します。削除時は訳の削除も PR で確認してください。
+    icon: work
+    folder: src/content/cases/ja
+    extension: md
+    format: yaml-frontmatter
+    create: true
+    delete: true
+    slug:
+      editable: [create]
+      hint: 記事の URL の末尾になります。例 project-case → https://cor-jp.com/works/project-case/ 。英小文字・数字・ハイフンだけ。作成後は変更できません。
+      pattern: ['^[a-z0-9]+(?:-[a-z0-9]+)*$', '英小文字・数字・ハイフンだけで入力してください（例: ai-adoption-roadmap）']
+    aliases_field: false
+    preview_path: /works/{{slug}}/
+    sortable_fields:
+      fields: [publishedAt, title]
+      default:
+        field: publishedAt
+        direction: descending
+    fields:
+      - name: title
+        label: タイトル
+        widget: string
+      - name: description
+        label: 概要
+        widget: text
+      - name: category
+        label: カテゴリ
+        widget: select
+        options:
+          - { label: Grift, value: grift }
+          - { label: 機密データ AI 活用, value: confidential-ai }
+          - { label: ローカル LLM, value: local-llm }
+          - { label: AI 受託開発, value: ai-contract }
+          - { label: 教育・コミュニティ, value: tech-culture }
+      - name: tags
+        label: タグ
+        widget: list
+        required: false
+      - name: publishedAt
+        label: 公開日
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        default: '{{now}}'
+      - name: updatedAt
+        label: 更新日
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        required: false
+      - name: heroImage
+        label: アイキャッチ画像
+        widget: object
+        required: false
+        fields:
+          - name: url
+            label: 画像
+            widget: image
+            accept: image/avif,image/webp,image/jpeg,image/png,image/heic
+          - name: alt
+            label: 代替テキスト
+            widget: string
+      - name: ogImage
+        label: SNS 用画像
+        widget: image
+        accept: image/avif,image/webp,image/jpeg,image/png,image/heic
+        required: false
+      - name: summary
+        label: リード文
+        widget: text
+      - name: securityNote
+        label: 機密情報に関する注記
+        widget: text
+        required: false
+      - name: ctaType
+        label: 記事の下で案内する相談
+        widget: select
+        required: false
+        options:
+          - { label: Grift, value: grift }
+          - { label: 機密データ AI 活用, value: confidential-ai }
+          - { label: ローカル LLM, value: local-llm }
+          - { label: AI 受託開発, value: ai-contract }
+          - { label: 教育・コミュニティ, value: tech-culture }
+      - name: relatedSlugs
+        label: 関連記事のスラッグ
+        widget: list
+        required: false
+      - name: isDraft
+        label: 下書き
+        widget: hidden
+        default: false
+      - name: featured
+        label: おすすめに表示
+        widget: boolean
+        default: false
+      - name: lang
+        label: 言語
+        widget: hidden
+        default: ja
+      - name: body
+        label: 本文
+        widget: markdown
         modes: [raw, rich_text]

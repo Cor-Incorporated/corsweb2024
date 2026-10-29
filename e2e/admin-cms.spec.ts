@@ -151,7 +151,7 @@ test('ログイン画面: 本番と同じヘッダーで日本語表示され、
   await expect(page.getByRole('button', { name: /GitHub\S* にログイン/ })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText('Cor.inc コンテンツ管理', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cor.株式会社 コンテンツ管理', { exact: true })).toBeVisible();
   expect(offOrigin, 'CMS の JS・CSS・フォントは CDN ではなく自オリジンから読む').toEqual([]);
   expect(cache, 'assets/ は immutable、それ以外は no-cache').toEqual([]);
   expect(await violations()).toEqual([]);
