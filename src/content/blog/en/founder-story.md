@@ -3,15 +3,16 @@ title: "I Founded a Company to Make \"Ah, They Understood\" an Everyday Experien
 description: "This is the story of how our representative, Kousuke Terada—a former trumpet player diagnosed with ASD at age 28—founded the AI company Cor.Inc. after working in sales at a musical instrument manufacturer and Recruit. He writes about why he is using technology to give shape to what words alone cannot convey."
 summary: "Cor.Inc. representative Kousuke Terada is a former trumpet player. Having navigated the worlds of music and sales while grappling with the pain of words failing to reach others, he encountered code and AI, ultimately founding the company in December 2023. To build up the small joy of \"Ah, they understood\" in everyday life, he starts by listening to find out where the other person is getting stuck."
 pubDate: 2026-10-25
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "founder"
 tags: ["起業", "キャリア", "ASD", "トランペット", "AI"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "1ff9204a09bfab1125ea243b24ad657002c537ac6d2f86aa9cdef2f9d4c4c6da"
-translatedAt: "2026-10-25T01:33:13.390Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "17699ba8eb76466282b208fb0ec30ea1f70d7169a68e390c37323d194ff76210"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 ## It Turned Out I Was the Alien
@@ -106,7 +107,7 @@ AI has expanded my potential. It made it possible for me to build from end to en
 
 However, if you proceed while taking an AI's answers for granted, you can easily end up running in circles. That is why I now pause and verify. I read primary sources. I measure things myself.
 
-Grift is an in-house product born from this very mindset. Resumes can be embellished. Evidence cannot. That is why we don't assign scores; we only present verifiable facts. The judgment is left to humans.
+Grift is an in-house product born from this very mindset. Verifiable grounds for explaining a career. We do not turn that into a score; we only present verifiable facts. The judgment is left to humans.
 
 Our local LLMs that keep confidential data from leaking outside stem from the exact same principle. Because in real workplaces, things stall simply because people don't know whether it is safe to hand confidential data over to an external AI.
 

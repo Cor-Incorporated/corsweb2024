@@ -1,18 +1,19 @@
 ---
 title: "Why AI and Contract Development Cost Estimation Becomes Dependent on Individuals: How to Turn the Basis for Estimates into Corporate Assets"
-description: "This article explains why contract development estimates vary from person to person and how to establish an explainable basis for estimates using GitHub track records, market rates, and man-hour breakdowns. It also introduces the concept of utilizing Grift."
-summary: "Contract development estimates become dependent on individuals because the necessary information is scattered across past projects, sales reps' memories, and individual team members' experience. By structuring project information and recording it with every estimate, that basis can be transformed into a corporate asset and reused for subsequent projects."
+description: "This article explains why contract development estimates vary from person to person, and how to keep an explainable basis by recording the breakdown and the assumptions. The estimation-support web app ended in September 2026. Current consultations are for AI contract development and adoption support."
+summary: "Contract development estimates become dependent on individuals because the necessary information is scattered across past projects, sales reps' memories, and individual team members' experience. By structuring project information and recording it with every estimate, that basis can be transformed into a corporate asset and reused for subsequent projects. The discussion of the estimation-support web app is kept as what was published at the time."
 pubDate: 2026-06-20
-updatedDate: 2026-10-23
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
+ctaIntent: "contract-dev"
 tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "6597c07e3b67000a2e45a3ca7973f943d12f3ea6d4ec70e8c23de473f380a0d7"
-translatedAt: "2026-10-23T06:14:42.717Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 Why do estimates in contract development become reliant on specific individuals? The reason is simple: the information needed for estimation is scattered across past projects, GitHub, work-hour logs, risks, sales reps' memories, and the personal experience of the team members involved. As long as this information remains trapped in individuals' heads, the quality of a team's proposals cannot stay consistent.
@@ -20,11 +21,17 @@ Why do estimates in contract development become reliant on specific individuals?
 > **Update: October 20, 2026**
 > Grift ceased offering its estimation-support web application in September 2026, and its direction has shifted to an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' git histories. The descriptions of Grift in this article reflect what was current at the time of publication. For consultations regarding contract development and AI development estimates, please reach out via [Contact Us](/contact) under our AI contract development services.
 
+The first edition of this article introduced the Grift estimation-support web app that was offered at the time. That offering ended in September 2026. The current Grift CLI is a different form: it organizes facts that can be checked from development records. This article keeps the thinking about estimates and updates where to ask now. The current place to ask is AI contract development and adoption support.
+
+The service page is [AI infrastructure and contract development](/services/ai-development/).
+
+Inquiries start from [contact](/contact?intent=contract-dev). That entrance is separate from a Grift trial (PoC).
+
 At Cor.Inc., we believe that an estimate is not just a calculation of an amount, but a foundation for building trust with clients. The question is not whether a quote is cheap or expensive, but whether you can explain *why* it costs that much. If you cannot answer that, business negotiations turn into mere price haggling.
 
 > **Objective Data Assumed in This Article**
 > - The Grift landing page at the time of publication stated that it cross-referenced GitHub track records with market rates, structured specifications through 5 to 10 AI-driven interview sessions, and generated comparison reports between market standards and the company's proposals.
-> - GitHub Octoverse 2025 noted that generative AI is becoming standard in software development, with AI, agents, and typed languages driving the largest development shift in over a decade.
+> - GitHub Octoverse 2025 noted that generative AI is becoming standard in software development, with AI, agents, and typed languages driving the largest development shift in over a decade. In the report, "2025" means 1 September 2024 through 31 August 2025. A developer means a person with a GitHub account, and metrics without a special note are public activity.
 > - At the time of publication, Cor.'s track record page positioned Grift as an "in-house AI estimation and evaluation platform that generates explainable reference estimates from GitHub track records and market rates."
 
 ## Three Reasons Why Estimation Becomes Person-Dependent
@@ -64,6 +71,6 @@ A. While initial organizing and the generation of supporting documentation can b
 ## References
 
 - [Grift LP](https://griftai.org/) - Reviewed the landing page at the time of publication, confirming cross-referencing of GitHub track records with market rates, 5–10 AI-driven interview sessions, comparison reports, and alpha-stage market research at the time.
-- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - Generative AI is becoming standard in development; 80% of new developers use Copilot within one week. TypeScript has become the most widely used language on GitHub.
+- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - The period is 1 September 2024 through 31 August 2025. The population is developers with a GitHub account; metrics without a special note are public activity. 80% of new developers use Copilot within one week. TypeScript has become the most widely used language on GitHub.
 - [Cor. Website: Track Record & Case Studies](https://cor-jp.com/works/) - Reviewed Engineer Cafe Navigator, Grift, AI SaaS, legacy core database migrations, architectural AI, and more.
 - [Cor. Website: AI × CO-CREATION / Business Overview](https://cor-jp.com/) - Reviewed Cor.'s business areas, Grift, local LLMs/secure AI, AI-driven development, and co-creation messaging.

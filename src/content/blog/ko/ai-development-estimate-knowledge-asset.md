@@ -3,16 +3,17 @@ title: "AI 개발·수탁 개발 견적이 개인 역량에 의존하게 되는 
 description: "수탁 개발 견적이 사람마다 달라지는 이유와 GitHub 실적, 시장 시세, 공수 내역을 활용하여 설명 가능한 견적 근거를 구축하는 방법을 설명합니다. Grift 활용에 대한 접근법도 소개합니다."
 summary: "수탁 개발 견적이 개인 역량에 의존하게 되는 것은 필요한 정보가 과거 프로젝트, 영업 담당자의 기억, 담당자의 경험 등에 흩어져 있기 때문입니다. 프로젝트별 정보를 구조화하여 견적을 낼 때마다 축적해 두면, 근거를 회사의 자산으로 삼아 다음 프로젝트에서 재사용할 수 있습니다."
 pubDate: 2026-06-20
-updatedDate: 2026-10-23
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
+ctaIntent: "contract-dev"
 tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "6597c07e3b67000a2e45a3ca7973f943d12f3ea6d4ec70e8c23de473f380a0d7"
-translatedAt: "2026-10-23T06:20:51.347Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 외주 개발 견적은 왜 개인의 역량에 의존하게(속인화) 되는 것일까요? 이유는 단순합니다. 견적에 필요한 정보가 과거 프로젝트, GitHub, 공수, 리스크, 영업 담당자의 기억, 실무자의 경험 등에 흩어져 있기 때문입니다. 이를 개인의 머릿속에만 둔 채로는 팀의 제안 품질이 안정될 수 없습니다.
@@ -20,11 +21,17 @@ translationModel: "gemini-3.8-flash"
 > **2026년 10월 20일 추가**
 > Grift는 2026년 9월 견적 지원 웹 애플리케이션 제공을 종료하였으며, 현재는 엔지니어의 git 이력에서 검증 가능한 사실을 추출하는 오픈소스 CLI([griftai.org](https://griftai.org))로 방향을 전환했습니다. 본 글의 Grift 관련 내용은 공개 당시의 기준입니다. 외주 개발·AI 개발 견적에 대한 상담은 AI 외주 개발 차원에서 [문의하기](/contact)를 통해 접수하고 있습니다.
 
+본 글의 초판은 당시 제공하던 Grift 견적 지원 웹 앱을 소개했습니다. 그 제공은 2026년 9월에 끝났습니다. 지금의 Grift CLI는 개발 기록에서 확인할 수 있는 사실을 정리하는 다른 제공 형태입니다. 본 글은 견적의 생각을 남기고, 지금의 상담처를 갱신했습니다. 지금의 상담처는 AI 수탁 개발·도입 지원입니다.
+
+서비스 페이지는 [AI 기반 구축·AI 수탁](/services/ai-development/)입니다.
+
+상담은 [문의하기](/contact?intent=contract-dev)에서 진행합니다. Grift 테스트 도입(PoC) 상담과는 다른 입구입니다.
+
 Cor.주식회사는 견적을 단순한 금액 계산이 아닌, 고객과의 신뢰 구축 과정이라고 생각합니다. 저렴한지 비싼지가 아니라 "왜 이 금액인지"를 설명할 수 있는가. 이 질문에 답하지 못하면 상담은 가격 흥정으로 변질되고 맙니다.
 
 > **이 글에서 전제로 한 객관적 데이터**
 > - 공개 당시의 Grift LP에서는 GitHub 실적과 시장 시세를 대조하고, 5~10회의 AI 인터뷰를 통해 사양을 구조화하여 시장 표준과 자사 제안의 비교 리포트를 생성한다고 설명했습니다.
-> - GitHub Octoverse 2025에서는 생성형 AI가 개발 표준으로 자리 잡아가고 있으며, AI·에이전트·타입 언어가 10년 이상 만에 최대 규모의 개발 변화를 이끌어내고 있다고 정리했습니다.
+> - GitHub Octoverse 2025에서는 생성형 AI가 개발 표준으로 자리 잡아가고 있으며, AI·에이전트·타입 언어가 10년 이상 만에 최대 규모의 개발 변화를 이끌어내고 있다고 정리했습니다. 보고서의 「2025」는 2024년 9월 1일부터 2025년 8월 31일까지입니다. 개발자는 GitHub 계정을 가진 사람을 가리키며, 따로 적지 않은 지표는 공개 활동입니다.
 > - 공개 당시 Cor.의 실적 페이지에서는 Grift를 "GitHub 실적과 시장 시세를 기반으로 설명 가능한 참고 견적을 생성하는 자사 AI 견적·평가 기반"으로 정의하고 있었습니다.
 
 ## 견적이 속인화되는 3가지 원인
@@ -64,6 +71,6 @@ A. 1차 정리나 근거 자료 생성은 AI에게 맡길 수 있지만, 최종 
 ## 참고 자료
 
 - [Grift LP](https://griftai.org/) - 공개 당시의 LP에서 GitHub 실적과 시장 시세 대조, 5~10회의 AI 인터뷰, 비교 리포트, 당시 알파 버전의 시장 조사 등을 확인.
-- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 생성형 AI가 개발 표준으로 자리 잡아가고 있으며, 신규 개발자의 80%가 1주일 이내에 Copilot을 사용. TypeScript가 GitHub에서 가장 많이 사용되는 언어로 등극.
+- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 대상 기간은 2024년 9월 1일~2025년 8월 31일. 모집단은 GitHub 계정을 가진 개발자이며, 따로 적지 않은 지표는 공개 활동. 신규 개발자의 80%가 1주일 이내에 Copilot을 사용. TypeScript가 GitHub에서 가장 많이 사용되는 언어로 등극.
 - [Cor. HP: 실적·사례](https://cor-jp.com/works/) - Engineer Cafe Navigator, Grift, AI SaaS, 레거시 기간계 DB 이전, 건축 AI 등을 확인.
 - [Cor. HP: AI × CO-CREATION / 사업 개요](https://cor-jp.com/) - Cor.의 사업 영역, Grift, 로컬 LLM·보안 AI, AI 주도 개발, 공존 및 협업 메시지 확인.

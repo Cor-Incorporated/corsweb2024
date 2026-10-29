@@ -1,11 +1,12 @@
 ---
 title: "AI開発・受託開発の見積もりが属人化する理由〜根拠を会社資産に変える方法"
-description: "受託開発の見積もりが人によってブレる理由と、GitHub実績・市場相場・工数内訳を用いて説明できる見積根拠を作る方法を解説します。Grift活用の考え方も紹介します。"
-summary: "受託開発の見積もりが属人化するのは、必要な情報が過去案件、営業の記憶、担当者の経験などに散らばっているからです。案件ごとの情報を構造化して見積もりのたびに残せば、根拠を会社の資産として次の案件で再利用できます。"
+description: "受託開発の見積もりが人によってブレる理由と、工数内訳や前提を残して説明できる見積根拠を作る方法を解説します。見積支援のWebアプリは2026年9月に提供を終えています。いまの相談はAI受託開発・導入支援です。"
+summary: "受託開発の見積もりが属人化するのは、必要な情報が過去案件、営業の記憶、担当者の経験などに散らばっているからです。案件ごとの情報を構造化して見積もりのたびに残せば、根拠を会社の資産として次の案件で再利用できます。見積支援のWebアプリの話は、公開当時の内容として残しています。"
 pubDate: 2026-06-20
-updatedDate: 2026-10-23
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
+ctaIntent: "contract-dev"
 tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "ja"
 featured: false
@@ -17,11 +18,17 @@ isDraft: false
 > **2026年10月20日 追記**
 > Griftは2026年9月に見積支援のWebアプリの提供を終え、現在はエンジニアのgit履歴から確かめられる事実を取り出すOSSのCLI（[griftai.org](https://griftai.org)）へ方針を変えています。本記事のGriftに関する記述は公開当時の内容です。受託開発・AI開発の見積もりのご相談は、AI受託開発として[お問い合わせ](/contact)からお受けしています。
 
+本記事の初版では、当時提供していたGriftの見積支援Webアプリを紹介していました。その提供は2026年9月に終了しています。現在のGrift CLIは、開発記録から確認できる事実を整理する別の提供形態です。本記事では見積もりの考え方を残し、現在の相談先を更新しています。現在の相談先は、AI受託開発・導入支援です。
+
+サービスのページは[AI基盤構築・AI受託](/services/ai-development/)です。
+
+相談は[お問い合わせ](/contact?intent=contract-dev)から進めます。Griftのテスト導入（PoC）の相談とは、別の入口です。
+
 Cor.株式会社では、見積もりは単なる金額計算ではなく、顧客との信頼づくりだと考えています。安いか高いかではなく、「なぜこの金額なのか」を説明できるか。ここで答えられないと、商談は価格交渉になってしまいます。
 
 > **この記事で前提にした客観データ**
 > - 公開当時のGriftのLPでは、GitHub実績と市場相場を照合し、5〜10回のAIヒアリングで仕様を構造化し、市場標準と自社提案の比較レポートを生成すると説明していました。
-> - GitHub Octoverse 2025では、生成AIが開発に標準化しつつあり、AI・エージェント・型付き言語が10年以上で最大級の開発変化を生んでいると整理されています。
+> - GitHub Octoverse 2025では、生成AIが開発に標準化しつつあり、AI・エージェント・型付き言語が10年以上で最大級の開発変化を生んでいると整理されています。報告書の「2025」は2024年9月1日から2025年8月31日までです。開発者はGitHubのアカウントを持つ人を指し、特記のない指標は公開活動です。
 > - 公開当時、Cor.の実績ページではGriftを「GitHub実績と市場相場から、説明できる参考見積もりを生成する自社AI見積・評価基盤」と位置づけていました。
 
 ## 見積もりが属人化する3つの原因
@@ -61,6 +68,6 @@ A. 一次整理や根拠資料の生成はAIに任せられますが、最終金
 ## 参考資料
 
 - [Grift LP](https://griftai.org/) - 公開当時のLPで、GitHub実績と市場相場の照合、5〜10回のAIヒアリング、比較レポート、当時アルファ版の市場調査等を確認した。
-- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 生成AIは開発に標準化しつつあり、80%の新規開発者が1週間以内にCopilotを使用。TypeScriptがGitHub上で最も使われる言語に。
+- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 対象期間は2024年9月1日〜2025年8月31日。母集団はGitHubのアカウントを持つ開発者で、特記のない指標は公開活動。新規開発者の80%が1週間以内にCopilotを使用。TypeScriptがGitHub上で最も使われる言語に。
 - [Cor. HP: 実績・事例](https://cor-jp.com/works/) - Engineer Cafe Navigator、Grift、AI SaaS、レガシー基幹DB移行、建築AIなどを確認。
 - [Cor. HP: AI × CO-CREATION / 事業概要](https://cor-jp.com/) - Cor.の事業領域、Grift、ローカルLLM・セキュアAI、AI駆動開発、共創メッセージを確認。

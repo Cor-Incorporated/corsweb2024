@@ -1,55 +1,66 @@
 ---
-title: "La productividad se multiplica por 7 con el desarrollo impulsado por IA: mi experiencia práctica"
-description: "Un caso de estudio práctico en el que, mediante un flujo de trabajo de desarrollo que combina las herramientas de IA más recientes, las contribuciones en GitHub aumentaron 7 veces, pasando de unas 50 a más de 350 al mes"
-summary: "Desde que cambié al desarrollo impulsado por IA, las contribuciones en GitHub se multiplicaron por 7, pasando de unas 50 al mes a más de 350. Genero especificaciones y código con Claude Desktop y Claude Code, y doy el acabado final con la revisión de CodeRabbit y Cursor."
+title: "Cómo cambió la actividad en GitHub al desarrollar con IA: unos 20–40 al mes en la segunda mitad de 2024, unos 300 en mayo de 2025"
+description: "Las contribuciones de GitHub fueron unos 20–40 al mes en la segunda mitad de 2024 y unos 300 en mayo de 2025. Es el total estándar de GitHub, que incluye issues, pull requests y revisiones, según el gráfico publicado el 30 de mayo de 2025. No es una tasa de velocidad de desarrollo ni de volumen entregado."
+summary: "Las contribuciones de GitHub (el total estándar, con issues, pull requests y revisiones) fueron unos 20–40 al mes en la segunda mitad de 2024 y unos 300 en mayo de 2025. El «7x» de la primera versión fue un redondeo que situaba el periodo anterior al uso de IA en unos 50 al mes. La calidad, el retrabajo y el tiempo de trabajo no se compararon en las mismas condiciones."
 pubDate: 2024-01-15
-updatedDate: 2026-10-23
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "ai"
-tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
+ctaIntent: "contract-dev"
+tags: ["AI", "コントリビュート", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "es"
 featured: true
-translationSourceHash: "ed0176d934a14b7285d9bbf477e8c07d66cff7938bf7a6ae93e9e8698ce3c118"
-translatedAt: "2026-10-23T06:24:11.806Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "955397d96732625a2361532f533d4934ab6c77e0cc2b5d2853afae8f1f9b3d47"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
-## Multiplicar la productividad por 7 con el desarrollo impulsado por IA: mi experiencia real
+Las contribuciones de GitHub (el total estándar, que incluye issues, pull requests y revisiones) fueron unos 20–40 al mes en la segunda mitad de 2024. En mayo de 2025 fueron unos 300 (según el gráfico publicado el 30 de mayo de 2025).
 
-Al pasar de los métodos de desarrollo tradicionales al desarrollo impulsado por IA, la productividad del desarrollo mejoró de forma drástica. El número de contribuciones en GitHub, que a lo sumo rondaba las 50 al mes, pasó a superar las 350 mensuales. Se multiplicó por 7. No es una broma, realmente se multiplicó por 7. Aquí dejo por escrito todo sobre cómo lo logré.
+El «7x» de la primera versión fue un redondeo que situaba el periodo anterior al uso de IA en unos 50 al mes.
 
-## Construcción del flujo de trabajo de desarrollo impulsado por IA
+Esta cifra no muestra que la velocidad de desarrollo o el volumen entregado se multiplicaran.
 
-### 1. Automatización de la generación de código
+Este artículo recuerda qué tareas se encomendaron entonces a la IA y qué resultó más fácil de avanzar. La calidad, el retrabajo y el tiempo real de trabajo no se compararon en las mismas condiciones. No se afirman esas tasas de mejora.
 
-Hago que Claude Code escriba el código. En primer lugar, interactúo con Claude Desktop para elaborar las instrucciones detalladas y luego transmito ese contenido a Claude Code en la terminal. En cuestión de minutos, la estructura básica del código está lista. A partir de ahí, voy añadiendo instrucciones concretas como: «añade un método a esta clase y escribe también las pruebas unitarias».
+Lo que se compara es el recuento mensual de la segunda mitad de 2024 y el recuento de mayo de 2025. Si se incluyen los recuentos de repositorios privados no se sabe por la información pública. No se creó un denominador ni un indicador de calidad nuevo para ajustar las cifras antiguas.
 
-### 2. Optimización de la revisión de código
+## Cómo se repartía el trabajo entonces
 
-Un conejo inteligente llamado CodeRabbit se encarga de la revisión de código. Al crear un PR, la revisión comienza de forma automática y señala mediante comentarios en el PR posibles errores, vulnerabilidades de seguridad, infracciones de las normas de codificación, entre otros aspectos. Los puntos señalados se corrigen con la función Agent de Cursor. Vivimos en una época maravillosa.
+### Escribir código
 
-## Datos reales medidos
+El código lo escribía Claude Code. Primero se preparaba un pliego de instrucciones en conversación con Claude Desktop y luego se pasaba a Claude Code en el terminal. En unos minutos había código que formaba un esqueleto básico. Después se acumulaban instrucciones concretas, como «añade un método a esta clase y escribe una prueba unitaria».
 
-Lo que medí fue el número de contribuciones en GitHub. Anteriormente, las contribuciones a proyectos personales o de código abierto rondaban, como mucho, unas 50 al mes. Desde que comencé a desarrollar junto con la IA, pasé a superar las 350 al mes.
+### Revisión
 
-Sin embargo, las contribuciones no son solo el número de commits. Según la definición de GitHub, además de los commits, también se cuentan las Issues, los Pull Requests, las revisiones, etc. Los detalles de la evolución de estas cifras los expliqué en el artículo de note citado en las referencias.
+Al abrir un pull request, CodeRabbit iniciaba la revisión y comentaba en el pull request posibles fallos, notas de seguridad y diferencias respecto a las convenciones. Los puntos señalados se corregían con la función Agent de Cursor. Eso no significa que los comentarios lo encuentren todo.
 
-## Detalle de la cadena de herramientas
+## Qué se contó
 
-### Herramientas principales: los compañeros de equipo
+Lo que se contó es el número de contribuciones de GitHub. En la segunda mitad de 2024 fueron unos 20–40 al mes. En mayo de 2025, unos 300. Ambos están en el alcance del gráfico publicado el 30 de mayo de 2025.
 
-- Cursor: editor integrado con IA. Corrige los puntos señalados mediante la función Agent (ya no puedo vivir sin él)
-- Claude Desktop: elabora las instrucciones dialogando de forma interactiva
-- Claude Code: escribe el código a partir de las instrucciones
-- CodeRabbit: un conejo inteligente que revisa el código de forma automática
+Una contribución no es un recuento de commits. En la definición de GitHub, además de los commits entran issues, pull requests y revisiones.
 
-Este flujo de trabajo no solo aumenta la eficiencia, sino que transforma la experiencia de desarrollo en sí misma. Ya no se siente tanto como escribir código, sino más bien como resolver problemas dialogando con la IA.
+## Herramientas que se usaban
+
+- Cursor: un editor con IA integrada. Los puntos señalados se corregían con la función Agent
+- Claude Desktop: preparar instrucciones en conversación
+- Claude Code: escribir código a partir de las instrucciones
+- CodeRabbit: revisión automática de pull requests
+
+La sensación de entonces se acercaba más a resolver problemas en diálogo con la IA que a escribir código línea a línea. Es una sensación, no una medición del tiempo de trabajo ni del volumen entregado.
 
 ## Referencias
 
-- [Cómo combiné las últimas herramientas de IA para multiplicar por 7 la velocidad de desarrollo: mi desarrollo ultrarrápido impulsado por IA](https://note.com/cor_instrument/n/n800a959f7284) (note, 1 de junio de 2025). Artículo en el que explico cómo las contribuciones en GitHub aumentaron de unas 50 al mes a más de 350.
+El título del artículo de note del 1 de junio de 2025 dice que la velocidad de desarrollo fue 7x. Las cifras de este artículo de la empresa siguen el gráfico del 30 de mayo de 2025. No se tratan como una tasa de velocidad o de volumen entregado.
 
-Estos son los servicios que utilizo en la práctica.
+https://note.com/cor_instrument/n/n800a959f7284
+
+El gráfico mensual de contribuciones está en la publicación del 30 de mayo de 2025.
+
+https://x.com/cor_terisuke/status/1928266812019368121
+
+- [GitHub Docs: Profile contributions](https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference) - descripción oficial de lo que se cuenta como contribución
 
 https://cor-jp.com/
 
