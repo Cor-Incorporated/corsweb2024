@@ -16,14 +16,17 @@ function python(args) {
   return spawnSync('python3', ['-I', ...args], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
 }
 
+// Python を起動するので、負荷のある環境でも落ちないように上限を長めにとる
+const TIMEOUT_MS = 30_000;
+
 describe('cor-voice のハーネスの入口', () => {
   it('入口が正本から生成したものと一致する', () => {
     const run = python([path.join(scripts, 'render_harness_entries.py'), '--check']);
     expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
-  });
+  }, TIMEOUT_MS);
 
   it('生成と検査のスクリプトの単体テストが通る', () => {
     const run = python(['-m', 'unittest', 'discover', '-s', scripts, '-p', 'test_*.py']);
     expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
-  });
+  }, TIMEOUT_MS);
 });
