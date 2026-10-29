@@ -4,6 +4,8 @@
 
 yomimono の Worker・UI に関する部分は廃止した（コードは #328 でリポジトリから削除。後継候補は ADR-0018、Proposed）。news / cases のコレクション定義、プレスリリース運用、OGP の PNG 化は存続する。以下は当時の記録（Accepted 2026-07-14）。
 
+> 2026-10-29 現状注記: 後継の [ADR-0018](./ADR-0018-cms-sveltia.md) は、2026-10-27 に Accepted となった。以下の yomimono に関する記述は当時の記録として残す。
+
 ## 背景
 ADR-0008 で確立した「静的＋記事bot（DBなし）」の読みものCMS基盤（yomimono Worker / `cor-yomimono-bot`）は**ブログ単機能で稼働中**。これを取り巻く4つの課題がある:
 
