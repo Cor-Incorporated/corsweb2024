@@ -1,10 +1,11 @@
+// @vitest-environment node
 /**
  * CMS（Sveltia CMS, ADR-0018・#329）の設定 cms/public/config.yml と、サイト側の定義を結ぶリンクテスト。
  *
  * 項目の正本は src/config/cms-contract.ts。config.yml は同じ値を置く。
  * 同じ事実が次の箇所にある:
  *   - カテゴリの選択肢      config.yml ↔ cms-contract ↔ src/config/categories.ts（と blog-schema.ts の enum）
- *   - 必須・任意の項目      config.yml ↔ src/config/blog-schema.ts（Zod）
+ *   - 必須・任意の項目      config.yml ↔ src/content/config.ts・blog-schema.ts（Zod）
  *   - 書き込み先・ブランチ  config.yml ↔ ADR-0018（ja のフォルダだけ・develop・PR 経由）
  *   - トークンを渡す先      wrangler.toml [vars] ALLOWED_DOMAINS ↔ cms/firebase.json hosting.site
  *   - 認証 Worker の URL    config.yml backend.base_url ↔ wrangler.toml name
@@ -15,9 +16,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { z } from 'astro/zod';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { blogFrontmatterSchema } from '../blog-schema';
 import { BLOG_CATEGORIES } from '../categories';
+import { NEWS_CATEGORIES } from '../news-categories';
 import { CONTACT_INTENTS } from '../site';
 import {
   authWorker,
@@ -29,6 +31,13 @@ import {
   cmsSite,
   draftField,
 } from '../cms-contract';
+
+vi.mock('astro:content', async () => {
+  const { z } = await import('astro/zod');
+  return { z, defineCollection: (definition: unknown) => definition };
+});
+
+const { collections } = await import('../../content/config');
 
 type CmsOption = string | { label: string; value: string };
 type CmsField = {
@@ -44,6 +53,8 @@ type CmsCollection = {
   folder?: string;
   path?: string;
   i18n?: unknown;
+  delete?: boolean;
+  publish_mode?: string;
   fields: CmsField[];
 };
 type CmsConfig = {
@@ -77,8 +88,14 @@ const JA_FOLDER = /^src\/content\/(?:blog|news|cases)\/ja$/;
 const loadConfig = (): CmsConfig => yaml.load(readFileSync(CONFIG_PATH, 'utf8')) as CmsConfig;
 const list = (values: Iterable<unknown>): string =>
   `[${[...values].map(String).sort().join(', ')}]`;
-const blogFields = (config: CmsConfig): CmsField[] =>
-  config.collections.find((collection) => collection.name === 'blog')?.fields ?? [];
+const collectionFields = (config: CmsConfig, name: string): CmsField[] =>
+  config.collections.find((collection) => collection.name === name)?.fields ?? [];
+const blogFields = (config: CmsConfig): CmsField[] => collectionFields(config, 'blog');
+const contentSchemas = {
+  blog: blogFrontmatterSchema,
+  news: collections.news.schema as Schema,
+  cases: collections.cases.schema as Schema,
+};
 
 // Zod 側: default も optional も無いキーが「必須」。
 const zodRequirement = (schema: z.ZodTypeAny): 'required' | 'optional' | 'defaulted' => {
@@ -126,8 +143,12 @@ function checkCategories(config: CmsConfig, categories: Category[], schema: Sche
 }
 
 /** (b) 必須・任意 ↔ Zod スキーマ */
-function checkRequirements(config: CmsConfig, schema: Schema): string[] {
-  const fields = blogFields(config).filter((f) => f.name !== 'body');
+function checkRequirements(
+  config: CmsConfig,
+  schema: Schema,
+  collection = 'blog',
+  fields = collectionFields(config, collection).filter((f) => f.name !== 'body')
+): string[] {
   const byName = new Map(fields.map((f) => [f.name, f]));
   const zodKeys = Object.keys(schema.shape);
   const zodRequired = zodKeys.filter((k) => zodRequirement(schema.shape[k]) === 'required');
@@ -173,6 +194,74 @@ function checkRequirements(config: CmsConfig, schema: Schema): string[] {
   return violations;
 }
 
+/** 全キー・値の種類・enum・ネストを実際の Content Collection スキーマと照合する。 */
+function checkSchemaFields(config: CmsConfig, schema: Schema, collection: string): string[] {
+  const inspect = (object: Schema, fields: CmsField[], prefix: string): string[] => {
+    const violations = checkRequirements(config, object, collection, fields).map(
+      (message) => `${prefix}: ${message}`
+    );
+    for (const [key, definition] of Object.entries(object.shape)) {
+      const here = `${prefix}.${key}`;
+      const field = fields.find((entry) => entry.name === key);
+      if (!field) {
+        violations.push(`${here} が config.yml に無い / src/content/config.ts には定義がある`);
+        continue;
+      }
+      const declared = definition as z.ZodTypeAny;
+      if (
+        declared instanceof z.ZodDefault &&
+        field.default !== undefined &&
+        JSON.stringify(field.default) !== JSON.stringify(declared._def.defaultValue())
+      )
+        violations.push(`${here} の default が Zod と違う: ${JSON.stringify(field.default)}`);
+      if (key === 'lang' && (field.widget !== 'hidden' || field.default !== 'ja'))
+        violations.push(`${here} は hidden・default: ja が必要`);
+      let base = declared;
+      while (base instanceof z.ZodOptional || base instanceof z.ZodDefault)
+        base = base._def.innerType;
+      if (field.widget === 'hidden') {
+        if (base instanceof z.ZodEnum && !base.options.includes(field.default))
+          violations.push(`${here} の default が enum に無い: ${String(field.default)}`);
+        continue;
+      }
+      const widgets =
+        base instanceof z.ZodEnum
+          ? ['select']
+          : base instanceof z.ZodObject
+          ? ['object']
+          : base instanceof z.ZodArray
+          ? ['list']
+          : base instanceof z.ZodDate
+          ? ['datetime']
+          : base instanceof z.ZodBoolean
+          ? ['boolean']
+          : ['string', 'text', 'image'];
+      if (!widgets.includes(field.widget ?? ''))
+        violations.push(
+          `${here} の widget: config.yml ${field.widget} / Zod ${base._def.typeName}`
+        );
+      if (base instanceof z.ZodEnum) {
+        const values = (field.options ?? []).map((option) =>
+          typeof option === 'string' ? option : option.value
+        );
+        if (list(values) !== list(base.options))
+          violations.push(
+            `${here} の選択肢: config.yml ${list(values)} / src/content/config.ts ${list(
+              base.options
+            )}`
+          );
+      }
+      if (base instanceof z.ZodObject) violations.push(...inspect(base, field.fields ?? [], here));
+    }
+    return violations;
+  };
+  return inspect(
+    schema,
+    collectionFields(config, collection).filter((field) => field.name !== 'body'),
+    collection
+  );
+}
+
 /** (c) CMS が書くのは ja のフォルダだけ（en / zh / ko / es は翻訳 CI の専有） */
 function checkJaOnly(config: CmsConfig): string[] {
   const folders = config.collections.map((c) => c.folder ?? '（folder なし）');
@@ -203,6 +292,14 @@ function checkJaOnly(config: CmsConfig): string[] {
   return violations;
 }
 
+const checkDeletion = (config: CmsConfig): string[] =>
+  config.collections
+    .filter((collection) => collection.delete !== true)
+    .map(
+      (collection) =>
+        `${collection.name} の delete は true が必要 / config.yml ${String(collection.delete)}`
+    );
+
 /** (d) 編集は develop への PR 経由（ADR-0018 決定 2） */
 function checkBranch(config: CmsConfig): string[] {
   const { backend, publish_mode: publishMode } = config;
@@ -213,17 +310,31 @@ function checkBranch(config: CmsConfig): string[] {
     ['backend.squash_merges', cmsBackend.squashMerges, backend.squash_merges ?? false],
     ['backend.open_authoring', cmsBackend.openAuthoring, backend.open_authoring ?? false],
   ];
-  return expected
+  const violations = expected
     .filter(([, want, actual]) => want !== actual)
     .map(
       ([key, want, actual]) =>
         `${key} が違う: ADR-0018 ${String(want)} / config.yml ${String(actual)}`
     );
+  for (const collection of config.collections) {
+    const effective = collection.publish_mode ?? publishMode;
+    if (effective !== cmsBackend.publishMode)
+      violations.push(
+        `${collection.name}.publish_mode が違う: ADR-0018 ${
+          cmsBackend.publishMode
+        } / config.yml ${String(effective)}（全体 ${String(publishMode)}）`
+      );
+  }
+  return violations;
 }
 
 /** (e) 既存の ja 記事の frontmatter キーはすべて config.yml に定義がある（保存で落ちない） */
-function checkExistingKeys(config: CmsConfig, keysByFile: Map<string, string[]>): string[] {
-  const defined = new Set(blogFields(config).map((f) => f.name));
+function checkExistingKeys(
+  config: CmsConfig,
+  keysByFile: Map<string, string[]>,
+  collection = 'blog'
+): string[] {
+  const defined = new Set(collectionFields(config, collection).map((f) => f.name));
   return [...keysByFile].flatMap(([file, keys]) =>
     keys
       .filter((k) => !defined.has(k))
@@ -335,11 +446,14 @@ function checkDocsWorkerUrls(docs: string, wrangler: Wrangler): string[] {
   const found = [...docs.matchAll(pattern)]
     .map((match) => match[0])
     .filter((url) => url !== placeholder);
-  if (found.length === 0) return [`docs/cms-sveltia.md に Worker の URL が 1 つも無い / 期待 "${expected}"`];
+  if (found.length === 0)
+    return [`docs/cms-sveltia.md に Worker の URL が 1 つも無い / 期待 "${expected}"`];
   const wrong = [...new Set(found.filter((url) => url !== expected))];
   if (wrong.length === 0) return [];
   return [
-    `docs/cms-sveltia.md の Worker の URL: 期待と違うもの [${wrong.join(', ')}]（${found.length} 件中）/ 期待 "${expected}"`,
+    `docs/cms-sveltia.md の Worker の URL: 期待と違うもの [${wrong.join(', ')}]（${
+      found.length
+    } 件中）/ 期待 "${expected}"`,
   ];
 }
 
@@ -426,7 +540,9 @@ describe('CMS 設定（cms/public/config.yml）とサイト定義の照合', () 
   it('(c) 書き込み先は ja のフォルダだけ', () => {
     expect(checkJaOnly(config)).toEqual([]);
     expect(config.collections.map((c) => c.folder)).toEqual(cmsCollections.map((c) => c.folder));
-    expect(cmsCollections.map((c) => c.delete)).toEqual([false]);
+    expect(config.collections.map((c) => c.name).sort()).toEqual(['blog', 'cases', 'news']);
+    expect(checkDeletion(config)).toEqual([]);
+    expect(cmsCollections.map((c) => c.delete)).toEqual([true, true, true]);
   });
 
   it('(d) develop への PR（editorial workflow・merge commit）で編集する', () => {
@@ -443,9 +559,9 @@ describe('CMS 設定（cms/public/config.yml）とサイト定義の照合', () 
     expect(blogFields(config).map((field) => field.name)).toEqual(
       contractBlogFields.map((field) => field.name)
     );
-    expect(contractBlogFields.some((field) => field.name === draftField && field.widget === 'hidden')).toBe(
-      true
-    );
+    expect(
+      contractBlogFields.some((field) => field.name === draftField && field.widget === 'hidden')
+    ).toBe(true);
     expect(blogCategoryOptions.map((option) => option.value)).toEqual(
       BLOG_CATEGORIES.map((category) => category.id)
     );
@@ -457,7 +573,126 @@ describe('CMS 設定（cms/public/config.yml）とサイト定義の照合', () 
       `https://${authWorker.name}.${authWorker.workersDevSubdomain}.workers.dev`
     );
     expect(authWorker.allowedDomains).toBe(`${cmsSite.hostingSite}.web.app`);
-    expect(cmsCollections[0]?.delete).toBe(false);
+    expect(cmsCollections[0]?.delete).toBe(true);
+  });
+});
+
+describe.each(['news', 'cases'] as const)('%s の CMS と Content Collection の照合', (name) => {
+  const schema = contentSchemas[name];
+  const mutate = (change: (fields: CmsField[]) => void) => {
+    const config = structuredClone(loadConfig());
+    change(collectionFields(config, name));
+    return config;
+  };
+
+  it('全項目・必須任意・enum・ネストが src/content/config.ts と一致する', () => {
+    expect(checkSchemaFields(loadConfig(), schema, name)).toEqual([]);
+  });
+
+  it('既存の日本語記事のキーを保存できる', () => {
+    const keys = readFrontmatterKeys(path.join(ROOT, `src/content/${name}/ja`));
+    expect(keys.size).toBeGreaterThan(0);
+    expect(checkExistingKeys(loadConfig(), keys, name)).toEqual([]);
+  });
+
+  it('publishedAt を任意にすると検出する', () => {
+    const config = mutate((fields) => {
+      fields.find((field) => field.name === 'publishedAt')!.required = false;
+    });
+    expect(checkSchemaFields(config, schema, name).join('\n')).toContain(
+      'publishedAt は Zod で必須'
+    );
+  });
+
+  it('任意の updatedAt を消しても検出する', () => {
+    const config = mutate((fields) => {
+      fields.splice(
+        fields.findIndex((field) => field.name === 'updatedAt'),
+        1
+      );
+    });
+    expect(checkSchemaFields(config, schema, name).join('\n')).toContain(
+      `${name}.updatedAt が config.yml に無い`
+    );
+  });
+
+  it('Zod にだけ必須項目を足すと検出する', () => {
+    const changed = schema.extend({ subtitle: z.string() });
+    expect(checkSchemaFields(loadConfig(), changed, name).join('\n')).toContain(
+      'subtitle は Zod で必須'
+    );
+  });
+
+  it('カテゴリの選択肢を消すと両側の値を出して検出する', () => {
+    const config = mutate((fields) => {
+      fields.find((field) => field.name === 'category')!.options!.pop();
+    });
+    const message = checkSchemaFields(config, schema, name).join('\n');
+    expect(message).toContain(`${name}.category の選択肢: config.yml`);
+    expect(message).toContain('/ src/content/config.ts');
+  });
+
+  it('日付を文字列欄にすると検出する', () => {
+    const config = mutate((fields) => {
+      fields.find((field) => field.name === 'publishedAt')!.widget = 'string';
+    });
+    expect(checkSchemaFields(config, schema, name).join('\n')).toContain(
+      `${name}.publishedAt の widget`
+    );
+  });
+
+  it('言語を en に変えると日本語専用の制約違反を検出する', () => {
+    const config = mutate((fields) => {
+      fields.find((field) => field.name === 'lang')!.default = 'en';
+    });
+    expect(checkSchemaFields(config, schema, name).join('\n')).toContain(
+      `${name}.lang は hidden・default: ja が必要`
+    );
+  });
+
+  it('featured の既定値を変えると Zod とのずれを検出する', () => {
+    const config = mutate((fields) => {
+      fields.find((field) => field.name === 'featured')!.default = true;
+    });
+    expect(checkSchemaFields(config, schema, name).join('\n')).toContain(
+      `${name}.featured の default が Zod と違う`
+    );
+  });
+
+  it('削除を無効にすると依頼の delete: true と食い違う', () => {
+    const config = structuredClone(loadConfig());
+    config.collections.find((collection) => collection.name === name)!.delete = false;
+    expect(checkDeletion(config)).toEqual([`${name} の delete は true が必要 / config.yml false`]);
+  });
+});
+
+describe('news/cases の固有フィールドの変異', () => {
+  it('news のカテゴリ表示名は news-categories.ts の日本語と一致する', () => {
+    const field = collectionFields(loadConfig(), 'news').find(
+      (field) => field.name === 'category'
+    )!;
+    expect(field.options).toEqual(
+      NEWS_CATEGORIES.map((category) => ({ value: category.id, label: category.label.ja }))
+    );
+  });
+
+  it('cases の画像の代替テキストを任意にすると検出する', () => {
+    const config = structuredClone(loadConfig());
+    const image = collectionFields(config, 'cases').find((field) => field.name === 'heroImage')!;
+    image.fields!.find((field) => field.name === 'alt')!.required = false;
+    expect(checkSchemaFields(config, contentSchemas.cases, 'cases').join('\n')).toContain(
+      'cases.heroImage: alt は Zod で必須'
+    );
+  });
+
+  it('cases の任意 CTA の enum を変えても検出する', () => {
+    const config = structuredClone(loadConfig());
+    collectionFields(config, 'cases').find((field) => field.name === 'ctaType')!.options = [
+      'unknown',
+    ];
+    expect(checkSchemaFields(config, contentSchemas.cases, 'cases').join('\n')).toContain(
+      'cases.ctaType の選択肢'
+    );
   });
 });
 
@@ -532,7 +767,7 @@ describe('F3 変異: 片側だけ変えると両側の値を出して落ちる',
     });
     const message = checkJaOnly(config).join('\n');
     expect(message).toContain('blog-en の folder が ja ではない: src/content/blog/en');
-    expect(message).toContain('全 folder [src/content/blog/en, src/content/blog/ja]');
+    expect(message).toContain(`全 folder ${list(config.collections.map((c) => c.folder))}`);
   });
 
   it('ブランチを main にする', () => {
@@ -543,6 +778,18 @@ describe('F3 変異: 片側だけ変えると両側の値を出して落ちる',
       'backend.branch が違う: ADR-0018 develop / config.yml main',
     ]);
   });
+
+  it.each(['blog', 'news', 'cases'])(
+    '%s だけ simple にすると PR を通らない設定を検出する',
+    (name) => {
+      const config = mutate((c) => {
+        c.collections.find((collection) => collection.name === name)!.publish_mode = 'simple';
+      });
+      expect(checkBranch(config)).toEqual([
+        `${name}.publish_mode が違う: ADR-0018 editorial_workflow / config.yml simple（全体 editorial_workflow）`,
+      ]);
+    }
+  );
 
   it('既存記事にだけ未定義のキーがある', () => {
     const keysByFile = new Map([['example.md', ['title', 'ogImage']]]);
@@ -633,9 +880,15 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
   });
 
   it.each([
-    ['Worker の URL が決まる前の仮の値', 'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev'],
+    [
+      'Worker の URL が決まる前の仮の値',
+      'https://cor-sveltia-cms-auth.REPLACE-WITH-CF-SUBDOMAIN.workers.dev',
+    ],
     ['別のホスト', 'https://auth.example.com'],
-    ['アカウントのサブドメインの打ち間違い', 'https://cor-sveltia-cms-auth.company-979.workers.dev'],
+    [
+      'アカウントのサブドメインの打ち間違い',
+      'https://cor-sveltia-cms-auth.company-979.workers.dev',
+    ],
     ['第三者のアカウントにある同名の Worker', 'https://cor-sveltia-cms-auth.attacker.workers.dev'],
   ])('base_url を変える: %s', (_, baseUrl) => {
     const config = loadConfig();
@@ -649,7 +902,10 @@ describe('F3 変異: トークンの渡し先・Worker の URL・CSP の片側�
     ['サブドメインの打ち間違い', 'https://cor-sveltia-cms-auth.company-979.workers.dev'],
     ['大文字のサブドメインの打ち間違い', 'https://cor-sveltia-cms-auth.COMPANY-979.workers.dev'],
     ['http', 'http://cor-sveltia-cms-auth.company-997.workers.dev'],
-    ['後ろに文字が付いたよく似たホスト', 'https://cor-sveltia-cms-auth.company-997.workers.dev.evil.example'],
+    [
+      '後ろに文字が付いたよく似たホスト',
+      'https://cor-sveltia-cms-auth.company-997.workers.dev.evil.example',
+    ],
   ])('手順書の Worker の URL を 1 か所だけ変える: %s', (_, wrongUrl) => {
     const docs = readFileSync(DOCS_PATH, 'utf8');
     const mutated = docs.replace(
