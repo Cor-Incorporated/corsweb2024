@@ -1,0 +1,81 @@
+name: Cor voice weekly intake
+
+# ADR-0026 / #448。公開RSS/APIとvoice-feedbackのリンクだけを集める。LLMと追加secretは使わない。
+# schedule / workflow_dispatch は既定mainへの反映後に利用できる。developへのmergeだけでは週次起動しない。
+on:
+  schedule:
+    # 月曜09:43 JST。週の識別はUTCのISO週。
+    - cron: '43 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Issueを書き込まず、候補と台帳を確認する'
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - '.github/workflows/cor-voice-weekly.yml'
+      - '.github/workflows/voice-intake/**'
+      - '.claude/skills/cor-voice/**'
+      - 'docs/cor-voice-weekly-intake.md'
+
+permissions: {}
+
+concurrency:
+  group: cor-voice-weekly-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'collector' }}
+  cancel-in-progress: false
+
+jobs:
+  fixtures:
+    name: Check the fixed voice intake fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check detection and issue writes with fixtures
+        run: python3 -m unittest discover -s .github/workflows/voice-intake -p 'test_*.py' -v
+
+  collect:
+    name: Collect public voice materials
+    if: github.event_name != 'pull_request'
+    needs: fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Collect links into the weekly issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ] && [ "$DRY_RUN" = 'true' ]; then
+            args+=(--dry-run)
+          fi
+          python3 .github/workflows/voice-intake/intake.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --evidence .claude/skills/cor-voice/references/evidence.md \
+            --ledger "$RUNNER_TEMP/voice-intake/guard-ledger.jsonl" \
+            "${args[@]}"
+      - name: Retain the collection ledger
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cor-voice-intake-ledger-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/voice-intake/guard-ledger.jsonl
+          if-no-files-found: error
+          retention-days: 30
