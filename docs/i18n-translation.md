@@ -63,6 +63,8 @@ translationModel: "gemini-3.8-flash"   # --adopt で採用した既存翻訳は 
 
 frontmatter は分類の時点で `src/content/config.ts` と同じ制約（Zod ミラー `scripts/i18n/schema.mjs`）で検証します（ja が不正なまま翻訳して API を使ったり、壊れた翻訳を `ok` と判定したりしないため）。
 
+未公開の下書き（ja の `isDraft: true` で、翻訳ファイルがまだ無いもの）は `missing` でも、`--check` の失敗にも `--write` の API 呼び出しにもしません。下書きのあいだは翻訳しないためです。`isDraft` を外した変更では翻訳ファイルが無いので `missing` になり、その PR で翻訳します。追加された ja が下書きだけで、ほかの `src/content` の変更が無い PR では、translate ジョブが `npm ci` と Gemini の前に止まります（`scripts/i18n/draft-only-diff.mjs`）。既存記事の `isDraft` を変えただけ（翻訳が既にある）のときは、これまでどおり `meta-drift` として API なしで同期します。省略された `isDraft` は false（公開）なので、キーの無い記事は見送りません。
+
 `--check` は 1 件でも問題があれば終了コード 1、`--write` は失敗・未処理が 1 件でもあれば終了コード 1、引数や設定の誤りは終了コード 2 です。
 
 `orphan` を削除する条件（人が書いた翻訳や、ja の改名だけで消える事故を防ぐため）:
