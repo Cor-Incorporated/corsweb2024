@@ -12,6 +12,7 @@ import { getRobotsContent } from '../config/site';
 import { safeJsonLd } from '../utils/json-ld';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
 import { ORGANIZATION_NAMES } from '../config/organization';
+import { OG_LOCALES } from '../config/og-locales';
 import { isNoindexPath } from '../config/indexing';
 import { SERVICE_PAGES, getServiceBasePath, getServiceOgSlug } from '../config/services';
 
@@ -38,13 +39,6 @@ interface Props {
   analytics?: boolean;
 }
 
-const OG_LOCALES: Record<Locale, string> = {
-  ja: 'ja_JP',
-  en: 'en_US',
-  zh: 'zh_CN',
-  ko: 'ko_KR',
-  es: 'es_ES',
-};
 const ALL_LOCALES = ['ja', 'en', 'zh', 'ko', 'es'] as const;
 
 const { description, title, availableLocales = ALL_LOCALES, ogImage: ogImageProp, ogType = 'website', publishedTime, modifiedTime, ogTitle, ogDescription, cloudiaLauncher = true, analytics = true } = Astro.props;
