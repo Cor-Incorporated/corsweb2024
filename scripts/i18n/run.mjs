@@ -34,6 +34,14 @@ export const HINTS = Object.freeze({
 export const sourceChangedInDiff = (item) =>
   item.sourceDiff === 'added' || item.sourceDiff === 'modified';
 
+/**
+ * 未公開の下書き（ja の isDraft が true）で、翻訳ファイルがまだ無い。
+ * 公開前は Gemini を呼ばず、--check の失敗にもしない。isDraft を外すと missing になり、その変更で翻訳する。
+ * 省略時の isDraft は false（公開）なので、キーが無い記事は対象にしない。
+ */
+export const isMissingDraft = (item) =>
+  item.status === 'missing' && item.source?.data?.isDraft === true;
+
 /** 項目ごとの具体的な案内（状態ごとの HINTS より優先）。無ければ undefined。 */
 export function itemHint(item) {
   if (item.status === 'untracked' && sourceChangedInDiff(item)) {
@@ -85,8 +93,14 @@ function summaryLine(items) {
 }
 
 export function runCheck({ plan, out }) {
-  const problems = plan.items.filter((i) => i.status !== 'ok');
-  out.info(`i18n check: ${plan.items.length} 組を検査（${summaryLine(plan.items)}）`);
+  const held = plan.items.filter(isMissingDraft);
+  const problems = plan.items.filter((i) => i.status !== 'ok' && !isMissingDraft(i));
+  const checked = plan.items.filter((i) => !isMissingDraft(i));
+  out.info(`i18n check: ${checked.length} 組を検査（${summaryLine(checked)}）`);
+  if (held.length > 0) {
+    const slugs = [...new Set(held.map((i) => `${i.collection}/${i.slug}`))].join(', ');
+    out.info(`isDraft のため翻訳を見送り: ${held.length} 件（${slugs}）`);
+  }
   formatReport(problems).forEach((line) => out.info(line));
   if (problems.length === 0) out.info('✓ すべての翻訳が ja と同期しています');
   return problems.length === 0 ? 0 : 1;
@@ -217,13 +231,15 @@ const skipOf = (item) => ({
  */
 export function planWrite(plan, { retranslateUntracked, pruneUntracked, maxPruneRatio }) {
   const { items } = plan;
+  const held = items.filter(isMissingDraft);
+  const actionable = items.filter((i) => !isMissingDraft(i));
   const translateStatuses = new Set([
     'missing',
     'stale',
     'invalid',
     ...(retranslateUntracked ? ['untracked'] : []),
   ]);
-  const orphans = items
+  const orphans = actionable
     .filter((i) => i.status === 'orphan')
     .map((item) => ({ item, ...orphanDecision(item, { pruneUntracked }) }));
   const { prune, blocked } = capPrunes(
@@ -232,12 +248,13 @@ export function planWrite(plan, { retranslateUntracked, pruneUntracked, maxPrune
     maxPruneRatio
   );
   return {
-    translate: items.filter((i) => translateStatuses.has(i.status)),
-    resync: items.filter((i) => i.status === 'meta-drift'),
+    translate: actionable.filter((i) => translateStatuses.has(i.status)),
+    resync: actionable.filter((i) => i.status === 'meta-drift'),
     prune,
+    held,
     skipped: [
-      ...items.filter((i) => i.status === 'untracked' && !retranslateUntracked).map(skipOf),
-      ...items.filter((i) => i.status === 'source-error').map(skipOf),
+      ...actionable.filter((i) => i.status === 'untracked' && !retranslateUntracked).map(skipOf),
+      ...actionable.filter((i) => i.status === 'source-error').map(skipOf),
       ...orphans.filter((o) => !o.prune).map(({ item, reason }) => ({ item, reason })),
       ...blocked,
     ],
@@ -268,11 +285,15 @@ function printPlan(work, out) {
   rows.forEach(([action, i]) =>
     out.info(`(dry-run) ${action} ${i.collection}/${i.slug} [${i.lang}]（${i.status}）`)
   );
+  work.held.forEach((i) =>
+    out.info(`(dry-run) hold ${i.collection}/${i.slug} [${i.lang}]（isDraft のため翻訳しない）`)
+  );
   work.skipped.forEach(({ item: i, reason }) =>
     out.info(`(dry-run) skip ${i.collection}/${i.slug} [${i.lang}]（${i.status}）: ${reason}`)
   );
+  const heldNote = work.held.length > 0 ? ` / 見送り ${work.held.length}` : '';
   out.info(
-    `(dry-run) 翻訳 ${work.translate.length} / 同期 ${work.resync.length} / 削除 ${work.prune.length} / 未処理 ${work.skipped.length}`
+    `(dry-run) 翻訳 ${work.translate.length} / 同期 ${work.resync.length} / 削除 ${work.prune.length} / 未処理 ${work.skipped.length}${heldNote}`
   );
 }
 
@@ -298,7 +319,12 @@ export async function runWrite({ plan, retranslateUntracked, pruneUntracked = fa
     overLimit.forEach((line) => ctx.out.error(line));
     return 1;
   }
-  // API キー不足などはファイルに触る前に失敗させる。
+  for (const item of work.held) {
+    ctx.out.info(
+      `- hold ${item.collection}/${item.slug} [${item.lang}]（isDraft のため翻訳しない）`
+    );
+  }
+  // API キー不足などはファイルに触る前に失敗させる。下書きだけのときはクライアントを作らない。
   const client = work.translate.length > 0 ? await ctx.createClient() : null;
   const synced = [];
   for (const item of work.resync) synced.push(await applySync(item, 'resync', ctx));

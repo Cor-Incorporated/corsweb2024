@@ -12,6 +12,7 @@ import { getRobotsContent } from '../config/site';
 import { safeJsonLd } from '../utils/json-ld';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
 import { ORGANIZATION_NAMES } from '../config/organization';
+import { OG_LOCALES } from '../config/og-locales';
 import { isNoindexPath } from '../config/indexing';
 import { SERVICE_PAGES, getServiceBasePath, getServiceOgSlug } from '../config/services';
 
@@ -38,13 +39,6 @@ interface Props {
   analytics?: boolean;
 }
 
-const OG_LOCALES: Record<Locale, string> = {
-  ja: 'ja_JP',
-  en: 'en_US',
-  zh: 'zh_CN',
-  ko: 'ko_KR',
-  es: 'es_ES',
-};
 const ALL_LOCALES = ['ja', 'en', 'zh', 'ko', 'es'] as const;
 
 const { description, title, availableLocales = ALL_LOCALES, ogImage: ogImageProp, ogType = 'website', publishedTime, modifiedTime, ogTitle, ogDescription, cloudiaLauncher = true, analytics = true } = Astro.props;
@@ -240,9 +234,9 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
       [x-cloak] { display: none !important; }
 
       /* ===== スクロール没入演出（軽量・ライブラリ0） ===== */
-      /* 初期非表示は JS 有効時(html.js)のみ。JS 無効/失敗時は即表示＝離脱防止(北極星)を担保。 */
+      /* 監視の登録が済んだ要素だけ隠す。モジュールが失敗しても本文は既定で見える。 */
       /* 動き（フェード＋浮き上がり）は維持しつつ、描画コストの高い blur は使わず軽量化。 */
-      html.js [data-reveal] {
+      html.js [data-reveal].reveal-ready {
         opacity: 0;
         transform: translateY(2.5rem) scale(0.98);
         transition:
@@ -250,7 +244,7 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
           transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         transition-delay: var(--reveal-delay, 0s);
       }
-      html.js [data-reveal].is-visible {
+      html.js [data-reveal].reveal-ready.is-visible {
         opacity: 1;
         transform: translateY(0) scale(1);
       }
@@ -354,10 +348,11 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
 
     <!-- スクロール没入演出: IntersectionObserver で [data-reveal] に .is-visible を付与（軽量・ライブラリ0） -->
     <script>
-      let revealObserver = null;
+      let revealObserver: IntersectionObserver | null = null;
       function initScrollReveal() {
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const targets = document.querySelectorAll('[data-reveal]');
+        targets.forEach((el) => el.classList.remove('reveal-ready'));
         // 再初期化(ページ遷移)時は前の observer を破棄して重複監視を防ぐ
         if (revealObserver) { revealObserver.disconnect(); revealObserver = null; }
         if (prefersReduced || !('IntersectionObserver' in window)) {
@@ -365,17 +360,27 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
           targets.forEach((el) => el.classList.add('is-visible'));
           return;
         }
-        revealObserver = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              // 双方向: viewport に入れば表示、出れば元に戻す（上下どちらのスクロールでも毎回アニメ）
-              entry.target.classList.toggle('is-visible', entry.isIntersecting);
-            });
-          },
-          // threshold 0 + 下 12% マージンで、上端が入った時点で発火（早すぎ防止）
-          { threshold: 0, rootMargin: '0px 0px -12% 0px' }
-        );
-        targets.forEach((el) => revealObserver.observe(el));
+        let nextObserver: IntersectionObserver | null = null;
+        try {
+          nextObserver = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                // 双方向: viewport に入れば表示、出れば元に戻す（上下どちらのスクロールでも毎回アニメ）
+                entry.target.classList.toggle('is-visible', entry.isIntersecting);
+              });
+            },
+            // threshold 0 + 下 12% マージンで、上端が入った時点で発火（早すぎ防止）
+            { threshold: 0, rootMargin: '0px 0px -12% 0px' }
+          );
+          targets.forEach((el) => nextObserver!.observe(el));
+          revealObserver = nextObserver;
+          targets.forEach((el) => el.classList.add('reveal-ready'));
+        } catch {
+          // 一部だけ登録できた場合も、非表示に切り替えず本文を見えるままにする。
+          targets.forEach((el) => el.classList.remove('reveal-ready'));
+          nextObserver?.disconnect();
+          revealObserver = null;
+        }
       }
       // 初回 + View Transitions のページ遷移後にも再バインド
       document.addEventListener('astro:page-load', initScrollReveal);

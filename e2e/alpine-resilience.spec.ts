@@ -28,12 +28,24 @@ function collectAlpineErrors(page: Page): string[] {
 const themeSwitch = (page: Page) => page.locator('header button[role="switch"]');
 const html = (page: Page) => page.locator('html');
 
+async function expectRevealContentVisible(page: Page) {
+  const targets = page.locator('[data-reveal]');
+  expect(await targets.count()).toBeGreaterThan(0);
+  await expect.poll(() => targets.evaluateAll((elements) =>
+    elements.filter((element) => getComputedStyle(element).opacity !== '1').length,
+  )).toBe(0);
+}
+
 test.describe('Alpine without CDN (ADR-0017)', () => {
   for (const path of ['/', '/blog/complete-markdown-guide/']) {
     test(`shows the page body with jsDelivr blocked: ${path}`, async ({ page }) => {
       await blockJsdelivr(page);
       await page.goto(path);
       await expect(page.locator('main h1').first()).toBeVisible();
+      if (path === '/') {
+        await expect(page.locator('[data-reveal]').first()).toHaveClass(/reveal-ready/);
+        await expect(page.locator('[data-reveal]').first()).toHaveCSS('opacity', '1');
+      }
       // CDN を遮断しても Alpine（同梱版）は起動し、ヘッダーの操作が効く
       await waitForAlpine(page);
       await page.getByRole('button', { name: /Language/ }).click();
@@ -65,13 +77,12 @@ test.describe('Alpine without CDN (ADR-0017)', () => {
   });
 
   // ネットワーク経由のスクリプト（Alpine を含むモジュール）を止め、インラインのスクリプトだけが動く状態の初期表示。
-  // TODO(#346): この状態ではファーストビューの [data-reveal] が opacity 0 のまま残る（html.js は
-  // インラインで付くが、表示を戻す IntersectionObserver はモジュール側にある）。以前からの設計のため別途扱う。
   test('renders sensible defaults while network scripts are blocked (inline scripts only)', async ({ page }) => {
     await page.route('**/*', (route) =>
       route.request().resourceType() === 'script' ? route.abort() : route.continue(),
     );
     await page.goto('/');
+    await expectRevealContentVisible(page);
     // FAQ の質問行は Alpine を待たずに見える（回答は閉じたまま）
     const faqQuestion = page.locator('button[aria-controls^="faq-question-"]').first();
     await faqQuestion.scrollIntoViewIfNeeded();
@@ -86,6 +97,54 @@ test.describe('Alpine without CDN (ADR-0017)', () => {
     await expect(page.getByRole('button', { name: /Language/ })).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('header a img').first()).not.toHaveAttribute('loading', 'lazy');
   });
+
+  test('shows reveal content without JavaScript', async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
+    const page = await context.newPage();
+    await page.goto('/');
+    await expectRevealContentVisible(page);
+    await context.close();
+  });
+
+  test('shows reveal content with reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await waitForAlpine(page);
+    await expectRevealContentVisible(page);
+  });
+
+  for (const failure of ['constructor', 'observe'] as const) {
+    test(`shows reveal content when IntersectionObserver ${failure} fails`, async ({ page }) => {
+      await page.addInitScript((failure) => {
+        const NativeObserver = window.IntersectionObserver;
+        const state = window as unknown as { __revealObserverFailure?: string };
+        let revealRegistrations = 0;
+        window.IntersectionObserver = class extends NativeObserver {
+          constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+            if (failure === 'constructor' && options?.rootMargin === '0px 0px -12% 0px') {
+              state.__revealObserverFailure = failure;
+              throw new Error('reveal observer construction failed');
+            }
+            super(callback, options);
+          }
+          observe(target: Element) {
+            if (failure === 'observe' && target.hasAttribute('data-reveal') && ++revealRegistrations === 2) {
+              state.__revealObserverFailure = failure;
+              throw new Error('reveal observer registration failed');
+            }
+            super.observe(target);
+          }
+        };
+      }, failure);
+      await page.goto('/');
+      await waitForAlpine(page);
+      await expect.poll(() => page.evaluate(() =>
+        (window as unknown as { __revealObserverFailure?: string }).__revealObserverFailure,
+      )).toBe(failure);
+      await expectRevealContentVisible(page);
+      await expect(page.locator('[data-reveal].reveal-ready')).toHaveCount(0);
+    });
+  }
 });
 
 test.describe('Alpine interactions', () => {
@@ -161,6 +220,11 @@ test.describe('Alpine interactions', () => {
       await themeSwitch(page).click();
       await expect(html(page)).not.toHaveClass(/(^|\s)dark(\s|$)/);
       expect(errors).toEqual([]);
+      if (from === '/') {
+        await page.goBack();
+        await expect(page.locator('[data-reveal]').first()).toHaveClass(/reveal-ready/);
+        await expect(page.locator('[data-reveal]').first()).toHaveCSS('opacity', '1');
+      }
     });
   }
 });
