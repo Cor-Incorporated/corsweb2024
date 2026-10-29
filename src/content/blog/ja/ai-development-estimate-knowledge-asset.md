@@ -24,7 +24,7 @@ Cor.株式会社では、見積もりは単なる金額計算ではなく、顧�
 
 > **この記事で前提にした客観データ**
 > - 公開当時のGriftのLPでは、GitHub実績と市場相場を照合し、5〜10回のAIヒアリングで仕様を構造化し、市場標準と自社提案の比較レポートを生成すると説明していました。
-> - GitHub Octoverse 2025では、生成AIが開発に標準化しつつあり、AI・エージェント・型付き言語が10年以上で最大級の開発変化を生んでいると整理されています。
+> - GitHub Octoverse 2025では、生成AIが開発に標準化しつつあり、AI・エージェント・型付き言語が10年以上で最大級の開発変化を生んでいると整理されています。報告書の「2025」は2024年9月1日から2025年8月31日までです。開発者はGitHubのアカウントを持つ人を指し、特記のない指標は公開活動です。
 > - 公開当時、Cor.の実績ページではGriftを「GitHub実績と市場相場から、説明できる参考見積もりを生成する自社AI見積・評価基盤」と位置づけていました。
 
 ## 見積もりが属人化する3つの原因
@@ -64,6 +64,6 @@ A. 一次整理や根拠資料の生成はAIに任せられますが、最終金
 ## 参考資料
 
 - [Grift LP](https://griftai.org/) - 公開当時のLPで、GitHub実績と市場相場の照合、5〜10回のAIヒアリング、比較レポート、当時アルファ版の市場調査等を確認した。
-- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 生成AIは開発に標準化しつつあり、80%の新規開発者が1週間以内にCopilotを使用。TypeScriptがGitHub上で最も使われる言語に。
+- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 対象期間は2024年9月1日〜2025年8月31日。母集団はGitHubのアカウントを持つ開発者で、特記のない指標は公開活動。新規開発者の80%が1週間以内にCopilotを使用。TypeScriptがGitHub上で最も使われる言語に。
 - [Cor. HP: 実績・事例](https://cor-jp.com/works/) - Engineer Cafe Navigator、Grift、AI SaaS、レガシー基幹DB移行、建築AIなどを確認。
 - [Cor. HP: AI × CO-CREATION / 事業概要](https://cor-jp.com/) - Cor.の事業領域、Grift、ローカルLLM・セキュアAI、AI駆動開発、共創メッセージを確認。
