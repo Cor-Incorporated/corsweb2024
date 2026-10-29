@@ -34,11 +34,12 @@ Cor.株式会社と Grift の公開文を、代表・寺田康佑（terisuke）�
 
 ### 会社として書く文章
 
-cor-jp.com のページ、サービス紹介、会社概要、FAQ、ブログの解説記事（ai・engineering カテゴリの多く）、griftai.org の LP・料金・FAQ・コラムが当たる。
+cor-jp.com のページ、サービス紹介、会社概要、FAQ、ブログの解説記事（ai・engineering カテゴリの多く）、griftai.org の LP・料金・FAQ・コラムが当たる。社内向けの手順書と説明もここに入る。
 
 - です・ます調。主語は「Cor.株式会社では」「Cor.」「Grift は」。会社の文章で「僕」「私」は使わない。
 - 1 文は短め（平均 30 字前後）。1 段落は 1〜3 文。
 - 読み手が次に何をすればよいかを、最後に 1 か所だけ書く。
+- 手順書は、読み手が上から順にすることを番号つきの手順で書く。項目を太字のラベルとコロンで始めない（4 章）。資料に無い手順、ツール、担当者を足さない。
 
 ### 代表の名前で書く文章
 
@@ -55,6 +56,18 @@ lab・engineering カテゴリの検証記事、Grift CLI の使い方、Qiita �
 - です・ます調。手順、表、箇条書きを使ってよい（yomiyasu の manual と article の規則どおり）。
 - 数字には定義、版、期間、分子と分母を付ける（「`0.2664` ではなく、`73 / 274` と読む」）。
 - 何が言えて、何が言えないかを分けて書く。
+
+代表の名前で書く文章と技術の記事は、1 文の平均を本人の 2026 年の記事の幅（17.8〜27.2 字）に寄せる。2026-10-30 に 4 本を `cor-voice-gate/scripts/cor_voice_lint.py stats` で測った値で、測り方は `references/evidence.md` にある。AI の下書きは 28〜34 字になりやすかった。平均が 30 字を超えたら長い文から見直す。文を分けるのは、つなぎ言葉で前後の関係を残せるときだけにする（yomiyasu Step 2 の 13）。
+
+### メールと返信（顧客、候補者、取引先）
+
+問い合わせへの返信、候補者や取引先へのメール、フォームの回答が当たる。代表の名前で送るものも、会社としての返事なのでこの場面にする。
+
+- です・ます調。名乗りと署名は会社と名前（「Cor.株式会社の寺田です」）。本文は自称なしで書ける形を先に考え、要るときは「私」にする。「僕」は代表個人の発信だけに使う。
+- 相手の問いへの答えを、最初の 5 行のうちに書く。できないことは先に書く（3 章「出さないもの、言えないことを先に書く」）。
+- 金額、日程、期限、約束は、依頼と資料にあるものだけを書く。資料に無い日程はこちらで作らず、相手に候補を聞く。
+- 1 文は短く、1 段落は 1〜3 文。宛名、あいさつ、結び、署名は残してよい（yomiyasu の mail の規則）。原文に無い「させていただく」は作らない。
+- 根拠: 本人の会話の特徴（です・ます調で短い、理由を聞く、決めるときは短い。`references/evidence.md`）。本人が書いたメールの実例は、まだ evidence.md に入っていない。
 
 ### Grift のストーリー（架空の物語）
 
@@ -87,6 +100,8 @@ griftai.org の `/column/story-*` が当たる。
 - 方言の語尾（「〜んよね」「〜やん」）と「（笑）」。公開記事にはほぼなく、下書きでだけ増えていた。代表の名前で書く文章でも新しく足さない（代表個人の X の例外は 5 を参照）。
 - 会社の文章での「。。。」「笑」などのくだけた記号。代表の名前で書く文章で原文にあれば残す。
 - 一つの文章の中で「僕」と「私」を混ぜること。
+- 依頼と資料に無い方針や提供の状態を、言い切りで足すこと（「〜をおすすめしています」「〜にも対応しています」）。2026-10-30 のツールの比較で、AI の下書きに出た（例: 返信メールの「〜をおすすめしています」）。足したいときは本文の外の「確かめたい点」に書く。
+- 依頼と資料にある固有の言葉（「TEP」「テスト導入（PoC）」、規範や機能の名前）を、似た一般の言葉に言い換えること（「TEP に沿わない」を「考え方に沿わない」にするなど）。
 
 ## 5. 読みやすさ・見られやすさ
 
@@ -189,9 +204,12 @@ griftai.org の `/column/story-*` が当たる。
 ## 7. 検査
 
 - yomiyasu: `python3 .claude/skills/yomiyasu/scripts/yomiyasu_check.py run --source 原文 --final 最終稿 --doc-type 種類 --fact-gaps`、提出の前に `verify --final 最終稿`。
+- cor-voice の機械で判定できる型（4 章と 6 章の一部、文と段落の長さ）: `python3 -I .claude/skills/cor-voice-gate/scripts/cor_voice_lint.py check --scene <company|founder|tech|mail> 最終稿`。error は直すまで提出しない。warn は候補で、意味を変えずに直せないなら残して理由を書く。
 - cor-jp.com: 記事は `npm run blog:check -- <ファイル>`、文言を変えたら `npm run check:links`、最後に `npm run build` と `npm run test:run`。
 - griftai.org: `npm run check`（lint、書式、型、CTA、指標の検査）と `npm run build`。
 
 ## 8. このスキルの更新
 
 本人の新しい記事が出たら、`references/evidence.md` の一覧に足し、特徴が変わっていれば 3 と 4 を直す。cor-jp.com と griftai.org の 2 つのリポジトリに同じ内容を置いているので、両方を同じに保つ。
+
+Codex、OpenCode、Pi、dsh、Grok、Cursor、Claude Code が読む入口（`AGENTS.md`、`CLAUDE.md`、`.cursor/rules/cor-voice.mdc` の生成区画）は、`cor-voice-gate/references/harness-entry.md` から `python3 -I .claude/skills/cor-voice-gate/scripts/render_harness_entries.py --write` で作る。入口を手で直さない。規則の本文はこのスキルに置き、入口には写さない（ADR-0026）。

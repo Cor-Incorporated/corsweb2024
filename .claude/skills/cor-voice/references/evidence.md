@@ -40,6 +40,19 @@ note（https://note.com/cor_instrument）22 本と Qiita（https://qiita.com/ter
 
 スキ上位（例: S1 88、S2 34）は手本から外した 2025 年の AI 下書き型で、手本の 2026 年の記事（S4・S5）はスキ 6・0。今後、本人 note の高／低はスキ単独で決めず、次の優先で併用する: X での記事告知の表示数 ＞ 引用 ＞ ブックマーク ＞ スキ。
 
+## 2026-10-30 の実測（文体の統計）
+
+本人の 2026 年の記事 3 本（note「All you need is actuals」 https://note.com/cor_instrument/n/n0545bfafb8f7 、note「AI時代のプロジェクトをどう評価するのか」 https://note.com/cor_instrument/n/nd58ba0955317 、Qiita「Git履歴を技量スコアにせず、検算できるCLIを作った」 https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1 ）と、cor-jp.com の `src/content/blog/ja/founder-story.md`（2026-10-25、代表が承認。手書きかは確かめていない）を、公開ページの本文から `cor-voice-gate/scripts/cor_voice_lint.py stats` で測った。コード、表、URL、引用は数えていない。
+
+| 記事 | 1 文の平均（字） | 1 段落の平均（文） | 1 文の読点 | 英数字の前後の空白 |
+|---|---|---|---|---|
+| note「All you need is actuals」 | 17.8 | 1.25 | 0.60 | 0.00 |
+| note「AI時代のプロジェクトをどう評価するのか」 | 26.4 | 1.14 | 0.90 | 0.02 |
+| Qiita「Git履歴を技量スコアにせず…」 | 27.2 | 1.45 | 0.76 | 0.18 |
+| founder-story.md | 25.7 | 2.53 | 0.99 | 0.00 |
+
+同じ日に、Claude Code、Codex、OpenCode、Pi、dsh に同じ 3 つの依頼（記事、返信メール、社内の手順書）を書かせた下書きは、1 文の平均が 24〜34 字だった。4 本には `cor_voice_lint.py check --scene founder`（と tech）の候補が 0 件で、検査の決まりが本人の文を止めないことを確かめた。比較の記録は corsweb2024 の `docs/evidence/cor-voice-harness-20261030/` にある。
+
 ## 会話に見えた特徴
 
 です・ます調で短い。反論は「〜では？」の形で、理由を聞く（「〜必要がある理由を教えて下さい。」）。決めるときは短く、気持ちを一言添える。「下さい」は漢字。会話では「笑」「！」、方言は使っていない。
@@ -68,4 +81,4 @@ cor-jp.com の 2024 年の記事（`src/content/blog/ja/` の 2024-01 付けの 
 
 ## 足りない点
 
-手書きと言える記事は 7 本だけで、2026 年の短い改行の文体にも AI が関わった可能性はある。Zenn は記事 0 本で根拠に足せるものなし。本人の新しい記事が出たら、ここに足して見直す。
+手書きと言える記事は 7 本だけで、2026 年の短い改行の文体にも AI が関わった可能性はある。Zenn は記事 0 本で根拠に足せるものなし。本人の新しい記事が出たら、ここに足して見直す。本人が書いた顧客や候補者へのメールの実例は、まだ読んでいない（cor-voice 2 章「メールと返信」の根拠は会話の特徴だけ）。
