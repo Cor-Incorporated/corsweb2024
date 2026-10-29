@@ -1,0 +1,67 @@
+name: Japanese content advisory
+
+# #449: 全ツールと CMS の ja 記事を同じ既存 lint で検査する。required check にはしない。
+# pull_request_target は既定ブランチの定義で動くため、main への統合後に有効になる。
+# 記事は Git blob API でデータとして読むだけ。PR のコード・設定・依存は実行しない。
+# 共用ルール: .claude/skills/{yomiyasu,cor-voice}/SKILL.md（本文は変更しない）。
+# cor-voice の人による確認・polish の代替ではなく、yomiyasu lint と blog:check の補助通知。
+# #451 の CMS PR status とコメント目印・concurrency を分離する。
+# 運用: 初回の正常結果はコメントしない。修正後は既存の指摘コメントを正常結果に更新する。
+# 撤収: 後継検査で違反・正常・修正後の通知を再現し、旧目印の通知が0件であることを確認して廃止。
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/content/*/ja/**'
+
+permissions: {}
+
+concurrency:
+  group: content-advisory-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  advisory:
+    name: Japanese content advisory (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout trusted default branch revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Inspect changed Japanese content and comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.sha }}
+        run: node scripts/content-advisory.mjs
+
+      - name: Surface inspection failure without blocking the PR
+        if: failure()
+        run: |
+          echo '::warning title=Japanese content advisory::検査を実行できませんでした。指摘なしとは判定していません。ジョブログを確認してください。'
+
+      - name: Preserve advisory report and guard ledger
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: content-advisory-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
+          path: .content-advisory/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
