@@ -152,6 +152,11 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ] && git diff --quiet "${BASE_SHA}...HEAD" -- src/content; then
             echo "src/content に変更が無いため翻訳は不要です"
             echo "changed=false" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "pull_request" ] && command -v node >/dev/null && node scripts/i18n/draft-only-diff.mjs --since "$BASE_SHA"; then
+            # 追加された ja が isDraft: true の下書きだけのときは Gemini を呼ばない。
+            # 公開記事の変更や、既存記事の isDraft 変更（meta-drift の同期）はここを通さない。
+            echo "::notice title=i18n::追加された ja は isDraft: true の下書きだけなので、Gemini 翻訳をスキップしました"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
