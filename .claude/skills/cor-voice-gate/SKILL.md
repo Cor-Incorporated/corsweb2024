@@ -16,6 +16,10 @@ Apply to all Japanese outbound text Terada or Cor. may send or publish: cor-jp.c
 - Box copy: `/home/box/agent-data/workflows/cor-voice` and `/home/box/agent-data/workflows/yomiyasu`
 If the box copy is older, refresh from Mac before checking.
 
+## Harness entries (Codex, OpenCode, Pi, dsh, Grok, Cursor, Claude Code)
+- Every harness reads the same short entry: the generated block in `AGENTS.md` (Codex, OpenCode, Pi, dsh, Grok) and `CLAUDE.md` (Claude Code), and `.cursor/rules/cor-voice.mdc` (Cursor). The entry points at the skills and lists the checks; it never copies rule bodies (ADR-0026).
+- Source: `references/harness-entry.md`. After editing it, run `python3 -I .claude/skills/cor-voice-gate/scripts/render_harness_entries.py --write` in both repos. `--check` (run by each repo's unit tests) fails when an entry was edited by hand, a source edit was not rendered, or `AGENTS.md` grows past Codex's 32 KiB read limit.
+
 ## Priority
 1. ADR / CLAUDE.md wording rules for the product
 2. yomiyasu: keep meaning; do not add facts
@@ -31,6 +35,7 @@ If the box copy is older, refresh from Mac before checking.
 3. Run yomiyasu Steps 1–5, then:
    `python3 /home/box/agent-data/workflows/yomiyasu/scripts/yomiyasu_check.py run --source <original> --final <polished> --doc-type <type> --fact-gaps`
    and `verify --final <polished>` before handoff.
+   Also run `python3 -I .claude/skills/cor-voice-gate/scripts/cor_voice_lint.py check --scene <company|founder|tech|mail|founder-x> <polished>` (the cor-voice rules a machine can check: site wording errors, banned patterns, sentence and paragraph length). Errors block handoff.
    **Scope:** `--source` and `--final` must be the **same document before/after polish** (same section, same ask). Do not diff a short outline against a long cover, or two different drafts, or that will inflate meaning_risk and cause false hard stops.
 4. **Hard stop on meaning_risk:** if that same-document run reports `meaning_risk` count > 0 (or any meaning_risk items in diff/report), do **not** hand off as gate-passed. Rewrite, re-run, or escalate to Terada with the exact risks. Soft-continuing past meaning_risk is forbidden. If scopes were mismatched, fix the inputs and re-run before treating the stop as real.
    **Intentional framing fixes (security / architecture):** corrective edits that deliberately change assertion strength (e.g. external review on trust boundary / shared responsibility) will flag meaning_risk against the pre-fix source. Map each risk to the intentional fix, escalate for Terada OK, then set the **approved text as the new `--source`**, polish same-document again, and require `meaning_risk_count == 0` on that re-run before second reader. Do not soft-pass the first run.
@@ -150,6 +155,7 @@ Pick the gate before polishing. Any one "Full" condition → Full.
   2. Measurement posts: date (or updated date) and measurement conditions near the top.
   3. X announcements: not a bare link; title or 1–2 line summary before the URL (audit `note_tweet` too when present).
   4. Body must not contain `editor.note.com` (or `.../edit` draft paths); linked note/blog URLs must be public and HTTP 200 before Postiz load.
+  5. `cor_voice_lint.py check` reports 0 errors for the chosen scene (warns are candidates; keep them only when fixing would change meaning).
 - X exception: for founder X (@cor_terisuke) only, see cor-voice §5 (「！」「www」「やねん」「やん」「んよね」、絵文字、「（笑）」「笑」 *may* appear). Not for company accounts or other media. **Optional spice, not a checklist item to insert.** Whole-post tone check and Semantic Review still win.
 - Ban / keep lists live only in cor-voice. This gate references them and does not copy them.
 
