@@ -13,7 +13,7 @@ const root = path.resolve(import.meta.dirname, '../..');
 const scripts = path.join(root, '.claude/skills/cor-voice-gate/scripts');
 
 function python(args) {
-  return spawnSync('python3', ['-I', ...args], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
+  return spawnSync('python3', ['-I', '-B', ...args], { cwd: root, encoding: 'utf8', timeout: TIMEOUT_MS });
 }
 
 // Python を起動するので、負荷のある環境でも落ちないように上限を長めにとる

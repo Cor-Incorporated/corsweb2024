@@ -43,28 +43,28 @@ NOT_FOUNDER_X = ("company", "founder", "tech", "mail")
 
 # 公開を止める決まり（ADR とサイトの表現ルール）は error、文体の型は warn。
 RULES: tuple[Rule, ...] = (
-    _rule("trial_word", "error", r"試行", "「試行」は使わない。紹介会社・採用担当向けは「テスト導入（PoC）」、CTA は「自社でテストしてみる」", "cor-voice §6 / ADR-0022"),
+    _rule("trial_word", "error", r"試行(?!錯誤)", "「試行」は使わない。紹介会社・採用担当向けは「テスト導入（PoC）」、CTA は「自社でテストしてみる」", "cor-voice §6 / ADR-0022"),
     _rule("isms_obtained", "error", r"(ISMS|27001)[^。\n]{0,30}(取得済|認証取得|取得しました|を取得し)|(取得済|認証取得)[^。\n]{0,30}(ISMS|27001)", "ISMS は「第2段階審査を終え、2026年12月ごろの認証登録を見込んでいる」まで", "cor-voice §6 / ADR-0007"),
     _rule("evidence_copy", "error", r"証拠は盛れない", "「証拠は盛れない」は使わない。「経歴の説明に、確かめられる根拠を。」", "cor-voice §6A-4"),
-    _rule("seven_x_metric", "error", r"7\s*倍[^。\n]{0,40}(生産性|開発速度|納品量)|(生産性|開発速度|納品量)[^。\n]{0,40}7\s*倍", "「7倍」は GitHub のコントリビュート数。生産性・開発速度・納品量と結びつけない", "cor-voice §6A-4"),
+    _rule("seven_x_metric", "error", r"(?<![\d.])7\s*倍[^。\n]{0,40}(生産性|開発速度|納品量)|(生産性|開発速度|納品量)[^。\n]{0,40}(?<![\d.])7\s*倍", "「7倍」は GitHub のコントリビュート数。生産性・開発速度・納品量と結びつけない", "cor-voice §6A-4"),
     _rule("company_name", "error", r"Cor\.?\s?[Ii]nc\b|(?<![.．])Cor株式会社|コル株式会社|コア株式会社", "社名は「Cor.株式会社」", "cor-voice §6 / ADR-0007"),
     _rule("absolute_claim", "error", r"100\s*[%％]\s*安全|日本初|業界初|世界初", "根拠と定義のない最上級・保証は書かない", "cor-voice §6 / §6A-4"),
-    _rule("strong_claim", "warn", r"確実に|絶対に?|唯一の|最速|完璧", "言い切りの保証や最上級は、根拠と定義が資料にあるときだけ", "cor-voice §6 / §6A-4"),
+    _rule("strong_claim", "warn", r"確実に|絶対に|絶対(?=[、。だで])|唯一の|最速|完璧", "言い切りの保証や最上級は、根拠と定義が資料にあるときだけ", "cor-voice §6 / §6A-4"),
     _rule("exclamation", "warn", r"[！!]", "感嘆符は使わない（引用と製品名を除く）", "cor-voice §4", NOT_FOUNDER_X),
     # 「Grift CLIとは」のように疑問符の無い見出しは本人の記事にもある（2026-08 の Qiita）。疑問符つきと「何者か」だけを拾う
     _rule("what_is_heading", "warn", r"^#{1,6}\s.*(とは[？?]\s*$|とは何者か)", "「〜とは？」「〜とは何者か」の見出しにしない", "cor-voice §4"),
-    _rule("bold_label_colon", "warn", r"^\s*(?:[-*+]|\d+\.)?\s*\*\*[^*\n]+\*\*\s*[:：]", "太字のラベルとコロンで始める箇条書きにしない", "cor-voice §4"),
+    _rule("bold_label_colon", "warn", r"^[ \t]*(?:(?:[-*+]|\d+\.)[ \t]+)?\*\*[^*\n]+\*\*[ \t]*[:：]", "太字のラベルとコロンで始める箇条書きにしない", "cor-voice §4"),
     _rule("ellipsis", "warn", r"…", "「…」を多用しない", "cor-voice §4", NOT_FOUNDER_X, 2),
     _rule("cliche", "warn", r"天元突破|断言しよう|未来を変える|過言ではない|革命を起こ|新時代の幕開け", "大げさな決まり文句を持ち込まない", "cor-voice §4"),
-    _rule("dialect", "warn", r"んよね|やねん|やんか|やん[。、！!]", "方言の語尾は足さない（代表個人の X の例外を除く）", "cor-voice §4 / §5", NOT_FOUNDER_X),
+    _rule("dialect", "warn", r"(?<!せ)んよね|やねん|やんか|やん[。、！!]", "方言の語尾は足さない（代表個人の X の例外を除く）", "cor-voice §4 / §5", NOT_FOUNDER_X),
     _rule("closed_warai", "warn", r"（笑）|\(笑\)", "「（笑）」は持ち込まない", "cor-voice §4", NOT_FOUNDER_X),
     _rule("free_cta", "warn", r"無料で(お?試|始め|使い始め|ご利用)|今すぐ(無料|お試し)", "CTA で「無料」を主な誘い文句にしない", "cor-voice §6"),
-    _rule("price", "warn", r"\d[\d,，.]*\s*(万円|円)", "価格は資料にあるときだけ。Grift の料金は個別案内", "cor-voice §6"),
+    _rule("price", "warn", r"(?<![\d,，.])\d[\d,，.]*[ \t]*(万円|円)", "価格は資料にあるときだけ。Grift の料金は個別案内", "cor-voice §6"),
     _rule("ai_slop", "warn", r"シームレス|革新的|画期的|ご紹介します|解説します|見ていきましょう|いかがでしたか|寄り添|最大限に活用|と言えるでしょう", "AI の下書きで増えた言い回し。本人の書き方（短く言い切る、確かめた事実を書く）に寄せる", "cor-voice §3 / §4"),
-    _rule("company_first_person", "warn", r"(?<![\w一-龥])(僕|私)(は|が|も|の|に|を|たち|達)", "会社として書く文章で「僕」「私」を使わない", "cor-voice §2", ("company",)),
+    _rule("company_first_person", "warn", r"(?<![公滅下])(僕|私)(は|が|も|の|に|を|たち|達)", "会社として書く文章で「僕」「私」を使わない", "cor-voice §2", ("company",)),
 )
 
-FIRST_PERSON = re.compile(r"(?<![\w一-龥])(僕|私)(?=は|が|も|の|に|を|たち|達|自身)")
+FIRST_PERSON = re.compile(r"(?<![公滅下])(僕|私)(?=は|が|も|の|に|を|たち|達|自身)")
 
 
 @dataclass(frozen=True)
@@ -85,32 +85,42 @@ def strip_frontmatter(text: str) -> tuple[str, str]:
     return m.group(1), text[m.end():]
 
 
-def masked_lines(text: str) -> list[str]:
-    """検査しない部分（コード、インラインコード、URL、HTML コメント、表、引用）を空にした行の配列。行番号は保つ。"""
+FENCE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
+
+
+def masked_lines(text: str, keep_blocks: bool = False) -> list[str]:
+    """検査しない部分（コード、インラインコード、URL、HTML コメント）を空にした行の配列。行番号は保つ。
+
+    keep_blocks が偽なら、表と引用の行も空にする（文体の規則用）。サイトの表現ルール（error）は、表と引用の中も見る。
+    リンクは文字だけを残す（「[こちら](URL)で試行」の「試行」を落とさない）。コードの囲みは、開いたのと同じ記号で
+    同じ長さ以上の行が来たときだけ閉じる。
+    """
     out: list[str] = []
-    in_fence = False
+    fence = ""
     for line in text.split("\n"):
-        if re.match(r"^\s*(```|~~~)", line):
-            in_fence = not in_fence
+        m = FENCE.match(line)
+        if m and (not fence or (m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not line[m.end():].strip())):
+            fence = "" if fence else m.group(1)
             out.append("")
             continue
-        if in_fence or re.match(r"^\s*(\||>)", line):
+        if fence or (not keep_blocks and re.match(r"^\s*(\||>)", line)):
             out.append("")
             continue
-        line = re.sub(r"`[^`]*`", "", line)
+        line = re.sub(r"`[^`\n]*`", "", line)
         line = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", line)
-        line = re.sub(r"https?://\S+", "", line)
+        line = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", line)
+        line = re.sub(r"https?://[!-~]+", "", line)
         line = re.sub(r"<!--.*?-->", "", line)
         out.append(line)
     return out
 
 
 def _without_quotes(line: str) -> str:
-    return re.sub(r"「[^」]*」|『[^』]*』", "", line)
+    return re.sub(r"「[^「」]*」|『[^『』]*』", "", line)
 
 
 # 「『取得済み』とは書きません」「『試行』は使わない」のように、使わない語を説明している引用は数えない
-META_MENTION = re.compile(r"[「『][^」』]*[」』](?=\s*(?:と|とは|は|も)\s*(?:書か|書き|書く|使わ|使い|使う|言わ|言う|しない|せず|呼ば|呼び|呼ぶ))")
+META_MENTION = re.compile(r"[「『][^「『」』]*[」』](?=[ \t]*(?:と|とは|は|も)[ \t]*(?:書かない|書きません|書かず|使わない|使いません|使わず|言わない|言いません|しない|しません|せず|呼ばない|呼びません))")
 
 
 def _without_meta_mentions(line: str) -> str:
@@ -119,11 +129,12 @@ def _without_meta_mentions(line: str) -> str:
 
 def check_text(text: str, scene: str) -> list[Hit]:
     lines = masked_lines(text)
+    block_lines = masked_lines(text, keep_blocks=True)
     hits: list[Hit] = []
     for rule in RULES:
         if scene not in rule.scenes:
             continue
-        found, matches = _rule_hits(rule, lines)
+        found, matches = _rule_hits(rule, block_lines if rule.level == "error" else lines)
         if matches >= rule.min_count:
             hits.extend(found)
     hits.extend(_first_person_mix(lines))
@@ -254,7 +265,8 @@ def _read(path: str) -> str:
     try:
         return Path(path).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise SystemExit(f"cor_voice_lint: {path} を読めません: {exc}") from None
+        print(f"cor_voice_lint: {path} を読めません: {exc}", file=sys.stderr)
+        sys.exit(2)
 
 
 def _print_check(path: str, hits: list[Hit]) -> None:

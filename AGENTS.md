@@ -153,7 +153,7 @@ Codex, OpenCode, Pi, dsh and Grok read this section from AGENTS.md, Claude Code 
 2. cor-voice の 2 章で場面（会社として、代表の名前で、技術の記事、メールと返信）を選び、yomiyasu の文書の種類（記事は article、メールは mail、手順書は manual、LP と告知は promo）を決めます。
 3. 依頼と資料にない事実は足しません。数字、日付、期間、社名と顧客名、価格、実績、人の発言、依頼に無い frontmatter の項目がこれに当たります。足りない値は本文で作らず、本文の外に「確かめたい点」として書きます。
 4. 下書きをファイルに保存し、次の 3 つを通します。候補が出たら直して、もう一度通します。
-   - `python3 -I .claude/skills/cor-voice-gate/scripts/cor_voice_lint.py check --scene <company|founder|tech|mail> <下書き>`
+   - `python3 -I .claude/skills/cor-voice-gate/scripts/cor_voice_lint.py check --scene <company|founder|tech|mail|founder-x> <下書き>`（founder-x は代表個人の X だけ）
    - `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py run --material <依頼と資料> --final <下書き> --doc-type <種類> --fact-gaps`（直す前の原文があれば `--source <原文>` も付けます）
    - `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py verify --final <下書き>`
 5. 公開、送信、投稿、push はしません。返すのは、仕上げた本文と確かめたい点です。本文はファイルにも残し、最後の返答に本文とそのパスを書きます。作業の報告や検査の記録を本文に混ぜません。

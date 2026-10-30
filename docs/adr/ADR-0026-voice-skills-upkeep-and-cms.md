@@ -102,4 +102,4 @@ cor-jp.com と griftai.org の日本語の文章は、2 つのスキルで書い
 
 - Epic #452、#448・#449・#450・#451・#454、`voice-feedback` の #455・#456・#457、Cor-Incorporated/griftai#94・#95・#96
 - ADR-0007（対外表現）、ADR-0015（横断 ADR の正本）、ADR-0018（Sveltia CMS）、ADR-0019（翻訳 CI）、ADR-0022（事業の柱と Grift）
-- `.claude/skills/cor-voice/SKILL.md` §7、`.claude/skills/cor-voice/references/evidence.md`、`cms/public/config.yml`
+- `.claude/skills/cor-voice/SKILL.md` §8（更新の手順）、`.claude/skills/cor-voice/references/evidence.md`、`cms/public/config.yml`

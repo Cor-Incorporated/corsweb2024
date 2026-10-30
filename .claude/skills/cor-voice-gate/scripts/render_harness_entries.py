@@ -116,14 +116,14 @@ def check(root: Path, entry: str) -> list[str]:
 
 
 def write(root: Path, entry: str) -> list[str]:
+    # 先に全部の生成結果を作る。どれかの印が崩れていたら、1 つも書かずに止める
+    planned = [(root / target.rel, expected(root, target, entry), target.rel) for target in TARGETS]
     written = []
-    for target in TARGETS:
-        path = root / target.rel
-        want = expected(root, target, entry)
+    for path, want, rel in planned:
         if not path.exists() or path.read_text(encoding="utf-8") != want:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(want, encoding="utf-8")
-            written.append(target.rel)
+            written.append(rel)
     return written
 
 

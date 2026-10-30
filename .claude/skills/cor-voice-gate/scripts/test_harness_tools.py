@@ -69,6 +69,14 @@ class RenderTest(unittest.TestCase):
         with self.assertRaises(render.MarkerError):
             render.check(self.tmp, ENTRY)
 
+    def test_write_touches_nothing_when_one_target_is_broken(self):
+        before = (self.tmp / "AGENTS.md").read_text()
+        (self.tmp / "CLAUDE.md").write_text("# CLAUDE.md\n")
+        with self.assertRaises(render.MarkerError):
+            render.write(self.tmp, ENTRY)
+        self.assertEqual((self.tmp / "AGENTS.md").read_text(), before)
+        self.assertFalse((self.tmp / ".cursor/rules/cor-voice.mdc").exists())
+
     def test_agents_md_over_codex_limit_is_reported(self):
         fixture_root(self.tmp, agents_extra="あ" * (render.CODEX_MAX_BYTES // 3 + 10))
         render.write(self.tmp, ENTRY)
@@ -86,6 +94,7 @@ def rule_ids(text: str, scene: str = "company") -> list[str]:
 class LintTest(unittest.TestCase):
     def test_site_rules_are_errors(self):
         hits = lint.check_text("まずは試行してください。ISMS 認証取得済みです。生産性が7倍になりました。証拠は盛れない。Cor株式会社です。", "company")
+        self.assertNotIn("trial_word", [h.rule_id for h in lint.check_text("試行錯誤しました。", "company")])
         self.assertEqual({h.rule_id for h in hits if h.level == "error"}, {"trial_word", "isms_obtained", "seven_x_metric", "evidence_copy", "company_name"})
 
     def test_style_rules(self):
@@ -97,7 +106,40 @@ class LintTest(unittest.TestCase):
         self.assertEqual(rule_ids("## Grift CLIとは\n\n本文です。\n"), [])
 
     def test_mentions_of_banned_words_are_not_hits(self):
-        self.assertEqual(rule_ids("「取得済み」とは書きません。「試行」は使わない。\n- ISMS について「取得済み」と書く\n"), [])
+        self.assertEqual(rule_ids("「取得済み」とは書きません。「試行」は使わない。\n"), [])
+        # 肯定の動詞は言及にしない（「『取得済み』と書きます」は主張のまま）
+        self.assertIn("isms_obtained", rule_ids("ISMS 認証は「取得済み」と書きます。\n"))
+
+    def test_error_rules_see_links_tables_quotes_and_odd_fences(self):
+        # レビューで見つかった素通り（2026-10-30）: URL の後ろ、表、引用、閉じないコードの囲み
+        self.assertIn("trial_word", rule_ids("[記事](https://x.com/a)で試行を始めました。\n"))
+        self.assertIn("isms_obtained", rule_ids("[こちら](https://cor-jp.com/)にあるとおり、ISMS 認証取得済みです。\n"))
+        self.assertIn("isms_obtained", rule_ids("| ISMS | 認証取得済み |\n"))
+        self.assertIn("isms_obtained", rule_ids("> ISMS 認証取得済みです。\n"))
+        self.assertIn("trial_word", rule_ids("```\n~~~\n```\n試行します。\n"))
+        self.assertNotIn("exclamation", rule_ids("| 列 | すごい！ |\n"))  # 文体の規則は表を見ない
+
+    def test_reviewed_false_positives(self):
+        self.assertEqual(rule_ids("試行錯誤の記録です。\n", "founder"), [])
+        self.assertEqual(rule_ids("コントリビュートは1.7倍で、生産性は測っていません。\n"), [])
+        self.assertEqual(rule_ids("絶対パスで指定します。\n"), [])
+        self.assertEqual(rule_ids("そうではありませんよね。\n"), [])
+
+    def test_first_person_after_japanese_text(self):
+        self.assertIn("company_first_person", rule_ids("そして私は確かめました。"))
+        self.assertIn("first_person_mix", rule_ids("今日僕は書いた。そして私も書いた。", "founder"))
+        self.assertEqual(rule_ids("公私の区別をつけます。"), [])
+
+    def test_long_lines_stay_fast(self):
+        import time
+        start = time.monotonic()
+        lint.check_text(" " * 40000 + "\n" + "1" * 40000 + "\n" + "「" * 20000 + "\n", "company")
+        self.assertLess(time.monotonic() - start, 5.0)
+
+    def test_unreadable_file_exits_2(self):
+        with self.assertRaises(SystemExit) as ctx:
+            lint.main(["check", "/nonexistent/cor-voice-draft.md"])
+        self.assertEqual(ctx.exception.code, 2)
 
     def test_quotes_code_and_urls_are_not_style_hits(self):
         text = "「すごい！」と言われました。\n\n```\necho hi!\n```\n\n`ok!` と https://example.com/a!b\n"
