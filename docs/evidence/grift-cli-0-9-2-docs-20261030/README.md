@@ -49,3 +49,17 @@ Grift CLI 0.9.2 の変更（Docker で実行、`grift update`、`grift contribut
 
 - OpenCode（`opencode run --auto`）の after は、依頼に書いた griftai の `src/pages/faq.astro` を、評価用のコピーではなく本物の worktree（`~/Developer/griftai/.worktrees/claude/grift-cli-0-9-2/`）に絶対パスで書き込んだ。git で元に戻してから、ゲートを通した最終稿を入れた。ほかの worktree への書き込みは無かった（全 worktree の `git status` と OpenCode の記録で確かめた）
 - 製品ページの題に「経歴は盛れる。証拠は盛れない。」がある。新しい `cor_voice_lint.py` は error で止め、`npm run blog:check` は通した。題の差し替えは代表の承認が要るので、この PR では変えていない
+
+## CHANGELOG の 0.9.2 の節との突き合わせ（2026-10-30 21:18〜）
+
+grift-cli-dev の release/v0.9.2 に `chore(release): 0.9.2`（c7e2a6e）が入り、CHANGELOG に `## [0.9.2] — 2026-10-30` の節ができた。上の最終稿は PR #111〜#113・#115 の本文から書いたので、この節と、同じ commit の `docs/usage.md`・`docs/metrics-guide.md`・`docs/migration-v092.md`・README の「Docker で使う」に突き合わせた（抜き出しは `final/material-changelog-v092.txt`）。
+
+- 数え方: CHANGELOG は Added 1・Changed 1・Fixed 3。Changed と Fixed の #51 はどちらも `grift update` なので、話題は Docker・`grift update`・`grift contribute`・文脈の表示の 4 つで、`docs/migration-v092.md` の「変わるのは次の 4 つ」と同じ。製品ページの本文は数を書いていない
+- 直したところ（`final/cases-changelog.source.md` → `final/cases-changelog.final.md`）
+  - `grift update`: 「実行中の環境を明示的に更新」→「実行中の環境だけを更新」。PATH の別の環境を使わないことを足した
+  - `grift contribute`: 既定の `--door local` では提出ID・PR内のファイル名・meta行を出さず、`--door public-pr` で作り直す手順だけを出す、に直した（前は既定でも「提出に必要な情報と提出先を表示」と読めた）。「提出ID・hash・meta」は CHANGELOG と `docs/usage.md` の語「提出ID・PR内のファイル名・meta行」に揃えた。コードの文言（`src/tep_cli/__main__.py` の local draft の案内、c7e2a6e）とも同じ
+  - 文脈の表示: 出るのは `grift report`（report-v1）の Markdown で、JSON の値は変わらないこと、活動期間が 20 日未満なら年換算しないことを足した
+  - 定義の版: `DEFINITION_VERSION` が `tep-v0.9.1-2026-10-28` → `tep-v0.9.2-2026-10-30` になり、0.9.1 で保存したレポートと照らし合わせは 0.9.2 の `grift verify` で検算できない（CANNOT_VERIFY）ことを、0.9.1 の段落と同じ形で「成果」に足した。例外（要求だけから作った案件のレポート、actor collection）は移行の注意へのリンクに任せた
+- 使っていないフラグ: `--open`・`--out`・`-P -m pip` は本文に書いていない。書いた `--door local`・`--door public-pr`・`grift update --check`・`/repo`・`git worktree` は資料と同じ
+- 書き写さなかった所: CHANGELOG の Changed の段落で「exit 2 になったinstaller は」と 2 文がつながっている所（grift-cli 側で直す）。`docs/migration-v092.md` の contribute の段落は「引数なしの `grift contribute` も…提出 ID…を表示する」とあり、CHANGELOG・`docs/usage.md`・コードと違うので、使っていない
+- ゲート（スキルは feat/cor-voice-harness 2d1ebc5）: `yomiyasu_check.py run --source final/cases-changelog.source.md --final final/cases-changelog.final.md --material final/material-changelog-v092.txt --doc-type article --fact-gaps` は meaning_risk=7。7 件とも資料にある値・語（2つ、20日、0.9.1、`grift report`、移行の注意のリンク、「ため」は CHANGELOG の「上げたので」）で、意図した変更として直さなかった。資料にない数値・名前は移行の注意の URL 1 件（0.9.1 の段落と同じ形のリンク。公開前は開けない）。事実の穴 0。verify はハッシュ一致。`cor_voice_lint.py check --scene company` は error 0 / warn 2（1 文の平均 40.5 字、1 段落の平均 5.0 文）
