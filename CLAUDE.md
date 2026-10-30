@@ -43,6 +43,7 @@ npm run security:audit           # security:audit:firebase + security:audit:work
 npm run i18n:check        # Missing/outdated content translations (no API key; exit 1 if any)
 npm run check:links       # scripts/check-external-links.mjs: no hard-coded griftai.org, no unbacked "30秒" / multipliers in pages, components, i18n
 npm run blog:check -- src/content/blog/ja/your-post.md   # scripts/blog-guardrails.mjs on one article (ADR-0007 wording)
+npm run blog:eyecatch -- src/content/blog/ja/your-post.md --dry-run   # Gemini-generated hero image: candidates, --pick N --alt "…" writes AVIF + frontmatter image (docs/blog-eyecatch.md)
 npm run polish -- prepare --file src/content/blog/ja/your-post.md   # yomiyasu + cor-voice gate for ja blog and news (docs/polish-gate.md)
 npm run check:grift-version  # ja articles that call an old Grift CLI version "公開中/最新/現在" (ADR-0023; also run by test:run)
 npm run seo:snapshot -- --out snapshot.json   # SEO/AIO snapshot of dist (see scripts/seo-snapshot.mjs for --compare)
@@ -445,6 +446,9 @@ to `develop`.
    #   alt: "Image description"
    ---
    ```
+
+   To generate the image, see `docs/blog-eyecatch.md` (`npm run blog:eyecatch`;
+   policy: "アイキャッチの方針" in `docs/blog-style-guide.md`).
 
 3. **Check wording**: `npm run blog:check -- src/content/blog/ja/your-post-name.md`
 4. **Polish gate**: `npm run polish -- prepare --file src/content/blog/ja/your-post-name.md`, rewrite, then `npm run polish -- check --file <ja.md> --final <draft.md>` (`docs/polish-gate.md`). News uses the same command. Do not switch voice unless the human recorded an explicit instruction.
