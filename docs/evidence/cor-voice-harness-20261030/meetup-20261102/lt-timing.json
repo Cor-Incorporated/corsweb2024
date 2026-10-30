@@ -1,0 +1,99 @@
+{
+ "voice": "Kyoko",
+ "rate": 105,
+ "pause_between_paragraphs": 0.8,
+ "chars": 1251,
+ "total_secs": 271.3,
+ "chars_per_min": 277,
+ "at_270_chars_per_min_secs": 285.2,
+ "slides": {
+  "1": 0.0,
+  "2": 33.3,
+  "3": 47.4,
+  "4": 75.0,
+  "5": 132.2,
+  "6": 242.7
+ },
+ "paragraphs": [
+  {
+   "paragraph": 1,
+   "slide": 1,
+   "starts_at": 0.0,
+   "secs": 14.7,
+   "chars": 73,
+   "head": "こんばんは。福岡の Cor.株式会社で代表をして"
+  },
+  {
+   "paragraph": 2,
+   "slide": 1,
+   "starts_at": 15.5,
+   "secs": 17.0,
+   "chars": 88,
+   "head": "先に、言えないことを言います。"
+  },
+  {
+   "paragraph": 3,
+   "slide": 2,
+   "starts_at": 33.3,
+   "secs": 13.3,
+   "chars": 62,
+   "head": "使っている計算機は 2 台です。"
+  },
+  {
+   "paragraph": 4,
+   "slide": 3,
+   "starts_at": 47.4,
+   "secs": 26.7,
+   "chars": 123,
+   "head": "まず GB10 です。"
+  },
+  {
+   "paragraph": 5,
+   "slide": 4,
+   "starts_at": 75.0,
+   "secs": 22.8,
+   "chars": 115,
+   "head": "では、同じ重みを別の物理に載せても、立って歩ける"
+  },
+  {
+   "paragraph": 6,
+   "slide": 4,
+   "starts_at": 98.5,
+   "secs": 32.9,
+   "chars": 148,
+   "head": "このときの推論は、Thor の CPU だけでし"
+  },
+  {
+   "paragraph": 7,
+   "slide": 5,
+   "starts_at": 132.2,
+   "secs": 70.8,
+   "chars": 322,
+   "head": "次にスイカ割りです。"
+  },
+  {
+   "paragraph": 8,
+   "slide": 5,
+   "starts_at": 203.8,
+   "secs": 38.1,
+   "chars": 181,
+   "head": "もう一つ、うまくいかなかった話をします。"
+  },
+  {
+   "paragraph": 9,
+   "slide": 6,
+   "starts_at": 242.7,
+   "secs": 13.0,
+   "chars": 68,
+   "head": "今日は Thor の上で、このスイカ割りのシミュ"
+  },
+  {
+   "paragraph": 10,
+   "slide": 6,
+   "starts_at": 256.5,
+   "secs": 14.7,
+   "chars": 71,
+   "head": "実機で確かめるのは、次の段階です。"
+  }
+ ]
+}
