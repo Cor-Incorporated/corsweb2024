@@ -51,7 +51,7 @@ note（https://note.com/cor_instrument）22 本と Qiita（https://qiita.com/ter
 | Qiita「Git履歴を技量スコアにせず…」 | 27.2 | 1.45 | 0.76 | 0.18 |
 | founder-story.md | 25.7 | 2.53 | 0.99 | 0.00 |
 
-同じ日に、Claude Code、Codex、OpenCode、Pi、dsh に同じ 3 つの依頼（記事、返信メール、社内の手順書）を書かせた下書きは、1 文の平均が 24〜34 字だった。4 本には `cor_voice_lint.py check --scene founder`（と tech）の候補が 0 件で、検査の決まりが本人の文を止めないことを確かめた。比較の記録は corsweb2024 の `docs/evidence/cor-voice-harness-20261030/` にある。
+同じ日に、Claude Code、Codex、OpenCode、Pi、dsh に同じ 3 つの依頼（記事、返信メール、社内の手順書）を書かせた下書き（入口を直す前）は、1 文の平均が記事と返信メールで 28.7〜33.4 字、手順書で 21.8〜26.7 字だった。4 本には `cor_voice_lint.py check --scene founder`（と tech）の候補が 0 件で、検査の決まりが本人の文を止めないことを確かめた。比較の記録は corsweb2024 の `docs/evidence/cor-voice-harness-20261030/` にある。
 
 ## 会話に見えた特徴
 

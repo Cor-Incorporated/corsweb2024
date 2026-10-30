@@ -1,0 +1,760 @@
+{
+ "claude": {
+  "A-article": {
+   "status": "scored",
+   "doc_from": "readback:tmp/grift-cli-run-and-read-numbers.final.md",
+   "rc": "0",
+   "secs": "379",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "レポートの中ではこの2つを別のものとして扱います。",
+    "`grift verify`はレポートに記録された条件で再計算し、結果を3つのうちのどれかで返します。"
+   ],
+   "unsupported_names": [
+    "執筆時点の版は[v0.9.1](https://pypi.org/project/grift-cli/)で、2026年10月28日に公開しました。",
+    "```bash",
+    "cd <対象のリポジトリ>"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 3,
+   "lint_per_1000": 1.6,
+   "meaning_risk_count": 5,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 1886,
+    "sentences": 65,
+    "paragraphs": 23,
+    "headings": 5,
+    "sentence_len_mean": 28.7,
+    "sentence_len_median": 28,
+    "sentence_len_p90": 47.6,
+    "polite_ratio": 0.88,
+    "ending_kinds_ratio": 0.15,
+    "ending_max_run": 4,
+    "commas_per_sentence": 0.65,
+    "paragraph_sentences_mean": 2.83,
+    "ascii_space_ratio": 0.0,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.5,
+    "commas_per_sentence": 0.0,
+    "paragraph_sentences_mean": 0.7,
+    "ascii_space_ratio": 0.0,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 1.2,
+   "p_task": 0,
+   "total": 1.2
+  },
+  "B-mail": {
+   "status": "scored",
+   "doc_from": "B-mail.raw",
+   "rc": "0",
+   "secs": "171",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [],
+   "unsupported_names": [
+    "件名: Re: Grift について"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 1,
+   "lint_per_1000": 1.6,
+   "meaning_risk_count": 7,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 669,
+    "sentences": 21,
+    "paragraphs": 9,
+    "headings": 0,
+    "sentence_len_mean": 31.5,
+    "sentence_len_median": 26,
+    "sentence_len_p90": 68.6,
+    "polite_ratio": 0.76,
+    "ending_kinds_ratio": 0.43,
+    "ending_max_run": 3,
+    "commas_per_sentence": 0.76,
+    "paragraph_sentences_mean": 2.33,
+    "ascii_space_ratio": 1.0,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 1.4,
+    "commas_per_sentence": 0.0,
+    "paragraph_sentences_mean": 0.0,
+    "ascii_space_ratio": 4.1,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 5.5,
+   "p_task": 0,
+   "total": 5.5
+  },
+  "C-manual": {
+   "status": "scored",
+   "doc_from": "readback:tmp/blog-publish-runbook.md",
+   "rc": "0",
+   "secs": "259",
+   "cor_lint": [
+    "isms_obtained@L140"
+   ],
+   "cor_errors": 1,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "## 1. 記事を書く",
+    "category は上の 4 つ以外を書けません。",
+    "## 5. 代表に merge を依頼する"
+   ],
+   "unsupported_names": [
+    "URL: https://cor-jp-cms-admin.web.app/",
+    "```yaml",
+    "```markdown",
+    "- https://example.com/source-1",
+    "- https://example.com/source-2",
+    "```bash"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 0,
+   "lint_per_1000": 0.0,
+   "meaning_risk_count": 9,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 1408,
+    "sentences": 59,
+    "paragraphs": 24,
+    "headings": 15,
+    "sentence_len_mean": 23.5,
+    "sentence_len_median": 21,
+    "sentence_len_p90": 39.0,
+    "polite_ratio": 0.56,
+    "ending_kinds_ratio": 0.37,
+    "ending_max_run": 7,
+    "commas_per_sentence": 0.42,
+    "paragraph_sentences_mean": 2.46,
+    "ascii_space_ratio": 0.88,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.0,
+    "commas_per_sentence": 0.9,
+    "paragraph_sentences_mean": 0.0,
+    "ascii_space_ratio": 3.5,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 3,
+   "p_fact": 0,
+   "p_style": 4.4,
+   "p_task": 0,
+   "total": 7.4
+  }
+ },
+ "codex": {
+  "A-article": {
+   "status": "scored",
+   "doc_from": "A-article.err",
+   "rc": "0",
+   "secs": "430",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [],
+   "unsupported_names": [
+    "執筆時点のバージョンは2026年10月28日公開の[0.9.1](https://pypi.org/project/grift-cli/0.9.1/)です。",
+    "```bash",
+    "当時のGrift CLIは[v0.5.6](https://pypi.org/project/grift-cli/0.5.6/)です。",
+    "```text"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 0,
+   "lint_per_1000": 0.0,
+   "meaning_risk_count": 4,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 1897,
+    "sentences": 56,
+    "paragraphs": 25,
+    "headings": 6,
+    "sentence_len_mean": 33.4,
+    "sentence_len_median": 34.5,
+    "sentence_len_p90": 52.0,
+    "polite_ratio": 0.89,
+    "ending_kinds_ratio": 0.2,
+    "ending_max_run": 3,
+    "commas_per_sentence": 1.14,
+    "paragraph_sentences_mean": 2.24,
+    "ascii_space_ratio": 0.0,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 2.1,
+    "commas_per_sentence": 0.7,
+    "paragraph_sentences_mean": 0.0,
+    "ascii_space_ratio": 0.0,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 2.8,
+   "p_task": 0,
+   "total": 2.8
+  },
+  "B-mail": {
+   "status": "scored",
+   "doc_from": "readback:tmp/grift-inquiry-reply.txt",
+   "rc": "0",
+   "secs": "248",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [],
+   "unsupported_names": [
+    "件名: Re: Grift について"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 0,
+   "lint_per_1000": 0.0,
+   "meaning_risk_count": 1,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 609,
+    "sentences": 19,
+    "paragraphs": 11,
+    "headings": 0,
+    "sentence_len_mean": 31.5,
+    "sentence_len_median": 24,
+    "sentence_len_p90": 62.0,
+    "polite_ratio": 0.68,
+    "ending_kinds_ratio": 0.47,
+    "ending_max_run": 3,
+    "commas_per_sentence": 0.53,
+    "paragraph_sentences_mean": 1.73,
+    "ascii_space_ratio": 0.91,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 1.4,
+    "commas_per_sentence": 0.3,
+    "paragraph_sentences_mean": 0.0,
+    "ascii_space_ratio": 3.6,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 5.3,
+   "p_task": 0,
+   "total": 5.3
+  },
+  "C-manual": {
+   "status": "scored",
+   "doc_from": "readback:tmp/cor-jp-blog-manual.md",
+   "rc": "0",
+   "secs": "237",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "## 1. 管理画面を開く",
+    "## 4. 保存して、変更を取り込むための依頼を作る",
+    "## 5. 文言・推敲・記事データを検査する",
+    "## 6. merge と公開は代表が行う"
+   ],
+   "unsupported_names": [],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 0,
+   "lint_per_1000": 0.0,
+   "meaning_risk_count": 4,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 653,
+    "sentences": 26,
+    "paragraphs": 14,
+    "headings": 7,
+    "sentence_len_mean": 24.6,
+    "sentence_len_median": 23.0,
+    "sentence_len_p90": 38.6,
+    "polite_ratio": 1.0,
+    "ending_kinds_ratio": 0.12,
+    "ending_max_run": 10,
+    "commas_per_sentence": 0.5,
+    "paragraph_sentences_mean": 1.86,
+    "ascii_space_ratio": 1.0,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.0,
+    "commas_per_sentence": 0.5,
+    "paragraph_sentences_mean": 0.0,
+    "ascii_space_ratio": 4.1,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 4.6,
+   "p_task": 0,
+   "total": 4.6
+  }
+ },
+ "cursor": {
+  "A-article": {
+   "status": "not_run"
+  },
+  "B-mail": {
+   "status": "not_run"
+  },
+  "C-manual": {
+   "status": "not_run"
+  }
+ },
+ "opencode": {
+  "A-article": {
+   "status": "scored",
+   "doc_from": "readback:tmp/grift-cli-self-run.md",
+   "rc": "0",
+   "secs": "312",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "逆に、数字だけを出すと、今度は数字の意味が分からないまま一人歩きします。",
+    "0を入れると「数えた結果が0件だった」と読めてしまいます。",
+    "結果は3つです。",
+    "0.2664だけを眺めるより、73 / 274と読んだほうが、何を数えたのかが分かります。",
+    "推薦の場面では、数字を並べるより、数字の意味を1行で添えるほうが伝わります。"
+   ],
+   "unsupported_names": [
+    "```bash",
+    "cd path/to/your-repo",
+    "cd path/to/your-repo"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 2,
+   "lint_per_1000": 0.9,
+   "meaning_risk_count": 8,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 2209,
+    "sentences": 76,
+    "paragraphs": 25,
+    "headings": 7,
+    "sentence_len_mean": 28.8,
+    "sentence_len_median": 27.0,
+    "sentence_len_p90": 44.3,
+    "polite_ratio": 0.84,
+    "ending_kinds_ratio": 0.18,
+    "ending_max_run": 4,
+    "commas_per_sentence": 0.83,
+    "paragraph_sentences_mean": 3.04,
+    "ascii_space_ratio": 0.0,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.5,
+    "commas_per_sentence": 0.0,
+    "paragraph_sentences_mean": 1.1,
+    "ascii_space_ratio": 0.0,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 1.6,
+   "p_task": 0,
+   "total": 1.6
+  },
+  "B-mail": {
+   "status": "scored",
+   "doc_from": "readback:tmp/reply-grift-yamada.md",
+   "rc": "0",
+   "secs": "85",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [],
+   "unsupported_names": [
+    "件名: Re: Grift について"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 2,
+   "lint_per_1000": 3.1,
+   "meaning_risk_count": 9,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 700,
+    "sentences": 24,
+    "paragraphs": 12,
+    "headings": 0,
+    "sentence_len_mean": 28.7,
+    "sentence_len_median": 22.5,
+    "sentence_len_p90": 60.5,
+    "polite_ratio": 0.67,
+    "ending_kinds_ratio": 0.5,
+    "ending_max_run": 4,
+    "commas_per_sentence": 0.88,
+    "paragraph_sentences_mean": 2.0,
+    "ascii_space_ratio": 0.93,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.5,
+    "commas_per_sentence": 0.0,
+    "paragraph_sentences_mean": 0.0,
+    "ascii_space_ratio": 3.8,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 4.3,
+   "p_task": 0,
+   "total": 4.3
+  },
+  "C-manual": {
+   "status": "scored",
+   "doc_from": "C-manual.raw",
+   "rc": "0",
+   "secs": "32",
+   "cor_lint": [
+    "bold_label_colon@L24",
+    "bold_label_colon@L25",
+    "bold_label_colon@L26",
+    "bold_label_colon@L27",
+    "bold_label_colon@L28",
+    "isms_obtained@L161",
+    "bold_label_colon@L166",
+    "bold_label_colon@L167",
+    "bold_label_colon@L168"
+   ],
+   "cor_errors": 1,
+   "cor_warns": 8,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "| 1 | 管理画面で記事を書き始める | あなた |",
+    "| 4 | 文言の検査をする | あなた（コマンドはエンジニアに頼んでもよい） |",
+    "| 5 | 推敲の検査をする | あなた（同上） |",
+    "| 6 | develop 向けの PR を確認し、翻訳が付くのを待つ | あなた（翻訳は CI が行う） |",
+    "| 7 | ビルドが通ることを確かめる | あなた／エンジニア |",
+    "| 8 | 代表に merge と公開を頼む | あなた → 代表 |"
+   ],
+   "unsupported_names": [
+    "```bash"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 8,
+   "lint_per_1000": 3.4,
+   "meaning_risk_count": 7,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 2133,
+    "sentences": 86,
+    "paragraphs": 34,
+    "headings": 17,
+    "sentence_len_mean": 24.4,
+    "sentence_len_median": 21.5,
+    "sentence_len_p90": 51.3,
+    "polite_ratio": 0.74,
+    "ending_kinds_ratio": 0.17,
+    "ending_max_run": 5,
+    "commas_per_sentence": 0.52,
+    "paragraph_sentences_mean": 2.53,
+    "ascii_space_ratio": 0.81,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.0,
+    "commas_per_sentence": 0.4,
+    "paragraph_sentences_mean": 0.1,
+    "ascii_space_ratio": 3.2,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 11,
+   "p_fact": 0,
+   "p_style": 3.7,
+   "p_task": 0,
+   "total": 14.7
+  }
+ },
+ "pi": {
+  "A-article": {
+   "status": "no_doc",
+   "rc": "1",
+   "total": 50.0
+  },
+  "B-mail": {
+   "status": "no_doc",
+   "rc": "1",
+   "total": 50.0
+  },
+  "C-manual": {
+   "status": "scored",
+   "doc_from": "readback:tmp/blog_guide.md",
+   "rc": "0",
+   "secs": "65",
+   "cor_lint": [
+    "bold_label_colon@L13",
+    "bold_label_colon@L15",
+    "bold_label_colon@L43",
+    "bold_label_colon@L45",
+    "bold_label_colon@L47",
+    "bold_label_colon@L54",
+    "bold_label_colon@L56",
+    "bold_label_colon@L58",
+    "bold_label_colon@L60"
+   ],
+   "cor_errors": 0,
+   "cor_warns": 9,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "### 1. 記事を書く",
+    "新しくブログ記事を書く方法は主に以下の2つです。",
+    "### 4. 記事のチェックと推敲をする",
+    "### 5. プルリクエスト（PR）を作成する",
+    "### 6. 記事の公開"
+   ],
+   "unsupported_names": [
+    "この手順書は、Cor.株式会社のウェブサイト（cor-jp.com）に新しいブログ記事を作成し、公開の準備をするまでの流れを説明します。",
+    "SEO やプレビューに使われます。",
+    "`tags`: 記事に関連するタグのリスト（例: `[\"AI\", \"開発\"]`）",
+    "記事下部のCTAボックスがその役割を担います。"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 14,
+   "lint_per_1000": 8.5,
+   "meaning_risk_count": 9,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 1563,
+    "sentences": 58,
+    "paragraphs": 15,
+    "headings": 8,
+    "sentence_len_mean": 26.7,
+    "sentence_len_median": 21.5,
+    "sentence_len_p90": 51.1,
+    "polite_ratio": 0.53,
+    "ending_kinds_ratio": 0.26,
+    "ending_max_run": 4,
+    "commas_per_sentence": 0.57,
+    "paragraph_sentences_mean": 3.87,
+    "ascii_space_ratio": 0.37,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.0,
+    "commas_per_sentence": 0.2,
+    "paragraph_sentences_mean": 2.7,
+    "ascii_space_ratio": 0.9,
+    "lint_per_1000": 1.2
+   },
+   "task_missing": [
+    "numbered_steps"
+   ],
+   "p_cor": 9,
+   "p_fact": 0,
+   "p_style": 5.0,
+   "p_task": 1,
+   "total": 15.0
+  }
+ },
+ "dsh": {
+  "A-article": {
+   "status": "scored",
+   "doc_from": "readback:tmp/grift-cli-run-and-read.md",
+   "rc": "0",
+   "secs": "379",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "git（変更を1回ずつ記録する仕組み）の履歴には、変更とテストが同じコミット（1回分の変更の記録）に含まれた回数など、後から数え直せる事実が残っています。",
+    "0.2664は73を274で割った率です。",
+    "分母が小さいほど、1件の増減で率は大きく動きます。",
+    "Grift CLIですることは3つです。"
+   ],
+   "unsupported_names": [
+    "```bash",
+    "cd <対象のリポジトリ>"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 2,
+   "lint_per_1000": 0.8,
+   "meaning_risk_count": 6,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 2330,
+    "sentences": 77,
+    "paragraphs": 26,
+    "headings": 11,
+    "sentence_len_mean": 29.9,
+    "sentence_len_median": 28,
+    "sentence_len_p90": 47.0,
+    "polite_ratio": 0.95,
+    "ending_kinds_ratio": 0.12,
+    "ending_max_run": 5,
+    "commas_per_sentence": 1.08,
+    "paragraph_sentences_mean": 2.96,
+    "ascii_space_ratio": 0.0,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.9,
+    "commas_per_sentence": 0.4,
+    "paragraph_sentences_mean": 0.9,
+    "ascii_space_ratio": 0.0,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 2.2,
+   "p_task": 0,
+   "total": 2.2
+  },
+  "B-mail": {
+   "status": "scored",
+   "doc_from": "B-mail.raw",
+   "rc": "0",
+   "secs": "322",
+   "cor_lint": [],
+   "cor_errors": 0,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [],
+   "unsupported_names": [
+    "件名: Re: Grift について"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 3,
+   "lint_per_1000": 4.2,
+   "meaning_risk_count": 1,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 751,
+    "sentences": 25,
+    "paragraphs": 9,
+    "headings": 0,
+    "sentence_len_mean": 29.7,
+    "sentence_len_median": 23,
+    "sentence_len_p90": 58.2,
+    "polite_ratio": 0.8,
+    "ending_kinds_ratio": 0.36,
+    "ending_max_run": 4,
+    "commas_per_sentence": 0.76,
+    "paragraph_sentences_mean": 2.78,
+    "ascii_space_ratio": 0.82,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.8,
+    "commas_per_sentence": 0.0,
+    "paragraph_sentences_mean": 0.6,
+    "ascii_space_ratio": 3.2,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 0,
+   "p_fact": 0,
+   "p_style": 4.6,
+   "p_task": 0,
+   "total": 4.6
+  },
+  "C-manual": {
+   "status": "scored",
+   "doc_from": "readback:tmp/blog-article-procedure.md",
+   "rc": "0",
+   "secs": "139",
+   "cor_lint": [
+    "isms_obtained@L124"
+   ],
+   "cor_errors": 1,
+   "cor_warns": 0,
+   "added_unit_numbers": [],
+   "unsupported_numbers": [
+    "## 1. この手順書について",
+    "この手順書は、cor-jp.com のブログに新しい記事を1本追加し、公開できる状態にするまでの流れをまとめたものです。",
+    "記事を書く方法は2つあります。",
+    "6章の検査ではコマンドを使います。",
+    "4章の frontmatter と、5章の本文の決まりにしたがって書きます。",
+    "4章の frontmatter と、5章の本文の決まりにしたがって書きます。",
+    "## 4. frontmatter を埋める",
+    "| category | 必須 | `ai`、`engineering`、`founder`、`lab` のどれか1つ |",
+    "category は、上の4つのどれか1つを選びます。",
+    "## 5. 本文の決まり",
+    "## 6. 公開前に検査する",
+    "## 7. PR を develop に向ける",
+    "## 8. 翻訳が PR に足されるのを待つ",
+    "## 9. merge と公開",
+    "## 10. 公開前チェックリスト"
+   ],
+   "unsupported_names": [
+    "```bash"
+   ],
+   "fact_gaps": 0,
+   "yomiyasu_lint": 5,
+   "lint_per_1000": 3.1,
+   "meaning_risk_count": 16,
+   "verify_rc": 0,
+   "stats": {
+    "chars": 1417,
+    "sentences": 64,
+    "paragraphs": 20,
+    "headings": 16,
+    "sentence_len_mean": 21.8,
+    "sentence_len_median": 18.0,
+    "sentence_len_p90": 37.0,
+    "polite_ratio": 0.66,
+    "ending_kinds_ratio": 0.23,
+    "ending_max_run": 5,
+    "commas_per_sentence": 0.42,
+    "paragraph_sentences_mean": 3.2,
+    "ascii_space_ratio": 0.79,
+    "fullwidth_alnum": 0
+   },
+   "style_penalty": {
+    "sentence_len_mean": 0.0,
+    "commas_per_sentence": 0.9,
+    "paragraph_sentences_mean": 1.4,
+    "ascii_space_ratio": 3.1,
+    "lint_per_1000": 0.0
+   },
+   "task_missing": [],
+   "p_cor": 3,
+   "p_fact": 0,
+   "p_style": 5.4,
+   "p_task": 0,
+   "total": 8.4
+  }
+ },
+ "grok": {
+  "A-article": {
+   "status": "not_run"
+  },
+  "B-mail": {
+   "status": "not_run"
+  },
+  "C-manual": {
+   "status": "not_run"
+  }
+ }
+}
