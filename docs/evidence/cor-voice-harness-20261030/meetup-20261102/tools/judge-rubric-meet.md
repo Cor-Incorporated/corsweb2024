@@ -4,9 +4,9 @@
 
 目標は「Cor.株式会社の代表・寺田康佑が自分で書いたものと遜色ない文書」です。代表の書き方の手本は次の 3 本です（読むだけ。採点しない）。
 
-- /private/tmp/claude-501/-Users-teradakousuke-Developer-corsweb/a2241786-9f74-4878-9959-b0e0081db075/scratchpad/exemplars/note-hyoka-nd58ba0955317.md
-- /private/tmp/claude-501/-Users-teradakousuke-Developer-corsweb/a2241786-9f74-4878-9959-b0e0081db075/scratchpad/exemplars/qiita-c6bb68b3af0db3d43bb1.md
-- /private/tmp/claude-501/-Users-teradakousuke-Developer-corsweb/a2241786-9f74-4878-9959-b0e0081db075/scratchpad/exemplars/note-actuals-n0545bfafb8f7.md
+- <scratchpad>/exemplars/note-hyoka-nd58ba0955317.md
+- <scratchpad>/exemplars/qiita-c6bb68b3af0db3d43bb1.md
+- <scratchpad>/exemplars/note-actuals-n0545bfafb8f7.md
 
 代表の書き方の決まり（要点）:
 - 残すもの: 問いを重ねて分からないことを具体にする。出さないもの・言えないことを先に書く。否定してから言い直す。数字は出典・期間・定義と一緒に書く。たとえは 1 つだけ理由と一緒に。結びは控えめに、判断を読み手に返す。うまくいかなかったことも書く。ふだんの言い方を選ぶ。
