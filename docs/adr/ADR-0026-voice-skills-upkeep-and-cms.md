@@ -35,6 +35,7 @@ cor-jp.com と griftai.org の日本語の文章は、2 つのスキルで書い
   - Codex・OpenCode・Pi・dsh（DeepSeek Harness）: `AGENTS.md`。どれも repo の `AGENTS.md` を読む。Pi は repo の中のファイルを信頼させる `-a` を付けて動かす
   - Cursor: `.cursor/rules/japanese-copy.mdc`。対象のパスを globs で指定し、2 つの SKILL.md と検査のコマンドを指すだけにする
 - 入口が指すパスがずれないように、リンクテストで結ぶ（#450、griftai#95）。
+- 2026-10-30 の追記: 記事・メール・社内の手順書など、日本語の対外文すべての書き方の手順を、1 つの元ファイル（`.claude/skills/cor-voice-gate/references/harness-entry.md`）から生成する。生成先は `CLAUDE.md` と `AGENTS.md` の節「Japanese outbound text in any harness (generated)」と `.cursor/rules/cor-voice.mdc`（常時適用）で、生成は `cor-voice-gate/scripts/render_harness_entries.py`。手順には読むスキルと検査のコマンドだけを書き、規則の本文は写さない。Grok も `AGENTS.md` と `CLAUDE.md` を読む。入口と元ファイルのずれは `scripts/__tests__/harness-entries.test.mjs` が止める。
 
 ### 2. 検査は CI でも回し、書いた人やツールに関係なく同じ検査をかける
 
@@ -101,4 +102,4 @@ cor-jp.com と griftai.org の日本語の文章は、2 つのスキルで書い
 
 - Epic #452、#448・#449・#450・#451・#454、`voice-feedback` の #455・#456・#457、Cor-Incorporated/griftai#94・#95・#96
 - ADR-0007（対外表現）、ADR-0015（横断 ADR の正本）、ADR-0018（Sveltia CMS）、ADR-0019（翻訳 CI）、ADR-0022（事業の柱と Grift）
-- `.claude/skills/cor-voice/SKILL.md` §7、`.claude/skills/cor-voice/references/evidence.md`、`cms/public/config.yml`
+- `.claude/skills/cor-voice/SKILL.md` §8（更新の手順）、`.claude/skills/cor-voice/references/evidence.md`、`cms/public/config.yml`
