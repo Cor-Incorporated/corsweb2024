@@ -17,11 +17,11 @@
 ## 事実の出所
 
 - Thor レーンの報告書 `Claude_Code報告_20261030_physical-ai-thor.md`（2026-10-30 22:25 JST の追記まで。sha256 `f791b4ac84720a96e9ae0c14382e1f1476b613aff0cf6f869aec3ab42cfe0ed8`）
-- スイカ割りについて外に向けて書ける一文（`materials/suika-external.md`。kotoba-robocon の証跡 `docs/acceptance/evidence/suika-sim-20261030.md` 1〜9 行。Thor レーンが書いたもの）。報告書にない「スイカの真の位置を見ながら」「決定論的な指示語だけ」が入っているので使った。誘導役が LLM で言葉を理解しているように読めるのを防ぐため
+- スイカ割りについて外に向けて書ける一文（`materials/suika-external.md`。ロボット側の非公開 repo の証跡（社内記録に記載）の 1〜9 行。Thor レーンが書いたもの）。報告書にない「スイカの真の位置を見ながら」「決定論的な指示語だけ」が入っているので使った。誘導役が LLM で言葉を理解しているように読めるのを防ぐため
 - ミートアップの事実（`materials/meetup.md`）と、載せてよい URL（`materials/cor-jp-pages.md`）は、統括の依頼から書いた
 - Thor レーンの 23:45 版（`materials/thor-line-2345.md`。統括経由で 23:45 ごろに届いた）。22:32 の 1 行（`materials/thor-line-2232.md`）を置き換えたもので、**最終稿の数字はここと 23:50 版、10-31 版、`materials/meetup.md` にあるものだけ**。SDK・方策の提供元の社名は、この公開リポジトリでは伏せた
 - Thor レーンの 23:50 版（`materials/thor-line-2350.md`。23:45 版に足す事実）。重みの run を固定したこと、sim2sim の 4/4 と対照の値はここから使った。この sim2sim は Thor と同じ arm64 の image で測った値で、Thor の上ではまだ動かしていない。原稿と配布では「Thor と同じビルドで」と書き、「Thor の上で動かすのは、これから」と書き添えた（修正 4 で 10-31 版の値に差し替えた）
-- Thor レーンの 10-31 版（`materials/thor-line-20261031.md`。統括が 2026-10-31 05:36 に検証して中継）。Thor の上で測った sim2sim（5/5、+4.34〜4.37 m、腰の高さの最小 0.799 m、転倒 0）、CPU だけの推論の時間（平均 0.25 ms、制御周期 10 ms の 2.5%、最も遅い 1 回 4.2 ms）、そのあいだの温度と電力（CPU 41 °C 以下、最大 47.4 W）は、ここから使った。数字は kotoba-robocon #43（head `023e3b0`）の生データ（各回の `summary.json`、`bench-under-load.json`、`tegrastats/summary.txt`）とも照らし、一致した
+- Thor レーンの 10-31 版（`materials/thor-line-20261031.md`。統括が 2026-10-31 05:36 に検証して中継）。Thor の上で測った sim2sim（5/5、+4.34〜4.37 m、腰の高さの最小 0.799 m、転倒 0）、CPU だけの推論の時間（平均 0.25 ms、制御周期 10 ms の 2.5%、最も遅い 1 回 4.2 ms）、そのあいだの温度と電力（CPU 41 °C 以下、最大 47.4 W）は、ここから使った。数字はロボット側の非公開 repo の PR と commit（社内記録に記載）の生データ（各回の `summary.json`、`bench-under-load.json`、`tegrastats/summary.txt`）とも照らし、一致した
 - 報告書からは、数字の無い事実だけを使った（計画の自己承認を直したこと、それまでの測定の承認がスクリプトだったこと、v2 の誘導役に命中のあとにもう 1 回指示する欠陥が残ること、調整の途中で転倒した回があったこと）。v2 の欠陥は 23:45 版に書かれていないが、直ったとも書かれていないので、報告書（18:24 の追記）に従って残した
 - 寺田の決定（`materials/direction-20261030.md`。統括経由）: 実演は Jetson AGX Thor の上、Thor + sim only、実機は次の段階として 1 文、Mac で動かす前提の表現を書かない、シミュレーターの記述は当面 MuJoCo + 公開 SDK
 

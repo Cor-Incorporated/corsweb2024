@@ -53,7 +53,7 @@ Safe procedure for reflecting polished Japanese drafts into note.com (`editor.no
 - Creating a new draft key for a published-note **update**, then reporting it as 更新 or putting 「更新しました」 in the body
 
 ## Sources
-- RCA (embed/Header): `/workspace/reports/20261029_note_embed_header_loss_rca.md`
-- RCA (new-key publish): `/workspace/reports/20261029_note_new_key_publish_rca.md`
+- RCA (embed/Header): `<agent-server>/reports/20261029_note_embed_header_loss_rca.md`
+- RCA (new-key publish): `<agent-server>/reports/20261029_note_new_key_publish_rca.md`
 - Ops memo: store `note-editor-formatting.md` (SNS・note統括)
 - Gate: cor-voice-gate items 19–20 + note 編集UI反映ゲート section
