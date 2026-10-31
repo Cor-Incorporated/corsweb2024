@@ -6,6 +6,6 @@
 - 1. GB10 = 学習・検証のシミュレーション: DGX Spark（DGX OS 7.2.3、driver 580.159.03）で Isaac Sim 5.1.0 + Isaac Lab 2.3.2 + 提供元が公開した RL の学習環境を動かし、提供元が Isaac Lab で学習・公開した PM01 の AMP 歩行方策（2026-09-14、model_19999）を再生した。605 ステップで 2.95 m 前進、腰の高さ 0.80〜0.81 m を維持。重みは提供元のもので、私たちは学習していない（原稿では「提供元が公開した学習済み方策」と書く）
 - 2. Thor = 推論: スイカ割りの PM01 の歩行と振りは、公開 SDK の RL runner が、シミュレーションで学習された MNN 方策（251009_221907_41000.mnn・dance.mnn）を Thor の CPU で推論する。Isaac Lab の方策そのものを Thor で動かす sim2sim はまだ（次の段階）
 - 3. PM01 = MuJoCo のシミュレーション: Thor の上の実演は、起動スクリプト 1 コマンドで 20.6 s、Thor 本体の起動 33.8 s、待機中 21〜31 W。誘導役 v1 6/10・v2 10/10（Wilson 95% 72–100%）、本番 20 回 + 10-30 の夜の 2 回で転倒 0。来場者は kiosk のボタンか文字で指示する（距離は 0.25 / 0.5 / 1 / 1.5 / 2 m のみ、60 秒・3 振り）
-- 録画・スクリーンショット: kotoba-robocon PR #43（head f3f99a8）の `docs/meetup/2026-11-02/media/`。`isaac-sim-gb10-pm01-amp-walk-6s.mp4`（Isaac Sim、6 s）、`suika-v2-seed114.mp4`（26.8 s）、`suika-v2-seed116.mp4`（45.4 s）、`thor-kiosk-round-in-progress-20261030.jpg`、`thor-kiosk-result-20261030.jpg`、`isaac-sim-gb10-pm01-amp-walk-frame.jpg`
+- 録画・スクリーンショット: ロボット側の非公開 repo の PR と commit（社内記録に記載）の media フォルダ。`isaac-sim-gb10-pm01-amp-walk-6s.mp4`（Isaac Sim、6 s）、`suika-v2-seed114.mp4`（26.8 s）、`suika-v2-seed116.mp4`（45.4 s）、`thor-kiosk-round-in-progress-20261030.jpg`、`thor-kiosk-result-20261030.jpg`、`isaac-sim-gb10-pm01-amp-walk-frame.jpg`
 - 構成図の一文: Isaac Sim / Isaac Lab（GB10）→ 方策（MNN）→ Thor（推論・承認・UI）→ PM01（MuJoCo のシミュレーション）→ 実機は次の段階
 - 何がシミュレーションで何が実機かを文ごとに書く。まだやっていないこと（sim2sim、実機）を、やったと読める書き方にしない

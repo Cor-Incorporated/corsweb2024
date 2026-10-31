@@ -25,7 +25,7 @@ Safe procedure for reflecting polished Japanese drafts into note.com (`editor.no
 
 ## Steps
 1. Classify the job: **更新／改稿** vs **続稿／新規**. Open the edit URL. Confirm note id.
-2. **Preedit inventory** — write `/workspace/.../note_preedit_<noteId>.md`:
+2. **Preedit inventory** — write `<agent-server>/.../note_preedit_<noteId>.md`:
    - cover/Header present? asset URL if yes
    - image count and short list
    - embed cards: each URL + approx position
@@ -53,7 +53,7 @@ Safe procedure for reflecting polished Japanese drafts into note.com (`editor.no
 - Creating a new draft key for a published-note **update**, then reporting it as 更新 or putting 「更新しました」 in the body
 
 ## Sources
-- RCA (embed/Header): `/workspace/reports/20261029_note_embed_header_loss_rca.md`
-- RCA (new-key publish): `/workspace/reports/20261029_note_new_key_publish_rca.md`
+- RCA (embed/Header): `<agent-server>/reports/20261029_note_embed_header_loss_rca.md`
+- RCA (new-key publish): `<agent-server>/reports/20261029_note_new_key_publish_rca.md`
 - Ops memo: store `note-editor-formatting.md` (SNS・note統括)
 - Gate: cor-voice-gate items 19–20 + note 編集UI反映ゲート section

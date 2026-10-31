@@ -1,4 +1,4 @@
-cwd=/Users/teradakousuke/Developer/corsweb/.worktrees/claude/cor-voice-harness branch=feat/cor-voice-harness head=28a67a4
+cwd=<home>/Developer/corsweb/.worktrees/claude/cor-voice-harness branch=feat/cor-voice-harness head=28a67a4
 BAD  git push origin --mirror                      CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
 BAD  git push origin "--mirror"                    CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
 BAD  git push --mirror origin                      CC=BLOCK(0/2) CU=BLOCK CX=BLOCK

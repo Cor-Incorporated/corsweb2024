@@ -13,8 +13,8 @@ Apply to all Japanese outbound text Terada or Cor. may send or publish: cor-jp.c
 
 ## Canonical paths
 - Mac (source of truth): `~/Developer/corsweb/.claude/skills/cor-voice` and `.../yomiyasu` (identical copy under `~/Developer/griftai/.claude/skills/`)
-- Box copy: `/home/box/agent-data/workflows/cor-voice` and `/home/box/agent-data/workflows/yomiyasu`
-If the box copy is older, refresh from Mac before checking.
+- Agent-server copy: `$COR_VOICE_SKILLS_DIR/cor-voice` and `$COR_VOICE_SKILLS_DIR/yomiyasu` (the directory is set per environment and is not part of this repository)
+If the agent-server copy is older, refresh from Mac before checking.
 
 ## Harness entries (Codex, OpenCode, Pi, dsh, Grok, Cursor, Claude Code)
 - Every harness reads the same short entry: the generated block in `AGENTS.md` (Codex, OpenCode, Pi, dsh, Grok) and `CLAUDE.md` (Claude Code), and `.cursor/rules/cor-voice.mdc` (Cursor). The entry points at the skills and lists the checks; it never copies rule bodies (ADR-0026).
@@ -25,7 +25,7 @@ If the box copy is older, refresh from Mac before checking.
 2. yomiyasu: keep meaning; do not add facts
 3. cor-voice register and anti-slop lists
 4. Whole-post tone coherence (below) — blocks ship even when a media exception would allow a token
-5. **Semantic Review (below) — hard stop; overrides soft pass** (items 13–18, item 21 (2026-10-29 tech/safety), and the §10.2 table added 2026-10-29 from `/workspace/reports/20261029_cor_voice_rewrite_review.md`)
+5. **Semantic Review (below) — hard stop; overrides soft pass** (items 13–18, item 21 (2026-10-29 tech/safety), and the §10.2 table added 2026-10-29 from `<agent-server>/reports/20261029_cor_voice_rewrite_review.md`)
 6. cor-voice §5 readability (always loses on conflict with 1–5)
 7. **note 編集UI反映ゲート（when reflecting to note）— hard stop; items 19–20**
 
@@ -33,7 +33,7 @@ If the box copy is older, refresh from Mac before checking.
 1. Choose register: company (です・ます, no 僕/私) vs personal/note/founder X (僕 OK, short plain lines OK; X-only tone exception in cor-voice §5 is optional, not a mandate).
 2. Choose yomiyasu doc-type (promo for SNS, article for long posts, **mail / formal for email and questionnaires**) and reader (informed / expert).
 3. Run yomiyasu Steps 1–5, then:
-   `python3 /home/box/agent-data/workflows/yomiyasu/scripts/yomiyasu_check.py run --source <original> --final <polished> --doc-type <type> --fact-gaps`
+   `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py run --source <original> --final <polished> --doc-type <type> --fact-gaps`
    and `verify --final <polished>` before handoff.
    Also run `python3 -I .claude/skills/cor-voice-gate/scripts/cor_voice_lint.py check --scene <company|founder|tech|mail|founder-x> <polished>` (the cor-voice rules a machine can check: site wording errors, banned patterns, sentence and paragraph length). Errors block handoff.
    **Scope:** `--source` and `--final` must be the **same document before/after polish** (same section, same ask). Do not diff a short outline against a long cover, or two different drafts, or that will inflate meaning_risk and cause false hard stops.
@@ -44,8 +44,8 @@ If the box copy is older, refresh from Mac before checking.
 7. **Thread / publish context:** before any X (or similar) publish or fix, check how the timeline will look after the action (parent post, replies, deletes). Fix the odd post itself when possible; do not delete a parent and leave only a reply (orphan reply + bare URL reply is a failed fix). Prefer rewrite-in-place or delete-and-repost as a clean standalone with the same substance and URL.
 8. **Semantic Review (required, Fast and Full)** — checklist below. Fail any item → rewrite or escalate; do not mark ready for review.
 9. Apply corsweb blog-guardrails rules in spirit (no retired brand names, no ISMS-as-certified, no *.web.app / draftKey / internal notes).
-10. **Second reader:** the bot that wrote the draft must not be the only gate. Another bot (SNS統括, 発信QA, or Grok Bot) must re-read Semantic Review + open the cited run path on the shared box. If `ls` cannot open the run path, treat as not passed.
-11. Return polished path + **absolute shared-box run path** (`/workspace/<case>/.yomiyasu/runs/<ID>` or equivalent) + `meaning_risk` count + what changed + questions for Terada. Do not post, schedule, or ship without explicit approval.
+10. **Second reader:** the bot that wrote the draft must not be the only gate. Another bot (SNS統括, 発信QA, or Grok Bot) must re-read Semantic Review + open the cited run path on the agent server. If `ls` cannot open the run path, treat as not passed.
+11. Return polished path + **absolute agent-server run path** (`<agent-server>/<case>/.yomiyasu/runs/<ID>` or equivalent) + `meaning_risk` count + what changed + questions for Terada. Do not post, schedule, or ship without explicit approval.
 
 ## Semantic Review (required)
 
@@ -56,7 +56,7 @@ Check every outbound medium, including email and formal documents:
 3. □ **Motive from the reader’s seat:** within the first ~5 lines, who is writing, why them, why now — clear to the recipient.
 4. □ **Relationship / debt:** if Terada’s relationship to the reader or city (e.g. 支援を受けてきた) belongs in the piece, confirm with him before inventing; do not invent to satisfy this check. Escalate rather than fabricate (respects yomiyasu no-add-facts).
 5. □ **Factual framing:** first-time vs recurring; personal vs official; no scoring / endorsement / popularity framing unless Terada ordered it. Labels must match the actual activity (e.g. do not call an in-session comparison 「宿題」).
-6. □ **meaning_risk_count == 0** after the latest **same-document** shared-box run (hard stop if > 0). Mismatched source/final scopes do not count as a real pass or a real fail until re-run correctly. After Terada-approved intentional framing fixes, the zero-risk run must use the approved text as `--source`.
+6. □ **meaning_risk_count == 0** after the latest **same-document** agent-server run (hard stop if > 0). Mismatched source/final scopes do not count as a real pass or a real fail until re-run correctly. After Terada-approved intentional framing fixes, the zero-risk run must use the approved text as `--source`.
 7. □ **Publish-path preview:** for SNS, open the final Postiz / intent / scheduler preview and confirm URL, link card, and thread shape. URL-required posts: if Postiz strips links, use `x.com/intent/post` (or equivalent) so the URL is in the parent body. When auditing live X, check short `text` **and** `note_tweet` / long text — short-text-only URL checks cause false “missing URL” alarms.
 8. □ **No duplicate / orphan posts:** same substance must not already be live twice; no orphan replies after parent delete.
 9. □ **Dialect:** never in tech / product / security / article announces (existing rule; machine-check mindset).
@@ -86,22 +86,22 @@ Check every outbound medium, including email and formal documents:
     - ISMS: stage 2 done / registration expected ~Dec 2026, separated from what each system verified.
     - 技術・安全系記事全般（続稿①に限らない）には item 21 も適用する。
 
-19. □ **note 編集UI反映（when reflecting into editor.note.com）— hard stop（寺田承認 2026-10-29）:** 出典 `/workspace/reports/20261029_note_embed_header_loss_rca.md`・運用メモ `note-editor-formatting.md`。
+19. □ **note 編集UI反映（when reflecting into editor.note.com）— hard stop（寺田承認 2026-10-29）:** 出典 `<agent-server>/reports/20261029_note_embed_header_loss_rca.md`・運用メモ `note-editor-formatting.md`。
     - **Markdown／HTML 全文ペースト禁止**（一時 http.server の HTML 全文コピー→貼付、全文選択→置換を含む）。段落本文の貼付は可。見出し・リストはツールバーまたは行頭ショートカットの**入力変換**。
     - 反映前に退避: カバー画像（Header／eyecatch）の有無、画像・埋込カードの一覧（位置・URL）を `note_preedit_<id>.md` に記録。無い場合は「未設定」と書く。
     - 反映後照合（タイトル・冒頭だけでは不十分）: **埋込カード数**、**カバー画像**、**素URL残存ゼロ**（`https://x.com/` / `https://twitter.com/` の素リンク行がカード化されず残っていない）、見出し数・画像数。不一致 → 保存完了／ready にしない。
     - **Header方針**: 改稿下書き＝**旧公開アイキャッチ流用が標準**（毎回確認不要）。続稿のように当初未設定なら載せない。流用アセットURLを照合に含める。
-    - REFLECT の「埋込復元」は、カード化のスクショまたは DOM 証跡が付くまで ready にしない。箱上 md／paste_body は埋込メタを保持しない前提で扱う。
-    - 詳細手順は [note-edit-safe](sand-workflow:note-edit-safe) に従う。
+    - REFLECT の「埋込復元」は、カード化のスクショまたは DOM 証跡が付くまで ready にしない。エージェントサーバー上の md／paste_body は埋込メタを保持しない前提で扱う。
+    - 詳細手順は [note-edit-safe](../note-edit-safe/SKILL.md) に従う。
 
 
-20. □ **公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（寺田承認 2026-10-29）:** 出典 `/workspace/reports/20261029_note_new_key_publish_rca.md`・運用メモ `note-editor-formatting.md`（「更新／リライト」節）。
+20. □ **公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（寺田承認 2026-10-29）:** 出典 `<agent-server>/reports/20261029_note_new_key_publish_rca.md`・運用メモ `note-editor-formatting.md`（「更新／リライト」節）。
     - 編集URLの noteId（`editor.note.com/notes/<id>/edit/`）は、旧公開URLの noteId（`note.com/.../n/<id>`）と **一致必須**。報告に `targetPublicKey` / `editorNoteId` / `key一致: yes|no` を必ず書く。不一致、または旧公開URLの書き漏れ → FAIL。ready／ワンタップ公開導線に載せない。
     - 本文・タイトル・完了報告に「更新しました」等の更新フレーミングがあるのに key が新規 → FAIL。
     - 新規 key で作ってよいのは **続稿・新シリーズ**、または寺田が「別記事」と明示した場合のみ。その場合は更新フレーミングを使わない。
-    - 詳細手順は [note-edit-safe](sand-workflow:note-edit-safe) Hard stops §5–6。
+    - 詳細手順は [note-edit-safe](../note-edit-safe/SKILL.md) Hard stops §5–6。
 
-21. □ **技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（寺田承認 2026-10-29）:** 出典: 2026-10-29 P0-S1 外部レビュー（「設計思想として良いが調査／検証記事として不足」; 原文保管先は未確認）＋`/workspace/reports/20261029_tech_safety_article_gate_draft.md`。item12／13／14／18 を置換せず補強する。
+21. □ **技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（寺田承認 2026-10-29）:** 出典: 2026-10-29 P0-S1 外部レビュー（「設計思想として良いが調査／検証記事として不足」; 原文保管先は未確認）＋`<agent-server>/reports/20261029_tech_safety_article_gate_draft.md`。item12／13／14／18 を置換せず補強する。
     - **(1 hard) 危険源から安全側状態を定義:** 停止・静止・帰還・待機を無条件に「安全」と呼ばない。何の危険源に対して、どの状態が安全側かを書く。書けない → 「安全側状態は未定義」と明記するか escalate。Fail = hard stop.
     - **(2 hard) AI推論と安全制御の分離:** 停止判断の主体が AI 自身だけになっていないか。独立した制御（ハードインターロック・ウォッチドッグ・人の停止権限など）の有無と状態（方針／実装／検証）を書く。無いなら無いと書く。Fail = hard stop.
     - **(3 Full必須) 確信度≠安全性:** 確信度・スコアを安全性の指標として使わない。高確信度での誤判断とキャリブレーションの問題に触れずに「確信度が低ければ止まるので安全」と書かない。
