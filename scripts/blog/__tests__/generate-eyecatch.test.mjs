@@ -235,9 +235,12 @@ describe('鍵の扱い', () => {
     expect(plain).toContain('quota');
     // project の規則だけに掛かる短い番号と、要約の経路に混ざった識別子も伏せる。
     expect(publicErrorMessage('consumer projects/12345678 denied', { rootDir: root })).toBe('consumer projects/<redacted> denied');
-    const longStatus = JSON.stringify({ error: { code: 503, status: `${'x'.repeat(400)} projects/123456789012` } });
+    // 識別子を先頭に置く。後ろに置くと 300 字の打ち切りだけで消えて、伏せ字の有無を見分けられない。
+    const longStatus = JSON.stringify({ error: { code: 503, status: `projects/123456789012 https://x.example/overview?project=123456789012 ${'x'.repeat(400)}` } });
     const summary = publicErrorMessage(longStatus, { rootDir: root });
     expect(summary).not.toContain('123456789012');
+    expect(summary).not.toContain('https://');
+    expect(summary).toContain('projects/<redacted>');
     expect(summary.length).toBeLessThanOrEqual(300);
   });
 
