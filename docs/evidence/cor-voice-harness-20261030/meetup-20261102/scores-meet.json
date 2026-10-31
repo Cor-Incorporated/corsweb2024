@@ -1,0 +1,134 @@
+[
+ {
+  "judge_id": "D3",
+  "skills": "after",
+  "harness": "claude",
+  "secs": 322,
+  "rank": 1,
+  "voice_score": 5,
+  "passes_as_terada": "yes",
+  "fact_additions": 1,
+  "semantic_fails": 1,
+  "request_misses": 0,
+  "script_chars": 1237,
+  "script_sentence_len_mean": 23.4,
+  "unsupported_script_slides_handout": [
+   1,
+   0,
+   1
+  ],
+  "cor_voice_lint_errors": 0,
+  "cor_voice_lint_warns": 3,
+  "task_misses": []
+ },
+ {
+  "judge_id": "D6",
+  "skills": "before",
+  "harness": "claude",
+  "secs": 295,
+  "rank": 2,
+  "voice_score": 4,
+  "passes_as_terada": "yes",
+  "fact_additions": 0,
+  "semantic_fails": 0,
+  "request_misses": 1,
+  "script_chars": 1268,
+  "script_sentence_len_mean": 25.1,
+  "unsupported_script_slides_handout": [
+   6,
+   4,
+   5
+  ],
+  "cor_voice_lint_errors": 0,
+  "cor_voice_lint_warns": 3,
+  "task_misses": []
+ },
+ {
+  "judge_id": "D4",
+  "skills": "before",
+  "harness": "codex",
+  "secs": 526,
+  "rank": 3,
+  "voice_score": 3,
+  "passes_as_terada": "no",
+  "fact_additions": 2,
+  "semantic_fails": 2,
+  "request_misses": 0,
+  "script_chars": 1282,
+  "script_sentence_len_mean": 26.1,
+  "unsupported_script_slides_handout": [
+   1,
+   0,
+   1
+  ],
+  "cor_voice_lint_errors": 0,
+  "cor_voice_lint_warns": 1,
+  "task_misses": []
+ },
+ {
+  "judge_id": "D5",
+  "skills": "after",
+  "harness": "codex",
+  "secs": 585,
+  "rank": 4,
+  "voice_score": 3,
+  "passes_as_terada": "no",
+  "fact_additions": 1,
+  "semantic_fails": 1,
+  "request_misses": 1,
+  "script_chars": 1220,
+  "script_sentence_len_mean": 25.4,
+  "unsupported_script_slides_handout": [
+   1,
+   1,
+   1
+  ],
+  "cor_voice_lint_errors": 0,
+  "cor_voice_lint_warns": 0,
+  "task_misses": []
+ },
+ {
+  "judge_id": "D1",
+  "skills": "before",
+  "harness": "opencode",
+  "secs": 332,
+  "rank": 5,
+  "voice_score": 4,
+  "passes_as_terada": "no",
+  "fact_additions": 4,
+  "semantic_fails": 3,
+  "request_misses": 0,
+  "script_chars": 1296,
+  "script_sentence_len_mean": 24.0,
+  "unsupported_script_slides_handout": [
+   3,
+   1,
+   2
+  ],
+  "cor_voice_lint_errors": 0,
+  "cor_voice_lint_warns": 2,
+  "task_misses": []
+ },
+ {
+  "judge_id": "D2",
+  "skills": "after",
+  "harness": "opencode",
+  "secs": 447,
+  "rank": 6,
+  "voice_score": 3,
+  "passes_as_terada": "no",
+  "fact_additions": 6,
+  "semantic_fails": 4,
+  "request_misses": 0,
+  "script_chars": 1253,
+  "script_sentence_len_mean": 19.7,
+  "unsupported_script_slides_handout": [
+   4,
+   1,
+   4
+  ],
+  "cor_voice_lint_errors": 0,
+  "cor_voice_lint_warns": 0,
+  "task_misses": []
+ }
+]
