@@ -233,6 +233,12 @@ describe('鍵の扱い', () => {
     const plain = publicErrorMessage('quota for project 987654321098 exhausted (consumer projects/987654321098)', { rootDir: root });
     expect(plain).not.toContain('987654321098');
     expect(plain).toContain('quota');
+    // project の規則だけに掛かる短い番号と、要約の経路に混ざった識別子も伏せる。
+    expect(publicErrorMessage('consumer projects/12345678 denied', { rootDir: root })).toBe('consumer projects/<redacted> denied');
+    const longStatus = JSON.stringify({ error: { code: 503, status: `${'x'.repeat(400)} projects/123456789012` } });
+    const summary = publicErrorMessage(longStatus, { rootDir: root });
+    expect(summary).not.toContain('123456789012');
+    expect(summary.length).toBeLessThanOrEqual(300);
   });
 
   it('redact は渡された鍵と、Gemini の鍵の形の文字列を伏せる', () => {

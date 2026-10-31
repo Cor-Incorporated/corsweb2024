@@ -90,7 +90,7 @@ function redactIdentifiers(text) {
 export function publicErrorMessage(message, { secret, rootDir }) {
   const redacted = redact(message, secret);
   const summarized = summarizeApiError(redacted.trim());
-  if (summarized) return summarized;
+  if (summarized) return redactIdentifiers(summarized).slice(0, 300);
   const firstLine = redactIdentifiers(redacted.split('\n')[0]);
   const withoutPaths = [rootDir, homedir()]
     .filter(Boolean)
