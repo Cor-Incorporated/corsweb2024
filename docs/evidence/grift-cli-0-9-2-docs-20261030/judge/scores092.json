@@ -1,0 +1,198 @@
+{
+ "before/claude/P1-cases": {
+  "status": "scored",
+  "doc_from": "P1-cases.raw",
+  "chars": 1148,
+  "sentence_len_mean": 41,
+  "cor_errors": [],
+  "cor_warns": [
+   "long_sentences"
+  ],
+  "meaning_risk": 15,
+  "diff_meaning_risk": 15,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 3,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "before/claude/P2-faq": {
+  "status": "scored",
+  "doc_from": "P2-faq.raw",
+  "chars": 242,
+  "sentence_len_mean": 60.5,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 0,
+  "diff_meaning_risk": 0,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 1,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "before/codex/P1-cases": {
+  "status": "scored",
+  "doc_from": "P1-cases.raw.last",
+  "chars": 607,
+  "sentence_len_mean": 40.5,
+  "cor_errors": [],
+  "cor_warns": [
+   "long_sentences"
+  ],
+  "meaning_risk": 1,
+  "diff_meaning_risk": null,
+  "unsupported": [
+   "0.9.2では、手元のPCにPythonを入れずにDockerでgit履歴を読めるようにしました。"
+  ],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 3,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "before/codex/P2-faq": {
+  "status": "scored",
+  "doc_from": "P2-faq.err",
+  "chars": 218,
+  "sentence_len_mean": 54.5,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 1,
+  "diff_meaning_risk": 1,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 1,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "before/opencode/P1-cases": {
+  "status": "scored",
+  "doc_from": "P1-cases.raw",
+  "chars": 1516,
+  "sentence_len_mean": 44.6,
+  "cor_errors": [],
+  "cor_warns": [
+   "long_sentences"
+  ],
+  "meaning_risk": 17,
+  "diff_meaning_risk": 16,
+  "unsupported": [
+   "0.9.2では、Dockerでの実行、環境の更新、提出物の作成、リポジトリの文脈（context profile）の表示を足しました。"
+  ],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 4,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "before/opencode/P2-faq": {
+  "status": "scored",
+  "doc_from": "P2-faq.raw",
+  "chars": 348,
+  "sentence_len_mean": 87,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 0,
+  "diff_meaning_risk": 0,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 1,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "after/claude/P1-cases": {
+  "status": "scored",
+  "doc_from": "P1-cases.raw",
+  "chars": 1158,
+  "sentence_len_mean": 35.1,
+  "cor_errors": [],
+  "cor_warns": [
+   "long_sentences"
+  ],
+  "meaning_risk": 14,
+  "diff_meaning_risk": 14,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 3,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "after/claude/P2-faq": {
+  "status": "scored",
+  "doc_from": "P2-faq.raw",
+  "chars": 346,
+  "sentence_len_mean": 86.5,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 0,
+  "diff_meaning_risk": 0,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 1,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "after/codex/P1-cases": {
+  "status": "scored",
+  "doc_from": "P1-cases.raw.last",
+  "chars": 544,
+  "sentence_len_mean": 36.3,
+  "cor_errors": [],
+  "cor_warns": [
+   "long_sentences"
+  ],
+  "meaning_risk": 0,
+  "diff_meaning_risk": null,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 2,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "after/codex/P2-faq": {
+  "status": "scored",
+  "doc_from": "P2-faq.err",
+  "chars": 242,
+  "sentence_len_mean": 60.2,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 0,
+  "diff_meaning_risk": 0,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 1,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "after/opencode/P1-cases": {
+  "status": "scored",
+  "doc_from": "P1-cases.raw",
+  "chars": 1125,
+  "sentence_len_mean": 28.8,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 17,
+  "diff_meaning_risk": 16,
+  "unsupported": [
+   "[0.9.2](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.2)では、リポジトリの文脈（context profile）に、初めて活動した年と最後に活動した年、タグの頻度の分子と分母を出すようにしました。"
+  ],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 4,
+  "verify_rc": 0,
+  "task_misses": []
+ },
+ "after/opencode/P2-faq": {
+  "status": "scored",
+  "doc_from": "P2-faq.raw",
+  "chars": 269,
+  "sentence_len_mean": 67.2,
+  "cor_errors": [],
+  "cor_warns": [],
+  "meaning_risk": 0,
+  "diff_meaning_risk": 0,
+  "unsupported": [],
+  "fact_gaps": 0,
+  "yomiyasu_lint": 1,
+  "verify_rc": 0,
+  "task_misses": []
+ }
+}

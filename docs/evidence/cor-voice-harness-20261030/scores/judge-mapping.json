@@ -1,0 +1,106 @@
+{
+ "A-article/D1": {
+  "round": "after",
+  "harness": "opencode"
+ },
+ "A-article/D2": {
+  "round": "before",
+  "harness": "codex"
+ },
+ "A-article/D3": {
+  "round": "after",
+  "harness": "codex"
+ },
+ "A-article/D4": {
+  "round": "before",
+  "harness": "claude"
+ },
+ "A-article/D5": {
+  "round": "after",
+  "harness": "dsh"
+ },
+ "A-article/D6": {
+  "round": "before",
+  "harness": "opencode"
+ },
+ "A-article/D7": {
+  "round": "after",
+  "harness": "claude"
+ },
+ "A-article/D8": {
+  "round": "before",
+  "harness": "dsh"
+ },
+ "B-mail/D1": {
+  "round": "before",
+  "harness": "codex"
+ },
+ "B-mail/D2": {
+  "round": "after",
+  "harness": "dsh"
+ },
+ "B-mail/D3": {
+  "round": "after",
+  "harness": "opencode"
+ },
+ "B-mail/D4": {
+  "round": "before",
+  "harness": "dsh"
+ },
+ "B-mail/D5": {
+  "round": "after",
+  "harness": "codex"
+ },
+ "B-mail/D6": {
+  "round": "before",
+  "harness": "opencode"
+ },
+ "B-mail/D7": {
+  "round": "before",
+  "harness": "claude"
+ },
+ "B-mail/D8": {
+  "round": "after",
+  "harness": "claude"
+ },
+ "C-manual/D1": {
+  "round": "after",
+  "harness": "opencode"
+ },
+ "C-manual/D2": {
+  "round": "after",
+  "harness": "claude"
+ },
+ "C-manual/D3": {
+  "round": "before",
+  "harness": "dsh"
+ },
+ "C-manual/D4": {
+  "round": "before",
+  "harness": "pi"
+ },
+ "C-manual/D5": {
+  "round": "after",
+  "harness": "codex"
+ },
+ "C-manual/D6": {
+  "round": "after",
+  "harness": "pi"
+ },
+ "C-manual/D7": {
+  "round": "after",
+  "harness": "dsh"
+ },
+ "C-manual/D8": {
+  "round": "before",
+  "harness": "claude"
+ },
+ "C-manual/D9": {
+  "round": "before",
+  "harness": "codex"
+ },
+ "C-manual/D10": {
+  "round": "before",
+  "harness": "opencode"
+ }
+}

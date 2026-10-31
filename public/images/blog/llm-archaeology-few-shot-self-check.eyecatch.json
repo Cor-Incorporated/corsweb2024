@@ -1,0 +1,85 @@
+{
+  "recordVersion": 1,
+  "slug": "llm-archaeology-few-shot-self-check",
+  "source": "src/content/blog/ja/llm-archaeology-few-shot-self-check.md",
+  "candidates": [
+    {
+      "id": 1,
+      "generatedAt": "2026-10-30T02:40:56.389Z",
+      "model": "gemini-3.1-flash-image",
+      "promptVersion": 1,
+      "prompt": "Minimal, calm editorial illustration for the blog of a small Japanese technology company.\nFlat geometric shapes and thin line-art diagrams, generous negative space, soft paper-like texture.\nPalette: warm stone grays (#fafaf9, #e7e5e4, #a8a29e, #57534e, #292524) with one muted blue accent (#2563eb).\nWide 16:9 composition. Keep every important element inside the central 80% of the frame,\nbecause the same image is also cropped to 1200x630.\nVisual motif: abstract nodes connected by thin lines, two parallel paths being compared side by side, small geometric markers for checks and corrections.\nThe article is written in Japanese. Use its title and summary only to set the mood; never write them in the image.\nTitle (mood only): 見本を足すと悪くなる問もある。小さなLLMで確かめた、生成AIの試し方\nSummary (mood only): 小さな言語モデルで試すと、見本を付けて正しくなる問と、逆に間違える問がありました。見直しを頼むと、誤った答えを「修正なし」と言い切ることもありました。生成AIを試すときは、正解を先に決め、一度に1つだけ変え、同じ問を何回か繰り返し、良くなった例と悪くなった例の両方を記録します。\nDo not include: any text, letters, numbers, Japanese or Chinese characters, captions or labels; logos, brand marks, product names or watermarks; human faces, realistic people or identifiable persons; fake screenshots, user-interface mockups or chat windows; charts or tables with readable values.",
+      "imageConfig": {
+        "aspectRatio": "16:9",
+        "imageSize": "2K"
+      },
+      "picked": true,
+      "status": "generated",
+      "mimeType": "image/jpeg",
+      "width": 2752,
+      "height": 1536,
+      "bytes": 2136698,
+      "sha256": "e9ac5125e4e87b9aec6984f7fbebe2bb17b388c6c4847acfd97cbb82f4cc4e6d",
+      "file": ".eyecatch/llm-archaeology-few-shot-self-check/candidate-1.jpg"
+    },
+    {
+      "id": 2,
+      "generatedAt": "2026-10-30T02:41:12.180Z",
+      "model": "gemini-3.1-flash-image",
+      "promptVersion": 1,
+      "prompt": "Minimal, calm editorial illustration for the blog of a small Japanese technology company.\nFlat geometric shapes and thin line-art diagrams, generous negative space, soft paper-like texture.\nPalette: warm stone grays (#fafaf9, #e7e5e4, #a8a29e, #57534e, #292524) with one muted blue accent (#2563eb).\nWide 16:9 composition. Keep every important element inside the central 80% of the frame,\nbecause the same image is also cropped to 1200x630.\nVisual motif: abstract nodes connected by thin lines, two parallel paths being compared side by side, small geometric markers for checks and corrections.\nThe article is written in Japanese. Use its title and summary only to set the mood; never write them in the image.\nTitle (mood only): 見本を足すと悪くなる問もある。小さなLLMで確かめた、生成AIの試し方\nSummary (mood only): 小さな言語モデルで試すと、見本を付けて正しくなる問と、逆に間違える問がありました。見直しを頼むと、誤った答えを「修正なし」と言い切ることもありました。生成AIを試すときは、正解を先に決め、一度に1つだけ変え、同じ問を何回か繰り返し、良くなった例と悪くなった例の両方を記録します。\nDo not include: any text, letters, numbers, Japanese or Chinese characters, captions or labels; logos, brand marks, product names or watermarks; human faces, realistic people or identifiable persons; fake screenshots, user-interface mockups or chat windows; charts or tables with readable values.",
+      "imageConfig": {
+        "aspectRatio": "16:9",
+        "imageSize": "2K"
+      },
+      "picked": false,
+      "status": "generated",
+      "mimeType": "image/jpeg",
+      "width": 2752,
+      "height": 1536,
+      "bytes": 2153192,
+      "sha256": "b38c9115c4d2ba089382e7046233e67fb51f75ebb18ab013c149d3651eef83c9",
+      "file": ".eyecatch/llm-archaeology-few-shot-self-check/candidate-2.jpg"
+    },
+    {
+      "id": 3,
+      "generatedAt": "2026-10-30T02:41:28.207Z",
+      "model": "gemini-3.1-flash-image",
+      "promptVersion": 1,
+      "prompt": "Minimal, calm editorial illustration for the blog of a small Japanese technology company.\nFlat geometric shapes and thin line-art diagrams, generous negative space, soft paper-like texture.\nPalette: warm stone grays (#fafaf9, #e7e5e4, #a8a29e, #57534e, #292524) with one muted blue accent (#2563eb).\nWide 16:9 composition. Keep every important element inside the central 80% of the frame,\nbecause the same image is also cropped to 1200x630.\nVisual motif: abstract nodes connected by thin lines, two parallel paths being compared side by side, small geometric markers for checks and corrections.\nThe article is written in Japanese. Use its title and summary only to set the mood; never write them in the image.\nTitle (mood only): 見本を足すと悪くなる問もある。小さなLLMで確かめた、生成AIの試し方\nSummary (mood only): 小さな言語モデルで試すと、見本を付けて正しくなる問と、逆に間違える問がありました。見直しを頼むと、誤った答えを「修正なし」と言い切ることもありました。生成AIを試すときは、正解を先に決め、一度に1つだけ変え、同じ問を何回か繰り返し、良くなった例と悪くなった例の両方を記録します。\nDo not include: any text, letters, numbers, Japanese or Chinese characters, captions or labels; logos, brand marks, product names or watermarks; human faces, realistic people or identifiable persons; fake screenshots, user-interface mockups or chat windows; charts or tables with readable values.",
+      "imageConfig": {
+        "aspectRatio": "16:9",
+        "imageSize": "2K"
+      },
+      "picked": false,
+      "status": "generated",
+      "mimeType": "image/jpeg",
+      "width": 2752,
+      "height": 1536,
+      "bytes": 2255524,
+      "sha256": "8a20d941486ce2894dcedf7b574e0cc7dbfca1d97632f3d0e24c848122e6116c",
+      "file": ".eyecatch/llm-archaeology-few-shot-self-check/candidate-3.jpg"
+    }
+  ],
+  "picked": {
+    "candidateId": 1,
+    "pickedAt": "2026-10-30T02:42:21.591Z",
+    "alt": "細い線でつないだ点が2本の道に分かれ、一方に青いチェック、もう一方に×の印を置いた図",
+    "outputs": [
+      {
+        "path": "/images/blog/llm-archaeology-few-shot-self-check.avif",
+        "width": 1600,
+        "height": 900,
+        "bytes": 6260,
+        "sha256": "0a49a1a8f33228e0fa7be96a067992e84ca868b5eea899e8db9c9465525b0374"
+      },
+      {
+        "path": "/images/blog/llm-archaeology-few-shot-self-check-1200x630.avif",
+        "width": 1200,
+        "height": 630,
+        "bytes": 4467,
+        "sha256": "c0f61196793731986dc315be3b2b8be6a75ce99a62665d28b74489f8dc87bd40"
+      }
+    ]
+  }
+}

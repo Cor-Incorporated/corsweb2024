@@ -1,0 +1,20 @@
+cwd=<home>/Developer/griftai/.worktrees/claude/cor-voice-harness branch=feat/cor-voice-harness head=c005515
+BAD  git push origin --mirror                      CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push origin "--mirror"                    CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push --mirror origin                      CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push origin +main                         CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push origin +main:main                    CC=BLOCK(2/2) CU=BLOCK CX=BLOCK
+BAD  git push origin +develop                      CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push --force origin main                  CC=BLOCK(2/2) CU=BLOCK CX=BLOCK
+BAD  git push -f origin main                       CC=BLOCK(2/2) CU=BLOCK CX=BLOCK
+BAD  git push --force-with-lease origin main       CC=BLOCK(2/2) CU=BLOCK CX=BLOCK
+BAD  git push --all --force origin                 CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push origin --delete main                 CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push origin :main                         CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git -c foo=bar push origin --mirror           CC=BLOCK(0/2) CU=BLOCK CX=BLOCK
+BAD  git push origin main                          CC=BLOCK(2/2) CU=BLOCK CX=BLOCK
+BAD  git push -u origin develop                    CC=BLOCK(2/2) CU=BLOCK CX=BLOCK
+GOOD git push origin feat/x                        CC=ALLOW CU=ALLOW CX=ALLOW
+GOOD git push -u origin docs/y                     CC=ALLOW CU=ALLOW CX=ALLOW
+GOOD git status                                    CC=ALLOW CU=ALLOW CX=ALLOW
+holes=0 false_positives=0

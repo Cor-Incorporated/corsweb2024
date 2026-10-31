@@ -1,0 +1,17 @@
+griftai.org の FAQ「どうやって始めればよいですか？」の答え（griftai の `src/pages/faq.astro`）を、Grift CLI 0.9.2 で Docker でも動かせるようになったことに合わせて直してください。
+
+今の答え:
+エンジニアの方は、Python 3.11以上の環境で pipx install grift-cli を実行し、リポジトリの中で grift report を実行してください。紹介会社さま・SES企業さま・自社開発企業さまは、AI受付からテスト導入をお申し込みください。
+
+- 0.9.2 の公開後に出すので、版数は書かなくてかまいません。
+- FAQ の答えなので、3〜4 文に収めてください。コマンドは今の 2 つのほかに 1 つまでにし、詳しい手順は grift-cli の README に任せてください。
+- 会社として書く文章（です・ます調）です。今の答えにある事実（Python 3.11以上、pipx install grift-cli、grift report、AI受付からのテスト導入の申し込み）は残してください。
+- 下の資料にない事実、数字、コマンドは書かないでください。
+
+資料（grift-cli の PR #115 の README の追記から。2026-10-30 時点）:
+- ホストに Python を入れずに、grift-cli のリポジトリを clone して作ったイメージで grift を実行できる。読みたいリポジトリは `/repo` に mount する。
+- 例: `docker build -t grift-cli grift-cli`、`docker run --rm -v "$PWD:/repo:ro" grift-cli repo`
+- 履歴は全部取得する。`git worktree` で作った作業ツリーは mount しない（コンテナ内から履歴を読めず exit 2 で止まる）。
+- イメージには `git` と `openssh-client` だけを入れ、`gh` と `cosign` は入れない。
+
+作業用のファイルを作るときは tmp/ の下に置いてください。直した答えの文だけを、<<<DOC だけの行と DOC>>> だけの行で挟んで、返答の最後に出してください。公開や push はしないでください。
