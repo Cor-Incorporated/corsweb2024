@@ -1,0 +1,50 @@
+{
+ "P1-cases/D1": {
+  "round": "after",
+  "harness": "opencode"
+ },
+ "P1-cases/D2": {
+  "round": "after",
+  "harness": "codex"
+ },
+ "P1-cases/D3": {
+  "round": "after",
+  "harness": "claude"
+ },
+ "P1-cases/D4": {
+  "round": "before",
+  "harness": "codex"
+ },
+ "P1-cases/D5": {
+  "round": "before",
+  "harness": "claude"
+ },
+ "P1-cases/D6": {
+  "round": "before",
+  "harness": "opencode"
+ },
+ "P2-faq/D1": {
+  "round": "after",
+  "harness": "opencode"
+ },
+ "P2-faq/D2": {
+  "round": "after",
+  "harness": "codex"
+ },
+ "P2-faq/D3": {
+  "round": "before",
+  "harness": "opencode"
+ },
+ "P2-faq/D4": {
+  "round": "before",
+  "harness": "codex"
+ },
+ "P2-faq/D5": {
+  "round": "before",
+  "harness": "claude"
+ },
+ "P2-faq/D6": {
+  "round": "after",
+  "harness": "claude"
+ }
+}

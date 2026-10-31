@@ -1,0 +1,1 @@
+エンジニアの方は、Python 3.11以上の環境で pipx install grift-cli を実行し、リポジトリの中で grift report を実行してください。ホストに Python を入れない場合は、grift-cli のリポジトリを clone して Docker のイメージを作り、読みたいリポジトリを /repo に mount して実行できます（例: docker run --rm -v "$PWD:/repo:ro" grift-cli repo）。履歴の取得や git worktree の扱いなど、詳しい手順は grift-cli の README をご覧ください。紹介会社さま・SES企業さま・自社開発企業さまは、AI受付からテスト導入をお申し込みください。

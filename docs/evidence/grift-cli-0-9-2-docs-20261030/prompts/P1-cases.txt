@@ -1,0 +1,15 @@
+cor-jp.com の Grift の製品ページ `src/content/cases/ja/grift.md` に、Grift CLI 0.9.2 の変更を書き足してください。
+
+- 書き足すのは 2 か所です。1 つ目は「## 実装」の最後の箇条書き（リポジトリ、配布、ライセンス、リリースノート）のすぐ前に置く段落、2 つ目は「## 成果」の 0.9.1 の段落のすぐ後に置く段落です。今あるほかの文は変えないでください。
+- 0.9.2 はまだ公開していません。公開したあとでこの追記を出すので、公開日は書かないでください。成果の段落は「[0.9.2](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.2)では、」で始めてください。
+- 読み手は、人材紹介会社・SES の営業の方と、エンジニア本人です。このページのほかの段落と同じく、会社として書く文章（です・ます調）にしてください。
+- 下の資料にない事実、数字、コマンド、オプションは書かないでください。
+
+資料（grift-cli の PR #111・#112・#113・#115 の本文と、変更した docs から。2026-10-30 時点）:
+- Docker（#115）: Dockerfile を足し、ホストに Python を入れずに、grift-cli のリポジトリを clone して作ったイメージで grift を実行できるようにした。読みたいリポジトリは `/repo` に mount する。例: `docker build -t grift-cli grift-cli`、`docker run --rm -v "$PWD:/repo:ro" grift-cli repo`。履歴は全部取得する（shallow clone を mount すると、渡された commit だけで数え、`revision_completeness` が `complete: false` になる）。`git worktree` で作った作業ツリーは mount しない（コンテナ内から履歴を読めず exit 2 で止まる）。`--out` で書き出すときは `--user "$(id -u):$(id -g)"` を付ける。イメージには `git` と `openssh-client` だけを入れ、`gh` と `cosign` は入れないので、`contribute --open` と cosign を呼ぶ操作はホスト側で実行する。CI に docker の job を足し、イメージの `--version` と、読み取り専用の mount・network なしでの `repo` の観測を確かめる。コマンドと出力は変わらない。
+- `grift update`（#113）: 実行中の grift-cli の環境を明示的に更新し、更新後の版を表示する。実行中の環境が pipx の管理なら pipx で、それ以外は実行中の Python の `-m pip` で更新し、PATH にある別の環境の pip は使わない。`grift update --check` は PyPI の最新版の情報を読むだけで更新しない。`grift --version` は通信せず手元の版を表示する。自動の更新と、ふだんの測定コマンドからの版の確認の通信は無い。通信できないときや更新に失敗したときはメッセージを出す。
+- `grift contribute`（#111）: 本人が同意したあと、`.grift/contribution.json` を保存し、提出 ID、PR に入れるファイル名、保存したバイト列の SHA-256 を含む meta と manifest の行、2 つの提出経路の URL を表示する。自動では送らない。既定の `--door local` で作った v2 の payload は公開の受け口に出せないので、公開して出すときは `--door public-pr` で作り直し、新しく表示された ID・hash・meta を使う。本人の公開 PR の経路も、身元を伏せる代理 PR の経路も、payload そのものは公開される。
+- Context profile（#112）: 初めて活動した年と最後に活動した年、タグの頻度の分子と分母を表示する。`actor_turnover` の `joined` は観測した履歴で初めて活動した年、`last_active` は最後に活動した年で、今も活動している人も `last_active` に入るため、離脱や退職を示さない。`release_cadence` は「タグ数 ÷ 活動の期間の日数 × 365.25」の年換算（tags/year）で、たとえば 43 タグ・70 日なら 224.37 tags/year だが、224 回のリリースを観測したという意味ではない。
+- 0.9.2 でも、点数・順位・合否を出さないことは変わらない（Grift の利用規範）。
+
+作業用のファイルを作るときは tmp/ の下に置いてください。書き足す 2 つの段落（実装に足す段落、成果に足す段落の順）を、あいだに @@@ だけの行を置いて並べ、<<<DOC だけの行と DOC>>> だけの行で挟んで、返答の最後に出してください。公開や push はしないでください。
