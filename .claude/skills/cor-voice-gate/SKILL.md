@@ -45,7 +45,7 @@ If the agent-server copy is older, refresh from Mac before checking.
 8. **Semantic Review (required, Fast and Full)** — checklist below. Fail any item → rewrite or escalate; do not mark ready for review.
 9. Apply corsweb blog-guardrails rules in spirit (no retired brand names, no ISMS-as-certified, no *.web.app / draftKey / internal notes).
 10. **Second reader:** the bot that wrote the draft must not be the only gate. Another bot (SNS統括, 発信QA, or Grok Bot) must re-read Semantic Review + open the cited run path on the agent server. If `ls` cannot open the run path, treat as not passed.
-11. Return polished path + **absolute shared-box run path** (`/workspace/<case>/.yomiyasu/runs/<ID>` or equivalent) + `meaning_risk` count + what changed + questions for Terada. Do not post, schedule, or ship without explicit approval.
+11. Return polished path + **absolute agent-server run path** (`<agent-server>/<case>/.yomiyasu/runs/<ID>` or equivalent) + `meaning_risk` count + what changed + questions for Terada. Do not post, schedule, or ship without explicit approval.
 
 ## Semantic Review (required)
 
@@ -56,7 +56,7 @@ Check every outbound medium, including email and formal documents:
 3. □ **Motive from the reader’s seat:** within the first ~5 lines, who is writing, why them, why now — clear to the recipient.
 4. □ **Relationship / debt:** if Terada’s relationship to the reader or city (e.g. 支援を受けてきた) belongs in the piece, confirm with him before inventing; do not invent to satisfy this check. Escalate rather than fabricate (respects yomiyasu no-add-facts).
 5. □ **Factual framing:** first-time vs recurring; personal vs official; no scoring / endorsement / popularity framing unless Terada ordered it. Labels must match the actual activity (e.g. do not call an in-session comparison 「宿題」).
-6. □ **meaning_risk_count == 0** after the latest **same-document** shared-box run (hard stop if > 0). Mismatched source/final scopes do not count as a real pass or a real fail until re-run correctly. After Terada-approved intentional framing fixes, the zero-risk run must use the approved text as `--source`.
+6. □ **meaning_risk_count == 0** after the latest **same-document** agent-server run (hard stop if > 0). Mismatched source/final scopes do not count as a real pass or a real fail until re-run correctly. After Terada-approved intentional framing fixes, the zero-risk run must use the approved text as `--source`.
 7. □ **Publish-path preview:** for SNS, open the final Postiz / intent / scheduler preview and confirm URL, link card, and thread shape. URL-required posts: if Postiz strips links, use `x.com/intent/post` (or equivalent) so the URL is in the parent body. When auditing live X, check short `text` **and** `note_tweet` / long text — short-text-only URL checks cause false “missing URL” alarms.
 8. □ **No duplicate / orphan posts:** same substance must not already be live twice; no orphan replies after parent delete.
 9. □ **Dialect:** never in tech / product / security / article announces (existing rule; machine-check mindset).
@@ -91,7 +91,7 @@ Check every outbound medium, including email and formal documents:
     - 反映前に退避: カバー画像（Header／eyecatch）の有無、画像・埋込カードの一覧（位置・URL）を `note_preedit_<id>.md` に記録。無い場合は「未設定」と書く。
     - 反映後照合（タイトル・冒頭だけでは不十分）: **埋込カード数**、**カバー画像**、**素URL残存ゼロ**（`https://x.com/` / `https://twitter.com/` の素リンク行がカード化されず残っていない）、見出し数・画像数。不一致 → 保存完了／ready にしない。
     - **Header方針**: 改稿下書き＝**旧公開アイキャッチ流用が標準**（毎回確認不要）。続稿のように当初未設定なら載せない。流用アセットURLを照合に含める。
-    - REFLECT の「埋込復元」は、カード化のスクショまたは DOM 証跡が付くまで ready にしない。箱上 md／paste_body は埋込メタを保持しない前提で扱う。
+    - REFLECT の「埋込復元」は、カード化のスクショまたは DOM 証跡が付くまで ready にしない。エージェントサーバー上の md／paste_body は埋込メタを保持しない前提で扱う。
     - 詳細手順は [note-edit-safe](../note-edit-safe/SKILL.md) に従う。
 
 

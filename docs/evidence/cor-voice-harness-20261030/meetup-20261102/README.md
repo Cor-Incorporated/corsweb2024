@@ -168,4 +168,4 @@ e1c8ab2 の最終稿を元に、23:45 版に合わせて書き直した。
 
 ## 生の記録（コミットしていない）
 
-`/private/tmp/claude-501/-Users-teradakousuke-Developer-corsweb/a2241786-9f74-4878-9959-b0e0081db075/scratchpad/evalmeet/` の `<before|after>/<harness>/M1-meetup.{raw,err,jsonl,last,rc,secs}`、採点の全文 `judge-M1-meetup.json`、対応表 `judge-mapping-meet.json`、`scoresmeet.json`、最終稿の yomiyasu の記録 `final/ystate-*` から `final5/ystate-*`（修正 4）。読み上げ用と配布の PDF は `final5/pdf/`。
+`<scratchpad>/evalmeet/（手元のみ・非公開）` の `<before|after>/<harness>/M1-meetup.{raw,err,jsonl,last,rc,secs}`、採点の全文 `judge-M1-meetup.json`、対応表 `judge-mapping-meet.json`、`scoresmeet.json`、最終稿の yomiyasu の記録 `final/ystate-*` から `final5/ystate-*`（修正 4）。読み上げ用と配布の PDF は `final5/pdf/`。

@@ -25,7 +25,7 @@ Safe procedure for reflecting polished Japanese drafts into note.com (`editor.no
 
 ## Steps
 1. Classify the job: **更新／改稿** vs **続稿／新規**. Open the edit URL. Confirm note id.
-2. **Preedit inventory** — write `/workspace/.../note_preedit_<noteId>.md`:
+2. **Preedit inventory** — write `<agent-server>/.../note_preedit_<noteId>.md`:
    - cover/Header present? asset URL if yes
    - image count and short list
    - embed cards: each URL + approx position
