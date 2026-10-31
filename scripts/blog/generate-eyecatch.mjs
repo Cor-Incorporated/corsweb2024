@@ -62,12 +62,36 @@ export function redact(text, secret) {
   return out.replace(/AIza[0-9A-Za-z_-]{30,}/g, '[REDACTED]');
 }
 
+/** Gemini の API エラー（JSON の本文）を、公開してよい要約（code・status・reason）だけにする。JSON でなければ null。 */
+function summarizeApiError(message) {
+  try {
+    const { error } = JSON.parse(message);
+    if (!error || (error.code === undefined && !error.status)) return null;
+    const reason = error.details?.find((d) => d?.reason)?.reason;
+    return ['API error', error.code, error.status, reason ? `(${reason})` : ''].filter(Boolean).join(' ');
+  } catch {
+    return null;
+  }
+}
+
+/** URL、project の番号やリソース名（GCP のプロジェクト番号）、9 桁以上の数字を伏せる。公開される記録に識別子を出さない。 */
+function redactIdentifiers(text) {
+  return text
+    .replace(/https?:\/\/[^\s'"<>]+/g, '<url>')
+    .replace(/\b(projects?)([=/ ]+)[\w-]*\d{6,}[\w-]*/gi, '$1$2<redacted>')
+    .replace(/\b\d{9,}\b/g, '<redacted>');
+}
+
 /**
- * 公開される記録に残すエラーの文。1 行目だけにし、鍵を伏せ、リポジトリとホームの絶対パスを外す
- * （EACCES などの文には書き手の PC のパスが入る）。全文は stderr にだけ出す。
+ * 公開される記録に残すエラーの文。API のエラー本文は code・status・reason の要約だけにする。それ以外は
+ * 1 行目だけにし、鍵・URL・project の番号を伏せ、リポジトリとホームの絶対パスを外す（EACCES などの文には
+ * 書き手の PC のパスが入る）。全文は stderr にだけ出す。
  */
 export function publicErrorMessage(message, { secret, rootDir }) {
-  const firstLine = redact(message, secret).split('\n')[0];
+  const redacted = redact(message, secret);
+  const summarized = summarizeApiError(redacted.trim());
+  if (summarized) return summarized;
+  const firstLine = redactIdentifiers(redacted.split('\n')[0]);
   const withoutPaths = [rootDir, homedir()]
     .filter(Boolean)
     .reduce((text, dir) => text.split(dir).join(dir === rootDir ? '<repo>' : '~'), firstLine)

@@ -37,7 +37,7 @@ GEMINI_API_KEY="$(bwenv get NFC_GEMINI_API_KEY 2>/dev/null)" npm run blog:eyecat
 
 - `--max` は 1 回の実行で作る候補の数です。既定 2、最大 6。1 枚ごとに 1 回 API を呼びます
 - 候補は `.eyecatch/<slug>/candidate-<番号>.<png|jpg|webp>` に置きます（`.gitignore` 済み。コミットしない）
-- 記録 `public/images/blog/<slug>.eyecatch.json` に、候補ごとの番号・モデル id・プロンプト・生成日時・大きさ・sha256 を足します。失敗した回もエラーの 1 行目と一緒に残ります（記録はサイトで公開されるので、鍵と PC の絶対パスは伏せます。全文は標準エラーにだけ出します）
+- 記録 `public/images/blog/<slug>.eyecatch.json` に、候補ごとの番号・モデル id・プロンプト・生成日時・大きさ・sha256 を足します。失敗した回もエラーと一緒に残ります（記録はサイトで公開されるので、API のエラー本文は code・status・reason の要約だけにし、それ以外は 1 行目だけにして鍵・PC の絶対パス・URL・GCP の project 番号を伏せます。全文は標準エラーにだけ出します）
 - この段階では、記事と公開用の画像は変えません
 
 候補の画像を開いて、「アイキャッチの方針」の確認項目（文字・顔・ロゴ・偽スクショが無いか）を目で確かめます。
