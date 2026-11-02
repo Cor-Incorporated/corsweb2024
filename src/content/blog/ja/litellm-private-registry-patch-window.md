@@ -9,7 +9,7 @@ ctaIntent: "local-llm-poc"
 tags: ["LiteLLM", "ローカルLLM", "セキュリティ", "ISMS"]
 lang: "ja"
 featured: false
-isDraft: true
+isDraft: false
 image:
   url: "/images/blog/litellm-update-management-placeholder-20261101.avif"
   alt: "サーバーと端末を透明な囲いで区切った説明用イラスト"
@@ -17,7 +17,7 @@ image:
 
 修正版が公開された。では、自社の環境にはいつ適用されるのか。
 
-社内でローカルLLMを運用するなら、この間の作業も自分たちで受け持ちます。更新の通知を受ける人と、適用する人が決まっているか。適用したことを、あとから確かめられるか。LiteLLMの発表には、そこを考える手がかりがありました。
+社内でローカルLLMを運用するなら、この間の作業も自分たちで受け持ちます。更新の通知を受ける人と、適用する人が決まっているか。適用したことをあとから確かめられるか。LiteLLMの発表には、そこを考える手がかりがありました。
 
 ## 配る側が苦労したのは、適用までの確認だった
 
