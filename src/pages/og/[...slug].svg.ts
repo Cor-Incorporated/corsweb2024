@@ -1,4 +1,5 @@
 import { getCollection } from 'astro:content';
+import { ogFontScriptForSlug } from '../../utils/og-fonts';
 import { buildBlogOgSvg } from '../../utils/og-svg';
 
 interface Props {
@@ -17,7 +18,13 @@ export async function GET({ params }: Props) {
   }
 
   const { title, description, category, author } = post.data;
-  const svg = buildBlogOgSvg({ title, description, category, author });
+  const svg = buildBlogOgSvg({
+    title,
+    description,
+    category,
+    author,
+    script: ogFontScriptForSlug(slug),
+  });
 
   return new Response(svg, {
     headers: {
