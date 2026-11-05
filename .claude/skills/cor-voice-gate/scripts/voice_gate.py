@@ -145,7 +145,7 @@ def render_review(items: list[Item], gate: str, draft_rel: str, draft_sha: str) 
         f"- 下書き: `{draft_rel}`（この記録のフォルダからの相対パス）",
         f"- ゲート: {gate}",
         f"- 読んだ下書きの sha256: {draft_sha}",
-        "- 下書きを直したら、読み直して記入し、上の sha256 を check が示す今の値に書き換えます（違うと通りません）。",
+        "- 下書きを直したら、読み直して記入し、上の sha256 を読んだ版の値（`shasum -a 256 <下書き>`）に書き換えます（違うと通りません）。",
         "- 項目の中身は `.claude/skills/cor-voice-gate/SKILL.md` の同じ番号の節を読みます（ここには写しません）。",
         "- 判定の欄には pass、fail、n/a のどれかを書きます。根拠の欄は空にしません。",
         "- n/a は、その項目が当たらない理由を根拠に書きます。「n/a 不可」の項目は pass か fail だけです。",
@@ -208,7 +208,7 @@ def reviewed_sha_problems(review_text: str, draft_sha: str) -> list[str]:
         return [f"記入表に「- 読んだ下書きの sha256: <64 桁>」の行が 1 つではありません（{len(found)} 行）"]
     if found[0] != draft_sha:
         return [f"記入表は別の版の下書きを読んで書かれています（記入表 {found[0][:12]}、今の下書き {draft_sha[:12]}）。"
-                f"今の下書きを読み直して記入し、sha256 の行を {draft_sha} にします"]
+                "今の下書きを読み直して記入し、sha256 の行を読んだ版の値（`shasum -a 256 <下書き>`）にします"]
     return []
 
 
@@ -311,7 +311,9 @@ def run_yomiyasu(record: dict, run_dir: Path, draft: Path) -> dict:
     for rel in record["materials"]:
         args += ["--material", str(run_dir / rel)]
     run_code, run = _yomiyasu(args, "run")
-    verify_code, verify = _yomiyasu(["verify", "--final", str(draft), "--state-dir", state, "--json"], "verify")
+    # 同じ最終稿に別の記録（資料を変えた run）があると、ID なしの verify は ambiguous になる。今の run を照らす
+    run_id = ["--run-id", run["run_id"]] if run.get("run_id") else []
+    verify_code, verify = _yomiyasu(["verify", "--final", str(draft), *run_id, "--state-dir", state, "--json"], "verify")
     gaps = run.get("fact_gaps") or {}
     # meaning_risk は diff（原文との比較）と materials（資料との照合）の両方から来る。件数は run の合計と同じ
     risks = [risk for part in ("diff", "materials") for risk in (run.get(part) or {}).get("meaning_risks") or []]
@@ -360,17 +362,34 @@ def _load_record(run_dir: Path) -> dict:
             or record.get("format_version") != FORMAT_VERSION:
         raise UsageError(f"{path} は {INPUT_FORMAT} 形式 {FORMAT_VERSION} ではありません")
     missing = [key for key in RECORD_KEYS if key not in record]
-    if missing or record["gate"] not in GATES or record["scene"] not in SCENES:
-        raise UsageError(f"{path} の中身が足りないか、値が違います（足りない: {missing or 'なし'}、"
+    if missing or not _record_types_ok(record):
+        raise UsageError(f"{path} の中身が足りないか、値か型が違います（足りない: {missing or 'なし'}、"
                          f"gate {record.get('gate')}、scene {record.get('scene')}）。init し直します")
     return record
 
 
+def _record_types_ok(record: dict) -> bool:
+    paths = [record["draft"], *record["sources"]] if isinstance(record["sources"], list) else [None]
+    checklist_record = record["checklist"]
+    return (record["gate"] in GATES and record["scene"] in SCENES and isinstance(record["doc_type"], str)
+            and isinstance(record["materials"], list)
+            and all(isinstance(value, str) for value in [*paths, *record["materials"]])
+            and isinstance(checklist_record, dict) and isinstance(checklist_record.get("items"), list))
+
+
 def review_problems_for(run_dir: Path, record: dict, draft_sha: str) -> tuple[int, int, list[str]]:
     """記入表を読み、(行数, 期待する行数, 問題) を返す。SKILL.md が init のあとで変わっていれば問題にする。"""
-    skill_text = _read_text(SKILL_MD, "SKILL.md")
+    try:
+        skill_text = SKILL_MD.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise SetupError(f"SKILL.md を読めません: {error}") from error
     items = checklist(skill_text, record["gate"])
     problems = []
+    item_ids = [item.item_id for item in items]
+    if record["checklist"]["items"] != item_ids:
+        # gate.json の gate を手で書き換えると、記入表の行（Full の P 行など）が減っても通ってしまうため
+        problems.append(f"記入表の項目が init のときと違います（init {len(record['checklist']['items'])} 項目、"
+                        f"今 {len(item_ids)} 項目）。gate.json を手で直していないか確かめ、init し直します")
     skill_sha = hashlib.sha256(skill_text.encode("utf-8")).hexdigest()
     if skill_sha != record["checklist"].get("skill_sha256"):
         problems.append(f"SKILL.md が init のあとで変わりました（init {str(record['checklist'].get('skill_sha256'))[:12]}、"

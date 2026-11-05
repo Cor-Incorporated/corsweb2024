@@ -42,13 +42,13 @@ bash docs/evidence/voice-gate-no-harness-20261105/run-demo.sh
 
 ## Codex で同じ手順を回した記録（codex/）
 
-Claude Code 以外のハーネスでも同じ手順が通るかを、Codex で 1 回だけ確かめました。
+Claude Code 以外のハーネスでも同じ手順が通るかを、Codex で確かめました。
 
 - 実行: `codex exec -s workspace-write --skip-git-repo-check --ephemeral`（codex-cli 0.166.0）。AGENTS.md、3 つのスキル、依頼、資料だけを写したフォルダで動かしました。
 - 依頼の全文は `codex/prompt.txt` にあります。AGENTS.md の節の手順に従うことと、記録のフォルダの場所だけを指定しました。
-- Codex は init（Full を選択）、記入表 32 行の記入、check を自分で回し、最後の check は終了コード 0 でした。記録は `codex/gate.json`、`codex/review.md`、`codex/result.md`、最後の返答は `codex/last-message.md` です。
-- 2 人目の読み手として、同じフォルダで check を動かし直しました（Claude Code から実行）。終了コードは 0 で、下書きの sha256 は `4497c832…` です。Codex の最後の返答にある Readback と一致しました。
-- Cursor、OpenCode、Pi、dsh では、今回は動かしていません。
+- Codex は init（Full を選択）、記入表 32 行と「読んだ下書きの sha256」の記入、check を自分で回し、最後の check は終了コード 0 でした。記録は `codex/gate.json`、`codex/review.md`、`codex/result.md`、最後の返答は `codex/last-message.md` です。
+- 2 人目の読み手として、同じフォルダで check を動かし直しました（Claude Code から、この PR の最新の voice_gate.py で実行）。結果は「通った」で、下書きの sha256 は `b10e3657…` です。Codex の最後の返答にある Readback と一致しました。
+- Codex で回したのは 2 回です。1 回目は記入表に sha256 の行が無い版で、記録は 2 回目に入れ替えました。Cursor、OpenCode、Pi、dsh では、今回は動かしていません。
 
 ## 分かった限界
 

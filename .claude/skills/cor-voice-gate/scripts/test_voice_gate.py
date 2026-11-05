@@ -152,7 +152,9 @@ class ReviewTest(unittest.TestCase):
         text = gate.render_review(self.items, "fast", "../draft.md", "a" * 64)
         self.assertEqual(gate.reviewed_sha_problems(text, "a" * 64), [])
         stale = gate.reviewed_sha_problems(text, "b" * 64)
-        self.assertTrue(stale and "aaaaaaaaaaaa" in stale[0] and "b" * 64 in stale[0], stale)
+        self.assertTrue(stale and "aaaaaaaaaaaa" in stale[0] and "b" * 12 in stale[0], stale)
+        # 全体の値は出さない（貼るだけで通らないように。読んだ版の値を自分で計算させる。再レビューの LOW）
+        self.assertNotIn("b" * 64, stale[0])
         self.assertTrue(gate.reviewed_sha_problems(text.replace("a" * 64, ""), "a" * 64))
         self.assertTrue(gate.reviewed_sha_problems(text + f"- 読んだ下書きの sha256: {'a' * 64}\n", "a" * 64))
 
@@ -275,6 +277,15 @@ class EndToEndTest(unittest.TestCase):
         self.assertEqual((code, result["cor_voice_lint"]["errors"]), (1, 0), "lint は書き換え前の版を見ていた")
         self.assertTrue(any("途中で下書きが変わりました" in reason for reason in result["reasons"]), result["reasons"])
 
+    def test_changed_material_does_not_make_verify_ambiguous(self):
+        """資料を書き足して check し直すと、同じ最終稿の記録が 2 つになる。verify には今の run の ID を渡す。"""
+        run_dir = self.start(CLEAN)
+        self.fill(run_dir)
+        self.assertEqual(self.check(run_dir)[0], 0)
+        (self.tmp / "material.md").write_text(MATERIAL + "- MIT ライセンス。\n", encoding="utf-8")
+        code, result = self.check(run_dir)
+        self.assertEqual((code, result["yomiyasu"]["verify"]["status"]), (0, "executed"), result["reasons"])
+
     def test_init_rejects_bad_input(self):
         run_dir = self.start(CLEAN)
         base = ["--draft", str(self.draft), "--scene", "company", "--gate", "fast"]
@@ -296,11 +307,27 @@ class EndToEndTest(unittest.TestCase):
             "not-json": "{",
             "no-draft": json.dumps({key: value for key, value in record.items() if key != "draft"}),
             "bad-gate": json.dumps({**record, "gate": "fastest"}),
+            "checklist-list": json.dumps({**record, "checklist": []}),
+            "sources-str": json.dumps({**record, "sources": "x"}),
+            "draft-int": json.dumps({**record, "draft": 5}),
         }
         for name, text in broken.items():
             with self.subTest(name):
                 (run_dir / gate.GATE_JSON).write_text(text, encoding="utf-8")
                 self.assertEqual(run_gate(["check", "--run-dir", str(run_dir)], self.home).returncode, 2)
+
+    def test_gate_downgrade_by_hand_is_a_problem(self):
+        """init --gate full のあとで gate.json を fast に書き換え、P 行を消した記入表では通さない（再レビューの MEDIUM）。"""
+        run_dir = self.start(CLEAN, gate_name="full")
+        self.fill(run_dir)
+        review = run_dir / gate.REVIEW_MD
+        review.write_text("".join(line for line in review.read_text(encoding="utf-8").splitlines(keepends=True)
+                                  if not line.startswith("| P")), encoding="utf-8")
+        record = json.loads((run_dir / gate.GATE_JSON).read_text(encoding="utf-8"))
+        (run_dir / gate.GATE_JSON).write_text(json.dumps({**record, "gate": "fast"}), encoding="utf-8")
+        code, result = self.check(run_dir)
+        self.assertEqual(code, 1)
+        self.assertTrue(any("項目が init のときと違います" in reason for reason in result["reasons"]), result["reasons"])
 
     def test_skill_change_after_init_is_a_problem(self):
         run_dir = self.start(CLEAN)

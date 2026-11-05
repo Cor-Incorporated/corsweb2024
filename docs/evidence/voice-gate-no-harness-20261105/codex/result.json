@@ -2,13 +2,13 @@
   "format": "cor-voice-gate-result",
   "format_version": 1,
   "passed": true,
-  "checked_at": "2026-11-05T06:54:14Z",
+  "checked_at": "2026-11-05T07:33:28Z",
   "gate": "full",
   "scene": "company",
   "doc_type": "promo",
   "draft": {
     "path": "../../../draft.md",
-    "sha256": "4497c8325565801de9edd0d170b8bb4163b2fd3ede2d392495e17edd6b65b7cf"
+    "sha256": "b10e3657da44ef7b992e20ef1f49e80e3a4d7bf19a1dce5c68abd82aec31f8e0"
   },
   "cor_voice_lint": {
     "errors": 0,
@@ -19,8 +19,8 @@
     "run": {
       "exit": 0,
       "status": "executed",
-      "run_id": "20261105T064722Z-9c7a3d0a",
-      "status_line": "yomiyasu-check: executed via=run run=20261105T064722Z-9c7a3d0a attempt=5 final=sha256:4497c8325565 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0",
+      "run_id": "20261105T073327Z-7d6d7de3",
+      "status_line": "yomiyasu-check: executed via=run run=20261105T073327Z-7d6d7de3 attempt=1 final=sha256:b10e3657da44 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0",
       "meaning_risk_count": 0,
       "meaning_risks": [],
       "fact_gap_count": 0,
@@ -29,7 +29,7 @@
     "verify": {
       "exit": 0,
       "status": "executed",
-      "status_line": "yomiyasu-check: executed via=verify run=20261105T064722Z-9c7a3d0a attempt=5 final=sha256:4497c8325565 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped"
+      "status_line": "yomiyasu-check: executed via=verify run=20261105T073327Z-7d6d7de3 attempt=1 final=sha256:b10e3657da44 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped"
     }
   },
   "review": {

@@ -1,8 +1,8 @@
 # 記録: ハーネスなしで voice 技能を一周させる
 
-- 実行: 2026-11-05T07:22:32Z
+- 実行: 2026-11-05T07:36:39Z
 - Python: 3.12.9
-- voice_gate.py: sha256 f39c97ad0d00
+- voice_gate.py: sha256 91d9021f406b
 - cor-voice-gate/SKILL.md: sha256 d577aa4019ff
 
 ## 0. 環境: ハーネスの CLI と環境変数が無い
@@ -32,12 +32,12 @@ $ python3 -I -B '<repo>/.claude/skills/cor-voice-gate/scripts/voice_gate.py' che
 # cor-voice-gate の結果: 通らなかった
 
 - 下書き: `../draft.md`（sha256 af6c031a0596）
-- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:22:35Z
+- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:36:41Z
 - cor_voice_lint.py: error 1、warn 1
 - yomiyasu run: executed、meaning_risk 1、事実の穴の候補 0
-  - `yomiyasu-check: executed via=run run=20261105T072234Z-6211f372 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1`
+  - `yomiyasu-check: executed via=run run=20261105T073640Z-aa8a71b0 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1`
 - yomiyasu verify: executed
-  - `yomiyasu-check: executed via=verify run=20261105T072234Z-6211f372 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1 replay=skipped`
+  - `yomiyasu-check: executed via=verify run=20261105T073640Z-aa8a71b0 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1 replay=skipped`
 - 記入表: 22 / 22 行、問題 22 件
 
 公開と送信はこの結果で決めません。代表が決めます。
@@ -100,12 +100,12 @@ $ python3 -I -B '<repo>/.claude/skills/cor-voice-gate/scripts/voice_gate.py' che
 # cor-voice-gate の結果: 通った
 
 - 下書き: `../draft.md`（sha256 6d67baccbe06）
-- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:22:37Z
+- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:36:42Z
 - cor_voice_lint.py: error 0、warn 0
 - yomiyasu run: executed、meaning_risk 0、事実の穴の候補 0
-  - `yomiyasu-check: executed via=run run=20261105T072234Z-6211f372 attempt=2 final=sha256:6d67baccbe06 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0`
+  - `yomiyasu-check: executed via=run run=20261105T073640Z-aa8a71b0 attempt=2 final=sha256:6d67baccbe06 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0`
 - yomiyasu verify: executed
-  - `yomiyasu-check: executed via=verify run=20261105T072234Z-6211f372 attempt=2 final=sha256:6d67baccbe06 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped`
+  - `yomiyasu-check: executed via=verify run=20261105T073640Z-aa8a71b0 attempt=2 final=sha256:6d67baccbe06 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped`
 - 記入表: 22 / 22 行、問題 0 件
 
 公開と送信はこの結果で決めません。代表が決めます。
@@ -136,8 +136,8 @@ $ printf '日本初の仕組みです。\n' >> '<work>/draft.md'
 ```console
 $ python3 -I -B '<repo>/.claude/skills/yomiyasu/scripts/yomiyasu_check.py' verify --final '<work>/draft.md' --state-dir '<work>/run/.yomiyasu'
 最終稿が、最後に検査した本文と違います。本文を変えたなら yomiyasu_check.py run をもう一度実行し、そのあと verify を実行してください。
-yomiyasu-check: final_changed via=verify run=20261105T072234Z-6211f372 attempt=3 final=sha256:0a9a134808bd expected=sha256:6d67baccbe06
-記録: <work>/run/.yomiyasu/runs/20261105T072234Z-6211f372/attempt-3.json
+yomiyasu-check: final_changed via=verify run=20261105T073640Z-aa8a71b0 attempt=3 final=sha256:0a9a134808bd expected=sha256:6d67baccbe06
+記録: <work>/run/.yomiyasu/runs/20261105T073640Z-aa8a71b0/attempt-3.json
 ```
 
 終了コード: 1（期待: 1）
@@ -149,12 +149,12 @@ $ python3 -I -B '<repo>/.claude/skills/cor-voice-gate/scripts/voice_gate.py' che
 # cor-voice-gate の結果: 通らなかった
 
 - 下書き: `../draft.md`（sha256 0a9a134808bd）
-- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:22:42Z
+- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:36:46Z
 - cor_voice_lint.py: error 1、warn 0
 - yomiyasu run: executed、meaning_risk 0、事実の穴の候補 0
-  - `yomiyasu-check: executed via=run run=20261105T072234Z-6211f372 attempt=4 final=sha256:0a9a134808bd mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0`
+  - `yomiyasu-check: executed via=run run=20261105T073640Z-aa8a71b0 attempt=4 final=sha256:0a9a134808bd mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0`
 - yomiyasu verify: executed
-  - `yomiyasu-check: executed via=verify run=20261105T072234Z-6211f372 attempt=4 final=sha256:0a9a134808bd mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped`
+  - `yomiyasu-check: executed via=verify run=20261105T073640Z-aa8a71b0 attempt=4 final=sha256:0a9a134808bd mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped`
 - 記入表: 22 / 22 行、問題 1 件
 
 公開と送信はこの結果で決めません。代表が決めます。
@@ -162,7 +162,7 @@ $ python3 -I -B '<repo>/.claude/skills/cor-voice-gate/scripts/voice_gate.py' che
 ## 通らなかった理由
 
 - cor_voice_lint.py の error が 1 件あります（error は直すまで渡さない）
-- 記入表: 記入表は別の版の下書きを読んで書かれています（記入表 6d67baccbe06、今の下書き 0a9a134808bd）。今の下書きを読み直して記入し、sha256 の行を 0a9a134808bdc8c1053f9b402746c70117ddb40e18cdb18d224db9e42786ab0f にします
+- 記入表: 記入表は別の版の下書きを読んで書かれています（記入表 6d67baccbe06、今の下書き 0a9a134808bd）。今の下書きを読み直して記入し、sha256 の行を読んだ版の値（`shasum -a 256 <下書き>`）にします
 
 ## cor_voice_lint.py の error（直すまで渡さない）
 
@@ -187,19 +187,19 @@ $ python3 -I -B '<repo>/.claude/skills/cor-voice-gate/scripts/voice_gate.py' che
 # cor-voice-gate の結果: 通らなかった
 
 - 下書き: `../draft.md`（sha256 199dc4910b6e）
-- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:22:45Z
+- 場面: company、種類: promo、ゲート: fast、実行: 2026-11-05T07:36:48Z
 - cor_voice_lint.py: error 0、warn 0
 - yomiyasu run: executed、meaning_risk 0、事実の穴の候補 0
-  - `yomiyasu-check: executed via=run run=20261105T072234Z-6211f372 attempt=5 final=sha256:199dc4910b6e mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0`
+  - `yomiyasu-check: executed via=run run=20261105T073640Z-aa8a71b0 attempt=5 final=sha256:199dc4910b6e mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0`
 - yomiyasu verify: executed
-  - `yomiyasu-check: executed via=verify run=20261105T072234Z-6211f372 attempt=5 final=sha256:199dc4910b6e mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped`
+  - `yomiyasu-check: executed via=verify run=20261105T073640Z-aa8a71b0 attempt=5 final=sha256:199dc4910b6e mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped`
 - 記入表: 22 / 22 行、問題 1 件
 
 公開と送信はこの結果で決めません。代表が決めます。
 
 ## 通らなかった理由
 
-- 記入表: 記入表は別の版の下書きを読んで書かれています（記入表 6d67baccbe06、今の下書き 199dc4910b6e）。今の下書きを読み直して記入し、sha256 の行を 199dc4910b6e9347988468ea3415e29a0470e734e08a51dcee996dacee2e7f3f にします
+- 記入表: 記入表は別の版の下書きを読んで書かれています（記入表 6d67baccbe06、今の下書き 199dc4910b6e）。今の下書きを読み直して記入し、sha256 の行を読んだ版の値（`shasum -a 256 <下書き>`）にします
 ```
 
 終了コード: 1（期待: 1）
