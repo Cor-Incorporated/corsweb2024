@@ -1,0 +1,10 @@
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "以下は cor-jp.com と griftai.org の記事、代表の note・Qiita の記事、Grift CLI への反響です：\n\n1. [cor-jp.com のローカル AI 記事](https://cor-jp.com/blog/local-ai-setup/)\n   - 要約: この記事が分かりやすく、参考になったという反応\n   - リンク: https://x.com/testuser123/status/1234567890\n   - 投稿者: @testuser123\n   - 種類: 肯定的な反応\n\n2. [Grift CLI v0.4.0 リリース](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.4.0)\n   - 要約: テスト併修率の計算が改善されて便利になった\n   - リンク: https://qiita.com/engineer_taro/items/abc123\n   - ユーザー: engineer_taro\n   - 種類: 機能への評価\n\n3. [代表の note 記事](https://note.com/cor_instrument/n/n1234567890ab)\n   - 要約: AI に対する考え方に共感した\n   - リンク: https://note.com/alice_dev/n/nxxxxxxxxx\n   - アカウント: alice_dev さん\n   - 種類: note への反応"
+      }
+    }
+  ]
+}
