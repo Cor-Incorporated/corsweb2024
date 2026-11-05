@@ -3,13 +3,15 @@
 
 使い方:
   voice_gate.py init  --run-dir DIR --draft FILE --scene SCENE --doc-type TYPE --gate fast|full
-                      (--material FILE … | --source FILE …)
+                      (--material FILE … | --source FILE)
   voice_gate.py check --run-dir DIR [--json]
 
 init   DIR に gate.json（入力と場面）と review.md（意味の確認の記入表）を書く。記入表の項目は
        ../SKILL.md の Semantic Review と §10.2 の表から毎回作る（項目の写しをこのファイルに持たない）。
 check  cor_voice_lint.py check、yomiyasu_check.py run --fact-gaps と verify を子プロセスで動かし、
-       review.md を読んで、DIR に result.json と result.md を書く。
+       review.md を読んで、DIR に result.json と result.md を書く。review.md の「読んだ下書きの sha256」が
+       今の下書きと違えば通さない（通ったあとに下書きだけを直しても、古い記入表では通らない）。
+       SKILL.md が init のあとで変わったときも通さない（記入表の項目の中身が変わったかもしれないため）。
 
 標準ライブラリだけで動く。モデルは呼ばない。外へ通信しない。特定のハーネスの機能（スキルの自動起動、
 フック、ハーネスの環境変数）を使わない。記録には絶対パスを書かない（DIR からの相対パスだけ）。
@@ -18,7 +20,8 @@ check  cor_voice_lint.py check、yomiyasu_check.py run --fact-gaps と verify �
 終了コード:
   0  ゲートを通った（機械の検査が通り、記入表に fail・未記入が無い）
   1  通らなかった（理由は result.md と result.json の reasons）
-  2  使い方か入力の誤り（ファイルが無い、DIR に前の記録がある、場面や種類の値が違う）
+  2  使い方か入力の誤り（ファイルが無い、DIR に前の記録がある、場面や種類の値が違う、gate.json か
+     review.md を読めない）
   3  検査を最後まで動かせなかった（子の内部の誤り・時間切れ）、または SKILL.md から記入表を作れなかった
 """
 from __future__ import annotations
@@ -40,7 +43,9 @@ LINT = HERE / "cor_voice_lint.py"
 YOMIYASU = HERE.parents[1] / "yomiyasu" / "scripts" / "yomiyasu_check.py"
 
 sys.path.insert(0, str(HERE))
+sys.path.insert(1, str(YOMIYASU.parent))
 from cor_voice_lint import SCENES  # noqa: E402  場面の一覧は lint と同じものを使う
+from markdown_visibility import normalize_doc_type  # noqa: E402  種類の一覧は yomiyasu と同じものを使う
 
 INPUT_FORMAT = "cor-voice-gate-input"
 RESULT_FORMAT = "cor-voice-gate-result"
@@ -61,6 +66,9 @@ SEMANTIC_ITEM = re.compile(r"^(\d+)\. □ \*\*(.+?)\*\*", re.M)
 PREPUBLISH_HEADER = "| 確認 | 合格条件 | ✓/✗ |"
 MEANING_RISK_ITEM = 6  # 「meaning_risk_count == 0」の項目。機械の結果と照らすので n/a にできない
 REVIEW_ROW = re.compile(r"^\|\s*(T|S\d+|P\d+)\s*\|(.*)\|\s*$")
+# 記入表がどの版の下書きを読んで書かれたか。下書きを直したら、読み直してこの行を書き換える
+REVIEWED_SHA = re.compile(r"^- 読んだ下書きの sha256: ([0-9a-f]{64})\s*$", re.M)
+RECORD_KEYS = ("gate", "scene", "doc_type", "draft", "sources", "materials", "checklist")
 
 
 class UsageError(Exception):
@@ -118,6 +126,10 @@ def checklist(skill_text: str, gate: str) -> list[Item]:
     found = SEMANTIC_ITEM.findall(_section(skill_text, "Semantic Review"))
     if not found:
         raise SetupError("SKILL.md の Semantic Review に「N. □ **…**」の項目がありません")
+    titles = dict(found)
+    if "meaning_risk" not in titles.get(str(MEANING_RISK_ITEM), ""):
+        raise SetupError(f"SKILL.md の Semantic Review の {MEANING_RISK_ITEM} が meaning_risk の項目ではありません"
+                         f"（今の題: {titles.get(str(MEANING_RISK_ITEM), 'なし')}）")
     items = [Item("T", "Whole-post tone check (Step 6)", False)]
     items += [Item(f"S{n}", _clean_title(title), int(n) not in required) for n, title in found]
     if gate == "full":
@@ -126,12 +138,14 @@ def checklist(skill_text: str, gate: str) -> list[Item]:
     return items
 
 
-def render_review(items: list[Item], gate: str, draft_rel: str) -> str:
+def render_review(items: list[Item], gate: str, draft_rel: str, draft_sha: str) -> str:
     head = [
         "# 意味の確認（cor-voice-gate の記入表）",
         "",
         f"- 下書き: `{draft_rel}`（この記録のフォルダからの相対パス）",
         f"- ゲート: {gate}",
+        f"- 読んだ下書きの sha256: {draft_sha}",
+        "- 下書きを直したら、読み直して記入し、上の sha256 を check が示す今の値に書き換えます（違うと通りません）。",
         "- 項目の中身は `.claude/skills/cor-voice-gate/SKILL.md` の同じ番号の節を読みます（ここには写しません）。",
         "- 判定の欄には pass、fail、n/a のどれかを書きます。根拠の欄は空にしません。",
         "- n/a は、その項目が当たらない理由を根拠に書きます。「n/a 不可」の項目は pass か fail だけです。",
@@ -187,6 +201,17 @@ def evaluate_review(items: list[Item], rows: dict[str, tuple[str, str]]) -> list
     return problems
 
 
+def reviewed_sha_problems(review_text: str, draft_sha: str) -> list[str]:
+    """記入表が今の下書きを読んで書かれたか。通ったあとに下書きだけを変えても、古い記入表では通さない。"""
+    found = REVIEWED_SHA.findall(review_text)
+    if len(found) != 1:
+        return [f"記入表に「- 読んだ下書きの sha256: <64 桁>」の行が 1 つではありません（{len(found)} 行）"]
+    if found[0] != draft_sha:
+        return [f"記入表は別の版の下書きを読んで書かれています（記入表 {found[0][:12]}、今の下書き {draft_sha[:12]}）。"
+                f"今の下書きを読み直して記入し、sha256 の行を {draft_sha} にします"]
+    return []
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -207,10 +232,14 @@ def cmd_init(args: argparse.Namespace) -> int:
     if (run_dir / GATE_JSON).exists() or (run_dir / REVIEW_MD).exists():
         raise UsageError(f"{run_dir} には前の記録があります。別のフォルダを指定します（記入済みの表を上書きしないため）")
     draft = _existing_file(args.draft, "下書き")
-    sources = [_existing_file(raw, "原文") for raw in args.source or []]
+    sources = [_existing_file(args.source, "原文")] if args.source else []
     materials = [_existing_file(raw, "資料") for raw in args.material or []]
     if not sources and not materials:
         raise UsageError("--material（依頼と資料）か --source（直す前の原文）を 1 つ以上渡します")
+    try:
+        normalize_doc_type(args.doc_type)
+    except ValueError as error:
+        raise UsageError(str(error)) from error
     skill_text = SKILL_MD.read_text(encoding="utf-8")
     items = checklist(skill_text, args.gate)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -224,7 +253,7 @@ def cmd_init(args: argparse.Namespace) -> int:
                       "items": [item.item_id for item in items]},
     }
     (run_dir / GATE_JSON).write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (run_dir / REVIEW_MD).write_text(render_review(items, args.gate, record["draft"]), encoding="utf-8")
+    (run_dir / REVIEW_MD).write_text(render_review(items, args.gate, record["draft"], _sha256(draft)), encoding="utf-8")
     print(f"記録のフォルダ: {run_dir}")
     print(f"次: {run_dir / REVIEW_MD} に判定と根拠を書き、check --run-dir {run_dir} を実行します")
     return 0
@@ -312,14 +341,47 @@ def gate_reasons(lint: dict, yomiyasu: dict, review_problems: list[str]) -> list
     return reasons + [f"記入表: {problem}" for problem in review_problems]
 
 
+def _read_text(path: Path, label: str) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise UsageError(f"{label}（{path}）を UTF-8 として読めません: {error}") from error
+
+
 def _load_record(run_dir: Path) -> dict:
     path = run_dir / GATE_JSON
     if not path.is_file():
         raise UsageError(f"{path} がありません。先に init を実行します")
-    record = json.loads(path.read_text(encoding="utf-8"))
-    if record.get("format") != INPUT_FORMAT or record.get("format_version") != FORMAT_VERSION:
+    try:
+        record = json.loads(_read_text(path, GATE_JSON))
+    except json.JSONDecodeError as error:
+        raise UsageError(f"{path} を JSON として読めません: {error}") from error
+    if not isinstance(record, dict) or record.get("format") != INPUT_FORMAT \
+            or record.get("format_version") != FORMAT_VERSION:
         raise UsageError(f"{path} は {INPUT_FORMAT} 形式 {FORMAT_VERSION} ではありません")
+    missing = [key for key in RECORD_KEYS if key not in record]
+    if missing or record["gate"] not in GATES or record["scene"] not in SCENES:
+        raise UsageError(f"{path} の中身が足りないか、値が違います（足りない: {missing or 'なし'}、"
+                         f"gate {record.get('gate')}、scene {record.get('scene')}）。init し直します")
     return record
+
+
+def review_problems_for(run_dir: Path, record: dict, draft_sha: str) -> tuple[int, int, list[str]]:
+    """記入表を読み、(行数, 期待する行数, 問題) を返す。SKILL.md が init のあとで変わっていれば問題にする。"""
+    skill_text = _read_text(SKILL_MD, "SKILL.md")
+    items = checklist(skill_text, record["gate"])
+    problems = []
+    skill_sha = hashlib.sha256(skill_text.encode("utf-8")).hexdigest()
+    if skill_sha != record["checklist"].get("skill_sha256"):
+        problems.append(f"SKILL.md が init のあとで変わりました（init {str(record['checklist'].get('skill_sha256'))[:12]}、"
+                        f"今 {skill_sha[:12]}）。項目の中身が変わっていないか読み直し、init し直します")
+    review_path = run_dir / REVIEW_MD
+    if not review_path.is_file():
+        return 0, len(items), problems + [f"{review_path} がありません"]
+    review_text = _read_text(review_path, REVIEW_MD)
+    rows, duplicate = parse_review(review_text)
+    problems += duplicate + reviewed_sha_problems(review_text, draft_sha) + evaluate_review(items, rows)
+    return len(rows), len(items), problems
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -328,19 +390,21 @@ def cmd_check(args: argparse.Namespace) -> int:
     draft = _existing_file(str(run_dir / record["draft"]), "下書き")
     for rel in record["sources"] + record["materials"]:
         _existing_file(str(run_dir / rel), "原文か資料")
-    items = checklist(SKILL_MD.read_text(encoding="utf-8"), record["gate"])
-    review_path = run_dir / REVIEW_MD
-    rows, duplicate = parse_review(review_path.read_text(encoding="utf-8")) if review_path.is_file() else ({}, [])
-    review_problems = duplicate + evaluate_review(items, rows)
+    draft_sha = _sha256(draft)
+    row_count, expected, review_problems = review_problems_for(run_dir, record, draft_sha)
     lint = run_lint(draft, record["scene"])
     yomiyasu = run_yomiyasu(record, run_dir, draft)
     reasons = gate_reasons(lint, yomiyasu, review_problems)
+    after_sha = _sha256(draft)
+    if after_sha != draft_sha:
+        # 途中で保存されると、古い版の記入表・lint と新しい版の yomiyasu が混ざる（Codex のレビューで再現）
+        reasons.append(f"check の途中で下書きが変わりました（始め {draft_sha[:12]}、終わり {after_sha[:12]}）。保存を終えてから check し直します")
     result = {
         "format": RESULT_FORMAT, "format_version": FORMAT_VERSION, "passed": not reasons,
         "checked_at": _now(), "gate": record["gate"], "scene": record["scene"], "doc_type": record["doc_type"],
-        "draft": {"path": record["draft"], "sha256": _sha256(draft)},
+        "draft": {"path": record["draft"], "sha256": draft_sha},
         "cor_voice_lint": lint, "yomiyasu": yomiyasu,
-        "review": {"rows": len(rows), "expected": len(items), "problems": review_problems},
+        "review": {"rows": row_count, "expected": expected, "problems": review_problems},
         "reasons": reasons,
     }
     (run_dir / RESULT_JSON).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -399,7 +463,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--doc-type", required=True, help="yomiyasu の文書の種類（article、mail、manual、promo など）")
     init.add_argument("--gate", required=True, choices=GATES, help="cor-voice-gate の Fast / Full")
     init.add_argument("--material", action="append", help="依頼と資料（何度でも）")
-    init.add_argument("--source", action="append", help="直す前の原文（何度でも）")
+    init.add_argument("--source", help="直す前の原文（1 つだけ。yomiyasu の run が 1 つしか受けないため）")
     check = sub.add_parser("check", help="検査を動かし、記入表を読んで result.json と result.md を書く")
     check.add_argument("--run-dir", required=True)
     check.add_argument("--json", action="store_true", help="標準出力に result.json と同じものを出す")

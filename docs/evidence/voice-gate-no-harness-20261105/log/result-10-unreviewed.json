@@ -1,0 +1,45 @@
+{
+  "format": "cor-voice-gate-result",
+  "format_version": 1,
+  "passed": false,
+  "checked_at": "2026-11-05T07:22:45Z",
+  "gate": "fast",
+  "scene": "company",
+  "doc_type": "promo",
+  "draft": {
+    "path": "../draft.md",
+    "sha256": "199dc4910b6e9347988468ea3415e29a0470e734e08a51dcee996dacee2e7f3f"
+  },
+  "cor_voice_lint": {
+    "errors": 0,
+    "warns": 0,
+    "findings": []
+  },
+  "yomiyasu": {
+    "run": {
+      "exit": 0,
+      "status": "executed",
+      "run_id": "20261105T072234Z-6211f372",
+      "status_line": "yomiyasu-check: executed via=run run=20261105T072234Z-6211f372 attempt=5 final=sha256:199dc4910b6e mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0",
+      "meaning_risk_count": 0,
+      "meaning_risks": [],
+      "fact_gap_count": 0,
+      "fact_gaps": []
+    },
+    "verify": {
+      "exit": 0,
+      "status": "executed",
+      "status_line": "yomiyasu-check: executed via=verify run=20261105T072234Z-6211f372 attempt=5 final=sha256:199dc4910b6e mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped"
+    }
+  },
+  "review": {
+    "rows": 22,
+    "expected": 22,
+    "problems": [
+      "記入表は別の版の下書きを読んで書かれています（記入表 6d67baccbe06、今の下書き 199dc4910b6e）。今の下書きを読み直して記入し、sha256 の行を 199dc4910b6e9347988468ea3415e29a0470e734e08a51dcee996dacee2e7f3f にします"
+    ]
+  },
+  "reasons": [
+    "記入表: 記入表は別の版の下書きを読んで書かれています（記入表 6d67baccbe06、今の下書き 199dc4910b6e）。今の下書きを読み直して記入し、sha256 の行を 199dc4910b6e9347988468ea3415e29a0470e734e08a51dcee996dacee2e7f3f にします"
+  ]
+}

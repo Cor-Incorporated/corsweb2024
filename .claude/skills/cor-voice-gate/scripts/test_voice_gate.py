@@ -11,14 +11,18 @@
 """
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -53,13 +57,16 @@ def run_gate(args: list[str], home: Path) -> subprocess.CompletedProcess:
                           encoding="utf-8", env=bare_env(home), timeout=120, check=False)
 
 
-def fill_review(review: Path, overrides: dict[str, tuple[str, str]] | None = None) -> None:
-    """記入表の空欄を埋める。overrides で行ごとに判定と根拠を変える。"""
+def fill_review(review: Path, draft: Path, overrides: dict[str, tuple[str, str]] | None = None) -> None:
+    """下書きを読み直した体で記入表を埋める。sha256 の行を今の下書きにそろえ、overrides で行ごとに判定と根拠を変える。"""
     overrides = overrides or {}
+    sha = gate._sha256(draft)
     lines = []
     for line in review.read_text(encoding="utf-8").splitlines():
         match = gate.REVIEW_ROW.match(line)
-        if match:
+        if gate.REVIEWED_SHA.match(line):
+            line = f"- 読んだ下書きの sha256: {sha}"
+        elif match:
             item_id = match.group(1)
             title = match.group(2).split("|", 1)[0].strip()
             verdict, basis = overrides.get(item_id, ("pass", "テストの記入（資料の範囲の 2 文で、当たる型が無い）"))
@@ -99,6 +106,8 @@ class ChecklistTest(unittest.TestCase):
             SKILL_TEXT.replace("Whole-post tone check (required, Fast and Full)", "Tone check"),
             SKILL_TEXT.replace("□", "-"),
             SKILL_TEXT.replace(gate.PREPUBLISH_HEADER, "| a | b | c |"),
+            # MEANING_RISK_ITEM（6）が SKILL.md の 6 と結びついていること。番号がずれたら止める
+            SKILL_TEXT.replace(f"{gate.MEANING_RISK_ITEM}. □ **meaning_risk_count", f"{gate.MEANING_RISK_ITEM}. □ **Other"),
         )
         for text in broken:
             with self.assertRaises(gate.SetupError):
@@ -131,7 +140,7 @@ class ReviewTest(unittest.TestCase):
         self.assertTrue(gate.evaluate_review(self.items, {**self.filled, "S99": ("pass", "x")}))
 
     def test_rendered_review_round_trips(self):
-        text = gate.render_review(self.items, "fast", "../draft.md")
+        text = gate.render_review(self.items, "fast", "../draft.md", "a" * 64)
         rows, duplicate = gate.parse_review(text)
         self.assertEqual(duplicate, [])
         self.assertEqual(set(rows), {item.item_id for item in self.items})
@@ -139,25 +148,37 @@ class ReviewTest(unittest.TestCase):
         _, duplicate = gate.parse_review(text + "| S1 | x | pass | y |\n")
         self.assertEqual(len(duplicate), 1)
 
+    def test_reviewed_sha_must_match_the_draft(self):
+        text = gate.render_review(self.items, "fast", "../draft.md", "a" * 64)
+        self.assertEqual(gate.reviewed_sha_problems(text, "a" * 64), [])
+        stale = gate.reviewed_sha_problems(text, "b" * 64)
+        self.assertTrue(stale and "aaaaaaaaaaaa" in stale[0] and "b" * 64 in stale[0], stale)
+        self.assertTrue(gate.reviewed_sha_problems(text.replace("a" * 64, ""), "a" * 64))
+        self.assertTrue(gate.reviewed_sha_problems(text + f"- 読んだ下書きの sha256: {'a' * 64}\n", "a" * 64))
+
 
 class EndToEndTest(unittest.TestCase):
     """PATH に Python だけを置いた環境で init → 記入 → check を一周する。"""
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.home = self.tmp / "home"
         self.home.mkdir()
+        self.draft = self.tmp / "draft.md"
         (self.tmp / "material.md").write_text(MATERIAL, encoding="utf-8")
 
-    def start(self, draft_text: str, *extra: str) -> Path:
-        draft = self.tmp / "draft.md"
-        draft.write_text(draft_text, encoding="utf-8")
+    def start(self, draft_text: str, *extra: str, gate_name: str = "fast") -> Path:
+        self.draft.write_text(draft_text, encoding="utf-8")
         run_dir = self.tmp / "run"
-        args = ["init", "--run-dir", str(run_dir), "--draft", str(draft), "--material", str(self.tmp / "material.md"),
-                "--scene", "company", "--doc-type", "article", "--gate", "fast", *extra]
+        args = ["init", "--run-dir", str(run_dir), "--draft", str(self.draft), "--material", str(self.tmp / "material.md"),
+                "--scene", "company", "--doc-type", "article", "--gate", gate_name, *extra]
         done = run_gate(args, self.home)
         self.assertEqual(done.returncode, 0, done.stderr)
         return run_dir
+
+    def fill(self, run_dir: Path, overrides: dict[str, tuple[str, str]] | None = None) -> None:
+        fill_review(run_dir / gate.REVIEW_MD, self.draft, overrides)
 
     def check(self, run_dir: Path) -> tuple[int, dict]:
         done = run_gate(["check", "--run-dir", str(run_dir), "--json"], self.home)
@@ -169,21 +190,27 @@ class EndToEndTest(unittest.TestCase):
         self.assertEqual(run_gate(["--help"], self.home).returncode, 0)
         self.assertNotEqual(subprocess.run(["sh", "-c", "command -v claude"], env=bare_env(self.home),
                                            capture_output=True, check=False).returncode, 0)
-        fill_review(run_dir / gate.REVIEW_MD)
+        code, result = self.check(run_dir)
+        self.assertEqual(code, 1)
+        self.assertTrue(any("未記入" in reason for reason in result["reasons"]))
+        self.fill(run_dir)
         code, result = self.check(run_dir)
         self.assertEqual((code, result["passed"], result["reasons"]), (0, True, []))
         self.assertEqual(result["yomiyasu"]["verify"]["status"], "executed")
         for name in (gate.RESULT_JSON, gate.RESULT_MD, gate.GATE_JSON):
             self.assertNotIn(str(self.tmp), (run_dir / name).read_text(encoding="utf-8"), f"{name} に絶対パス")
 
-    def test_empty_review_blocks(self):
-        code, result = self.check(self.start(CLEAN))
-        self.assertEqual(code, 1)
-        self.assertTrue(any("未記入" in reason for reason in result["reasons"]))
+    def test_full_gate_adds_prepublish_rows(self):
+        run_dir = self.start(CLEAN, gate_name="full")
+        self.fill(run_dir)
+        code, result = self.check(run_dir)
+        expected = len(gate.checklist(SKILL_TEXT, "full"))
+        self.assertEqual((code, result["review"]["rows"], result["review"]["expected"]), (0, expected, expected))
+        self.assertGreater(expected, len(gate.checklist(SKILL_TEXT, "fast")))
 
     def test_lint_error_blocks(self):
         run_dir = self.start(TRIAL_WORD)
-        fill_review(run_dir / gate.REVIEW_MD)
+        self.fill(run_dir)
         code, result = self.check(run_dir)
         self.assertEqual((code, result["cor_voice_lint"]["errors"]), (1, 1))
         self.assertTrue(any("cor_voice_lint" in reason for reason in result["reasons"]))
@@ -191,7 +218,7 @@ class EndToEndTest(unittest.TestCase):
     def test_added_promise_blocks_on_meaning_risk(self):
         (self.tmp / "source.md").write_text(CLEAN, encoding="utf-8")
         run_dir = self.start(STRONGER, "--source", str(self.tmp / "source.md"))
-        fill_review(run_dir / gate.REVIEW_MD)
+        self.fill(run_dir)
         code, result = self.check(run_dir)
         self.assertEqual(code, 1)
         self.assertGreater(result["yomiyasu"]["run"]["meaning_risk_count"], 0)
@@ -199,7 +226,7 @@ class EndToEndTest(unittest.TestCase):
     def test_meaning_risks_from_materials_are_listed(self):
         """資料との照合だけの run（原文なし）でも、meaning_risk の中身が result に並ぶ（件数と一致する）。"""
         run_dir = self.start(CLEAN + "SBOM は Syft 1.2 で作ります。\n")
-        fill_review(run_dir / gate.REVIEW_MD)
+        self.fill(run_dir)
         code, result = self.check(run_dir)
         run = result["yomiyasu"]["run"]
         self.assertEqual(code, 1)
@@ -209,35 +236,79 @@ class EndToEndTest(unittest.TestCase):
     def test_unbacked_effect_is_listed_and_stopped_by_review(self):
         (self.tmp / "source.md").write_text(CLEAN, encoding="utf-8")
         run_dir = self.start(UNBACKED, "--source", str(self.tmp / "source.md"))
-        fill_review(run_dir / gate.REVIEW_MD)
+        self.fill(run_dir)
         code, result = self.check(run_dir)
         run = result["yomiyasu"]["run"]
         self.assertEqual((code, run["meaning_risk_count"]), (0, 0), "機械の検査だけでは止まらない（限界の記録）")
         self.assertGreater(run["fact_gap_count"], 0)
         self.assertIn("確かめたい候補", (run_dir / gate.RESULT_MD).read_text(encoding="utf-8"))
-        fill_review(run_dir / gate.REVIEW_MD, {"S14": ("fail", "「必ず速くなる」は資料に無い効果")})
+        self.fill(run_dir, {"S14": ("fail", "「必ず速くなる」は資料に無い効果")})
         code, result = self.check(run_dir)
         self.assertEqual(code, 1)
         self.assertTrue(any("S14" in reason for reason in result["reasons"]))
 
-    def test_edit_after_pass_is_checked_again(self):
+    def test_edit_after_pass_needs_a_new_review(self):
+        """通ったあとに、機械では止まらない文（UNBACKED）を足しても、古い記入表では通らない（レビューの HIGH の再現）。"""
         run_dir = self.start(CLEAN)
-        fill_review(run_dir / gate.REVIEW_MD)
+        self.fill(run_dir)
         self.assertEqual(self.check(run_dir)[0], 0)
-        (self.tmp / "draft.md").write_text(STRONGER, encoding="utf-8")
+        self.draft.write_text(UNBACKED, encoding="utf-8")
         code, result = self.check(run_dir)
         self.assertEqual(code, 1)
-        self.assertNotEqual(result["draft"]["sha256"], "")
+        self.assertTrue(any("別の版の下書き" in reason for reason in result["reasons"]), result["reasons"])
+        self.assertEqual(result["yomiyasu"]["run"]["meaning_risk_count"], 0, "止めたのは記入表の sha256 の照合")
 
-    def test_init_refuses_to_overwrite_and_needs_material_or_source(self):
+    def test_draft_changed_during_check_fails(self):
+        """lint のあとで下書きが保存されると、古い lint と新しい yomiyasu が混ざる。終わりにも sha256 を照らす（Codex の P2）。"""
         run_dir = self.start(CLEAN)
-        again = run_gate(["init", "--run-dir", str(run_dir), "--draft", str(self.tmp / "draft.md"),
-                          "--material", str(self.tmp / "material.md"), "--scene", "company",
-                          "--doc-type", "article", "--gate", "fast"], self.home)
-        self.assertEqual(again.returncode, 2)
-        bare = run_gate(["init", "--run-dir", str(self.tmp / "other"), "--draft", str(self.tmp / "draft.md"),
-                         "--scene", "company", "--doc-type", "article", "--gate", "fast"], self.home)
-        self.assertEqual(bare.returncode, 2)
+        self.fill(run_dir)
+        original = gate.run_lint
+
+        def lint_then_edit(draft, scene):
+            result = original(draft, scene)
+            draft.write_text(CLEAN + "日本初の仕組みです。\n", encoding="utf-8")
+            return result
+
+        with mock.patch.object(gate, "run_lint", lint_then_edit), contextlib.redirect_stdout(io.StringIO()):
+            code = gate.main(["check", "--run-dir", str(run_dir)])
+        result = json.loads((run_dir / gate.RESULT_JSON).read_text(encoding="utf-8"))
+        self.assertEqual((code, result["cor_voice_lint"]["errors"]), (1, 0), "lint は書き換え前の版を見ていた")
+        self.assertTrue(any("途中で下書きが変わりました" in reason for reason in result["reasons"]), result["reasons"])
+
+    def test_init_rejects_bad_input(self):
+        run_dir = self.start(CLEAN)
+        base = ["--draft", str(self.draft), "--scene", "company", "--gate", "fast"]
+        cases = {
+            "overwrite": ["init", "--run-dir", str(run_dir), *base, "--doc-type", "article",
+                          "--material", str(self.tmp / "material.md")],
+            "no-material": ["init", "--run-dir", str(self.tmp / "a"), *base, "--doc-type", "article"],
+            "bad-doc-type": ["init", "--run-dir", str(self.tmp / "b"), *base, "--doc-type", "bogus",
+                             "--material", str(self.tmp / "material.md")],
+        }
+        for name, args in cases.items():
+            with self.subTest(name):
+                self.assertEqual(run_gate(args, self.home).returncode, 2)
+
+    def test_broken_record_is_usage_error_not_gate_failure(self):
+        run_dir = self.start(CLEAN)
+        record = json.loads((run_dir / gate.GATE_JSON).read_text(encoding="utf-8"))
+        broken = {
+            "not-json": "{",
+            "no-draft": json.dumps({key: value for key, value in record.items() if key != "draft"}),
+            "bad-gate": json.dumps({**record, "gate": "fastest"}),
+        }
+        for name, text in broken.items():
+            with self.subTest(name):
+                (run_dir / gate.GATE_JSON).write_text(text, encoding="utf-8")
+                self.assertEqual(run_gate(["check", "--run-dir", str(run_dir)], self.home).returncode, 2)
+
+    def test_skill_change_after_init_is_a_problem(self):
+        run_dir = self.start(CLEAN)
+        self.fill(run_dir)
+        record = json.loads((run_dir / gate.GATE_JSON).read_text(encoding="utf-8"))
+        record["checklist"]["skill_sha256"] = "0" * 64
+        _, _, problems = gate.review_problems_for(run_dir, record, gate._sha256(self.draft))
+        self.assertTrue(any("SKILL.md が init のあとで変わりました" in problem for problem in problems), problems)
 
 
 # 特定のハーネスだけが持つ呼び出し。名前（「Claude Code」「Codex」）を書くことは止めない。呼び出しを止める。

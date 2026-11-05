@@ -13,7 +13,7 @@ voice 技能（yomiyasu、cor-voice、cor-voice-gate）の検査が、ファイ�
 どのハーネスでも、人が端末で打っても同じ手順です。入口（AGENTS.md、CLAUDE.md、`.cursor/rules/cor-voice.mdc`）の手順 4 にも同じことを書きました。
 
 1. `voice_gate.py init` で記録のフォルダを作ります。`gate.json`（入力と場面）と `review.md`（意味の確認の記入表）ができます。
-2. 下書きを直し、`review.md` に項目ごとの判定と根拠を書きます。記入表の項目は、そのたびに cor-voice-gate の SKILL.md から作ります。
+2. 下書きを直し、`review.md` に項目ごとの判定と根拠を書きます。記入表の項目は、そのたびに cor-voice-gate の SKILL.md から作ります。表の上の「読んだ下書きの sha256」は、読んだ版の値にします。
 3. `voice_gate.py check` を実行します。`cor_voice_lint.py check`、`yomiyasu_check.py run --fact-gaps` と `verify` が中で動き、`result.json` と `result.md` に結果が残ります。通ったと言えるのは、終了コードが 0 のときだけです。
 
 ## 動かし方
@@ -36,7 +36,9 @@ bash docs/evidence/voice-gate-no-harness-20261105/run-demo.sh
 | 5 | 2 人目の読み手が同じフォルダで check をもう一度動かす。同じ sha256 で通る | 0 |
 | 6 | 通ったあとに、最上級の言い切りの 1 文を足す（中身は run-demo.sh の手順 6） | 0 |
 | 7 | yomiyasu の verify だけを動かす。最終稿が記録と合わない（final_changed） | 1 |
-| 8 | check。lint の error（absolute_claim）で止まる | 1 |
+| 8 | check。lint の error（absolute_claim）と、記入表が別の版を読んだものであることで止まる | 1 |
+| 9 | 直した下書きに戻し、機械の検査では止まらない 1 文（資料に無い効果）を足す | 0 |
+| 10 | check。lint の error 0、meaning_risk 0 でも、記入表が別の版を読んだものなので止まる | 1 |
 
 ## Codex で同じ手順を回した記録（codex/）
 
@@ -54,6 +56,7 @@ Claude Code 以外のハーネスでも同じ手順が通るかを、Codex で 1
 - 資料に無い効果は、機械では止まらないことがあります。「必ず採用の判断が速くなります。」を原文に足すと、yomiyasu の meaning_risk は 0 で、事実の穴の候補が 1 件でした。`result.md` に候補を並べ、記入表の S5 と S14 で止めます（`test_voice_gate.py` の `test_unbacked_effect_is_listed_and_stopped_by_review`）。
 - 依頼と資料を 1 つのファイルで `--material` に渡すと、誤った meaning_risk が出ました。資料が下書きに似ていたため、yomiyasu が資料を原文とみなして diff をかけ、依頼の「3 文」を消えた数字として数えました（meaning_risk 1）。依頼と資料は別のファイルで渡します。入口の手順 4 にもそう書きました。
 - 手順 8 で足した最上級の 1 文は lint の error（absolute_claim）で止まりましたが、yomiyasu の meaning_risk は 0 でした。
+- 最初の版（16d889c）は、記入表がどの版の下書きを読んで書かれたかを見ていませんでした。通ったあとに資料に無い効果の 1 文を足しても、古い記入表のまま終了コード 0 で通りました。独立レビュー（code-reviewer）が再現つきで見つけたので、記入表に読んだ下書きの sha256 を書かせ、今の下書きと違えば通さないようにしました（手順 9 と 10、`test_edit_after_pass_needs_a_new_review`）。
 - note の編集画面への反映（cor-voice-gate の 19 と 20）はブラウザでの作業なので、このコマンドでは閉じません。
 - yomiyasu の本文と scripts は、nanaism/yomiyasu v2.1.3 を手を加えずに同梱しています。本文には、各ホストでの呼び名（`/yomiyasu`、`$yomiyasu`）と配置先の例（`${CLAUDE_SKILL_DIR}`）、任意のフック（`yomiyasu_hook.py`）が残ります。どれも検査のコマンドには要りません。`test_voice_gate.py` の検査が見るのは、Cor. が足した節、cor-voice、cor-voice-gate です。
 

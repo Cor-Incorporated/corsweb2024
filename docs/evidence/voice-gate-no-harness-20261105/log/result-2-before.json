@@ -2,7 +2,7 @@
   "format": "cor-voice-gate-result",
   "format_version": 1,
   "passed": false,
-  "checked_at": "2026-11-05T07:02:45Z",
+  "checked_at": "2026-11-05T07:22:35Z",
   "gate": "fast",
   "scene": "company",
   "doc_type": "promo",
@@ -34,8 +34,8 @@
     "run": {
       "exit": 0,
       "status": "executed",
-      "run_id": "20261105T070244Z-5a8a3967",
-      "status_line": "yomiyasu-check: executed via=run run=20261105T070244Z-5a8a3967 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1",
+      "run_id": "20261105T072234Z-6211f372",
+      "status_line": "yomiyasu-check: executed via=run run=20261105T072234Z-6211f372 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1",
       "meaning_risk_count": 1,
       "meaning_risks": [
         {
@@ -53,7 +53,7 @@
     "verify": {
       "exit": 0,
       "status": "executed",
-      "status_line": "yomiyasu-check: executed via=verify run=20261105T070244Z-5a8a3967 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1 replay=skipped"
+      "status_line": "yomiyasu-check: executed via=verify run=20261105T072234Z-6211f372 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1 replay=skipped"
     }
   },
   "review": {

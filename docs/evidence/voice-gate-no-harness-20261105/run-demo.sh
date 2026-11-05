@@ -31,7 +31,8 @@ LOG="$OUT/transcript.md"
 hide() { sed -e "s#$WORK#<work>#g" -e "s#$ROOT#<repo>#g"; }
 
 clean() {
-  env -i PATH="$WORK/bin:/usr/bin:/bin" HOME="$WORK/home" LANG=C.UTF-8 bash --noprofile --norc -c "$1"
+  # 新しい bash には外の pipefail が引き継がれないので、ここでも付ける（パイプの前段の失敗を隠さない）
+  env -i PATH="$WORK/bin:/usr/bin:/bin" HOME="$WORK/home" LANG=C.UTF-8 bash --noprofile --norc -o pipefail -c "$1"
 }
 
 # step <見出し> <期待する終了コード> <コマンド>
@@ -77,7 +78,7 @@ step "4. check: 直した下書き" 0 \
 save_result result-4-after.json
 
 step "5. 2 人目の読み手: 同じフォルダで check をもう一度動かし、結果の要点だけを読む" 0 \
-  "python3 -I -B '$GATE' check --run-dir '$RUN' --json | python3 -I -c 'import json, sys; d = json.load(sys.stdin); print(\"passed\", d[\"passed\"], \"sha256\", d[\"draft\"][\"sha256\"][:12], \"meaning_risk\", d[\"yomiyasu\"][\"run\"][\"meaning_risk_count\"])'"
+  "python3 -I -B '$GATE' check --run-dir '$RUN' --json | python3 -I -c 'import json, sys; d = json.load(sys.stdin); print(\"passed\", d[\"passed\"], \"sha256\", d[\"draft\"][\"sha256\"][:12], \"meaning_risk\", d[\"yomiyasu\"][\"run\"][\"meaning_risk_count\"]); sys.exit(0 if d[\"passed\"] else 1)'"
 
 step "6. 通ったあとに 1 文を足す" 0 \
   "printf '日本初の仕組みです。\n' >> '$WORK/draft.md'"
@@ -88,5 +89,12 @@ step "7. yomiyasu の verify だけを動かす: 記録と最終稿が合わな�
 step "8. check: 足した 1 文で止まる" 1 \
   "python3 -I -B '$GATE' check --run-dir '$RUN'"
 save_result result-8-edited.json
+
+step "9. 直した下書きに戻し、機械の検査では止まらない 1 文（資料に無い効果）を足す" 0 \
+  "cp '$HERE/fixtures/draft-v2.md' '$WORK/draft.md' && printf '必ず採用の判断が速くなります。\n' >> '$WORK/draft.md'"
+
+step "10. check: lint と meaning_risk は 0 でも、記入表が別の版を読んだものなので止まる" 1 \
+  "python3 -I -B '$GATE' check --run-dir '$RUN'"
+save_result result-10-unreviewed.json
 
 printf '全手順が期待どおりの終了コードで終わりました。記録: %s\n' "$LOG"
