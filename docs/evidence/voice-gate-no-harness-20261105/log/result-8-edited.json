@@ -1,0 +1,51 @@
+{
+  "format": "cor-voice-gate-result",
+  "format_version": 1,
+  "passed": false,
+  "checked_at": "2026-11-05T07:02:53Z",
+  "gate": "fast",
+  "scene": "company",
+  "doc_type": "promo",
+  "draft": {
+    "path": "../draft.md",
+    "sha256": "0a9a134808bdc8c1053f9b402746c70117ddb40e18cdb18d224db9e42786ab0f"
+  },
+  "cor_voice_lint": {
+    "errors": 1,
+    "warns": 0,
+    "findings": [
+      {
+        "rule_id": "absolute_claim",
+        "level": "error",
+        "line": 4,
+        "message": "根拠と定義のない最上級・保証は書かない",
+        "source": "cor-voice §6 / §6A-4"
+      }
+    ]
+  },
+  "yomiyasu": {
+    "run": {
+      "exit": 0,
+      "status": "executed",
+      "run_id": "20261105T070244Z-5a8a3967",
+      "status_line": "yomiyasu-check: executed via=run run=20261105T070244Z-5a8a3967 attempt=4 final=sha256:0a9a134808bd mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0",
+      "meaning_risk_count": 0,
+      "meaning_risks": [],
+      "fact_gap_count": 0,
+      "fact_gaps": []
+    },
+    "verify": {
+      "exit": 0,
+      "status": "executed",
+      "status_line": "yomiyasu-check: executed via=verify run=20261105T070244Z-5a8a3967 attempt=4 final=sha256:0a9a134808bd mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=0 replay=skipped"
+    }
+  },
+  "review": {
+    "rows": 22,
+    "expected": 22,
+    "problems": []
+  },
+  "reasons": [
+    "cor_voice_lint.py の error が 1 件あります（error は直すまで渡さない）"
+  ]
+}
