@@ -142,7 +142,7 @@ readonly JQ_SUMMARY='
 
 readonly JQ_PLAN='
 . as $r | $r.tax_rate as $t
-| "PLAN tax_rate \($t.id):「\($t.display_name)」\($t.percentage)% 税別（inclusive=false）country=\($t.country) jurisdiction=\($t.jurisdiction) tax_type=\($t.tax_type) → GET /v1/tax_rates で metadata.plan_key を探し、無ければ POST /v1/tax_rates",
+| "PLAN tax_rate \($t.id): 「\($t.display_name)」\($t.percentage)% 税別（inclusive=false）country=\($t.country) jurisdiction=\($t.jurisdiction) tax_type=\($t.tax_type) → GET /v1/tax_rates で metadata.plan_key を探し、無ければ POST /v1/tax_rates",
   ($r.products[] | "PLAN product \(.id): 「\(.name)」service=\(.service) kind=\(.kind) → GET /v1/products/\(.id)、404 なら POST /v1/products"),
   ($r.prices[]
     | if .enabled then
