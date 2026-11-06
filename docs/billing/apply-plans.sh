@@ -91,7 +91,7 @@ readonly JQ_VALIDATE='
       then "stripe_api_version の形が違う（観測: \($r.stripe_api_version)）" else empty end),
     (if ([$l.min_unit_amount_jpy, $l.max_unit_amount_jpy, $l.max_installments] | all(isint)) | not
       then "limits の 3 項目は整数（観測: \($l)）" else empty end),
-    (if ($t.key | type == "string" and test("^[a-z0-9_]+$")) | not then "tax_rate.key の形が違う（観測: \($t.key)）" else empty end),
+    (if ($t.id | type == "string" and test("^[a-z0-9_]+$")) | not then "tax_rate.id の形が違う（観測: \($t.id)）" else empty end),
     (if ($t.percentage | type) != "number" or $t.percentage <= 0 or $t.percentage >= 100
       then "tax_rate.percentage は 0 より大きく 100 未満（観測: \($t.percentage)）" else empty end),
     (if $t.inclusive != false then "tax_rate.inclusive は false（税別で統一。観測: \($t.inclusive)）" else empty end),
@@ -142,7 +142,7 @@ readonly JQ_SUMMARY='
 
 readonly JQ_PLAN='
 . as $r | $r.tax_rate as $t
-| "PLAN tax_rate \($t.key): 「\($t.display_name)」\($t.percentage)% 税別（inclusive=false）country=\($t.country) jurisdiction=\($t.jurisdiction) tax_type=\($t.tax_type) → GET /v1/tax_rates で metadata.plan_key を探し、無ければ POST /v1/tax_rates",
+| "PLAN tax_rate \($t.id):「\($t.display_name)」\($t.percentage)% 税別（inclusive=false）country=\($t.country) jurisdiction=\($t.jurisdiction) tax_type=\($t.tax_type) → GET /v1/tax_rates で metadata.plan_key を探し、無ければ POST /v1/tax_rates",
   ($r.products[] | "PLAN product \(.id): 「\(.name)」service=\(.service) kind=\(.kind) → GET /v1/products/\(.id)、404 なら POST /v1/products"),
   ($r.prices[]
     | if .enabled then
@@ -169,7 +169,7 @@ validate_plans() {
 ensure_tax_rate() {
   local want key matches n diff
   want="$(jq -c '.tax_rate' "$PLANS")"
-  key="$(jq -r '.key' <<<"$want")"
+  key="$(jq -r '.id' <<<"$want")"
   api GET /v1/tax_rates --data-urlencode "active=true" --data-urlencode "limit=100"
   require_ok "税率の一覧 GET /v1/tax_rates"
   [ "$(jq -r '.has_more' <<<"$RESP_BODY")" != "true" ] || die 3 "有効な税率が 100 件を超える。手で確かめてから実行する"

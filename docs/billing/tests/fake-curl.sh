@@ -55,7 +55,7 @@ balance() {
 tax_rates() {
   case "$FAKE_SCENARIO" in
     empty | livemismatch) respond 200 '{"object":"list","data":[],"has_more":false}' ;;
-    *) respond 200 "$(jq -c '{object: "list", has_more: false, data: [.tax_rate | {id: "txr_fake", percentage, inclusive, country, tax_type, metadata: {plan_key: .key}}]}' "$FAKE_PLANS")" ;;
+    *) respond 200 "$(jq -c '{object: "list", has_more: false, data: [.tax_rate | {id: "txr_fake", percentage, inclusive, country, tax_type, metadata: {plan_key: .id}}]}' "$FAKE_PLANS")" ;;
   esac
 }
 
