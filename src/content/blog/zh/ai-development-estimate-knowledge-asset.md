@@ -3,16 +3,17 @@ title: "AI开发与定制开发的估算陷入个人经验化的原因——将�
 description: "本文将解析定制开发的估算因人而异的原因，并讲解如何利用GitHub实际业绩、市场行情和工时明细，打造具有充分说服力的估算依据。同时介绍Grift的应用思路。"
 summary: "定制开发的估算之所以陷入个人经验化，是因为所需信息分散在过往项目、销售人员的记忆以及负责人的经验之中。只要在每次估算时将各项目的信息结构化并沉淀下来，就能将依据转化为公司的资产，并在后续项目中重复利用。"
 pubDate: 2026-06-20
-updatedDate: 2026-10-23
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
+ctaIntent: "contract-dev"
 tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "6597c07e3b67000a2e45a3ca7973f943d12f3ea6d4ec70e8c23de473f380a0d7"
-translatedAt: "2026-10-23T06:17:55.415Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 软件定制开发（外包开发）的报价为什么会变得因人而异、过度依赖个人经验？原因很简单。报价所需的信息分散在过往项目、GitHub、工时、风险、销售人员的记忆以及负责人的经验之中。如果这些信息一直停留在个人脑海中，团队的提案质量就无法保持稳定。
@@ -20,11 +21,17 @@ translationModel: "gemini-3.8-flash"
 > **2026年10月20日 补充说明**
 > Grift已于2026年9月终止了报价辅助Web应用的提供，目前已调整方向为从工程师的git历史中提取可验证事实的开源CLI（[griftai.org](https://griftai.org)）。本文中关于Grift的描述均为发布当时的内容。如需咨询定制开发及AI开发的报价，我们通过AI定制开发业务在[联系我们](/contact)页面受理。
 
+本文初版介绍了当时提供的Grift报价辅助Web应用。该提供已于2026年9月结束。现在的Grift CLI是另一种提供形态，用来整理开发记录中可以核对的事实。本文保留报价的想法，并更新了现在的咨询入口。现在的咨询入口是AI受托开发与导入支持。
+
+服务页面是[AI基础构建与AI受托](/services/ai-development/)。
+
+咨询从[联系我们](/contact?intent=contract-dev)进入。这与Grift的试用（PoC）咨询是不同的入口。
+
 在Cor.株式会社看来，报价不仅仅是金额计算，更是与客户建立信任的过程。重点不在于便宜还是昂贵，而在于能否解释清楚“为什么是这个金额”。如果在这里无法给出合理解释，商务洽谈就会沦为单纯的价格博弈。
 
 > **本文所依据的客观数据**
 > - 在发布当期的Grift宣传页中，说明了其通过比对GitHub实际业绩与市场行情，经由5至10次AI需求调研实现需求结构化，并生成市场标准与自社提案的对比报告。
-> - 在GitHub Octoverse 2025中指出，生成式AI正逐渐成为开发的标准配置，AI、智能体（Agent）和类型化语言正在掀起十多年来规模最大的开发变革。
+> - 在GitHub Octoverse 2025中指出，生成式AI正逐渐成为开发的标准配置，AI、智能体（Agent）和类型化语言正在掀起十多年来规模最大的开发变革。报告中的“2025”指2024年9月1日至2025年8月31日。开发者指拥有GitHub账号的人，未特别说明的指标是公开活动。
 > - 在发布当时，Cor.的业绩页面将Grift定位为“基于GitHub实际业绩与市场行情，生成有据可依的参考报价的自研AI报价与评估平台”。
 
 ## 导致报价过度依赖个人的3个原因
@@ -64,6 +71,6 @@ A. 初步整理和依据材料的生成可以交给AI，但最终金额、风险
 ## 参考资料
 
 - [Grift LP](https://griftai.org/) - 在发布当期的LP中确认了GitHub实际业绩与市场行情比对、5至10次AI需求调研、对比报告以及当时的Alpha版市场调研等内容。
-- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 生成式AI正逐渐成为开发的标准配置，80%的新开发者在1周内开始使用Copilot。TypeScript成为GitHub上使用最多的语言。
+- [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/) - 对象期间为2024年9月1日至2025年8月31日。母群体是拥有GitHub账号的开发者，未特别说明的指标是公开活动。80%的新开发者在1周内开始使用Copilot。TypeScript成为GitHub上使用最多的语言。
 - [Cor. HP: 业绩与案例](https://cor-jp.com/works/) - 确认了Engineer Cafe Navigator、Grift、AI SaaS、老旧核心数据库迁移、建筑AI等内容。
 - [Cor. HP: AI × CO-CREATION / 业务概述](https://cor-jp.com/) - 确认了Cor.的业务领域、Grift、本地LLM与安全AI、AI驱动开发、共创理念等内容。

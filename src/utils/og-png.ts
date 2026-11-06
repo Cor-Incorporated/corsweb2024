@@ -1,11 +1,20 @@
-import sharp from 'sharp';
+import { Resvg } from '@resvg/resvg-js';
+import { OG_FONT_FAMILY, ogFontFiles, type OgFontScript } from './og-fonts';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from './og-svg';
 
-export async function renderOgPng(svg: string) {
-  return sharp(new TextEncoder().encode(svg))
-    .resize(OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT, { fit: 'fill' })
-    .png()
-    .toBuffer();
+export async function renderOgPng(svg: string, script: OgFontScript = 'jp') {
+  const family = OG_FONT_FAMILY[script];
+  const resvg = new Resvg(svg, {
+    font: {
+      fontFiles: ogFontFiles(script),
+      // システムのフォントに任せると、CI では日本語が16進の箱になる。
+      loadSystemFonts: false,
+      defaultFontFamily: family,
+      sansSerifFamily: family,
+    },
+  });
+  const png = resvg.render().asPng();
+  return Buffer.from(png);
 }
 
 export function createPngResponse(png: BodyInit) {

@@ -3,15 +3,16 @@ title: "Fundé una empresa para hacer del «Ah, se ha entendido» algo cotidiano
 description: "La historia de cómo Kousuke Terada, nuestro director ejecutivo, extrompetista y diagnosticado con TEA a los 28 años, fundó la empresa de IA Cor.Inc. tras trabajar en ventas para un fabricante de instrumentos musicales y Recruit. Explica las razones por las que busca hacer llegar, mediante la tecnología, aquello que las palabras por sí solas no logran transmitir."
 summary: "El representante de Cor.Inc., Kousuke Terada, es un extrompetista. Habiendo recorrido el mundo de la música y las ventas mientras cargaba con la dificultad de no lograr hacerse entender con palabras, descubrió el código y la IA, y en diciembre de 2023 fundó la empresa. Para acumular en el día a día esa pequeña emoción de decir «Ah, se ha entendido», comienza siempre escuchando para entender en qué punto se encuentra detenida la otra persona."
 pubDate: 2026-10-25
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "founder"
 tags: ["起業", "キャリア", "ASD", "トランペット", "AI"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "1ff9204a09bfab1125ea243b24ad657002c537ac6d2f86aa9cdef2f9d4c4c6da"
-translatedAt: "2026-10-25T01:33:51.629Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "17699ba8eb76466282b208fb0ec30ea1f70d7169a68e390c37323d194ff76210"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 ## El extraterrestre era yo
@@ -106,7 +107,7 @@ La IA expandió mis posibilidades. Hizo posible que una sola persona pudiera con
 
 No obstante, si uno avanza dando por sentadas las respuestas de la IA, a veces acaba dando vueltas en círculos sobre el mismo sitio. Por eso, ahora me detengo un momento a verificar. Leo las fuentes primarias. Mido los datos por mi cuenta.
 
-Grift es un producto propio nacido de esa mentalidad. La trayectoria profesional se puede exagerar. La evidencia no se puede exagerar. Por eso no lo convertimos en una puntuación numérica, sino que mostramos únicamente los hechos comprobables. El juicio corresponde a los humanos.
+Grift es un producto propio nacido de esa mentalidad. Bases comprobables para explicar una trayectoria. No lo convertimos en una puntuación numérica, sino que mostramos únicamente los hechos comprobables. El juicio corresponde a los humanos.
 
 Los LLM locales, que no envían datos confidenciales hacia el exterior, surgen del mismo principio. Existen entornos de trabajo paralizados porque no tienen claro si es seguro entregar datos confidenciales a una IA externa.
 

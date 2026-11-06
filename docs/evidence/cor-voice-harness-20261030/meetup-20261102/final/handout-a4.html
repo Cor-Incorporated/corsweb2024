@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>言葉で指示して、ロボットが動くまで</title>
+<style>
+@page { size: A4; margin: 11mm 14mm; }
+body { font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; font-size: 9.5pt; line-height: 1.45; color: #000; margin: 0; }
+h1 { font-size: 15pt; margin: 0 0 3pt; }
+h2 { font-size: 10.5pt; margin: 7pt 0 3pt; border-bottom: 0.6pt solid #888; }
+p { margin: 0 0 4pt; }
+ul { margin: 0 0 4pt; padding-left: 1.2em; }
+li { margin: 0 0 2pt; }
+code { font-family: Menlo, monospace; font-size: 8.5pt; }
+a { color: #000; text-decoration: none; }
+</style>
+</head>
+<body>
+<h1
+id="言葉で指示してロボットが動くまで">言葉で指示して、ロボットが動くまで</h1>
+<p>北九州フィジカルAIミートアップ #2（2026年11月2日、ATOMica
+北九州、主催 カラビナテクノロジー）<br />
+Cor.株式会社 代表取締役 寺田康佑</p>
+<h2 id="先にお伝えしたいこと">先にお伝えしたいこと</h2>
+<p>ここに書いたものは、すべてシミュレーションです。PM01
+の実機は会場に持ってきていません。この仕組みは、実機ではまだ動かしていません。実機での成功や転倒を推定するものでもありません。</p>
+<h2 id="構成すべてシミュレーション">構成（すべてシミュレーション）</h2>
+<ul>
+<li>GB10（DGX Spark、DGX OS 7.2.3、driver 580.159.03）: Isaac Sim 5.1.0
+と Isaac Lab 2.3.2 で、提供元が公開した PM01
+の学習済み歩行方策（AMP、2026-09-14、model_19999）を再生しました。605
+ステップで 2.95 m 前に進み、腰の高さは 0.80〜0.81 m
+でした。重みは提供元のもので、Cor.株式会社では学習しておらず、リポジトリにも入れていません。</li>
+<li>同じ重みを Thor の MuJoCo へ（sim2sim）: GB10 で再生した
+<code>model_19999</code> と同じ
+run（<code>2026-09-14_22-46-03</code>）の MNN の重みを、Thor の上の公開
+SDK の runner に載せ、MuJoCo の PM01 に 10 秒の前進を指示しました。5
+回とも立ったまま前に進み（+4.34〜4.37 m、腰の高さの最小 0.799
+m）、転倒は 0 回でした。</li>
+<li>Thor（Jetson AGX Thor）: 推論は CPU だけでしています。上の重みの推論
+1 ステップは、sim2sim を同時に回した 3,000 回で平均 0.25 ms（制御周期 10
+ms の 2.5%）、最も遅い 1 回で 4.2 ms、周期を超えた回は 0
+回でした。時間は runner
+の外から同じ推論の関数を同じ重みで呼んで測り、入力は乱数です。runner
+の中の 1 周は測っていません。sim2sim のあいだの Thor は、CPU 41 °C
+以下、消費電力は最大 47.4 W でした。</li>
+<li>スイカ割りの PM01 の歩行と振りは、公開 SDK の RL runner
+が、シミュレーションで学習された MNN
+の方策（<code>251009_221907_41000.mnn</code>、<code>dance.mnn</code>）を
+Thor の CPU で推論して動かします。</li>
+<li>PM01: 公開 SDK と MuJoCo のシミュレーションの中のロボットです。</li>
+<li>まだやっていないこと: 実機での確認です。</li>
+</ul>
+<h2 id="スイカ割りシミュレーション">スイカ割り（シミュレーション）</h2>
+<p>スイカの真の位置を見ている誘導役が、決まった指示の言葉だけでロボットを導きます。</p>
+<ul>
+<li>最初の版（v1）: 10 回中 6 回命中。誘導役に欠陥がありました。</li>
+<li>直した版（v2）: 10 回中 10 回命中（Wilson 95% 区間 72〜100%）。</li>
+<li>本番の 20 回と、10 月 30 日の夜の 2
+回で、シミュレーションのロボットの転倒は 0
+回でした。調整の途中では転倒した回もあります。</li>
+<li>v2 の誘導役にも、命中のあとにもう 1
+回指示を出す欠陥が残っています。集計は変わりませんが、まだ直していません。</li>
+</ul>
+<h2 id="うまくいかなかったこと">うまくいかなかったこと</h2>
+<p>言葉の指示を動きの計画にして、承認してから送る仕組みが、自分で立てた計画を自分で承認していました。今は、既定では人が
+y
+を入力しないと進みません。それまでに測った回の承認は、人の目視ではなくスクリプトでした。</p>
+<h2 id="当日見せるものthor-の上のシミュレーション">当日見せるもの（Thor
+の上のシミュレーション）</h2>
+<ul>
+<li>Thor 本体の起動は 33.8 秒、このシミュレーションは起動スクリプト 1
+つで 20.6 秒で立ち上がります。待機中の消費電力は 21〜31 W です。</li>
+<li>画面のボタンか文字で指示できます。進む距離は 0.25 / 0.5 / 1 / 1.5 /
+2 m の 5 つで、60 秒のあいだに 3 回まで振れます。</li>
+<li>実機で確かめるのは、次の段階です。</li>
+</ul>
+<h2 id="cor株式会社について">Cor.株式会社について</h2>
+<p>福岡の AI 実装会社です。フィジカル AI
+の取り組みを説明するページは、まだ用意していません。</p>
+<p>会社とブログは次のページからご覧いただけます。</p>
+<ul>
+<li><a href="https://cor-jp.com/">https://cor-jp.com/</a>
+（トップ）</li>
+<li><a href="https://cor-jp.com/about/">https://cor-jp.com/about/</a>
+（Cor.株式会社について）</li>
+<li><a
+href="https://cor-jp.com/company/">https://cor-jp.com/company/</a>
+（会社概要）</li>
+<li><a href="https://cor-jp.com/blog/">https://cor-jp.com/blog/</a>
+（ブログ）</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,15 @@
+社内向けの手順書を書いてください。題は「cor-jp.com のブログ記事を新しく書いて、公開の準備をするまで」です。読み手は新しく入ったスタッフで、エンジニアではありません。下の資料にない手順やツールは書かないでください。Markdown で、見出しと番号付きの手順を使ってかまいません。
+
+資料:
+- 記事は管理画面（Sveltia CMS、https://cor-jp-cms-admin.web.app/ ）で書けます。CMS で保存すると、develop 向けの PR ができます。
+- エンジニアは `src/content/blog/ja/<記事名>.md` を直接作ってもかまいません。
+- frontmatter の項目は、title、description（空にしない）、pubDate、category（ai、engineering、founder、lab のどれか）、tags、author（"Terisuke"）、lang（"ja"）です。任意で summary（2〜3 文。記事の上の「この記事の要点」に出ます）と image を付けられます。
+- 出典は、最後の「## 参考資料」にリンクの箇条書きで置きます。本文に営業の誘い文句を入れません。
+- 文言の検査は `npm run blog:check -- src/content/blog/ja/<記事名>.md` です。
+- 推敲の検査は `npm run polish -- prepare --file <記事>` で、書き直したら `npm run polish -- check --file <記事> --final <最終稿>` です。
+- 英語・中国語・韓国語・スペイン語の訳は、PR を develop に出すと CI が作って PR に足します。訳のファイルは手で直しません。
+- `npm run build` が通ることを確かめます。frontmatter が間違っているとここで落ちます。
+- merge と公開は代表が行います。develop から main へのリリースで本番に出ます。
+- ISMS について書くときは「2026年10月に ISO/IEC 27001 の第2段階審査を終え、2026年12月ごろの認証登録を見込んでいる」までにします。「取得済み」とは書きません。
+
+作業用のファイルを作るときは tmp/ の下に置いてください。完成した手順書の全文を、<<<DOC だけの行と DOC>>> だけの行で挟んで、返答の最後に出してください。

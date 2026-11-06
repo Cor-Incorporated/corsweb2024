@@ -1,9 +1,9 @@
 ---
-title: "이력서의 연수로는 일하는 방식을 알 수 없다. 점수를 매기지 않는 Grift로 실제 OSS 4개를 측정해 보았다"
-description: "이력서의 연수나 맨먼스(man-month)만으로는 그 사람이 어떤 방식으로 일해 왔는지 알 수 없습니다. Cor.이 점수도 순위도 매기지 않는 Grift를 만든 이유와 MBTI와의 차이점, 실제 OSS 4개를 측정하여 보였던 것과 보이지 않았던 것에 대해 헤드헌팅·SES 영업 담당자 및 엔지니어분들을 위해 전합니다."
-summary: "Grift는 git에 남은 변경 기록을 바탕으로 업무 성향과 그 근거가 된 건수를 도출합니다. 본인이 질문에 답하여 유형을 판별하는 MBTI와 달리, 근거가 자기 신고가 아닌 기록이므로 동일한 기록이라면 누가 세어도 같은 값이 나옵니다. 실제 OSS 4개를 측정해 보니 작업 영역이나 변경 간격의 차이는 보였던 반면, 리뷰의 질이나 회의, 본인의 동의가 없는 경험은 보이지 않았습니다. 수치는 분모 및 규칙과 함께 읽어야 하며, 판단하는 것은 사람입니다."
+title: "Git 이력에서 무엇이 보이고 무엇이 보이지 않는가. Grift로 OSS 4개를 검산했다"
+description: "git 이력에서, 밝힌 규칙으로 셀 수 있는 것과 셀 수 없는 것을 나눕니다. 실재하는 OSS 4개를 저장소 단위로 검산했습니다. 사람의 능력이나 기록이 완전하다는 것은 보증하지 않습니다."
+summary: "Grift가 확인하는 것은, 건네받은 기록을 명시한 규칙으로 센 결과입니다. 입력 범위와 commit, CLI 버전, 정의와 설정이 같으면 누가 세어도 같은 값이 됩니다. 실제 OSS 4개를 재면 작업 영역과 변경 간격의 차이는 보였지만, 사람의 능력이나 기록의 완전성은 보증하지 않습니다."
 pubDate: 2026-10-25
-updatedDate: 2026-10-26
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
 ctaIntent: "grift-team-beta"
@@ -11,9 +11,9 @@ tags: ["Grift", "OSS", "CLI", "git", "実測"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "b44f7e8456ab016f75a19cebd16e68f08f1dd0d7ff7409e14f2d35c261b63b91"
-translatedAt: "2026-10-26T13:32:01.659Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "75880e785376c1dd4282d8cbc16ea72155087b188d630bf6e14a8cf249212451"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 이력서에 'Python 5년'이라고 적혀 있어도, 그 5년 동안 어떤 일을 해왔는지는 알 수 없습니다.
@@ -26,11 +26,13 @@ translationModel: "gemini-3.8-flash"
 
 Grift는 이 간극을 메우기 위해 만든 자사 제품입니다. git(소프트웨어 변경 내역을 한 건씩 기록하는 시스템)에 남은 기록에서 업무 성향과 그 근거가 된 건수를 추출합니다. 점수도, 순위도 매기지 않습니다.
 
-대표인 데라다 코스케은 리쿠르트에서 구인 광고 영업을 하던 시절, 말이 닿지 않는 답답함을 겪었습니다. 그는 Grift에 대해 "경력은 부풀릴 수 있다. 증거는 부풀릴 수 없다."라고 썼습니다.
+대표인 데라다 코스케은 리쿠르트에서 구인 광고 영업을 하던 시절, 말이 닿지 않는 답답함을 겪었습니다. Grift의 말은 "경력 설명에, 확인할 수 있는 근거를."입니다.
+
+Grift가 확인하는 것은, 건네받은 기록을 명시한 규칙으로 센 결과입니다. 기록되지 않은 일, 기록을 만든 배경, 성과에 대한 실제 기여는 그것만으로는 알 수 없습니다. 다시 계산할 수 있다는 것은 사람의 능력이나 기록의 완전성을 보증하는 것이 아닙니다.
 
 점수화하면 어떤 일이 벌어질까요? 서로 다른 종류의 기록을 하나의 숫자로 뭉뚱그리면, 무엇을 셌고 무엇을 세지 못했는지가 사라집니다. 그리고 점수가 있으면 점수가 높은 사람이 우수한 사람처럼 보입니다. 줄을 세우면 순위가 됩니다.
 
-Grift를 통해 우리가 하고자 하는 일은 사람을 순위로 줄 세우는 것이 아닙니다. 그 사람의 업무 성향에 맞는 프로젝트와 사람을 연결하는 것입니다. 이를 위해 검증 가능한 사실만을 보여줍니다. 판단은 사람의 몫입니다.
+Grift가 지향하는 것은 사람을 순위로 줄 세우는 것이 아닙니다. 건네받은 기록을 명시한 규칙으로 센 결과를 남기는 것입니다. 판단은 사람의 몫입니다.
 
 ## MBTI와의 차이점
 
@@ -42,7 +44,7 @@ Grift는 질문을 하지 않습니다. 유형 이름도 붙이지 않습니다.
 
 차이점은 영업 담당자의 고민에 대입해 보면 쉽게 이해할 수 있습니다.
 
-이력서의 자기 신고 내용을 어디까지 믿어야 할지 알 수 없습니다. MBTI 결과 역시 이력서와 마찬가지로 본인의 응답에서 나옵니다. 반면 Grift의 근거는 기록입니다. 동일한 기록을 전달하면 누가 집계하더라도 같은 값이 나옵니다.
+이력서의 자기 신고 내용을 어디까지 믿어야 할지 알 수 없습니다. MBTI 결과 역시 이력서와 마찬가지로 본인의 응답에서 나옵니다. 반면 Grift의 근거는 기록입니다. 입력 범위와 commit, CLI 버전, 정의와 설정이 같으면 누가 집계하더라도 같은 값이 나옵니다.
 
 연수나 맨먼스로는 일하는 방식을 알 수 없습니다. Grift는 어떤 영역을 다루어 왔는지(테스트, 문서, 본체 프로그램 등), 변경을 어느 정도의 간격으로 내고 있는지, 수정 작업에 테스트가 동반되는지를 건수로 보여줍니다.
 
@@ -270,7 +272,7 @@ grift project click --requirements python-lib-maintenance.toml --format both --o
 - [grift 리포트 확인 가이드(metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - 지표별 알기 쉬운 설명
 - [TEP 이용 규범(norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - 부재를 부정적으로 해석하지 않음, 가중치 부여 및 환산 금지
 - ['점수도 순위도 매기지 않는다'를 구현으로 지켜내는 방법(Cor.주식회사 블로그, 2026년 10月 25일)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - 0.8 버전에서 확립한 5가지 조건
-- ['아, 전달됐다'가 일상이 되는 세상을 위해 회사를 만들었다(Cor.주식회사 블로그)](https://cor-jp.com/blog/founder-story/) - 대표의 이야기와 Grift가 탄생한 배경
+- [대표가 회사를 만든 이야기(Cor.주식회사 블로그)](https://cor-jp.com/blog/founder-story/) - 대표의 이야기와 Grift가 탄생한 배경
 - [Ethical Use of the MBTI(The Myers & Briggs Foundation)](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - MBTI 활용 원칙(자발적 참여 원칙, 채용 목적 사용 금지)
 - [MBTI Basics(The Myers & Briggs Foundation)](https://www.myersbriggs.org/my-mbti-personality-type/mbti-basics/) - 4가지 선호 지표와 16가지 성격 유형
 - [pallets/click](https://github.com/pallets/click) - 측정 대상 OSS(HEAD `36baa15`)

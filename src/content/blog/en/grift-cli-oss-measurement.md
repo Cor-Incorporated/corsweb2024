@@ -1,9 +1,9 @@
 ---
-title: "Years on a Resume Don't Show How Someone Works: Measuring 4 Real-World OSS Projects with Grift, Without Assigning Scores"
-description: "Years of experience and person-months on a resume alone do not reveal how a person actually works. For recruiting agencies, SES sales representatives, and engineers, this article explains why Cor. created Grift—a tool that assigns neither scores nor rankings—along with how it differs from MBTI, and what became visible and remained invisible when measuring four real-world OSS projects."
-summary: "Grift derives work tendencies and the underlying counts that support them directly from commit history recorded in git. Unlike MBTI, where individuals answer questions to determine their type, the basis comes from records rather than self-reporting, meaning anyone counting the same records will arrive at the exact same values. When measuring four real-world OSS projects, differences in areas of work and intervals between changes were visible, while review quality, meetings, and experiences lacking the individual's consent were not. Numbers must be read alongside their denominators and rules, and the final judgment rests with humans."
+title: "What Git History Can and Cannot Show: Checking Four OSS Projects with Grift"
+description: "This article separates what can be counted from a git history under stated rules, and what cannot. Four real OSS projects were checked at repository level. It does not guarantee a person's ability or that the record is complete."
+summary: "What Grift checks is the result of counting a given record under stated rules. If the input range and commit, the CLI version, and the definitions and settings are the same, anyone arrives at the same values. Measuring four real OSS projects showed differences in work areas and change intervals, while it does not guarantee a person's ability or the completeness of the record."
 pubDate: 2026-10-25
-updatedDate: 2026-10-26
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
 ctaIntent: "grift-team-beta"
@@ -11,9 +11,9 @@ tags: ["Grift", "OSS", "CLI", "git", "実測"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "b44f7e8456ab016f75a19cebd16e68f08f1dd0d7ff7409e14f2d35c261b63b91"
-translatedAt: "2026-10-26T13:30:44.576Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "75880e785376c1dd4282d8cbc16ea72155087b188d630bf6e14a8cf249212451"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 Even if a resume says "Python: 5 years," it does not tell you what kind of work was done during those 5 years.
@@ -26,11 +26,13 @@ Staffing agency and SES (System Engineering Service) sales representatives often
 
 Grift is an in-house product we built to bridge this gap. From records left in git (a system that records software changes one by one), it extracts work tendencies alongside the counts that serve as the evidence behind them. It produces neither scores nor rankings.
 
-When our representative, Kousuke Terada, was in recruitment advertising sales at Recruit, he experienced the frustration of words failing to get through. Regarding Grift, he writes: "A resume can be embellished. Evidence cannot."
+When our representative, Kousuke Terada, was in recruitment advertising sales at Recruit, he experienced the frustration of words failing to get through. The words for Grift are: "Verifiable grounds for explaining a career."
+
+What Grift checks is the result of counting a given record under stated rules. Work that was not recorded, the background of how a record was made, and the actual contribution to an outcome are not known from that count alone. Being able to recalculate does not guarantee a person's ability or the completeness of the record.
 
 What happens when you reduce things to a score? Rounding different types of records into a single number erases what was counted and what could not be counted. Furthermore, once a score exists, whoever has a higher score looks like the better candidate. Line them up, and it becomes a ranking.
 
-What we want to do with Grift is not to rank people. It is to connect people with projects that match their work tendencies. To that end, we only present verifiable facts. The decision-making is left to humans.
+What Grift aims to do is not to rank people. It is to keep the result of counting a given record under stated rules. The decision-making is left to humans.
 
 ## How It Differs from the MBTI
 
@@ -42,7 +44,7 @@ Grift asks no questions. It does not assign type names. Nor is it a tool for per
 
 The difference becomes easier to understand when applied to the challenges sales representatives face.
 
-*Not knowing how far to trust self-reported statements on a resume.* MBTI results, like resumes, are derived from the individual's own answers. Grift's basis is records. Given the same records, anyone will arrive at the exact same numbers.
+*Not knowing how far to trust self-reported statements on a resume.* MBTI results, like resumes, are derived from the individual's own answers. Grift's basis is records. If the input range and commit, the CLI version, and the definitions and settings are the same, anyone arrives at the same values.
 
 *Not knowing a person's work style from years of experience or person-months.* Grift presents counts showing which areas they have touched (tests, documentation, core program code, etc.), the intervals at which they ship changes, and whether tests accompany fix changes.
 
@@ -270,7 +272,7 @@ The output is divided into two sections, "Project Declaration" and "Observed Val
 - [Reading Grift Reports (metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - Plain-language guide to each metric
 - [TEP Code of Conduct (norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - Do not treat absence as negative; prohibition of weighting and conversion
 - [How to Enforce "No Scores, No Rankings" in Implementation (Cor.Inc. Blog, October 25, 2026)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - The five conditions established in 0.8
-- [To Make "Ah, I Got Through" an Everyday Reality, I Founded a Company (Cor.Inc. Blog)](https://cor-jp.com/blog/founder-story/) - Representative's story and the thinking behind Grift
+- [The story of the representative founding the company (Cor.Inc. blog)](https://cor-jp.com/blog/founder-story/) - Representative's story and the thinking behind Grift
 - [Ethical Use of the MBTI (The Myers & Briggs Foundation)](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - MBTI usage guidelines (voluntary nature, not for hiring purposes)
 - [MBTI Basics (The Myers & Briggs Foundation)](https://www.myersbriggs.org/my-mbti-personality-type/mbti-basics/) - The four preferences and 16 types
 - [pallets/click](https://github.com/pallets/click) - Measured OSS (HEAD `36baa15`)

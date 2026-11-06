@@ -1,0 +1,22 @@
+cor-jp.com のブログに載せる記事を 1 本書いてください。
+
+- カテゴリは engineering（技術の記事）です。書き手は代表の寺田康佑です。
+- 読み手は、人材紹介会社・SES の営業の方と、エンジニア本人です。
+- 題材は、Grift CLI を自分のリポジトリで動かす手順と、出てくる数字の読み方です。
+- 本文は 2,000〜3,000 字にしてください。
+- frontmatter（title、description、summary、pubDate、category、tags、author、lang）を付け、最後に「## 参考資料」を置いてください。
+- 下の資料にない事実、数字、日付、顧客名は書かないでください。
+
+資料:
+- Grift CLI は、git 履歴から後で検算できる事実を取り出す OSS です。MIT ライセンスで、Cor.株式会社が作っています。
+- 執筆時点の版は 0.9.1（2026-10-28 公開）です。Python 3.11 以上と git が要ります。
+- 入れ方は `pipx install grift-cli` です。対象のリポジトリで `grift report` を実行すると、`.grift/report.json` と `.grift/report.md` ができます。
+- `grift verify` は、レポートに記録された条件で再計算し、一致すれば VERIFIED、違えば MISMATCH、再計算できなければ CANNOT_VERIFY を返します。
+- 出さないものは、技量の総合点、シニア／ジュニアなどのランク、採用の合否、AI を使ったかどうかの検出や減点です。観測できなかった値は 0 で埋めず、not_observed や unresolved として残します。
+- 2026 年 8 月の Qiita 記事（v0.5.6 の時点）で使った例: 公開 OSS の pallets/click で、test co-change が `0.2664 ratio（73 of 274）` と出ました。本人に帰属した本番コードの変更 274 件のうち、73 件では同じコミットでテストも変わっていた、という意味です。ここから、テストが通った、テストの質が高い、本人が優秀だ、とは言えません。
+- 分析は手元で完結します。LLM を使わず、テレメトリを持たず、結果を自動で送りません。
+- 紹介会社・SES 企業には、テスト導入（PoC）を個別に案内しています。料金も個別の案内です。
+- リンク: GitHub https://github.com/Cor-Incorporated/grift-cli 、PyPI https://pypi.org/project/grift-cli/ 、利用規範 https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md
+- pubDate は 2026-10-30 です。
+
+作業用のファイルを作るときは tmp/ の下に置いてください。完成した記事の全文を、<<<DOC だけの行と DOC>>> だけの行で挟んで、返答の最後に出してください。公開や push はしないでください。

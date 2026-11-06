@@ -1,9 +1,9 @@
 ---
-title: "Los años de experiencia en el currículum no revelan la forma de trabajar: evaluamos cuatro proyectos reales de OSS con Grift, sin asignar puntuaciones"
-description: "Los años de experiencia o los meses-persona que figuran en un currículum no bastan para saber cómo trabaja una persona. Escribimos para reclutadores, comerciales de SES e ingenieros sobre por qué Cor. creó Grift —que no asigna puntuaciones ni clasificaciones—, en qué se diferencia del MBTI y qué pudimos y no pudimos observar al evaluar cuatro proyectos reales de OSS."
-summary: "Grift identifica las tendencias de trabajo y el recuento que las fundamenta a partir del historial de cambios registrado en git. A diferencia del MBTI, que determina un tipo a partir de las respuestas del propio individuo, su base no son las declaraciones, sino los registros, por lo que cualquiera obtendrá el mismo valor a partir de los mismos datos. Al evaluar cuatro proyectos reales de OSS, se apreciaron diferencias en el alcance de las tareas y los intervalos entre cambios, pero no la calidad de las revisiones, las reuniones ni la experiencia no respaldada por el consentimiento del interesado. Los números deben interpretarse junto con su denominador y sus reglas; la decisión final corresponde a las personas."
+title: "Qué se ve y qué no se ve en el historial de Git: comprobamos cuatro OSS con Grift"
+description: "Separamos qué se puede contar en un historial de git con reglas explícitas y qué no. Comprobamos cuatro OSS reales por repositorio. No garantiza la capacidad de una persona ni que el registro esté completo."
+summary: "Lo que Grift comprueba es el resultado de contar un registro entregado con reglas explícitas. Si el alcance de la entrada y el commit, la versión de la CLI y las definiciones y ajustes son los mismos, cualquiera obtiene el mismo valor. Al medir cuatro OSS reales se vieron diferencias de ámbito e intervalo, pero no se garantiza la capacidad de una persona ni la integridad del registro."
 pubDate: 2026-10-25
-updatedDate: 2026-10-26
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
 ctaIntent: "grift-team-beta"
@@ -11,9 +11,9 @@ tags: ["Grift", "OSS", "CLI", "git", "実測"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "b44f7e8456ab016f75a19cebd16e68f08f1dd0d7ff7409e14f2d35c261b63b91"
-translatedAt: "2026-10-26T13:32:36.914Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "75880e785376c1dd4282d8cbc16ea72155087b188d630bf6e14a8cf249212451"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 Aunque un currículum diga «5 años de Python», no sabemos qué tipo de trabajo se ha realizado durante esos 5 años.
@@ -26,11 +26,13 @@ El personal de ventas de las agencias de empleo y de servicios de SES se queda a
 
 Grift es un producto propio creado para cerrar esta brecha. A partir de los registros conservados en git (el mecanismo que registra los cambios del software uno a uno), extrae las tendencias de trabajo y el recuento de casos que les sirven de fundamento. No genera puntuaciones ni clasificaciones.
 
-Cuando nuestro director ejecutivo, Kousuke Terada, trabajaba en ventas de anuncios de empleo en Recruit, experimentó la frustración de ver que las palabras no transmitían la realidad. Sobre Grift escribe: «El currículum se puede inflar. Las pruebas no se pueden inflar».
+Cuando nuestro director ejecutivo, Kousuke Terada, trabajaba en ventas de anuncios de empleo en Recruit, experimentó la frustración de ver que las palabras no transmitían la realidad. La frase de Grift es: «Bases comprobables para explicar una trayectoria».
+
+Lo que Grift comprueba es el resultado de contar un registro entregado con reglas explícitas. El trabajo no registrado, el contexto en el que se hizo el registro y la contribución real a un resultado no se conocen solo con eso. Poder recalcular no garantiza la capacidad de una persona ni la integridad del registro.
 
 ¿Qué ocurre cuando se convierte en una puntuación? Al redondear registros de distinta naturaleza en un solo número, desaparece lo que se contó y lo que no se pudo contar. Además, si hay una puntuación, quien tiene la más alta parece la mejor persona. Si se ordenan, se convierte en un ranking.
 
-Lo que queremos hacer con Grift no es clasificar a las personas en un ranking. Es conectar a las personas con los proyectos que mejor se adaptan a su tendencia de trabajo. Para ello, solo mostramos hechos comprobables. El juicio corresponde a los humanos.
+Lo que Grift busca no es clasificar a las personas en un ranking. Es conservar el resultado de contar un registro entregado con reglas explícitas. El juicio corresponde a los humanos.
 
 ## Diferencias con el MBTI
 
@@ -42,7 +44,7 @@ Grift no hace preguntas. Tampoco asigna nombres a tipos. No es una herramienta p
 
 La diferencia resulta fácil de entender si la aplicamos a las dificultades del personal comercial.
 
-No saber hasta qué punto confiar en lo autodeclarado en el currículum. Los resultados del MBTI, al igual que el currículum, provienen de las respuestas del propio individuo. El fundamento de Grift son los registros. Si se entregan los mismos registros, cualquier persona obtendrá el mismo valor al contarlos.
+No saber hasta qué punto confiar en lo autodeclarado en el currículum. Los resultados del MBTI, al igual que el currículum, provienen de las respuestas del propio individuo. El fundamento de Grift son los registros. Si el alcance de la entrada y el commit, la versión de la CLI y las definiciones y ajustes son los mismos, cualquiera obtiene el mismo valor.
 
 Con los años de experiencia o las personas-mes, no se conoce la forma de trabajar. Grift muestra mediante recuentos numéricos qué áreas se han tocado (pruebas, documentación, programa principal, etc.), con qué intervalo se publican los cambios y si los cambios de corrección van acompañados de pruebas.
 
@@ -270,7 +272,7 @@ La salida se divide en dos secciones: «Declaración de la parte del proyecto» 
 - [Cómo leer los informes de grift (metrics-guide)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - Explicación accesible de cada indicador.
 - [Normas de uso de TEP (norms)](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - No interpretar la ausencia de forma negativa; prohibición de ponderaciones y conversiones.
 - [Cómo cumplir en la implementación con «no asignar puntuaciones ni rankings» (Blog de Cor.Inc., 25 de octubre de 2026)](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - Las 5 condiciones establecidas en la 0.8.
-- [Fundé una empresa para hacer del «vaya, se ha transmitido» algo cotidiano (Blog de Cor.Inc.)](https://cor-jp.com/blog/founder-story/) - Palabras del director ejecutivo e ideas que dieron origen a Grift.
+- [La historia de cómo el representante fundó la empresa (blog de Cor.Inc.)](https://cor-jp.com/blog/founder-story/) - Palabras del director ejecutivo e ideas que dieron origen a Grift.
 - [Ethical Use of the MBTI (The Myers & Briggs Foundation)](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - Directrices de uso del MBTI (carácter voluntario, no apto para fines de contratación).
 - [MBTI Basics (The Myers & Briggs Foundation)](https://www.myersbriggs.org/my-mbti-personality-type/mbti-basics/) - Las 4 preferencias y los 16 tipos.
 - [pallets/click](https://github.com/pallets/click) - OSS medido (HEAD `36baa15`).

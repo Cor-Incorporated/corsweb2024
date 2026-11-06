@@ -1,55 +1,66 @@
 ---
-title: "7x Productivity Through AI-Driven Development: My Real-World Experience"
-description: "A practical case study on how combining the latest AI tools into a development workflow increased GitHub contributions sevenfold, from around 50 to over 350 per month."
-summary: "Since switching to AI-driven development, my GitHub contributions have increased sevenfold, from around 50 to over 350 per month. I generate instructions and code using Claude Desktop and Claude Code, then refine and finalize everything with CodeRabbit reviews and Cursor."
+title: "How GitHub activity changed with AI-assisted development: about 20–40 a month in late 2024, about 300 in May 2025"
+description: "GitHub contribution counts were about 20–40 a month in the second half of 2024, and about 300 in May 2025. The count is GitHub's standard total, including issues, pull requests and reviews, based on the graph posted on 30 May 2025. It is not a rate of development speed or delivery volume."
+summary: "GitHub contribution counts (GitHub's standard total, including issues, pull requests and reviews) were about 20–40 a month in the second half of 2024, and about 300 in May 2025. The \"7x\" in the first edition was a rounding that treated the period before using AI as about 50 a month. Quality, rework and working time were not compared under the same conditions."
 pubDate: 2024-01-15
-updatedDate: 2026-10-23
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "ai"
-tags: ["AI", "開発効率", "Cursor", "CodeRabbit", "GitHub Copilot"]
+ctaIntent: "contract-dev"
+tags: ["AI", "コントリビュート", "Cursor", "CodeRabbit", "GitHub Copilot"]
 lang: "en"
 featured: true
-translationSourceHash: "ed0176d934a14b7285d9bbf477e8c07d66cff7938bf7a6ae93e9e8698ce3c118"
-translatedAt: "2026-10-23T06:15:07.984Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "955397d96732625a2361532f533d4934ab6c77e0cc2b5d2853afae8f1f9b3d47"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
-## 7x Productivity with AI-Driven Development: My Real Experience
+GitHub contribution counts (GitHub's standard total, including issues, pull requests and reviews) were about 20–40 a month in the second half of 2024. In May 2025 they were about 300 (from the graph posted on 30 May 2025).
 
-Switching from traditional development methods to AI-driven development dramatically boosted my development productivity. My GitHub contribution count, which used to be around 50 at most per month, has surged to over 350 per month. That is a 7x increase. It is no joke—it really did multiply by seven. Here, I have written down everything about how I did it.
+The "7x" in the first edition was a rounding that treated the period before using AI as about 50 a month.
 
-## Building an AI-Driven Development Workflow
+This count does not show that development speed or delivery volume became some multiple.
 
-### 1. Automating Code Generation
+This article looks back at which tasks were given to AI at the time, and what became easier to move forward. Quality, rework and actual working time were not compared under the same conditions. Those improvement rates are not claimed.
 
-I have Claude Code write the code. First, I refine the instructions through a dialogue with Claude Desktop, and then pass those contents to Claude Code in the terminal. In just a few minutes, the basic skeleton code is ready. From there, I layer on specific instructions, such as "Add a method to this class and write unit tests for it."
+The comparison is the monthly count in the second half of 2024 and the count in May 2025. Whether counts from private repositories are included is not known from public information. No new denominator or quality metric was created to fit the old numbers.
 
-### 2. Streamlining Code Reviews
+## How the work was split at the time
 
-A clever rabbit called CodeRabbit handles the code reviews. When you create a PR, it automatically starts the review, leaving comments directly on the PR pointing out potential bugs, security vulnerabilities, coding standard violations, and more. I fix the flagged areas using Cursor's Agent feature. What a wonderful era we live in.
+### Writing code
 
-## Actual Measured Data
+Code was written with Claude Code. First an instruction was worked out in conversation with Claude Desktop, then passed to Claude Code in the terminal. In a few minutes there was code that formed a basic skeleton. From there, concrete instructions were stacked, such as "add a method to this class and write a unit test."
 
-What I measured was the number of GitHub contributions. Previously, my contributions to personal projects and open source amounted to around 50 per month at most. Since I began developing alongside AI, that number has exceeded 350 per month.
+### Review
 
-However, contributions are not just commit counts. Under GitHub's definition, issues, pull requests, reviews, and other activities are also counted alongside commits. The background details behind these numbers are covered in the note article listed in the references.
+When a pull request was opened, CodeRabbit started a review and commented on the pull request about possible bugs, security notes and differences from coding conventions. The noted places were fixed with Cursor's Agent feature. That does not mean the comments find everything.
 
-## Toolchain Details
+## What was counted
 
-### Core Tools - My Partners
+What was counted is the GitHub contribution count. In the second half of 2024 it was about 20–40 a month. In May 2025 it was about 300. Both are within the graph posted on 30 May 2025.
 
-- Cursor: An AI-integrated editor. I use the Agent feature to fix flagged areas (I can no longer live without it)
-- Claude Desktop: Refines instructions through dialogue
-- Claude Code: Writes code based on the instructions
-- CodeRabbit: A clever rabbit that automatically reviews code
+A contribution is not a commit count. Under GitHub's definition, issues, pull requests and reviews are counted as well as commits.
 
-This workflow does not just boost efficiency; it transforms the development experience itself. It no longer feels like writing code, but rather like solving problems through dialogue with AI.
+## Tools in use
+
+- Cursor: an editor with AI built in. Noted places were fixed with the Agent feature
+- Claude Desktop: working out instructions in conversation
+- Claude Code: writing code from the instructions
+- CodeRabbit: automatic review on pull requests
+
+The feeling at the time was closer to solving problems in dialogue with AI than to writing code line by line. That is a feeling, not a measurement of working time or delivery volume.
 
 ## References
 
-- [How I achieved 7x development speed by combining the latest AI tools: My blazingly fast AI-driven development](https://note.com/cor_instrument/n/n800a959f7284) (note, June 1, 2025). An article detailing how my GitHub contributions jumped from around 50 per month to over 350.
+The title of the note article dated 1 June 2025 says development speed became 7x. The numbers in this company article follow the graph of 30 May 2025. They are not treated as a rate of speed or delivery volume.
 
-These are the services I actually use.
+https://note.com/cor_instrument/n/n800a959f7284
+
+The monthly contribution graph is in the post of 30 May 2025.
+
+https://x.com/cor_terisuke/status/1928266812019368121
+
+- [GitHub Docs: Profile contributions](https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference) - the official description of what is counted as a contribution
 
 https://cor-jp.com/
 

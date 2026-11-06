@@ -145,6 +145,39 @@ describe('i18n CLI', () => {
     ).toBe('mock-model');
   });
 
+  it('translates a published article and leaves a missing draft untranslated', async () => {
+    const draft = JA_BLOG.replace('lang: "ja"\n', 'lang: "ja"\nisDraft: true\n');
+    repo = await createTempRepo({
+      'blog/ja/draft.md': draft,
+      'blog/ja/alpha.md': JA_BLOG,
+    });
+    const check = await cli(['--check', '--langs', 'en']);
+    expect(check.code).toBe(1);
+    expect(check.out.text()).toContain('isDraft のため翻訳を見送り: 1 件（blog/draft）');
+    expect(check.out.text()).toContain('blog/alpha → en');
+    expect(check.out.text()).not.toContain('blog/draft → en');
+
+    const write = await cli(['--write', '--langs', 'en']);
+    expect(write.code).toBe(0);
+    expect(write.created).toBe(1);
+    expect(existsSync(file('blog/en/draft.md'))).toBe(false);
+    expect(existsSync(file('blog/en/alpha.md'))).toBe(true);
+  });
+
+  it('passes --check and does not call the API when the only article is an isDraft', async () => {
+    const draft = JA_BLOG.replace('lang: "ja"\n', 'lang: "ja"\nisDraft: true\n');
+    repo = await createTempRepo({ 'blog/ja/draft.md': draft });
+    const held = await cli(['--check', '--langs', 'en']);
+    expect(held.code).toBe(0);
+    expect(held.out.text()).toContain('isDraft のため翻訳を見送り: 1 件（blog/draft）');
+    expect(held.out.text()).toContain('✓ すべての翻訳が ja と同期しています');
+    const heldWrite = await cli(['--write', '--langs', 'en']);
+    expect(heldWrite.code).toBe(0);
+    expect(heldWrite.created).toBe(0);
+    expect(heldWrite.client.calls).toHaveLength(0);
+    expect(existsSync(file('blog/en/draft.md'))).toBe(false);
+  });
+
   it('--dry-run shows the plan without creating a client or writing files', async () => {
     repo = await createTempRepo({ 'blog/ja/alpha.md': JA_BLOG });
     const result = await cli(['--write', '--dry-run']);

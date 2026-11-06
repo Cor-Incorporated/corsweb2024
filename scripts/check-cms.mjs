@@ -198,8 +198,7 @@ export function configDrift(config, contract) {
       same(failures, collection.icon, expected.icon, `${here} icon`);
       same(failures, collection.folder, expected.folder, `${here} folder`);
       same(failures, collection.create, true, `${here} create`);
-      same(failures, collection.delete, false, `${here} delete`);
-      if (expected.delete !== false) failures.push(`${here} の契約の delete が false ではない`);
+      same(failures, collection.delete, expected.delete, `${here} delete`);
       if (!/^src\/content\/[^/]+\/ja$/.test(String(collection.folder ?? ''))) {
         failures.push(`${here} folder が ja ではない: ${collection.folder}`);
       }

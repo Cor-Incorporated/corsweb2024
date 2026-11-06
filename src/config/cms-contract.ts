@@ -43,8 +43,8 @@ export interface CmsCollection {
   sortableFields: readonly string[];
   sortableField: string;
   sortableDirection: 'ascending' | 'descending';
-  /** 翻訳ファイルが孤立するため、CMS からの削除はしない。 */
-  delete: false;
+  /** CMS は日本語を削除し、翻訳 CI が来歴と差分を確かめて訳を削除する。 */
+  delete: boolean;
   slugHint: string;
   fields: readonly CmsField[];
 }
@@ -80,7 +80,7 @@ export const cmsBackend = {
 } as const;
 
 export const cmsSite = {
-  appTitle: 'Cor.inc コンテンツ管理',
+  appTitle: 'Cor.株式会社 コンテンツ管理',
   siteUrl: 'https://cor-jp.com',
   logoSrc: '/logo.png',
   hostingSite: 'cor-jp-cms-admin',
@@ -250,6 +250,304 @@ export const blogFields = [
   },
 ] as const satisfies readonly CmsField[];
 
+export const newsFields = [
+  {
+    "name": "title",
+    "label": "タイトル",
+    "widget": "string",
+    "required": true
+  },
+  {
+    "name": "description",
+    "label": "概要",
+    "widget": "text",
+    "required": true
+  },
+  {
+    "name": "publishedAt",
+    "label": "公開日",
+    "widget": "datetime",
+    "required": true,
+    "default": "{{now}}",
+    "format": "YYYY-MM-DD",
+    "dateType": "date"
+  },
+  {
+    "name": "updatedAt",
+    "label": "更新日",
+    "widget": "datetime",
+    "required": false,
+    "format": "YYYY-MM-DD",
+    "dateType": "date"
+  },
+  {
+    "name": "author",
+    "label": "著者",
+    "widget": "string",
+    "required": true,
+    "default": "Terisuke"
+  },
+  {
+    "name": "category",
+    "label": "カテゴリ",
+    "widget": "select",
+    "required": true,
+    "options": [
+      {
+        "label": "お知らせ",
+        "value": "info"
+      },
+      {
+        "label": "メディア",
+        "value": "media"
+      },
+      {
+        "label": "アップデート",
+        "value": "update"
+      },
+      {
+        "label": "イベント",
+        "value": "event"
+      },
+      {
+        "label": "受賞",
+        "value": "award"
+      },
+      {
+        "label": "プレスリリース",
+        "value": "press"
+      }
+    ]
+  },
+  {
+    "name": "tags",
+    "label": "タグ",
+    "widget": "list",
+    "required": false
+  },
+  {
+    "name": "externalUrl",
+    "label": "外部記事の URL",
+    "widget": "string",
+    "required": false
+  },
+  {
+    "name": "source",
+    "label": "掲載元",
+    "widget": "string",
+    "required": false
+  },
+  {
+    "name": "ogImage",
+    "label": "SNS 用画像",
+    "widget": "image",
+    "required": false,
+    "accept": "image/avif,image/webp,image/jpeg,image/png,image/heic"
+  },
+  {
+    "name": "isDraft",
+    "label": "下書き",
+    "widget": "hidden",
+    "required": true,
+    "default": false
+  },
+  {
+    "name": "featured",
+    "label": "おすすめに表示",
+    "widget": "boolean",
+    "required": true,
+    "default": false
+  },
+  {
+    "name": "lang",
+    "label": "言語",
+    "widget": "hidden",
+    "required": true,
+    "default": "ja"
+  },
+  {
+    "name": "body",
+    "label": "本文",
+    "widget": "markdown",
+    "required": true,
+    "modes": [
+      "raw",
+      "rich_text"
+    ]
+  }
+] as const satisfies readonly CmsField[];
+
+export const casesFields = [
+  {
+    "name": "title",
+    "label": "タイトル",
+    "widget": "string",
+    "required": true
+  },
+  {
+    "name": "description",
+    "label": "概要",
+    "widget": "text",
+    "required": true
+  },
+  {
+    "name": "category",
+    "label": "カテゴリ",
+    "widget": "select",
+    "required": true,
+    "options": [
+      {
+        "label": "Grift",
+        "value": "grift"
+      },
+      {
+        "label": "機密データ AI 活用",
+        "value": "confidential-ai"
+      },
+      {
+        "label": "ローカル LLM",
+        "value": "local-llm"
+      },
+      {
+        "label": "AI 受託開発",
+        "value": "ai-contract"
+      },
+      {
+        "label": "教育・コミュニティ",
+        "value": "tech-culture"
+      }
+    ]
+  },
+  {
+    "name": "tags",
+    "label": "タグ",
+    "widget": "list",
+    "required": false
+  },
+  {
+    "name": "publishedAt",
+    "label": "公開日",
+    "widget": "datetime",
+    "required": true,
+    "default": "{{now}}",
+    "format": "YYYY-MM-DD",
+    "dateType": "date"
+  },
+  {
+    "name": "updatedAt",
+    "label": "更新日",
+    "widget": "datetime",
+    "required": false,
+    "format": "YYYY-MM-DD",
+    "dateType": "date"
+  },
+  {
+    "name": "heroImage",
+    "label": "アイキャッチ画像",
+    "widget": "object",
+    "required": false,
+    "fields": [
+      {
+        "name": "url",
+        "label": "画像",
+        "widget": "image",
+        "required": true,
+        "accept": "image/avif,image/webp,image/jpeg,image/png,image/heic"
+      },
+      {
+        "name": "alt",
+        "label": "代替テキスト",
+        "widget": "string",
+        "required": true
+      }
+    ]
+  },
+  {
+    "name": "ogImage",
+    "label": "SNS 用画像",
+    "widget": "image",
+    "required": false,
+    "accept": "image/avif,image/webp,image/jpeg,image/png,image/heic"
+  },
+  {
+    "name": "summary",
+    "label": "リード文",
+    "widget": "text",
+    "required": true
+  },
+  {
+    "name": "securityNote",
+    "label": "機密情報に関する注記",
+    "widget": "text",
+    "required": false
+  },
+  {
+    "name": "ctaType",
+    "label": "記事の下で案内する相談",
+    "widget": "select",
+    "required": false,
+    "options": [
+      {
+        "label": "Grift",
+        "value": "grift"
+      },
+      {
+        "label": "機密データ AI 活用",
+        "value": "confidential-ai"
+      },
+      {
+        "label": "ローカル LLM",
+        "value": "local-llm"
+      },
+      {
+        "label": "AI 受託開発",
+        "value": "ai-contract"
+      },
+      {
+        "label": "教育・コミュニティ",
+        "value": "tech-culture"
+      }
+    ]
+  },
+  {
+    "name": "relatedSlugs",
+    "label": "関連記事のスラッグ",
+    "widget": "list",
+    "required": false
+  },
+  {
+    "name": "isDraft",
+    "label": "下書き",
+    "widget": "hidden",
+    "required": true,
+    "default": false
+  },
+  {
+    "name": "featured",
+    "label": "おすすめに表示",
+    "widget": "boolean",
+    "required": true,
+    "default": false
+  },
+  {
+    "name": "lang",
+    "label": "言語",
+    "widget": "hidden",
+    "required": true,
+    "default": "ja"
+  },
+  {
+    "name": "body",
+    "label": "本文",
+    "widget": "markdown",
+    "required": true,
+    "modes": [
+      "raw",
+      "rich_text"
+    ]
+  }
+] as const satisfies readonly CmsField[];
+
 export const cmsCollections: readonly CmsCollection[] = [
   {
     name: 'blog',
@@ -263,8 +561,44 @@ export const cmsCollections: readonly CmsCollection[] = [
     sortableFields: ['pubDate', 'title'],
     sortableField: 'pubDate',
     sortableDirection: 'descending',
-    delete: false,
+    delete: true,
     slugHint: cmsSlug.hint,
     fields: blogFields,
+  },
+  {
+    "name": "news",
+    "label": "ニュース",
+    "labelSingular": "ニュース記事",
+    "description": "日本語のニュースを編集します。翻訳は CI が PR に追加します。削除時は訳の削除も PR で確認してください。",
+    "icon": "newspaper",
+    "folder": "src/content/news/ja",
+    "previewPath": "/news/{{slug}}/",
+    "sortableFields": [
+      "publishedAt",
+      "title"
+    ],
+    "sortableField": "publishedAt",
+    "sortableDirection": "descending",
+    "delete": true,
+    "slugHint": "記事の URL の末尾になります。例 company-news → https://cor-jp.com/news/company-news/ 。英小文字・数字・ハイフンだけ。作成後は変更できません。",
+    "fields": newsFields
+  },
+  {
+    "name": "cases",
+    "label": "実績",
+    "labelSingular": "実績記事",
+    "description": "日本語の実績を編集します。翻訳は CI が PR に追加します。削除時は訳の削除も PR で確認してください。",
+    "icon": "work",
+    "folder": "src/content/cases/ja",
+    "previewPath": "/works/{{slug}}/",
+    "sortableFields": [
+      "publishedAt",
+      "title"
+    ],
+    "sortableField": "publishedAt",
+    "sortableDirection": "descending",
+    "delete": true,
+    "slugHint": "記事の URL の末尾になります。例 project-case → https://cor-jp.com/works/project-case/ 。英小文字・数字・ハイフンだけ。作成後は変更できません。",
+    "fields": casesFields
   },
 ];

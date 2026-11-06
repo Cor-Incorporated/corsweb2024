@@ -1,0 +1,25 @@
+git status                               通過     通過     通過    
+
+
+破壊形 15 件中の通過（穴）: ClaudeCode=0  Cursor=0  Codex=0
+正常形 3 件中の偽陽性:  ClaudeCode=0  Cursor=0  Codex=0
+OpenCode: opencode.jsonc permission は git push*=ask / --force*・-f=deny（本表外・T6 参照）
+
+--- foreign PR ask matrix (repo axis x operation x quote axis) ---
+repo         op       quote      expected     Claude     Cursor    
+same         create   unquoted   ALLOW        ALLOW      ALLOW     
+same         create   quoted     ALLOW        ALLOW      ALLOW     
+same         merge    unquoted   ALLOW        ALLOW      ALLOW     
+same         merge    quoted     ALLOW        ALLOW      ALLOW     
+different    create   unquoted   ASK          ASK        ASK       
+different    create   quoted     ASK          ASK        ASK       
+different    merge    unquoted   ASK          ASK        ASK       
+different    merge    quoted     ASK          ASK        ASK       
+none         create   unquoted   ALLOW        ALLOW      ALLOW     
+none         create   quoted     ALLOW        ALLOW      ALLOW     
+none         merge    unquoted   ALLOW        ALLOW      ALLOW     
+none         merge    quoted     ALLOW        ALLOW      ALLOW     
+foreign PR matrix mismatches=0 (same/none false positives and different-owner misses combined)
+
+--- 門: 穴 0 / 偽陽性 0 / foreign PR mismatches 0 ---
+GATE-PASS: 測れた範囲で 穴 0 / 偽陽性 0 / foreign PR mismatches 0

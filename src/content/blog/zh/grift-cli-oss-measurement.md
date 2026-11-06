@@ -1,9 +1,9 @@
 ---
-title: "简历上的年限看不出工作方式。用不打分的Grift，测评了4个真实的开源项目"
-description: "仅凭简历上的年限或人月，无法了解一个人具体是如何开展工作的。本文面向职业介绍公司、SES销售人员及工程师，阐述Cor.打造不打分也不排名的Grift的缘由、它与MBTI的区别，以及测评4个真实开源项目时能看到的与看不到的内容。"
-summary: "Grift根据git中留存的变更记录，呈现工作倾向以及作为其依据的件数。与本人回答问题得出类型的MBTI不同，它的依据不是自我申报而是记录，只要记录相同，无论谁来统计都会得出相同的数值。在对4个真实开源项目进行测评后，虽然能看出工作领域以及变更间隔的差异，但无法体现评审质量、会议以及未获本人同意的经历。数字必须结合分母和规则来解读，最终做出判断的仍然是人。"
+title: "从Git历史中能看到什么、看不到什么。用Grift核算了4个OSS"
+description: "本文分开写：按明示的规则，从git历史中能数出什么，数不出什么。对4个真实OSS按仓库做了核算。这不保证人的能力，也不保证记录是完整的。"
+summary: "Grift核对的是，把交给它的记录按明示的规则数出来的结果。输入范围和commit、CLI版本、定义和设置相同的话，谁来数都是同一个值。测算4个真实OSS时，能看到作业领域和变更间隔的差别，但不能保证人的能力或记录的完整性。"
 pubDate: 2026-10-25
-updatedDate: 2026-10-26
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "engineering"
 ctaIntent: "grift-team-beta"
@@ -11,9 +11,9 @@ tags: ["Grift", "OSS", "CLI", "git", "実測"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "b44f7e8456ab016f75a19cebd16e68f08f1dd0d7ff7409e14f2d35c261b63b91"
-translatedAt: "2026-10-26T13:31:20.824Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "75880e785376c1dd4282d8cbc16ea72155087b188d630bf6e14a8cf249212451"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
 即便简历上写着“Python 5年”，我们依然无法了解在这5年里对方究竟做过怎样的工作。
@@ -26,11 +26,13 @@ translationModel: "gemini-3.8-flash"
 
 Grift是为了填补这一落差而开发的自研产品。它从git（逐次记录软件变更的机制）中留存的记录中，提取出工作倾向以及作为其依据的数据项数。它既不给出评分，也不进行排位。
 
-公司代表寺田 康佑在Recruit从事招聘广告销售期间，曾深切体会过话语无法传达意图的焦灼感。关于Grift，他曾写道：“简历可以注水，证据无法造假。”
+公司代表寺田 康佑在Recruit从事招聘广告销售期间，曾深切体会过话语无法传达意图的焦灼感。Grift的说法是：“为经历的说明，准备可以核对的依据。”
+
+Grift核对的是，把交给它的记录按明示的规则数出来的结果。没有留下记录的工作、记录是在什么背景下做成的、对成果的实际贡献，单凭这个数不出来。能够重新计算，并不保证人的能力，也不保证记录完整。
 
 一旦将其转化为分数，会发生什么？将不同类型的记录压缩为一个数字后，统计了什么、无法统计什么，都会随之消失。而且只要有了分数，高分者就会显得更优秀；一旦排序，就会形成顺位。
 
-在Grift中，我们想做的事情并不是将人按顺位排列，而是将契合该人工作倾向的项目与人才连接起来。为此，我们仅呈现可验证的事实。做判断的始终是人。
+Grift要做的不是把人按顺位排列，而是留下按明示规则数出来的结果。做判断的始终是人。
 
 ## 与MBTI的区别
 
@@ -42,7 +44,7 @@ Grift不进行问卷提问，不贴上类型标签，也不是诊断性格的工
 
 若结合销售人员的困扰来看，两者的区别会更加清晰易懂。
 
-简历上的自我申报，不知道该相信到什么程度。MBTI的结果与简历一样，均来自本人的回答。而Grift的依据是客观记录。只要提供相同的记录，无论由谁来统计，都会得出相同的数值。
+简历上的自我申报，不知道该相信到什么程度。MBTI的结果与简历一样，均来自本人的回答。而Grift的依据是客观记录。输入范围和commit、CLI版本、定义和设置相同的话，无论由谁来统计，都会得出相同的数值。
 
 仅凭年限或人月，无法了解工作方式。Grift会以件数形式呈现对方接触过哪些领域（测试、文档、主体程序等）、以怎样的时间间隔提交变更，以及修复性变更是否附带了测试。
 
@@ -270,7 +272,7 @@ grift project click --requirements python-lib-maintenance.toml --format both --o
 - [grift报告阅读指南（metrics-guide）](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/metrics-guide.md) - 各指标的浅显解读
 - [TEP利用规范（norms）](https://github.com/Cor-Incorporated/grift-cli/blob/main/docs/norms.md) - 不将缺失作负面解读、禁止加权与折算
 - [如何在实现中坚守“不打分、不排位”（Cor.株式会社博客，2026年10月25日）](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/) - 0.8确立的5项条件
-- [为了让“啊，对方理解了”成为日常，我创立了这家公司（Cor.株式会社博客）](https://cor-jp.com/blog/founder-story/) - 代表的故事与Grift诞生的初衷
+- [代表创立公司的故事（Cor.株式会社博客）](https://cor-jp.com/blog/founder-story/) - 代表的故事与Grift诞生的初衷
 - [Ethical Use of the MBTI（The Myers & Briggs Foundation）](https://www.myersbriggs.org/unique-features-of-myers-briggs/ethical-use-of-the-mbti/) - MBTI使用规定（遵循自愿原则、非招聘目的）
 - [MBTI Basics（The Myers & Briggs Foundation）](https://www.myersbriggs.org/my-mbti-personality-type/mbti-basics/) - 4种偏好与16种类型
 - [pallets/click](https://github.com/pallets/click) - 测量的OSS（HEAD `36baa15`）

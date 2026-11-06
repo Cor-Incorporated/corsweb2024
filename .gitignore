@@ -47,3 +47,6 @@ playwright-report/
 # yomiyasu の検査の記録（.claude/skills/yomiyasu/scripts/yomiyasu_check.py が作る。原文と最終稿の全文が入る）
 .yomiyasu/
 __pycache__/
+
+# blog:eyecatch の候補画像の置き場（採用した 1 枚だけを public/images/blog/ に書く。docs/blog-eyecatch.md）
+.eyecatch/

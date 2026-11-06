@@ -1,8 +1,9 @@
 ---
-title: "Lo que una empresa debe proteger en un mundo donde las API locales carecen de autenticación: sobre la gestión de listas de permitidos"
-description: "Muchas de las herramientas que ejecutan inferencia localmente están diseñadas bajo el supuesto de un uso individual. Por ejemplo, la API en localhost de Ollama no requiere autenticación. Kousuke Terada, CEO de la empresa, aborda las discrepancias en las configuraciones de permisos que suelen quedar tras expandirse a la red interna, el orden de admisión y desmantelamiento de terminales, y una lista de verificación generalizada."
-summary: "Muchas de las herramientas que ejecutan inferencia localmente están creadas bajo el supuesto de usarse en el propio equipo; por ejemplo, la API en localhost de Ollama no requiere autenticación. En una API sin autenticación, poder alcanzarla significa prácticamente poder usarla, por lo que las discrepancias residuales en la escucha y en los destinos permitidos tras extenderla a la red interna se convierten en un riesgo. Consideramos que, antes de rastrear información sobre vulnerabilidades, es fundamental convertir en procedimientos el orden de admisión y desmantelamiento de terminales. En la admisión, se debe priorizar el registro en el inventario; en el desmantelamiento, la eliminación de los permisos debe ir primero."
+title: "Antes de usar una API de inferencia local en la empresa: diseño de autenticación, lista de permitidos y baja de equipos"
+description: "Antes de usar una API de inferencia local en la empresa, hay que diseñar por separado la autenticación, la lista de permitidos y la baja de equipos. La lista de permitidos indica con quién puede pasar el tráfico. Quién puede usarla para qué trabajo se decide aparte."
+summary: "La documentación oficial de Ollama dice que la API de localhost no exige autenticación. La lista de permitidos muestra con quién puede pasar el tráfico. Eso solo no decide quién puede usarla para qué trabajo. Responder a vulnerabilidades y gestionar los permisos no son cosas que se resuelvan con una sola de las dos."
 pubDate: 2026-10-28
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"
@@ -10,88 +11,100 @@ tags: ["ローカルLLM", "Ollama", "情報セキュリティ", "ISMS"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "8378f2b839ed91057711bc8a65de4ef18e4426757c35c9541be542e7b342702c"
-translatedAt: "2026-10-27T13:41:54.677Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "1cfc6850c3470817cd6d66514c2be11bd1793eeda737c01c8f5359034ae4d502"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
-Hola, soy Terada, de Cor.Inc. Hoy traigo un tema un poco discreto. Sin embargo, si va a ejecutar IA local dentro de su empresa, probablemente sea lo que marque la mayor diferencia.
+Hola, soy Terada, de Cor.Inc. Hoy el tema es sencillo. Si se ejecuta IA local dentro de la empresa, es algo que conviene decidir antes.
 
-## Las API de inferencia local están diseñadas bajo el supuesto de «usarse en local»
+## Pensada para usarse en el equipo de delante
 
-Muchas herramientas para ejecutar inferencia en local parten de la premisa de que, en primer lugar, se utilizarán en la propia máquina del usuario.
+Muchas herramientas que ejecutan inferencia en local parten de que se usan primero en el equipo que se tiene delante.
 
-Por ejemplo, la documentación oficial de Ollama señala que la API local en localhost no requiere autenticación. También indica que, por defecto, escucha en local (127.0.0.1) y que es posible cambiar la dirección de escucha mediante la configuración.
+La documentación oficial de Ollama dice, por ejemplo, que la API local en localhost no exige autenticación. También dice que, por defecto, escucha en 127.0.0.1 y que la dirección de escucha se puede cambiar en la configuración.
 
-Más que un fallo, se trata de una premisa de diseño. Porque, para usarlo en local, con eso es suficiente. El problema surge cuando se extiende a la red interna manteniendo este supuesto.
+Esto es más una premisa de diseño que un defecto. Para usarla en el equipo de delante, esa premisa basta. El problema aparece cuando esa premisa se lleva tal cual a la red de la empresa.
 
-## «Solo interno» no es el nombre de un perímetro
+Llamar a una API local y que todo el proceso termine en ese equipo no es lo mismo. Según el modelo elegido, hay configuraciones que envían tráfico al exterior. Hay que comprobar también el modelo elegido y el tráfico saliente.
 
-Cuando se levanta un servidor de inferencia para uso interno, se amplía la escucha para que otros dispositivos puedan utilizarlo. En el firewall, se define desde qué terminales se permite el acceso. Hasta aquí, es el procedimiento habitual.
+## La palabra «interno»
 
-Lo que requiere atención es lo que viene después.
+Al levantar un servidor de inferencia para uso interno, se amplía la escucha para que otros equipos puedan usarlo. Un cortafuegos decide desde qué equipos se puede llegar. Hasta aquí es un procedimiento ordinario.
 
-La escucha que se abrió para una prueba se queda así. Las autorizaciones que se añadieron de forma temporal se quedan así. La autorización de un dispositivo que ya no se utiliza desaparece del registro, pero permanece en el firewall.
+Lo que hay que cuidar es lo que viene después.
 
-En una API sin autenticación, que el tráfico «llegue» significa prácticamente que se «puede usar». Por eso, el mero hecho de que persista un estado en el que terminales no previstos puedan conectarse ya constituye un riesgo. La expresión «solo interno» únicamente cobra sentido cuando va acompañada de configuraciones de permisos reales.
+Una escucha abierta a modo de prueba se queda abierta. Un permiso añadido de forma temporal se queda. El permiso de un equipo que ya no se usa desaparece del registro, pero sigue en el cortafuegos.
 
-## Lo que hay que hacer antes de mirar los CVE
+En una API sin autenticación, «se puede llegar» casi significa «se puede usar». Por eso, que un equipo no previsto pueda seguir llegando es en sí un riesgo. Las palabras «solo interno» significan algo cuando van acompañadas de la configuración real de permisos.
 
-Hacer seguimiento de la información sobre vulnerabilidades (CVE) es importante. Sin embargo, creo que antes de eso hay algo que se debe protocolizar: el orden para dar de alta y de baja los dispositivos.
+## Qué dice una lista de permitidos
 
-Las vulnerabilidades aparecen de golpe un día cualquiera. Los desajustes en las autorizaciones se acumulan poco a poco, día tras día. De estos últimos, nadie se da cuenta si no existe un procedimiento.
+Una lista de permitidos dice con quién puede pasar el tráfico. Eso solo no decide quién puede usarla para qué trabajo. Si la usan varias personas, la autenticación previa, los permisos por usuario o servicio y el comportamiento al revocar son puntos que hay que diseñar aparte. Esto no es un informe de que Cor.Inc. haya terminado de implementarlos.
 
-## El orden para dar de alta
+## Respuesta a vulnerabilidades y permisos
 
-Cuando permitimos que un nuevo dispositivo utilice la API de inferencia, seguimos este orden:
+Responder a vulnerabilidades y gestionar los permisos no son cosas que se resuelvan con una sola de las dos. Además de seguir los avisos de actualización, hay que seguir comprobando qué equipo puede conectarse, para qué uso y hasta cuándo.
 
-1. Registrar el terminal en el inventario (uso previsto, responsable, fecha límite de uso)
-2. Verificar la configuración básica del terminal
-3. Añadirlo a la lista de permitidos del firewall
-4. Confirmar que tiene conectividad y registrar la fecha de comprobación en el inventario
+La información de vulnerabilidades (CVE) sale junta un día. El desajuste de los permisos se acumula un poco cada día. Lo segundo es difícil de notar sin un procedimiento. Los dos van dentro del procedimiento.
 
-Primero el inventario, después el permiso. Este orden es fundamental. Si se concede el permiso primero, después no se podrá rastrear de quién es ni para qué se otorgó.
+## Orden de alta
 
-## El orden para dar de baja
+Cuando un equipo nuevo va a usar la API de inferencia, Cor.Inc. usa este orden en el alta.
 
-Al retirar un dispositivo, se hace en el orden inverso:
+1. Registrar el equipo en el registro (uso, responsable, fecha límite)
+2. Comprobar la configuración básica del equipo
+3. Añadirlo a los permitidos del cortafuegos
+4. Confirmar que se puede llegar y dejar la fecha en el registro
 
-1. Eliminarlo de la lista de permitidos del firewall
-2. Confirmar que ya no tiene conectividad
-3. Limpiar las credenciales y la configuración del terminal
-4. Actualizar el inventario al estado de «retirado» y registrar la fecha
+Primero el registro y después el permiso. Si solo entra el permiso, después no se puede seguir de quién era ni para qué.
 
-Aquí lo crucial es revocar el permiso en primer lugar. Actualizar solo el inventario y dejar el permiso activo es el desajuste que ocurre con más frecuencia.
+## Orden de baja
 
-## Lista de verificación generalizada
+Al retirar un equipo, el orden se invierte.
 
-Para que no quede solo en un caso particular, lo resumo de forma que otras empresas también puedan aplicarlo:
+1. Quitarlo de los permitidos del cortafuegos
+2. Confirmar que ya no se puede llegar
+3. Limpiar credenciales y ajustes en el equipo
+4. Marcar el registro como «baja» y dejar la fecha. No se borra la fila; se conserva como historial
 
-- ¿Se limita la escucha de la API de inferencia al alcance previsto?
-- ¿Se ha restablecido la escucha que se amplió para validaciones una vez finalizadas las pruebas?
-- ¿Coincide la lista de permitidos del firewall con el inventario de terminales?
-- ¿Constan en el inventario el uso previsto, el responsable y la fecha límite para cada autorización?
-- Al dar de baja, ¿se procesa en el orden «revocar permiso → confirmar la falta de conectividad → actualizar inventario»?
-- ¿Se realiza periódicamente (por ejemplo, de forma mensual) un cotejo entre la lista de permitidos y el inventario?
-- ¿Existen registros de auditoría de quién añadió o eliminó cada permiso y cuándo lo hizo?
-- En caso de necesitar exponer una API sin autenticación al exterior, ¿está diseñada para contar previamente con autenticación o control de acceso?
+El permiso se quita primero. Actualizar solo el registro y dejar el permiso es el desajuste que más fácil aparece.
 
-Ninguno de estos puntos es llamativo. Sin embargo, si esta lista se aplica de forma continua, la mayoría de los desajustes se detectan a tiempo.
+Si se sospecha una intrusión, eso es distinto de los pasos de baja anteriores. Primero el aislamiento y la revocación de credenciales. Un equipo sospechoso no se trata con el orden ordinario de retirada.
 
-## Lo que hacemos nosotros
+## Qué comprobar
 
-En Cor.Inc. brindamos acompañamiento para soluciones totalmente locales implementadas en los dispositivos existentes de los clientes. Dentro de la operación de nuestro SGSI (ISMS), definimos conjuntamente la selección de la arquitectura y el diseño de privilegios, revocaciones y registros de auditoría. Respecto al SGSI, en octubre de 2026 completamos la auditoría de Fase 2 de la norma ISO/IEC 27001, y prevemos obtener el registro de la certificación hacia diciembre de 2026.
+No es un caso aislado: se resume de forma que otras empresas también puedan usarlo. Aquí no hay valores medidos. El tiempo hasta que una revocación surte efecto se decide como requisito. Un valor medido se escribe solo cuando se ha medido.
 
-La gestión de listas de permitidos que tratamos hoy se sitúa en el núcleo exacto de esas «revocaciones» y «registros». Consideramos que trazar estas líneas discretas de forma constante aporta más valor que limitarse a comparar velocidades o rendimientos.
+- ¿La dirección de escucha de la API de inferencia está limitada al alcance previsto?
+- ¿Una escucha ampliada para una prueba se devolvió después de la prueba?
+- ¿La lista de permitidos del cortafuegos coincide con el registro de equipos?
+- ¿Cada permitido tiene en el registro un uso, un responsable y un plazo?
+- En la baja, ¿se sigue el orden «quitar el permiso, confirmar que no se llega, actualizar el registro»?
+- ¿Se cotejan la lista de permitidos y el registro con regularidad (por ejemplo cada mes)?
+- ¿Queda registro de quién añadió o quitó qué permiso, y cuándo?
+- Si una API sin autenticación debe exponerse, ¿el diseño pone autenticación o control de acceso delante?
+- Además de que un equipo permitido llegue, ¿un equipo no permitido es rechazado?
+- Después de la revocación, ¿se rechaza?
+- ¿Qué ocurre cuando se detiene el servicio?
+- ¿El modelo elegido y el tráfico saliente están en el alcance previsto?
 
-## Conclusión
+Si esta lista está en marcha, el desajuste se nota antes. Eso no significa que se encuentre todo desajuste.
 
-Saber que no hay autenticación puede generar inquietud. No obstante, solo se trata de entender las premisas de la herramienta. Una vez comprendidas, lo que se debe proteger queda claro.
+## Lo que se mira junto
 
-El dispositivo de quién, desde cuándo y hasta cuándo tiene permitido el acceso. El poder justificarlo tanto en el inventario como en la configuración de permisos: eso es exactamente lo que queremos proteger.
+Cor.Inc. parte del equipo que ya existe y mira junto el alcance que se procesa en local. Dentro del funcionamiento del ISMS, se elige la configuración y se diseña juntos permisos, revocación y registros. El ISMS terminó la auditoría de etapa 2 de ISO/IEC 27001 en octubre de 2026, y el registro de la certificación se prevé hacia diciembre de 2026.
 
-## Materiales de referencia
+Esta lista de permitidos está en esa conversación de revocación y registros. Poder explicar qué equipo puede llegar y hasta cuándo es también una condición de operación, además del rendimiento de la inferencia. Aquí no se niegan los requisitos de rendimiento.
 
-- [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - Indicación de que la API local en localhost (puerto 11434) no requiere autenticación (consultado el 27 de octubre de 2026)
-- [Ollama Docs: FAQ](https://docs.ollama.com/faq) - Sección «How can I expose Ollama on my network?». Indicación de que por defecto escucha en 127.0.0.1 en el puerto 11434, y que se puede cambiar la dirección de escucha mediante la variable de entorno `OLLAMA_HOST` (consultado el 27 de octubre de 2026)
-- [Cor.Inc.: Seguridad](https://cor-jp.com/security/) - Sobre la operación de nuestro SGSI, la finalización de la auditoría de Fase 2 de ISO/IEC 27001 en octubre de 2026 y la previsión del registro de la certificación hacia diciembre de 2026
+## Lo que se puede explicar
+
+Oír que no hay autenticación puede inquietar. Eso solo significa que ya se conoce la premisa de la herramienta. Si la premisa está clara, también se ve el alcance que hay que proteger.
+
+De quién es el equipo, desde cuándo y hasta cuándo puede llegar. Poder explicarlo tanto en el registro como en los permisos es lo que Cor.Inc. quiere conservar. La lista de permitidos sola no decide los permisos de quien la usa.
+
+## Referencias
+
+- [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - la API local de localhost (puerto 11434) no exige autenticación (comprobado el 27 de octubre de 2026)
+- [Ollama Docs: FAQ](https://docs.ollama.com/faq) - el apartado «How can I expose Ollama on my network?». Por defecto escucha en 127.0.0.1 puerto 11434, y la variable de entorno `OLLAMA_HOST` cambia la dirección de escucha (comprobado el 27 de octubre de 2026)
+- [Cor.Inc.: Seguridad](https://cor-jp.com/security/) - que se opera un ISMS, que la auditoría de etapa 2 de ISO/IEC 27001 terminó en octubre de 2026 y que el registro de la certificación se prevé hacia diciembre de 2026

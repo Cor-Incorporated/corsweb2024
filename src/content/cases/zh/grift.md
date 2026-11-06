@@ -1,16 +1,16 @@
 ---
-title: "Grift —— 履历可以美化，事实无法伪造。从 git 提交记录中提取可核实事实的开源软件"
-description: "介绍自有产品 Grift，它能从工程师的 git 历史中提取可核实的事实（检查值）而非打分。本文分享我们将其从估算支持 Web 应用转向开源 CLI 以及面向人才介绍公司与 SES 的推荐支持工具的过程与设计方案。"
+title: "Grift —— 履历可以夸大，证据无法伪造。从git历史中提取可验证事实的开源软件（OSS）"
+description: "自研产品Grift能从工程师的git历史中提取可验证的事实（检查值），而非评分。本文将介绍从最初的估算辅助Web应用，转变为面向猎头机构与SES的开源CLI及推荐辅助工具的历程与设计架构。"
 category: "grift"
 tags: ["Grift", "OSS", "CLI", "git", "人才中介", "SES", "招聘"]
 publishedAt: 2026-06-30
-updatedAt: 2026-10-28
-summary: "Grift 是一款从工程师的 git 提交记录中提取“可核实事实”的自有产品。它不进行打分或排名。由于在衡量过程中不使用 AI（LLM），任何人运行都能得到相同的结果，接收方也可进行验算。其 CLI 工具作为 MIT 许可的开源软件公开发布。"
+updatedAt: 2026-10-31
+summary: "Grift是一款能从工程师的git历史中提取“可验证事实”的自研产品。它不进行打分或排名。由于分析过程不使用AI（LLM），任何人运行都能得出相同的结果，接收方亦可自行验算。其CLI工具以MIT许可证作为开源软件（OSS）公开。"
 isDraft: false
 featured: true
 lang: "zh"
-translationSourceHash: "4ca681c34432675973331e8114ce197a04fd07b1460e509367b26bbd93cf1d4e"
-translatedAt: "2026-10-28T05:32:38.002Z"
+translationSourceHash: "6ef8194a514d202c2b450d889b28ec82bda30c14a0122cd1097c0e3a21d0f2b1"
+translatedAt: "2026-10-31T06:22:16.321Z"
 translationModel: "gemini-3.8-flash"
 ---
 
@@ -27,81 +27,92 @@ NDA・機密案件では具体名や数値をぼかし、frontmatter の securit
 2026-10-26: 「実装」に TEP の 4 つの段階の平易な説明と、griftai.org の TEP ページへのリンクを足した。
 2026-10-27: 0.9.0 のレポートの形（先頭の進め方の文と面談の問い、本人の同意の条件、観点の呼び名）と、0.9.0 の公開を足した。
 2026-10-28: 0.9.1 の公開を「成果」に足した（日付は PyPI に上げた日。#446 の手順で確かめる）。
+2026-10-30: 0.9.2 の変更（Docker で実行、grift update、grift contribute の同意後の表示、リポジトリの文脈の年とタグの頻度）を「実装」と「成果」に足した。0.9.2 は 2026-10-31 に PyPI へ公開（Release v0.9.2）。2026-10-31 に公開日を「成果」に足した。同日、release/v0.9.2 の CHANGELOG（c7e2a6e）と突き合わせ、grift update・grift contribute・文脈の表示の書き方を CHANGELOG と docs/usage.md に揃え、定義の版が変わったことを「成果」に足した。
 -->
 
 ## 课题
 
-人才中介机构和 SES 的销售人员在向企业推荐候选人时，需要说明“为什么推荐这位人才”。然而手头的材料往往仅限于简历和面试印象。即使上面写着“Java 5 年经验”，候选人究竟是在怎样的修改中、如何进行验证并推进工作的，其工作实质并无法被传达出来。
+人才中介机构和SES企业的销售人员在向企业推荐候选人时，需要说明“为什么推荐这位人选”。然而，手头拥有的材料几乎只有简历和面试印象。即使上面写着“5年Java经验”，但其具体进行了怎样的修改、又是如何进行验证推进的，这些工作的实际内容依然无法传达。
 
-另一方面，像 GitHub 上的绿墙（活动图）和提交次数这类“活动量”，借助生成式 AI 和 Agent 很容易就能注水膨胀。数量多已很难再作为推荐的依据。话虽如此，如果将其归纳为一个单一的评分，究竟测了什么、在多长时间内测的、基数是多少这些关键信息就会消失，评分反而沦为了简单粗暴的筛选淘汰工具。无论对推荐方还是被推荐方而言，都缺乏“可供验证的客观材料”。
+另一方面，像GitHub贡献图（绿墙）和提交次数这类的“活动量”，借助生成式AI和智能体已能够轻易膨胀。数量的多寡已难以作为推荐的依据。话虽如此，如果将其归纳为一个综合评分，又会抹去测量的具体内容、时间跨度及样本基数，沦为简单筛选淘汰的工具。无论对推荐方还是被推荐方而言，都缺少“可供核实的材料”。
 
-## 方法
+## 应对方案
 
-Grift 始于 2026 年 2 月，最初是一款支持受托开发估算评估的 Web 应用。在探索估算依据的过程中，我们意识到最可靠的材料正是工程师自己日积月累沉淀下来的 git 历史本身，因此于 2026 年 8 月将度量部分单独剥离出来，做成了一款命令行工具。到了 9 月，我们停止了原 Web 应用的提供，全面调整方向，致力于支持人才中介机构和 SES 销售人员的业务。
+Grift最初于2026年2月作为支持外包开发估算的Web应用启动。在探寻估算依据的过程中，我们发现最可靠的材料正是工程师自身积累的git历史记录，并于2026年8月将测量部分独立拆分为命令行工具。9月，我们停止了原Web应用的提供，将方向调整为支持人才中介机构及SES企业的销售业务。
 
-在设计之初，我们预先定下了 3 项承诺：
+在设计之初，我们确立了三条约定：
 
-- 不化为分数：输出的是检查值，负责判断的是人。不输出综合评分、排名、合格与否及等级，数值必须附带分子与分母
-- 每次结果一致：度量过程不使用 AI（LLM）。只要是同一个代码仓库、同一个版本，无论由谁执行，得到的数值都完全一致
-- 绝不向外发送：仅在本地电脑上运行。是否共享、公开哪些代码仓库，完全由本人决定
+- 不打分：仅输出检查值，由人来进行判断。不输出综合评分、排名、合格与否及评级，数值必须附带分子与分母
+- 每次结果相同：测量不使用AI（LLM）。在相同的代码仓库和相同版本下，任何人执行都会得到相同的数值
+- 不向任何地方发送：仅在本地PC上运行。是否共享、提供哪些仓库均由本人决定
 
-与此同时，我们还制定了“不得将未记录视为负面”“不得仅凭数值进行筛选淘汰”“未经本人同意不得度量他人”等 7 条使用规范，并约定不遵守这些规范的使用方式不得冠以本方法体系之名（TEP: Technical Evidence Pipeline）。
+同时，我们制定了包括“不将缺失理解为负面指标”、“不凭单一数值进行筛选淘汰”、“未经本人同意不对他人进行测量”等7条使用规范，并规定不遵守规范的使用方式不得冠以该方法论的名称（TEP: Technical Evidence Pipeline）。
 
 ## 实现
 
-Grift CLI 仅从 git 历史中提取如下维度的观察：
+Grift CLI仅通过git历史记录提取如下观测数据：
 
-- 归属的区分：通过本人独立提交、他人工作、bot、生成式/供应商产出、自 fork 源继承的历史等 11 类划分，厘清分别属于谁的工作
-- 测试伴随修改率：修改生产代码的同一次提交中，测试代码也一并修改的比例
-- 返工率・修缮重触：近期修改过的文件发生返工或再次触及的比例（仅用于记录倾向，不用作合格与否的判定）
-- 仓库上下文：实际开发天数、参与人数与最高产出者的占比、经由 Review 的比例等
+- 归属区分：通过本人的独立提交、他人的工作、bot、生成与供应商产物、沿袭自fork源的历史等11种分类，划分具体是谁的工作
+- 测试伴随修改率：在修改生产代码的同一次提交中，测试代码也一并修改的比例
+- 返工率・修缮重触：近期触及文件的返工或重新触及比例（作为倾向的记录，不用于评判合格与否）
+- 代码仓库背景信息：实际工作天数、参与人数与最高频创建者的占比、经由审查合并的比例等
 
-v0.6 中新增的 `report-v2`，增加了观察单名工程师工作形态的层级。所有指标均带有分子与分母，绝非对职位或能力的判定。
+在v0.6加入的`report-v2`中，增加了观察单名工程师工作形态的层级。各项均附带分子与分母，并非对职能或能力的评判。
 
-- 工作领域（`surface_profile`）：分为 test / docs / CI/CD / platform / data / observability / frontend / backend / config / 生成式及供应商产出 / 其他 11 个分类，统计各领域的修改各有多少件
-- 变更节奏（`change_rhythm`）：近 180 天中提交修改的天数，以及提交的时间间隔（中位数与 90 分位数、2 天以内连续提交的比例、间隔 30 天以上的比例）。这并非衡量劳动时间或工作意愿的指标
-- 验证形态（`verification_profile`）：触及测试的提交占比及其类型（unit / integration / e2e / contract / 未知），以及 fix 类提交中附带测试的比例
-- 角色 4 维度（`role_profile`）：仅由 domain / work_type / time / process_position 这 4 项构成，不归结压缩为单一职种。只有在存在记录了本人同意凭据的 identity 时才会输出
+- 工作领域（`surface_profile`）：按照test / docs / CI/CD / platform / data / observability / frontend / backend / config / 生成与供应商 / 其他等11个分类，统计各个领域的修改各有几件
+- 变更节奏（`change_rhythm`）：近180天中提交修改的天数及提交间隔（中位数与90百分位数、2天以内连续提交的比例、间隔30天以上的比例）。并不代表工作时长或工作意愿
+- 验证形态（`verification_profile`）：触及测试的提交比例及其类型（unit / integration / e2e / contract / 未知），以及修复（fix）提交中伴随测试的比例
+- 角色4个维度（`role_profile`）：仅使用domain / work_type / time / process_position这4个维度，不折叠为单一职能。仅在存在记录了本人同意的identity时才会输出
 
-与项目需求的对照匹配同样以不进行排名的方式开展。项目方在 `grift project` 中声明所要求的领域、验证、节奏与输入，`grift align` 则将候选人的观察数据分轴并列。并列对比的结果仅有重叠（overlap）、超出声明范围（outside_declared_range）、0件（observed_zero）、未观察到（not_observed）、无要求（not_declared）这 5 种状态，不计算任何综合得分、排名或合格与否。在通过 `--team` 以团队为单位进行查看时，仅输出满足要求的人数；若少于 3 人，为避免个人身份被识别，将不予统计汇总。
+与项目需求的对照比对也以不排名的方式进行。项目侧在`grift project`中声明所要求的领域、验证、节奏及输入，`grift align`将候选人的观测数据按维度并列呈现。比对结果仅有重合（overlap）、超出范围（outside_declared_range）、0件（observed_zero）、未观测到（not_observed）、无要求（not_declared）5种情形，不计算综合分、排名或合格与否。通过`--team`按团队维度查看时，仅输出满足要求的人数，不足3人时不作统计以避免个人被识别。
 
-当母数小于 20 时，不显示百分比，仅展示件数；无法观察到的项目不写作“无业绩”，而是附带理由作为“未观察到”输出。`grift verify` 会在相同条件下重新计算已保存的报告，并返回一致、不一致或无法验证的结果，以便接收方核实是否存在篡改或出入。
+当样本基数不足20时，不输出比率而仅展示件数；未能观测到的内容不列为“无实绩”，而是附带理由列为“未观测到”。`grift verify`能够按相同条件重新计算已保存的报告，并返回一致、不一致或无法验证，以便接收方核实是否存在篡改或分歧。
 
-从 0.9.0 开始，在 `grift actor` 的 Markdown 开头，会用简短语句描述从记录中反映出的工作推进方式。围绕所修改部分的分类、修改节奏、测试补充方式以及参与模式，附带件数和时间范围进行描述；紧接着写明本记录中无法观察到的事项，并以问题的形式列出建议在面试中确认的要点。`grift project` 按相同规则描述项目代码仓库的推进方式，不输出具体到个人的数字和参与模式。`grift align` 在要求与记录的对照并列中，以问题的形式附上建议在面试中确认的要点。语句和问题完全依据公开的[判定表](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md)根据数字选取，不使用 AI。由于未写入 JSON，因此可通过 `grift verify` 进行验算的是作为语句来源的那些数字本身。
+自0.9.0起，在`grift actor`的Markdown开头，会用简短的语句描述从记录中反映出的工作推进方式。针对修改部分的分类、修改节奏、测试添加方式以及参与方式，附上件数与时间跨度予以说明；紧接着阐述通过本记录无法看出的内容，并以问题的形式列出希望在面试中予以确认的事项。`grift project`以相同的规则描述项目仓库的推进方式，不输出每个人的具体数值和参与方式。`grift align`在要求与记录的并列对照中，以问题的形式附上希望在面试中确认的事项。文句与问题通过公开的[决策表](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.0/docs/trait-profile.md)根据数字选取，不使用AI。由于不包含在JSON中，可通过`grift verify`验算的仅为作为文句生成依据的数字。
 
-针对个人的描述语句和问题，只有在属于本人声明的 ID 且存在同意记录时才会输出。其他情况下，会输出一行未予显示的理由。在集中输出多人的场景下（`--all`、`--top`），不输出此类语句。
+关于个人的文句与问题，仅在为本人申报的ID且存在同意记录时才会输出。其他情况下，会以一句话说明未输出的理由。在汇总输出多人时（`--all`、`--top`），不输出文句。
 
-该方法体系名为 TEP（Technical Evidence Pipeline，技术证据提取管线）。它由 4 个阶段构成：读取 git 记录、按固定规则计数、为计数值附带分母及未计入原因、使任何人都能按相同步骤重新核算。详细说明请参阅 Grift 网站的 [TEP 页面](https://griftai.org/tep)。
+该方法论名为TEP（Technical Evidence Pipeline，技术证据提取链路）。由读取git记录、按固定规则计数、为计数值附加分母以及无法计数之事项的理由、使任何人都能以相同步骤重新计数这4个阶段组成。详细说明请参阅Grift网站的[TEP页面](https://griftai.org/tep)。
 
-本页面及 griftai.org 中使用的表述与 CLI 输出中所用术语的对应关系如下：
+本页面及griftai.org所用表述与CLI输出中所写词汇的对应关系如下：
 
-| 网站表述 | CLI 术语 |
+| 网站表述 | CLI词汇 |
 |---|---|
-| 检查值 | observed value（`kind: observed`。附带数值、单位和分母） |
+| 检查值 | observed value（`kind: observed`。附带数值、单位与分母） |
 | 测试伴随修改率 | test co-change |
 | 返工率 | corrective rework |
 | 修缮重触 | path retouch |
-| Code recency | survival（仅在指定 `--survival` 时） |
-| 仓库上下文 | context profile |
+| Code recency | survival（仅在指定`--survival`时） |
+| 代码仓库背景信息 | context profile |
 | 工作领域・变更节奏・验证形态 | surface_profile / change_rhythm / verification_profile |
 
-从 0.9.0 开始，CLI 的 Markdown 也将所修改部分的分类（工作领域）、修改节奏（变更节奏）、测试补充方式（验证形态）、参与模式这 4 个视角的称谓与 griftai.org 保持一致。JSON 中的键名保持不变。
+自0.9.0起，CLI的Markdown中，修改部分的分类（工作领域）、修改节奏（变更节奏）、测试添加方式（验证形态）以及参与方式这4个视角，也采用与griftai.org相同的称谓表述。JSON的键名保持不变。
 
-- 仓库: [github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
-- 分发: PyPI "grift-cli"（`pipx install grift-cli`，Python 3.11 及以上）
-- 许可证: MIT
-- 发行说明: [github.com/Cor-Incorporated/grift-cli/releases](https://github.com/Cor-Incorporated/grift-cli/releases)（各版本变更点）
+在0.9.2中，支持了无需在宿主机上安装Python，直接使用基于grift-cli仓库构建的Docker镜像来运行。需要读取的仓库需获取完整历史记录后传递给`/repo`。通过`git worktree`创建的工作树无法使用。
+
+`grift update`已变更为仅更新当前正在运行的环境，并在更新后显示新安装的版本。不使用PATH中的其他环境。`grift update --check`仅读取PyPI的最新版本信息，不执行更新。不存在自动更新以及日常测量命令进行版本确认的网络通信。
+
+`grift contribute`在获得本人同意后将提交用文件保存至本地。不会自动发送。使用默认的`--door local`创建的文件无法提交至公开入口，因此不会显示提交ID、PR内的文件名及meta行，仅显示通过`--door public-pr`重新创建的步骤。公开提交时，请使用重新创建运行所显示的提交ID、PR内的文件名、meta行以及2个提交路径的URL。无论是本人发起的公开PR，还是隐藏身份的代理PR，文件内容均会公开。
+
+- 代码仓库：[github.com/Cor-Incorporated/grift-cli](https://github.com/Cor-Incorporated/grift-cli)
+- 分发：PyPI“grift-cli”（`pipx install grift-cli`，Python 3.11及以上）
+- 许可证：MIT
+- 发布说明：[github.com/Cor-Incorporated/grift-cli/releases](https://github.com/Cor-Incorporated/grift-cli/releases)（各版本变更点）
 
 ## 成果
 
-2026 年 9 月 8 日，我们在 PyPI 上发布了 [v0.7.2](https://pypi.org/project/grift-cli/0.7.2/)。各项指标在公开的 117 个代码仓库中进行了验证，能够区分的对比和尚无法区分的对比均已在 GitHub 上公开（为公司内部测定，未接受第三方审计）。
+2026年9月8日，在PyPI上发布了[v0.7.2](https://pypi.org/project/grift-cli/0.7.2/)。指标已在公开的117个仓库上进行了验证，在GitHub上同时公开了已实现区分的比对与尚无法区分的比对（为内部测量，未接受第三方审计）。
 
-2026 年 10 月 25 日，我们对网站文案和 CLI 输出进行了逐行核对。发现多人一览（`actor-index`）中，虽然批注中写着“并非排名”，但实际上却是按照提交次数从多到少的顺序排列的，因此在 2026 年 10 月 26 日发布的 [0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0) 中，已将排序调整为 ID 的字典序。提交次数的数值依然保留。详细经过以及对 0.8 系列设定的 5 项验收条件已发布在[博客文章](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)中。
+2026年10月25日，我们逐行比对了网站文案与CLI的输出。发现多人列表（`actor-index`）中虽然注明“非排名”，却按提交次数降序排列，因此在2026年10月26日发布的[0.8.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.8.0)中，将排序调整为ID的字典顺序。保留了提交次数的数值。相关背景以及对0.8版本设定的5项验收条件已记录在[博客文章](https://cor-jp.com/blog/grift-no-score-no-rank-in-code/)中。
 
-在 2026 年 10 月 27 日发布的 [0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0) 中，加入了前述报告开头的描述语句与面试确认问题。同时，从 Markdown 中移除了倾向的“强度”行以及对照匹配的“匹配方向”行。这是因为两份报告并列时，极易被解读为“谁强谁弱”或“合适与不合适”。此外，我们还修正了 4 处可能针对个人输出与事实不符的数字的地方。
+在2026年10月27日发布的[0.9.0](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.0)中，添加了上述报告开头的文句与面试问题。同时，从Markdown中移除了倾向的“强弱”行和比对的“适合方向”行。这是因为两份报告并列时，容易被解读为谁强谁弱、适合谁不适合谁。同时修正了4处可能导致输出与个人事实不符数值的地方。
 
-在 2026 年 10 月 28 日发布的 [0.9.1](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.1) 中，修复了 0.9.0 发布后发现的针对个人或项目可能输出与事实不符数字的问题。未引入新命令，不输出分数、排名和类型名称的原则也保持不变。由于定义版本发生了变更，使用 0.9.0 保存的报告和对照匹配将无法使用 0.9.1 的 `grift verify` 进行验算（仅由要求生成的项目报告等例外情况，请参阅[迁移注意事项](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.1/docs/migration-v091.md)）。
+在2026年10月28日发布的[0.9.1](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.1)中，修正了0.9.0发布后发现的、可能导致输出与个人或项目事实不符数值的地方。未添加新命令，不输出评分、排名和类型名称的原则也保持不变。由于定义版本发生了变更，使用0.9.0保存的报告与比对将无法在0.9.1的`grift verify`中进行验算（仅根据要求生成的项目报告等例外情况请参阅[迁移注意事项](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.1/docs/migration-v091.md)）。
 
-目前，我们正与中介公司及 SES 企业共同筹备试点引入（PoC），旨在基于候选人本人在本地执行生成的记录，让推荐理由更加具体明确。对于自研企业的招聘负责人，我们也接受关于通过候选人本人共享的记录来验证其实际工作情况的试点引入（PoC）咨询。正式版计划结合试点引入的结果，争取于 2027 年开始提供。有关 Grift 的更多介绍，亦可在 [griftai.org](https://griftai.org) 上查阅。
+在2026年10月31日发布的[0.9.2](https://github.com/Cor-Incorporated/grift-cli/releases/tag/v0.9.2)中，在`grift report`的Markdown的代码仓库背景信息栏中，开始展示观测历史中首次活动年份与最后活动年份、标签频率的分子与分母。JSON的数值保持不变。由于目前仍在活动的人员也会显示最后活动年份，因此该项并不代表脱离或离职。标签频率是“标签数 ÷ 活动期间天数 × 365.25”的折合年化值，并非观测到的发布次数。对于活动期间不足20天的仓库，不进行年化折算，仅显示标签数和天数。
 
-关于 Grift 的设计理念，亦可在 [Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) 和 [note](https://note.com/cor_instrument/n/nd58ba0955317) 的文章中了解。
+未添加新命令，不输出评分、排名或合格与否的原则同样保持不变。亦无更改分析数值的修复，但由于提升了定义版本，使用0.9.1保存的报告与比对将无法在0.9.2的`grift verify`中进行验算（仅根据要求生成的项目报告等例外情况请参阅[迁移注意事项](https://github.com/Cor-Incorporated/grift-cli/blob/v0.9.2/docs/migration-v092.md)）。
+
+目前，我们正与中介公司及SES企业推进概念验证（PoC）的筹备工作，旨在基于候选人本人在本地执行的记录，让推荐理由更加具体充实。我们也面向自研企业的招聘负责人，受理基于候选人本人共享的记录来确认其过往工作内容的导入验证（PoC）咨询。关于正式版本，我们计划根据概念验证的结果，争取在2027年开始提供。关于Grift的介绍也可访问 [griftai.org](https://griftai.org)。
+
+关于Grift的设计理念，在[Qiita](https://qiita.com/terisuke/items/c6bb68b3af0db3d43bb1) 与 [note](https://note.com/cor_instrument/n/nd58ba0955317) 的文章中亦有介绍。

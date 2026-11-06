@@ -1,0 +1,4 @@
+このフォルダの AGENTS.md の節「Japanese outbound text in any harness (generated)」の手順に従ってください。
+依頼は request.md、資料は material.md です。
+下書きを draft.md に書き、手順 4 のとおり voice_gate.py の init、review.md の記入、check を行い、check の終了コードが 0 になるまで直してください。記録のフォルダは .yomiyasu/gate/demo にしてください。
+公開、送信、push はしません。最後の返答に、仕上げた本文、確かめたい点、記録のフォルダのパス、最後の check の終了コードを書いてください。

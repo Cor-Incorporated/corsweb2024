@@ -120,13 +120,9 @@ function checkKeyless(workflow: Workflow, text: string): string[] {
   return violations;
 }
 
-/** docs に書いた GCP 側の条件と binding ↔ ワークフロー（イベント・environment・パス・プロバイダ） */
-function checkGcpDocs(workflow: Workflow, { docs }: Inputs): string[] {
+/** WIF のプロバイダとサービスアカウント ↔ docs に書いた値 */
+function checkGcpAuth(docs: string, provider: string, account: string): string[] {
   const violations: string[] = [];
-  const steps = workflow.jobs.deploy?.steps ?? [];
-  const auth = steps.find((step) => step.uses?.startsWith('google-github-actions/auth@'));
-  const provider = String(auth?.with?.workload_identity_provider ?? '（なし）');
-  const account = String(auth?.with?.service_account ?? '（なし）');
   const docsProviders = unique(docs, PROVIDER);
   const docsAccounts = unique(docs, SERVICE_ACCOUNT);
   if (docsProviders.length !== 1 || docsProviders[0] !== provider) {
@@ -139,7 +135,12 @@ function checkGcpDocs(workflow: Workflow, { docs }: Inputs): string[] {
       `サービスアカウント: deploy-cms.yml "${account}" / docs [${docsAccounts.join(', ')}]`
     );
   }
-  const environment = environmentOf(workflow.jobs.deploy) ?? '（なし）';
+  return violations;
+}
+
+/** WIF の条件 ↔ ワークフローのイベント・environment・パス */
+function checkGcpConditions(workflow: Workflow, docs: string, environment: string): string[] {
+  const violations: string[] = [];
   const conditions = [...new Set([...docs.matchAll(CONDITION)].map((m) => m[1]))];
   const clauses = new Map(
     (conditions[0] ?? '').split('&&').map((clause) => {
@@ -177,6 +178,12 @@ function checkGcpDocs(workflow: Workflow, { docs }: Inputs): string[] {
         `WIF 条件に assertion.${name}（数値の ID）が無い: docs ${clauses.get(name) ?? '（なし）'}`
       );
   }
+  return violations;
+}
+
+/** binding の subject ↔ プロバイダの pool とワークフローの environment */
+function checkGcpBinding(docs: string, provider: string, environment: string): string[] {
+  const violations: string[] = [];
   const bindings = [...new Set([...docs.matchAll(BINDING)].map((match) => match[0]))];
   const [, number = '?', pool = '?'] = new RegExp(PROVIDER.source).exec(provider) ?? [];
   const want = `principal://iam.googleapis.com/projects/${number}/locations/global/workloadIdentityPools/${pool}/subject/repo:${REPOSITORY}:environment:${environment}`;
@@ -188,6 +195,20 @@ function checkGcpDocs(workflow: Workflow, { docs }: Inputs): string[] {
   if (docs.includes('principalSet://'))
     violations.push('docs に principalSet://（リポジトリ全体への古い binding）が残っている');
   return violations;
+}
+
+/** docs に書いた GCP 側の条件と binding ↔ ワークフロー（イベント・environment・パス・プロバイダ） */
+function checkGcpDocs(workflow: Workflow, { docs }: Inputs): string[] {
+  const steps = workflow.jobs.deploy?.steps ?? [];
+  const auth = steps.find((step) => step.uses?.startsWith('google-github-actions/auth@'));
+  const provider = String(auth?.with?.workload_identity_provider ?? '（なし）');
+  const account = String(auth?.with?.service_account ?? '（なし）');
+  const environment = environmentOf(workflow.jobs.deploy) ?? '（なし）';
+  return [
+    ...checkGcpAuth(docs, provider, account),
+    ...checkGcpConditions(workflow, docs, environment),
+    ...checkGcpBinding(docs, provider, environment),
+  ];
 }
 
 const ALLOWED_ACTIONS = ['actions/download-artifact', 'google-github-actions/auth'];

@@ -1,0 +1,127 @@
+# grift-cli-dev release/v0.9.2 c7e2a6e CHANGELOG.md の [0.9.2] 節
+## [0.9.2] — 2026-10-30
+
+Docker で grift を実行できるようにし、`contribute`・`context`・`update` の表示と動きを直す patch release。コマンドは増えず、
+CLI フラグと enum 値は変わらない。分析結果の値も変わらない（合成 repo の repo report を 0.9.1 と 0.9.2 で比べて、違ったのは
+`provenance.tool_version` と `definition_version` の 3 項目だけ）。公開 Forge 取得（provider-neutral Forge証跡、
+GitHub/GitLab/self-managed、PARTIAL/resume）、attest / portfolio、contribution-v2 の契約、`暗黙 PyPI update check` を
+持たない設計はいずれも 0.9.1 から変わらない。`DEFINITION_VERSION` を `tep-v0.9.1-2026-10-28` →
+`tep-v0.9.2-2026-10-30` に上げたので、0.9.1 で保存した report（`analyze`・`actor`・`repo`）と照らし合わせは 0.9.2 の `grift verify` で
+CANNOT_VERIFY になる。移行は `docs/migration-v092.md`、英語は `docs/en/migration-v092.md`。
+
+### Added
+
+- `Dockerfile` を足し、ホストに Python を入れずに、このチェックアウトから作ったイメージで grift を実行できるようにした。CI に `docker` job を足し、イメージの `--version` と、読み取り専用 mount・network なしでの `repo` の観測を確かめる。コマンドと出力は変わらない。
+
+### Changed
+
+- `grift update` は、実行中の環境だけを更新する（pipx 管理の環境なら pipx、それ以外は実行中の Python の `-P -m pip`。PATH にある別環境は使わない）。`grift update`（`--check` なし）は PyPI のメタデータを先に取りに行かなくなり、更新のあとに入った版を `installed after update: grift X.Y.Z` と表示する。通信できないときの `grift update --check` は exit 0 から exit 2 になったinstaller は `PYTHONPATH` と `PIP_TARGET`・`PIP_PREFIX`・`PIP_ROOT` を取り除いた環境で、作業ディレクトリではなく実行中の環境のディレクトリから起動する（解析中のリポジトリの `pip.py` を実行しない）。`grift update --check` は installer を起動しない（#51）。
+
+### Fixed
+
+- `grift contribute` の同意後の案内を、実行できる手順だけにした。既定の `--door local` で作った下書きには提出 ID・PR 内のファイル名・meta 行を出さず、`--door public-pr` で作り直す手順だけを示す。`--purpose outcome-linkage` のように公開受け口に出せない purpose には、公開提出の案内を出さない。`--open` では、何をするか（fork への commit と push、最後のボタンは本人）を説明する。gh/git が使えない・失敗したときは、書き出したファイル（`--out` のパス）を `payloads/<年>/<提出ID>.json` として加え、`.meta.json` に meta 行を保存する手順を示し、push が済んだ後に失敗したときは手順ではなく PR 作成ページの URL を示す。ブラウザを開けなかったときも URL を示す（#49）。
+- Context profile に初回/最終活動年とタグ頻度の分子・分母を表示する。活動スパンが 20 日未満の repo ではタグ頻度を年換算せず件数だけを表示する（JSON の値は変わらない）。手で編集した report.json を `grift report <file>` で描き直したとき、2 行が壊れた値で落ちず `not annualized (…)`・`not observed (malformed)` と表示する。日英 metrics-guide と report-schema の説明を同期する（#50）。
+- `grift update` を実行中の pip/pipx 環境へ限定し、明示 check と更新後の版確認・失敗表示を整える。installer を `-P` で、`PYTHONPATH`・`PIP_*` を取り除いて、環境のディレクトリから起動する。HTTP 応答が途中で切れたときの `--check` は読める失敗になる（#51）。
+
+### 既知の制約
+
+3 つの PR の独立レビューで見つかり、0.9.2 では直していないもの。
+
+- `grift contribute`（#49）
+  - report-v1 の report では `--purpose` が黙って無視され、purpose ごとの door の制限が掛からない（report-v2 では掛かる）。[#116](https://github.com/Cor-Incorporated/grift-cli-dev/issues/116) で追う
+  - 手動提出の手順に表示するパスは `shlex.quote` した形のまま（ブラウザのファイル選択にそのまま貼れない）。一時ディレクトリの後片付けに失敗すると、成功と失敗の文言が両方出る
+  - Windows の `cmd /c start` は URL の `&` をエスケープしておらず、終了コードで開けたかを判定するため、開けていても「could not open a browser」と表示されることがある（cmd.exe では未検証）
+  - 同意の開示文の「用途」は、`--purpose outcome-linkage` の report-v2 でも reference-distributions と表示される
+- 文脈プロファイルの表示（#50）
+  - タグ頻度と actor_turnover の行は、report-v1 の Markdown（`grift analyze`・引数なしの `grift report`）にだけ出る。`grift repo` などの report-v2 の Markdown には出ない（0.9.1 から同じ。JSON の `context_profile` には入っている）
+  - 手で編集した report.json の年換算値や単位の型は検査しない。`context_profile` 自体が文字列やリストのとき、`collaboration_class` が文字列のとき、極端に桁数の多い整数のときは、0.9.1 と同じく traceback で終わる
+- `grift update`（#51）
+  - installer を環境のディレクトリから起動するため、引き継いだ環境変数の相対パス（例 `PIP_CONFIG_FILE=.config/pip.conf`）は環境のディレクトリ基準になる。`pip.conf` の `[install] target=`（`[global]`・`prefix=`・`root=` も）で実行中の環境が変わらなかった場合は、更新後の版を表示して exit 0 になりうる（pip の実機では確かめていない）。uv で作った環境（pip が無い）では `No module named pip` で失敗する
+  - installer の終了コードをそのまま返す。grift の終了コード表（1 = MISMATCH、3 = PARTIAL）と値が重なる
+  - `shutil.which("pipx")` が相対パスを返す環境（PATH の先頭が `.`）では、表示と実際の実行がずれる。Windows の `shutil.which` が cwd を先に見る件は未検証
+- テスト基盤: `tests/process_guard.py` が拒否するのは `os`/`subprocess` の入口のうちイベントを出すものだけ（`ctypes` の直接呼び出し、`_posixsubprocess.fork_exec`、`multiprocessing` の spawn/forkserver は対象外）。`test_cli_keyful_cosign_when_binary_is_available` はネットワークが切れていると落ちる（cosign の署名が外部に接続する可能性。未確認）
+
+# docs/usage.md 292 行（contribute）
+引数なしの `grift contribute` も同意後に `.grift/contribution.json` を保存します。自動送信はしません。既定の `--door local` で作ったv2 payloadは公開受け口に提出できないため、提出ID・PR内のファイル名・meta行は表示せず、`--door public-pr` で作り直す手順だけを表示します。公開提出する場合は以下のように `--door public-pr` で作り直し、その実行が表示する提出ID、PR内のファイル名、保存したbytesのSHA-256を含むmeta / manifest行と二つの提出経路URLを使います。`--purpose outcome-linkage` のように `public-pr` を使えない目的では、公開受け口に提出できないことを1行だけ表示し、作り直す手順も表示しません。
+
+# docs/metrics-guide.md 274-275 行
+- **actor_turnover**: `joined` は観測履歴で初めて活動した年、`last_active` は最後に活動した年に数えます。現在も活動している人も `last_active` に含まれるため、離脱や退職を示しません
+- **release_cadence**: `タグ数 / active_span_days × 365.25` を小数第2位に丸めた年換算値（`tags/year`）です。`active_span_days` は最初から最後の人間コミットまでの日数差です。たとえば43タグ・70日なら224.37 tags/yearで、224回の公開リリースを観測した意味ではありません。ローカルに存在する全タグを数え、リリース用途の判定やタグ作成日時による絞り込みはしません。スパンが0日の場合は年換算できず、Markdownは `not observed (zero_activity_span)` と表示します。スパンが20日未満の場合も年換算せず（母数20未満の率は出さない）、Markdownはタグ数と日数だけを `3 tags over 1 days (not annualized: span < 20 days)` のように表示します。JSONの値は変わりません。浅い・部分cloneは `not_observed(history_incomplete)` です
+
+# docs/migration-v092.md 8-66 行
+## v0.9.2 の差分
+
+**面は増えない。Docker で grift を実行できるようにし、`contribute`・`context`・`update` の表示と動きを直す。** CLI の
+コマンド・フラグ・enum 値と JSON の形は変わらない。分析結果の値も変わらない: 合成 repo（作者 Alice の 30 commit）の
+repo report を 0.9.1 と 0.9.2 で作って比べると、違ったのは `provenance.tool_version` と `definition_version`
+（`provenance` と `metrics.human_nonmerge_commit_share` の 2 か所）の 3 項目だけだった。変わるのは次の 4 つ。
+
+### Docker で grift を実行できる（PR #115）
+
+- `Dockerfile`（`python:3.12-slim` の 2 段ビルド。`git` と `openssh-client` だけを同梱し、uid 1000 の非 root、`ENTRYPOINT` は
+  `grift`）と、wheel の入力だけを通す `.dockerignore` を足した。使い方は README の「Docker で使う」にある
+- `gh` と `cosign` は入れない。`contribute --open` と、cosign を呼ぶ操作（`attest --sign cosign`、cosign の信頼ポリシーを使う
+  `verify` と `portfolio`）はホストで実行する
+- イメージは各自の clone から `docker build` で作る。レジストリへの公開はしない
+- `git worktree` で作った作業ツリーは mount できない（`.git` が mount の外を指すので exit 2）。浅い clone は止まらないが、
+  渡された commit だけで数え、`revision_completeness` が不完全（`complete: false`）になる
+- CI に `docker` job を足した。イメージの版、同梱ツール、wheel の中身と追跡ファイルの一致、読み取り専用・network なしの
+  `repo` を確かめ、結果を `guard-ledger.jsonl` として artifact に残す。`tests/test_docker_build_inputs.py` は、
+  `pyproject.toml` の readme と wheel の入力が Dockerfile の `COPY` と `.dockerignore` に揃っていることを結ぶ
+
+### `grift contribute` が同意のあとに保存先と提出手順を案内する（PR #111、stderr の文言だけ）
+
+引数なしの `grift contribute` も、同意のあとに `.grift/contribution.json` を保存し、提出 ID、PR 内のファイル名、保存した
+bytes の SHA-256 を含む meta 行と、二つの提出経路の URL を表示する。自動では送信しない。既定の `--door local` で作った v2 payload は
+公開受け口に提出できないので、公開提出するときは `--door public-pr` で作り直し、新しく表示された ID・hash・meta を使う。
+controlled / masked / raw の出力には公開提出案内を出さない。終了コードと stdout の JSON は変わらない。
+
+### context profile に活動年とタグ頻度の根拠を出す（PR #112、Markdown だけ）
+
+report-v1 の Markdown の context に、初回活動年・最終活動年（`joined` / `last_active`。離脱ではない）と、タグ頻度の
+分子・分母（`タグ数 / active_span_days × 365.25`）を出す。JSON の値は変わらない。metrics-guide（日英）の説明も同じにした。
+
+### `grift update` が実行中の環境だけを更新する（PR #113、**動きが変わる**）
+
+| | 0.9.1 | 0.9.2 |
+|---|---|---|
+| `grift update`（`--check` なし） | PyPI のメタデータを先に取りに行く。PATH の `pipx`、なければ PATH の `pip` / `pip3` で更新 | メタデータを取りに行かない。実行中の環境が pipx 管理ならその環境を `pipx upgrade`、それ以外は実行中の Python の `-P -m pip install --upgrade grift-cli`。PATH の別環境は使わない。終わったら入った版を `installed after update: grift X.Y.Z` と表示 |
+| `grift update --check` | メタデータを読む。通信できないとき exit 0（`version check skipped`） | メタデータを読むだけで何も入れない。通信できないとき **exit 2** |
+| installer が失敗したとき | その終了コードを返す | その終了コードを返し、成功とは表示しない。版の読み戻しに失敗したら exit 2 |
+
+installer は `python -P -m pip`（カレントディレクトリの `pip.py` を読まない）で起動し、`PYTHONPATH` は引き継がない。
+測定コマンドが通信しないことは変わらない（`grift --version` も通信しない）。
+
+### 0.9.2 に入れなかったもの（0.9.3 以降の在庫）
+
+- 0.9.1 の移行文書に書いた 0.9.2 の在庫（M3 ほか）は、0.9.2 には入れていない
+- 3 つの PR のレビューで見つかった MEDIUM / LOW のうち直していないものは、`CHANGELOG.md` の 0.9.2 の節の「既知の制約」にある
+
+### 収集をやり直す必要があるか
+
+| 成果物 | 0.9.1 で作ったものの 0.9.2 verify | 作り直し |
+|---|---|---|
+| report-v1（`analyze` / `report`） | CANNOT_VERIFY（定義版数）、rc=2 | 要（verify を使うなら） |
+| actor / repo report-v2（collection 外） | CANNOT_VERIFY（定義版数）、rc=2 | 要 |
+| project report（project-v1） | リポジトリを観測したもの（`grift project REPO`）は MISMATCH（`definition_version` の欄）、rc=1。要求だけを書いたもの（`grift project --requirements`）は VERIFIED、rc=0 | リポジトリを観測したものは要 |
+| 照らし合わせ（alignment-v1、`align`） | CANNOT_VERIFY（定義版数）、rc=2 | 要 |
+| actor collection（`repo --actors` など） | 定義版数は見ない。`repo --actors` で書いたものは VERIFIED、rc=0 | 不要（`--as-of` と identity の組み合わせは 0.9.1 の節のとおり。0.9.2 では再測していない） |
+| attest / portfolio | 入力 report の digest が変われば再署名 | 入力に依存 |
+
+
+# README.md 124-138 行
+## Docker で使う
+
+ホストに Python を入れずに、このリポジトリを clone して作ったイメージで grift を実行できます。読みたいリポジトリは `/repo` に mount します。
+
+```bash
+git clone https://github.com/Cor-Incorporated/grift-cli.git
+docker build -t grift-cli grift-cli
+cd /path/to/target-repo
+docker run --rm -v "$PWD:/repo:ro" grift-cli repo
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" grift-cli repo . --format both --out .grift
+```
+
+- 履歴は全部取得してください。shallow clone を mount しても止まりませんが、渡された commit だけで数え、`revision_completeness` が不完全（`complete: false`）になります
+- `git worktree` で作った作業ツリーは mount しないでください。`.git` がファイルで mount の外を指すため、コンテナ内から履歴を読めず exit 2 で止まります。通常の clone を mount します
+- `--out` で書き出すときは `--user "$(id -u):$(id -g)"` でホストの UID を渡します（イメージ既定は uid 1000 の非 root ユーザー）

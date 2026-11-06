@@ -1,8 +1,9 @@
 ---
-title: "What Companies Must Protect in a World Where Local APIs Lack Authentication: Operating with Allow-Lists"
-description: "Many tools that run local inference are designed for local use. For example, Ollama's localhost API does not require authentication. Kousuke Terada, CEO, discusses the discrepancies in permission settings that often remain after expanding to internal networks, the proper order for onboarding and decommissioning devices, and a generalized checklist."
-summary: "Many tools that run local inference are built on the assumption that they will be used locally; for instance, Ollama's localhost API does not require authentication. With unauthenticated APIs, reachability essentially means usability, making lingering listening ports and permission discrepancies after expanding to internal networks a significant risk. Rather than just tracking vulnerability information, we believe it is essential to first formalize procedures for the order of device onboarding and decommissioning—registering to the ledger first during onboarding, and revoking permissions first during decommissioning."
+title: "Before using a local inference API inside the company: designing authentication, an allow list and device retirement"
+description: "Before using a local inference API inside the company, design authentication, an allow list and device retirement as separate things. An allow list shows which peer may be reached. Who may use it for which work is decided separately."
+summary: "The official description of Ollama says the localhost API does not require authentication. An allow list shows which peer the traffic may reach. That alone does not decide who may use it for which work. Responding to vulnerabilities and managing allow rules are not alternatives that replace each other."
 pubDate: 2026-10-28
+updatedDate: 2026-10-29
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"
@@ -10,88 +11,100 @@ tags: ["ローカルLLM", "Ollama", "情報セキュリティ", "ISMS"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "8378f2b839ed91057711bc8a65de4ef18e4426757c35c9541be542e7b342702c"
-translatedAt: "2026-10-27T13:40:22.021Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "1cfc6850c3470817cd6d66514c2be11bd1793eeda737c01c8f5359034ae4d502"
+translatedAt: "2026-10-29T05:20:00.000Z"
+translationModel: "manual-i18n-sync"
 ---
 
-Hello, this is Terada from Cor.Inc. Today's topic is a bit understated. But if you are running local AI internally, it is probably the thing that matters most.
+Hello, this is Terada from Cor.Inc. Today's subject is plain. If you run local AI inside a company, it is something to decide first.
 
-## Local Inference APIs Are Designed Assuming "Local Machine Use"
+## Built for use on the machine in front of you
 
-Many tools that run inference locally start from the premise that they will be used on the local machine in front of you.
+Many tools that run inference locally assume, first, that they are used on the machine in front of you.
 
-For example, the official Ollama documentation states that the local API on localhost does not require authentication. It also states that by default, it listens locally (127.0.0.1), and you can change the listening interface through settings.
+Ollama's official documentation says, for example, that the local API on localhost does not require authentication. It also says that, by default, it listens on local 127.0.0.1, and that the listen address can be changed in settings.
 
-This is not so much a flaw as a design assumption. For use on a local machine, that is sufficient. Problems arise when you extend this assumption to your internal corporate network.
+This is less a defect than a design premise. For use on the machine in front of you, that premise is enough. The problem starts when that premise is carried onto the company network.
 
-## "Internal Only" Is Not the Name of a Perimeter
+Calling a local API and having the whole process finish on that machine are not the same thing. Depending on the model you choose, some setups send traffic outside. Check the chosen model and the outbound traffic as well.
 
-When setting up an inference server for internal use, you widen the listening address so other devices can use it. You use a firewall to decide which devices are allowed to reach it. Up to this point, it is standard procedure.
+## The word "internal"
 
-What requires caution is what comes after.
+When you stand up an inference server for internal use, you widen what it listens on so other devices can reach it. A firewall decides which devices may reach it. Up to here, this is an ordinary procedure.
 
-A listening configuration opened for testing is left as is. A permission temporarily added remains indefinitely. A permission for a device no longer in use remains in the firewall, even though it was removed from the ledger.
+What needs care is what comes after.
 
-With an unauthenticated API, "being able to reach it" effectively means "being able to use it." Therefore, the very state where unintentional devices could reach it becomes a risk. The phrase "internal only" only has meaning when accompanied by actual, concrete permission settings.
+A listen address opened as a trial stays open. An allow entry added for a short time stays. A device that is no longer used is gone from the register, but the firewall still allows it.
 
-## What to Do Before Checking CVEs
+On an API without authentication, "it can be reached" almost means "it can be used." So a state in which an unintended device can still reach it is itself a risk. The words "internal only" mean something only when the actual allow rules go with them.
 
-Tracking vulnerability information (CVEs) is important. But I believe there is something that should be made into a standard procedure before that: the sequence for onboarding and decommissioning devices.
+## What an allow list tells you
 
-Vulnerabilities surface all at once on a given day. Discrepancies in permission settings accumulate little by little every day. Without a procedure, no one will notice the latter.
+An allow list tells you which peer the traffic may reach. That alone does not decide who may use it for which work. When several people use it, authentication in front, permissions per user or service, and what happens on revocation are items to design separately. This is not a report that Cor.Inc. has finished implementing them.
 
-## Onboarding Sequence
+## Vulnerability response and allow rules
 
-When allowing a new device to use the inference API, we follow this sequence:
+Responding to vulnerabilities and managing allow rules are not things that one of the two can finish alone. Besides following update notices, keep checking which device may connect, for which purpose, and until when.
 
-1. Register the device in the ledger (purpose, person in charge, expiration date)
-2. Check the basic configuration on the device side
-3. Add it to the firewall allowlist
-4. Confirm reachability and record the verification date in the ledger
+Vulnerability information (CVEs) arrives in a batch on some day. Drift in allow rules accumulates a little every day. The latter is hard to notice without a procedure. Both belong in the procedure.
 
-Ledger first, permissions second. This order is essential. If permissions are added first, you will not be able to trace later "whose permission this is, and what it was for."
+## Order of acceptance
 
-## Decommissioning Sequence
+When a new device is allowed to use the inference API, Cor.Inc. uses this order for acceptance.
 
-When removing a device, we do the reverse:
+1. Register the device in the register (purpose, owner, end date)
+2. Check the device's basic settings
+3. Add it to the firewall allow list
+4. Confirm that it can be reached, and record the date in the register
 
-1. Remove it from the firewall allowlist
+The register comes first and the allow rule after. If only the allow rule is added first, you can no longer trace whose permission it was, or for what.
+
+## Order of retirement
+
+When a device is removed, the order is reversed.
+
+1. Remove it from the firewall allow list
 2. Confirm that it can no longer be reached
-3. Clean up credentials and settings on the device side
-4. Update the ledger to "Decommissioned" and record the date
+3. Clear credentials and settings on the device
+4. Mark the register row as retired and keep the date. Do not delete the row; keep it as history
 
-Here, deleting the permission first is essential. Updating only the ledger while leaving the permission in place is the most common discrepancy that occurs.
+The allow rule is removed first. Updating only the register while the allow rule remains is the drift that happens most easily.
 
-## A Generalized Checklist
+When compromise is suspected, that is separate from the retirement steps above. Isolation and revocation of credentials come first. A suspect device is not handled by the ordinary retirement order.
 
-Here is a summary that can be applied to other companies, rather than being specific to our own cases:
+## Items to check
 
-- Is the inference API's listening address restricted to the intended scope?
-- Have listening configurations broadened for testing been reverted after testing?
-- Does the firewall allowlist match the device ledger?
-- For each allowed destination, are the purpose, person in charge, and expiration date recorded in the ledger?
-- During decommissioning, are tasks processed in the order of "remove permission → confirm unreachable → update ledger"?
-- Is a cross-check between the allowlist and the ledger conducted periodically (for example, monthly)?
-- Are logs kept showing who added or removed which permissions, and when?
-- If an unauthenticated API must be exposed externally, is it designed with authentication or access control placed in front of it?
+This is not a single incident. It is written so other companies can use the same shape. No measured values are listed here. The time until a revocation takes effect is decided as a requirement. A measured value is written only when it has been measured.
 
-None of these are glamorous. However, if this checklist is actively maintained, most discrepancies will be caught early.
+- Is the inference API's listen address limited to the intended range?
+- Was a listen address widened for a test put back after the test?
+- Does the firewall allow list match the device register?
+- Does the register have a purpose, an owner and an end date for each allow entry?
+- On retirement, is the order "remove the allow rule, confirm it cannot be reached, update the register"?
+- Is the allow list checked against the register on a regular cadence (for example monthly)?
+- Is there a record of who added or removed which allow rule, and when?
+- If an API without authentication must be exposed, is there a design that puts authentication or access control in front?
+- Besides success from an allowed device, is an unallowed device refused?
+- After revocation, is it refused?
+- What happens when the service is stopped?
+- Are the chosen model and the outbound traffic within the range you assumed?
 
-## What We Do
+If this list is in use, drift is easier to notice. That does not mean every drift is found.
 
-Cor.Inc. provides hands-on support for all-local implementations running on existing devices. Within our ISMS operations, we work together with you on architecture selection, as well as the design of permissions, revocations, and logging. For our ISMS, we completed the ISO/IEC 27001 Stage 2 audit in October 2026, and expect certification registration around December 2026.
+## What we look at together
 
-The allowlist management discussed here sits right at the core of those "revocations" and "logging." Rather than comparing speed or performance, we believe the true value lies in continuously maintaining these understated boundaries.
+Cor.Inc. starts from existing equipment and looks together at the range to process locally. Within ISMS operations, we work together on choosing a setup and on designing permissions, revocation and logs. The ISMS completed the ISO/IEC 27001 stage 2 audit in October 2026, and certification registration is expected around December 2026.
 
-## In Conclusion
+This allow-list subject sits in that talk of revocation and logs. Being able to explain which device may reach the API, and until when, is an operating condition in addition to inference performance. Performance requirements are not denied here.
 
-Hearing that there is no authentication might make you uneasy. However, that simply means understanding the tool's underlying assumptions. Once you understand the assumptions, what needs to be protected becomes clear.
+## What can be explained
 
-Whose device is allowed to reach it, starting from when, and until when? Being able to account for that in both your ledger and your permission settings—that is what we aim to safeguard.
+Hearing that there is no authentication may feel unsettling. That only means the tool's premise is now known. Once the premise is known, the range to protect becomes visible.
+
+Whose device may reach it, from when, and until when. Being able to explain that in both the register and the allow rules is what Cor.Inc. wants to keep. An allow list alone does not decide a user's permissions.
 
 ## References
 
-- [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - Description stating that the local API on localhost (port 11434) does not require authentication (verified on October 27, 2026)
-- [Ollama Docs: FAQ](https://docs.ollama.com/faq) - Under "How can I expose Ollama on my network?". Description stating that by default it listens on 127.0.0.1 port 11434, and the listening interface can be changed via the environment variable `OLLAMA_HOST` (verified on October 27, 2026)
-- [Cor.Inc.: Security](https://cor-jp.com/security/) - Details on our ISMS operations, completing the ISO/IEC 27001 Stage 2 audit in October 2026, and expecting certification registration around December 2026
+- [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - the local API on localhost (port 11434) does not require authentication (checked on 27 October 2026)
+- [Ollama Docs: FAQ](https://docs.ollama.com/faq) - the section "How can I expose Ollama on my network?". By default it listens on 127.0.0.1 port 11434, and the environment variable `OLLAMA_HOST` changes the listen address (checked on 27 October 2026)
+- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated, that the ISO/IEC 27001 stage 2 audit was completed in October 2026, and that certification registration is expected around December 2026

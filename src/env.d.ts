@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly PUBLIC_SITE_ENV?: 'production' | 'preview' | 'development';
   readonly PUBLIC_CF_BEACON_TOKEN?: string;
   readonly PUBLIC_CLARITY_ID?: string;
+  readonly PUBLIC_GA4_ID?: string;
   readonly PUBLIC_STRIPE_PAYMENT_LINK?: string;
   readonly PUBLIC_YOUTUBE_API_KEY?: string;
   readonly PUBLIC_TURNSTILE_SITEKEY?: string;

@@ -34,10 +34,10 @@ describe('CMS 契約（scripts/check-cms.mjs）', () => {
     expect(message).toContain('cms-contract');
   });
 
-  it('ブログの delete を true にすると落ちる', async () => {
+  it('ブログの delete を false にすると落ちる', async () => {
     const contract = await loadCmsContract();
     const config = structuredClone(yaml.load(readFileSync(configPath, 'utf8')));
-    config.collections[0].delete = true;
+    config.collections[0].delete = false;
     const message = configDrift(config, contract).join('\n');
     expect(message).toContain('delete');
     expect(message).toContain('false');

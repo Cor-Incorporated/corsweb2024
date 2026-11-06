@@ -1,0 +1,2 @@
+資料（grift-cli の docs/usage.md。origin/release/v0.9.2 = 0.9.1 の時点）:
+| `grift update` | grift-cli 自身を明示的に更新。`--check` は最新版の表示だけを行う唯一の update-check 経路 |
