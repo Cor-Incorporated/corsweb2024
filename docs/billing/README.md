@@ -10,8 +10,11 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 |---|---|
 | [plans.json](plans.json) | 商品・価格・税率の宣言（機械可読）。金額は税別の円 |
 | [apply-plans.sh](apply-plans.sh) | plans.json を読んで Stripe に冪等に作る。既定は dry-run（通信しない・鍵を読まない） |
+| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約（Customer・basic・開発費の schedule）、状態の読取、basic の期間末の解約。既定は dry-run |
+| [verify-installments.sh](verify-installments.sh) | テストモード専用。test clock で、開発費が N 回で止まることと、basic の最初の支払いでカードが保存されることを実測する |
+| [lib.sh](lib.sh) | 3 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 解約 → 閉じる） |
-| [tests/test-apply-plans.sh](tests/test-apply-plans.sh) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと） |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 35 項目、`test-subscribe.sh` 46 項目。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -36,7 +39,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 - 商品の id は自分で決めた固定値にする（Stripe は商品 id の上書きを許す [1]）。価格は `lookup_key` で探す [2]。どちらも、何度実行しても同じものを指すため（冪等）。
 - 開発費は、サービスごとに別の商品にする。請求書の行に商品名が出るので、どのサービスの開発費かが顧客に分かる。
 - 価格の金額は、作ったあとに変えられない（価格の更新で変えられる項目に `unit_amount` が無い [3]）。金額を変えるときは、新しい lookup_key で価格を作り直す。`apply-plans.sh` は、既存の価格が plans.json と違えば上書きせずに止まる。
-- **premium を足す手順**: plans.json の premium の行に金額を入れ、`enabled: true` にして `apply-plans.sh` を実行する。既存の顧客を basic から移すときは、subscription の価格を差し替える。日割りにするかは寺田が決める（未決）。
+- premium を足すときは、plans.json の premium の行に金額を入れ、`enabled: true` にして `apply-plans.sh` を実行する。既存の顧客を basic から移すときは、subscription の価格を差し替える。日割りにするかは寺田が決める（未決）。
 - 金額はゼロ小数の円で書く。`unit_amount` の 10000 は 10,000 円 [4]。JPY の最低請求額は 50 円 [4]。plans.json の上限（`limits.max_unit_amount_jpy` = 100,000 円）は、100 倍の打ち間違い（1,000,000）を落とすためにある。
 
 ## 2. 税
@@ -55,14 +58,15 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 
 | 案 | 中身 | 良い点 | 弱い点 |
 |---|---|---|---|
-| **A（推奨）** | 開発費の商品に月額の価格を作り、顧客ごとに subscription schedule を 1 フェーズで作る。`phases[0].duration` を `interval=month`、`interval_count=<残りの回数>`、`end_behavior=cancel` | 回数で止まる。止め忘れが無い。開始日を先の日付にできる [9] | 「ちょうど N 回請求する」と書いた文書は無い。**テストモードの test clock で N 回目の次が請求されないことを実測してから使う**（runbook T5） |
+| **A（推奨）** | 開発費の商品に月額の価格を作り、顧客ごとに subscription schedule を 1 フェーズで作る。`phases[0].duration` を `interval=month`、`interval_count=<残りの回数>`、`end_behavior=cancel` | 回数で止まる。止め忘れが無い。開始日を先の日付にできる [9] | 「ちょうど N 回請求する」と書いた文書は無い。**テストモードの test clock で N 回目の次が請求されないことを実測してから使う**（`verify-installments.sh`、runbook T5） |
 | B | 普通の subscription に `cancel_at`（終了日時）を付ける | 作るのは 1 回 | 期間の途中に `cancel_at` が来ると日割りが起きる [10]。期間の境目ちょうどのときの動きは未確認 |
 | C | 毎月、寺田が 1 回分の請求書を作る | Stripe の機能に頼らない | 顧客 × サービスごとに 12 回の手作業。漏れと二重請求の危険 |
 
-注意:
+次の点に気をつける。
 
 - subscription schedule の `iterations`（回数）は、API の版 `2025-09-30.clover` で削除された [11]。今の版（`2026-10-28.endive` [12]）では `duration` か `end_date` を使う [9]。Stripe の使い方の案内（分割払いの例）は、まだ `iterations` で書かれている [13]。`apply-plans.sh` は `Stripe-Version: 2026-10-28.endive` を固定して送る。
-- schedule の作成には、カードを保存する設定（`payment_behavior` / `payment_settings`）が無い。カードは basic の最初の支払いで保存し（5 章）、schedule の `default_settings.default_payment_method` にそのカードを指定する。**この組み合わせは文書で確かめていない**ので、テストモードで通してから使う（runbook T4）。
+- schedule の作成には、カードを保存する設定（`payment_behavior` / `payment_settings`）が無い。カードは basic の最初の支払いで保存し（5 章）、schedule の `default_settings.default_payment_method` にそのカードを指定する（この項目はある [9]）。**この組み合わせを通しで書いた文書は無い**ので、`verify-installments.sh` で実測してから使う（runbook T5）。
+- test clock は 1 回に「最短の subscription の 2 期間」までしか進められず、1 つの clock に顧客は 3 人まで [19]。`verify-installments.sh` は 31 日ずつ N+2 回進める。
 - 残りの回数は顧客ごとに決まる: `12 − 回収済みの回数 − Stripe 以外で請求する回数`。値は非公開の台帳に書く（8 章）。
 - 顧客が basic を解約しても、開発費の schedule は止めない（分割で払う約束の残り）。途中で解約したときに残りをどう扱うか（一括で請求するか）は契約書で決める（未決）。
 - 顧客ポータルからは、schedule に管理された subscription を顧客が解約できない [14]。開発費を顧客が誤って止めることはない。今週はポータルを使わない。
@@ -82,20 +86,20 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 
 ## 5. 支払い → 入口を開ける（今週は手動）
 
-入口（Access の許可）は、支払いを確かめてから最後に開ける。それまでの作業は顧客から見えない。詳しい手順は runbook C1〜C8。
+入口（Access の許可）は支払いを確かめてから最後に開ける。それまでの作業は顧客から見えない。詳しい手順は runbook C1〜C8。
 
-1. 契約書を交わす（寺田）。
-2. Stripe に Customer を作り、basic の subscription を作る。`payment_behavior=default_incomplete`、`payment_settings[save_default_payment_method]=on_subscription`、`default_tax_rates` に消費税。最初の支払いが済むとカードが subscription の既定になる [15]。
-3. 最初の請求書の支払いページの URL を、寺田が顧客へ送る（送信は寺田）。
-4. 支払いが済んだことを寺田が確かめる（請求書の状態が paid。通知の名前は `invoice.paid` [16]）。
-5. 開発費があれば、開発費の schedule を作る（3 章）。
-6. 製品側の準備: XESM は `contract-to-use.md` の手順 3〜7、business-dossier は `docs/deploy/onboarding.md`。
-7. Access の許可メールに、顧客の利用者を足す（**公開スイッチ。寺田のみ**）。
-8. 初回のログインを見届ける。
+1. 契約書を交わし、非公開の台帳に 1 行足す（寺田）。
+2. Stripe に Customer を作る（`subscribe.sh customer`）。
+3. basic の subscription を作る（`subscribe.sh basic`）。`payment_behavior=default_incomplete`、`payment_settings[save_default_payment_method]=on_subscription`、`default_tax_rates` に消費税。最初の支払いが済むとカードが subscription の既定になる [15]。スクリプトは、最初の請求書の税込の額が plans.json と合うことを確かめてから支払いページの URL を出す。
+4. 支払いページの URL を、寺田が顧客へ送る（送信は寺田）。**23 時間以内に払われないと subscription は `incomplete_expired` になる** [15]ので、顧客と時間を合わせてから 3 を実行する。
+5. 支払いが済んだことを確かめる（`subscribe.sh status` で `status=active`・`card=保存済み`。通知の名前は `invoice.paid` [16]）。
+6. 開発費があれば、開発費の schedule を作る（`subscribe.sh devfee`。3 章）。
+7. 製品側の準備: XESM は `contract-to-use.md` の手順 3〜7、business-dossier は `docs/deploy/onboarding.md`。
+8. Access の許可メールに、顧客の利用者を足す（**公開スイッチ。寺田のみ**）。初回のログインを見届ける。
 
 ## 6. 解約 → 入口を閉じる
 
-1. 解約の申し出を受けたら、寺田が basic の subscription を期間末で止める（`cancel_at_period_end=true`）。
+1. 解約の申し出を受けたら、寺田が basic の subscription を期間末で止める（`subscribe.sh cancel`。`cancel_at_period_end=true` [20]）。スクリプトは basic 以外（開発費）を止めない。
 2. 期間末に subscription が終わる（通知 `customer.subscription.deleted` [16]）。**先に Access の許可から利用者を外し**、入口を閉じる。
 3. 製品側の利用者を無効にする。XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
 4. 支払いが失敗したとき（通知 `invoice.payment_failed` [16]）: 再請求の設定と、何日で入口を閉じるかは寺田が決める（未決）。
@@ -105,7 +109,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 - 受け口: Cloudflare Worker で Stripe の通知（`invoice.paid`、`customer.subscription.deleted`、`invoice.payment_failed` [16]）を受け、署名を確かめる。
 - 処理: subscription の `metadata.customer_code` と `metadata.service` から、開けるべき Access のポリシーを決める。利用者のメールは非公開の保管場所（KV か D1）から読む。足す・外す操作は、はじめは寺田の承認 1 回を挟む。
 - 秘密: 通知の署名の鍵と Cloudflare の API token は、`register-secret-verified.sh` に査読済みの recipe が無い。recipe ができるまで手順に書かず、保留にする。
-- 通知の受け口は、作ったときの API の版で固定される [12]。作るときに `2026-10-28.endive` を選ぶ。
+- 通知の受け口は作ったときの API の版で固定される [12]。作るときに `2026-10-28.endive` を選ぶ。
 
 ## 8. 過去の月の未回収分
 
@@ -117,7 +121,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | b | Stripe で 1 回だけの請求書を作り、支払いページでカードで払ってもらう | まだどこにも請求していない過去の月を、カードでまとめて払ってもらうとき |
 | c | 分割の回数に足す（schedule の回数を増やす） | 使わない。開始月と回数の対応が崩れ、台帳と合わなくなる |
 
-二重請求を防ぐ決まり: schedule の回数は「Stripe で請求する月」だけを数える。台帳には、月ごとに「請求の方法・請求日・入金日」を書く。
+二重請求を防ぐ決まり: schedule の回数は「Stripe で請求する月」だけを数える。台帳には月ごとに「請求の方法・請求日・入金日」を書く。
 
 ## 9. テストモード → 本番
 
@@ -130,14 +134,14 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 
 | 要求 | 設計書 | 宣言ファイル | 手順書 | 未確認の限界 |
 |---|---|---|---|---|
-| 商品 | 1 章 | `products` | T2 | 商品名は寺田が確定 |
-| プラン（basic / premium の枠） | 1 章 | `prices[].plan`・`enabled` | T2 | premium の金額は未定 |
-| 開発費の分割 | 3 章 | `prices[].installments` | T4・T5・C5 | 「ちょうど 12 回」は test clock の実測待ち |
-| 税 | 2 章 | `tax_rate`・`tax_behavior` | T2 | 適格請求書の要件は未確認 |
-| 顧客の識別 | 4 章 | `services` | C3 | 実際の行は repo に書かない |
-| 支払い → 入口を開ける | 5 章 | `services[].entry` | C1〜C8 | 支払いページの画面の文言は未確認 |
+| 商品 | 1 章 | `products` | T2〜T4・L2〜L3 | 商品名は寺田が確定 |
+| プラン（basic / premium の枠） | 1 章 | `prices[].plan`・`enabled` | T2・C3 | premium の金額は未定 |
+| 開発費の分割 | 3 章 | `prices[].installments` | T5・T6・C6 | 「ちょうど 12 回」は T5 の実測待ち（AI のレーンは偽の応答でしか通していない） |
+| 税 | 2 章 | `tax_rate`・`tax_behavior` | T2・C3 の CHECK | 適格請求書の要件は未確認 |
+| 顧客の識別 | 4 章 | `services` | C1〜C3 | 実際の行は repo に書かない。台帳の置き場所が未決 |
+| 支払い → 入口を開ける | 5 章 | `services[].entry` | C2〜C7 | 支払いページにカードが出るかは T6 で確かめる |
 | 解約 → 入口を閉じる | 6 章 | — | D1〜D4 | XESM の利用者の無効化手順が無い |
-| 未回収分 | 8 章 | — | C9 | 顧客ごとの数字は非公開の台帳 |
+| 未回収分 | 8 章 | — | C8 | 顧客ごとの数字は非公開の台帳 |
 | 特商法 | 別 PR | — | — | 文言は寺田が確定 |
 | 手順書 | — | — | runbook.md | Stripe の画面の文言は確かめていない |
 
@@ -161,8 +165,9 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 16. subscription の通知: https://docs.stripe.com/billing/subscriptions/webhooks
 17. 残高の `livemode`: https://docs.stripe.com/api/balance/balance_object
 18. サンドボックス: https://docs.stripe.com/sandboxes
-
-test clock の文書（https://docs.stripe.com/billing/testing/test-clocks）は読んでいない。runbook T5 の前に寺田が読む。
+19. test clock（作成・進め方・上限）: https://docs.stripe.com/api/test_clocks/advance 、https://docs.stripe.com/billing/testing/test-clocks/api-advanced-usage
+20. subscription の更新（`cancel_at_period_end`）: https://docs.stripe.com/api/subscriptions/update
+21. テスト用のカード（`pm_card_visa`、`4242 4242 4242 4242`）: https://docs.stripe.com/testing
 
 ## 12. 確かめたい点（寺田）
 

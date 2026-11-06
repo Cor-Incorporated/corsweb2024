@@ -4,8 +4,9 @@
 
 - 鍵は画面に出さない入力で受ける（スクリプトが聞く）。鍵をファイル・メモ・チャットに書かない。
 - 先にコマンドを打ち、聞かれてから鍵をコピーして貼る（鍵をコピーしたあとにコマンドを貼ると、クリップボードが上書きされる）。
-- Stripe の画面の名前・ボタンの名前は、確かめていないので書かない。書いたものは「未確認」と付けた。
-- 顧客ごとの値（社名、メール、残りの回数）は、この手順書にもリポジトリにも書かない。非公開の台帳に書く（C3）。
+- Stripe の画面の名前・ボタンの名前は、確かめていないので書かない。書いたものには「未確認」と付けた。
+- 顧客ごとの値（社名、メール、残りの回数）は、この手順書にもリポジトリにも書かない。非公開の台帳に書く（C1）。
+- `tee` で残すログには、顧客の社名とメールが入る。ログはホームの直下に置き、リポジトリに入れない。
 
 ## 0. 前提
 
@@ -14,6 +15,7 @@
 | P1 | Stripe のアカウント（本人確認・入金先の口座を含む） | 寺田（画面の作業） | **未確認**。corsweb の特商法ページに「クレジットカード決済（Stripe）」の記載があり、アカウントはある見込み |
 | P2 | 手元の Mac に `jq` と `curl` がある | — | 実測済み（14:01）: `/usr/bin/jq`（jq-1.7.1-apple）、`/usr/bin/curl`（8.7.1） |
 | P3 | 作業する場所 | 寺田 | PR の merge 前は `~/Developer/corsweb/.worktrees/claude/billing-20261106`、merge 後は `~/Developer/corsweb`（develop） |
+| P4 | 非公開の台帳の置き場所 | 寺田 | **未決**。列は C1 の表 |
 
 P3 の場所へ移る（merge 前）:
 
@@ -21,13 +23,27 @@ P3 の場所へ移る（merge 前）:
 cd ~/Developer/corsweb/.worktrees/claude/billing-20261106
 ```
 
-## T. テストモードで商品・価格・税率を作る
+鍵なしで動く検査を先に通す（通信しない。`35 passed, 0 failed` と `46 passed, 0 failed` が出ること）:
+
+```bash
+bash docs/billing/tests/test-apply-plans.sh | tail -1
+```
+
+```bash
+bash docs/billing/tests/test-subscribe.sh | tail -1
+```
+
+## T. テストモード
 
 ### T1. テストモードの鍵を用意する（画面の作業）
 
 - テストモードの鍵を Stripe の画面で用意する。画面の場所と名前は**未確認**。
-- 推奨は権限を絞った鍵（制限付きの鍵）。要る権限は「商品・価格・税率の書き込み」と「残高の読み取り」（`GET /v1/balance` でモードを確かめるため）。**権限の画面での名前は未確認**。
-- この時点では鍵をコピーしない（T3 でスクリプトに聞かれてからコピーする）。
+- 権限を絞った鍵（制限付きの鍵）にするなら、要る権限は次のとおり。**権限の画面での名前は未確認**。
+  - 商品・価格・税率: 書き込み（T3）
+  - 残高: 読み取り（全部のスクリプトがモードの確認に使う）
+  - 顧客・subscription・subscription schedule・請求書・支払い方法: 書き込み（T5・T6）
+  - test clock: 書き込み（T5）
+- この時点では鍵をコピーしない（スクリプトに聞かれてからコピーする）。
 
 ### T2. dry-run（通信しない・鍵を読まない）
 
@@ -52,7 +68,7 @@ DONE dry-run: 何も作っていない。…
 
 金額が上と違えば、先へ進まない（plans.json を直す PR を出す）。
 
-### T3. テストモードに作る
+### T3. テストモードに商品・価格・税率を作る
 
 ```bash
 bash docs/billing/apply-plans.sh --apply --mode test 2>&1 | tee ~/billing-apply-test-$(date +%Y%m%d-%H%M%S).log
@@ -63,7 +79,6 @@ bash docs/billing/apply-plans.sh --apply --mode test 2>&1 | tee ~/billing-apply-
    - `CHECK ok: 鍵のモード = test（観測 livemode=false）`
    - 1 回目は `CREATED tax_rate …`、`CREATED product …` が 4 行、`CREATED price …` が 4 行
    - 最後に `DONE apply --mode test`
-3. ログには鍵は書かれない（スクリプトは鍵を出力しない。`tests/test-apply-plans.sh` が検査している）。
 
 ### T4. もう一度実行して、何も作られないことを確かめる（冪等）
 
@@ -75,17 +90,65 @@ bash docs/billing/apply-plans.sh --apply --mode test 2>&1 | tee ~/billing-apply-
 
 ### T5. 分割が 12 回で止まることを確かめる（test clock）
 
-**準備中（17:00 の最終報告で入れる）**。テストモードの test clock で、開発費の schedule が N 回請求して N+1 回目を請求しないことを実測する。これが済むまで、本番で開発費の schedule を作らない。
+```bash
+bash docs/billing/verify-installments.sh 2>&1 | tee ~/billing-verify-$(date +%Y%m%d-%H%M%S).log
+```
+
+- 鍵を聞かれたら、テストモードの鍵を貼る。所要は 2〜3 分（clock を 14 回進める。1 回ごとに 7 秒以上あける）。
+- 最後に次の 2 行が出ること:
+  - `VERIFY 開発費: 支払い済み 12 件（期待 12）、それ以外 0 件（期待 0）、額の違う請求書 0 件（期待 0。各回 税込 8800 円・税 800 円）、subscription=canceled（期待 canceled）`
+  - `VERIFY ok: 開発費は 12 回請求して止まった（13 回目は無い）`
+- 途中の `VERIFY basic …: status=active、保存されたカード=pm_…` は、basic の最初の支払いでカードが保存されたことの実測。
+- `VERIFY NG` が出たら、本番で開発費の schedule を作らない。ログを統括へ渡す。
+- 作った test clock は自動で消える（`VERIFY clock …（自動で消える日時: …）` の行）。スクリプトは何も消さない。
+
+### T6. 顧客 1 社の流れをテストモードで 1 周する
+
+テスト用の値: 顧客コード `cor-test`、社名 `Cor.株式会社（テスト）`、請求先のメール `company@cor-jp.com`、サービス `xesm`、組織 `テスト`。テストモードでメールが送られるかは**未確認**（送られても宛先は自社のアドレス）。
+
+1. Customer を作る。`CREATED customer cus_…` の id を控える（台帳には書かない。テストだけ）。
+
+   ```bash
+   bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email company@cor-jp.com --apply --mode test
+   ```
+
+2. basic を作る。`<cus_…>` は 1 の出力の id。控え忘れたら `bash docs/billing/subscribe.sh find --code cor-test --mode test` の `FOUND` の行で取れる。
+
+   ```bash
+   bash docs/billing/subscribe.sh basic --customer <cus_…> --service xesm --tenant テスト --apply --mode test
+   ```
+
+   `CHECK ok: 最初の請求書 税込 11000 円（うち消費税 1000 円）` と `PAY_URL https://…` が出ること。
+3. `PAY_URL` をブラウザで開き、Stripe のテスト用カード番号（`4242 4242 4242 4242`、有効期限は未来の任意の月、CVC は任意の 3 桁。https://docs.stripe.com/testing ）で払う。**支払いページにカードが出るかは未確認**（この手順で確かめる）。
+4. 状態を読む。`SUB … plan=basic status=active … card=保存済み` が出ること。
+
+   ```bash
+   bash docs/billing/subscribe.sh status --customer <cus_…> --mode test
+   ```
+
+5. 開発費を作る（回数 2、すぐ始める）。`CREATED schedule … 2 回` が出ること。
+
+   ```bash
+   bash docs/billing/subscribe.sh devfee --customer <cus_…> --service xesm --count 2 --start now --apply --mode test
+   ```
+
+6. basic を期間末で止める。`<sub_…>` は 4 の `SUB` の行のうち `plan=basic` の id。`CANCEL_AT_PERIOD_END … に終わる` が出ること。
+
+   ```bash
+   bash docs/billing/subscribe.sh cancel --subscription <sub_…> --apply --mode test
+   ```
+
+7. 4 をもう一度実行し、basic の行が `cancel_at_period_end=true`、開発費の `SCHEDULE` の行が残っていることを確かめる。
 
 ## L. 本番に切り替える
 
-T2〜T4 が通ってから行う。
+T2〜T6 が通ってから行う。
 
 ### L1. 本番の鍵を用意する（画面の作業）
 
-T1 と同じ権限の鍵を、本番で用意する。画面の場所と名前は**未確認**。
+T1 と同じ権限の鍵を、本番で用意する（test clock の権限は要らない）。画面の場所と名前は**未確認**。
 
-### L2. 本番に作る
+### L2. 本番に商品・価格・税率を作る
 
 ```bash
 bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-live-$(date +%Y%m%d-%H%M%S).log
@@ -93,50 +156,142 @@ bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-
 
 1. 鍵を聞かれたら、本番の鍵を貼って Enter。
 2. `CHECK ok: 鍵のモード = live（観測 livemode=true）` が出ること。
-3. `本番（live）に上の PLAN を作ります。続けるなら live と打って Enter:` と出たら、上の `PLAN` の金額を読み、`live` と打って Enter。
+3. `本番（live）に上の PLAN を実行します。続けるなら live と打って Enter:` と出たら、上の `PLAN` の金額を読み、`live` と打って Enter。
 4. `CREATED` が 9 行（または既存の分は `OK`）と、`DONE apply --mode live` が出ること。
 
 ### L3. もう一度実行して、何も作られないことを確かめる
-
-T4 の `--mode test` を `--mode live` に変えて実行し、`0` が出ること。
 
 ```bash
 bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-live-$(date +%Y%m%d-%H%M%S).log | grep -c '^CREATED'
 ```
 
-## C. 顧客 1 社: 契約 → 入口を開ける
+最後に `0` が出ること。
 
-**C4・C5・C7 のスクリプト（`docs/billing/subscribe.sh`）は準備中（17:00 の最終報告で入れる）**。それまでは本番で顧客を作らない。
+## C. 顧客 1 社: 契約 → 入口を開ける（本番）
 
-| # | 内容 | 実行者 |
+### C1. 契約と台帳（寺田）
+
+契約書を交わし、申込票を受け取り、非公開の台帳（P4）に 1 行足す。台帳の列:
+
+| 列 | 中身 | 使う手順 |
 |---|---|---|
-| C1 | 契約書を交わす（サービス、プラン、開発費の有無と残りの回数、解約の条件） | 寺田 |
-| C2 | 申込票を受け取る: 顧客コード（英小文字・数字・ハイフン）、社名、請求先のメール、サービス、利用者のメール | 寺田 |
-| C3 | 非公開の台帳に 1 行足す: 顧客コード、サービス、プラン、開発費の残りの回数、月ごとの請求の方法。**台帳の置き場所は未決（寺田）** | 寺田 |
-| C4 | Stripe に Customer と basic の subscription を作る（準備中のスクリプト） | 寺田 |
-| C5 | 開発費があれば、開発費の schedule を作る（準備中のスクリプト。T5 の後） | 寺田 |
-| C6 | 最初の請求書の支払いページの URL を顧客へ送る | 寺田（送信） |
-| C7 | 支払いが済んだことを確かめる（請求書の状態が paid） | 寺田 |
-| C8 | 製品側の準備と、Access の許可メールの追加（XESM: `contract-to-use.md` の手順 3〜8。business-dossier: `docs/deploy/onboarding.md`）。Access は最後に開ける | 寺田（Access）／ Claude（製品側の準備） |
-| C9 | 過去の月の未回収分は、README の 8 章の方法で回収する（顧客ごとの数字は台帳） | 寺田 |
+| 顧客コード | 英小文字・数字・ハイフン（40 文字まで。XESM の申込票の顧客コードと同じ規則） | C2・C3 |
+| 社名・請求先のメール | 申込票から | C2 |
+| サービス | `business-dossier` か `xesm` | C3・C5 |
+| 製品側の組織 | business-dossier は起動の slug（bd-deploy の報告 6 章の推奨は `c01`）、XESM は組織名（XESM の `contract-to-use.md` 手順 6 の取得コマンドの出力） | C3 |
+| 開発費の Stripe で請求する回数 | `12 − 回収済み − Stripe 以外で請求する回数`（README 8 章） | C5 |
+| 月ごとの請求の方法・請求日・入金日 | 二重請求を防ぐため | C7 |
 
-## D. 解約 → 入口を閉じる
+### C2. Customer を作る
 
-| # | 内容 | 実行者 |
-|---|---|---|
-| D1 | basic の subscription を期間末で止める（`cancel_at_period_end=true`。準備中のスクリプト） | 寺田 |
-| D2 | 期間末に subscription が終わったら、**先に** Access の許可から利用者を外す | 寺田 |
-| D3 | 製品側の利用者を無効にする（XESM はお客様用の手順がまだ無い。xesm の報告 W6） | 寺田 ／ Claude |
-| D4 | 台帳に解約日を書く。開発費の schedule は止めない（契約書の定めに従う） | 寺田 |
+`<顧客コード>`・`<社名>`・`<請求先のメール>` は台帳の同じ名前の列。まず dry-run（`--apply` なし）で PLAN を読む。
+
+```bash
+bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール>
+```
+
+```bash
+bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+```
+
+`CREATED customer cus_…`（既にあれば `OK customer cus_…`）が出ること。id は次で取り直せる（作った直後は 1 分ほど出ないことがある）:
+
+```bash
+bash docs/billing/subscribe.sh find --code <顧客コード> --mode live
+```
+
+### C3. basic を作り、支払いページの URL を受け取る
+
+`<cus_…>` は C2 の id、`<サービス>` と `<製品側の組織>` は台帳の列。
+
+```bash
+bash docs/billing/subscribe.sh basic --customer <cus_…> --service <サービス> --tenant '<製品側の組織>' --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+```
+
+- `CHECK ok: 最初の請求書 税込 11000 円（うち消費税 1000 円）` と `PAY_URL https://…` が出ること。
+- `STOP: 最初の請求書の税込の額が違う` が出たら、URL を送らない（払われなければ 23 時間で失効する）。統括へ渡す。
+
+### C4. 支払いページの URL を顧客へ送る（寺田）
+
+- **23 時間以内に払ってもらう**（過ぎると subscription が `incomplete_expired` になり、C3 からやり直し）。先に顧客と時間を合わせてから C3 を実行する。
+- 送る経路と文面は寺田が決める（このレーンは送らない）。
+
+### C5. 支払いを確かめる
+
+```bash
+bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
+```
+
+`SUB … service=<サービス> plan=basic status=active … card=保存済み` が出ること。`status=incomplete` のままなら、まだ払われていない。
+
+### C6. 開発費の schedule を作る（開発費がある顧客だけ。T5 が合格してから）
+
+`<回数>` は台帳の「開発費の Stripe で請求する回数」。`--start align` は、basic の次の請求日に合わせる（同じ日に 2 つの請求が出る）。
+
+```bash
+bash docs/billing/subscribe.sh devfee --customer <cus_…> --service <サービス> --count <回数> --start align
+```
+
+```bash
+bash docs/billing/subscribe.sh devfee --customer <cus_…> --service <サービス> --count <回数> --start align --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+```
+
+`CREATED schedule … <回数> 回` と `CHECK phases[0]: 開始 … → 終了 …` が出ること。開始と終了の日付を台帳に書く。
+
+### C7. 製品側の準備と、入口を開ける
+
+- XESM: `contract-to-use.md` の手順 3〜7（利用者・組織・案件）→ 手順 8（Access の許可メール。**寺田のみ**）。
+- business-dossier: `docs/deploy/onboarding.md`（Access は最後）。
+- 入口は最後に開ける。台帳に、開けた日時を書く。
+
+### C8. 過去の月の未回収分
+
+README の 8 章。請求書（銀行振込）で請求済みの月は、その請求書のまま回収する。台帳の「月ごとの請求の方法」に書く。
+
+## D. 解約 → 入口を閉じる（本番）
+
+### D1. basic を期間末で止める
+
+`<sub_…>` は C5 の `status` の出力のうち `plan=basic` の `SUB` の id。
+
+```bash
+bash docs/billing/subscribe.sh cancel --subscription <sub_…> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+```
+
+`CANCEL_AT_PERIOD_END <sub_…>: <日時> に終わる。…` が出ること。日時を台帳に書く。開発費の subscription を渡すと `basic でない` で止まる（開発費は止めない）。
+
+### D2. 期間末に入口を閉じる
+
+D1 の日時を過ぎたら、状態を読む。
+
+```bash
+bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
+```
+
+basic の行が `status=canceled` になっていたら、**先に** Access の許可から利用者を外す（XESM は `contract-to-use.md` 手順 8 の逆。business-dossier は `onboarding.md` の Access の節の逆。**寺田のみ**）。
+
+### D3. 製品側の利用者を無効にする
+
+XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
+
+### D4. 台帳に書く
+
+解約日、入口を閉じた日時。開発費の schedule は契約書の定めに従い、止めない。
 
 ## 問題が起きたら
 
 | 出たもの | 原因 | 対処 |
 |---|---|---|
-| `STOP: plans.json の検査で不合格` と `NG: …` の行（exit 2） | plans.json の誤り（税込で書いた、100 倍、小数、税率を内税にした、回数が無い など） | `NG:` の行を読み、plans.json を直す PR を出す。何も作られていない |
+| `NG: …` の行と `STOP: plans.json の検査で不合格`（exit 2） | plans.json の誤り（税込で書いた、100 倍、小数、税率を内税にした、回数が無い など） | `NG:` の行を読み、plans.json を直す PR を出す。何も作られていない |
 | `STOP: 鍵のモードが --mode と違う（--mode test、観測 livemode=true）`（exit 3） | テストのつもりで本番の鍵を貼った（またはその逆） | 正しいモードの鍵で、同じコマンドをもう一度。何も作られていない |
 | `STOP: 既存の価格 … が plans.json と違う: unit_amount 期待 10000 観測 …`（exit 3） | 前に違う金額で作った価格が残っている | 上書きはしない。新しい lookup_key で作るか、古い価格を使わないようにするかを寺田が決める |
 | `STOP: 既存の税率 … が plans.json と違う`（exit 3） | 前に違う率・国で作った税率が残っている | 率と国は変えられない。作り直すかを寺田が決める |
+| `STOP: 価格 … が無い。先に apply-plans.sh …`（exit 3） | そのモードで T3（または L2）をまだ実行していない | T3（L2）を先に実行する |
+| `STOP: この顧客には … の basic が既にある`（exit 3） | 同じ顧客・同じサービスに basic がある | `status` で状態を読む。`incomplete` のままなら C4 の URL を送り直すか、23 時間の失効を待って C3 からやり直す |
+| `STOP: … の basic が active でない` / `カードが保存されていない`（exit 3） | 最初の支払いがまだ | C5 で `status=active`・`card=保存済み` になってから C6 |
+| `STOP: 最初の請求書の税込の額が違う`（exit 3） | 消費税が付いていない、または価格が違う | URL を送らない。統括へ渡す |
+| `STOP: --start に過去の日付は使わない`（exit 64） | 過去の日付を渡した（過去の日付は遡って請求される） | `align` か今日以降の日付にする |
+| `VERIFY NG: …`（exit 5） | 開発費が 12 回で止まらない、額が違う、カードが保存されない | 本番で開発費の schedule を作らない。ログを統括へ渡す |
 | `STOP: API エラー（HTTP 401、…）`（exit 4） | 鍵の誤り、取り消された鍵、貼ったときに前後へ空白が入った | 鍵を貼り直す。スクリプトは鍵の形を検査しない（形は提供元が決める） |
 | `STOP: API エラー（HTTP 403、…）`（exit 4） | 制限付きの鍵に権限が足りない | T1 の権限を足す（権限の画面の名前は未確認） |
 | `STOP: 本番は端末から実行する`（exit 64） | 本番をパイプや自動実行で動かした | 端末から直接実行する（`live` と打つ確認が要る） |
@@ -146,6 +301,7 @@ bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-
 
 | 手順 | この文書だけで実行できるか | 足りないもの |
 |---|---|---|
-| T2〜T4、L2〜L3 | できる（コマンドと出るべき行がある） | 鍵の用意（T1・L1）は画面の作業で、画面の文言は未確認 |
-| T5、C4・C5・C7、D1 | **できない** | スクリプトが準備中（17:00 の最終で入れる） |
-| C3 | **できない** | 台帳の置き場所が未決（寺田） |
+| T2〜T6、L2〜L3 | できる（コマンド、テスト用の値、出るべき行がある） | 鍵の用意（T1・L1）は画面の作業で、画面の文言は未確認。支払いページにカードが出るかは T6 で確かめる |
+| C2〜C6、D1〜D2 | できる（`<…>` は台帳の同じ名前の列、`cus_…` と `sub_…` は取得コマンドがある） | 台帳の置き場所（P4）が未決。開発費の回数は台帳の値で、10 月以降の扱い（統括への報告の J4）が決まるまで決まらない |
+| C7、D2 の Access | 製品側の手順書へ渡す | Access の画面の文言は製品側の手順書でも未確認 |
+| D3 | **できない** | XESM のお客様用の無効化の手順が無い（xesm の W6） |
