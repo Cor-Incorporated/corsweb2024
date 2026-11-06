@@ -46,7 +46,7 @@ merge の Yes は、PR ごとに、PR の番号を指して言います。エー
 ## 1. 守る順序（飛ばすと計測が止まる、または開示なしで計測が始まる）
 
 1. griftai.org は、ID をコードから外します。Pages の Production に変数を入れる前に release すると、griftai.org の GA4 と Clarity が止まります。**5-2 節を、6-2 節より先に**します。
-2. cor-jp.com の GA4 は、プライバシーポリシーに Google Analytics の開示が入ってから有効にします。2026-11-06 の時点で、develop の ja のポリシー（`src/i18n/locales/ja.json`）に「Google Analytics」は 0 件です。開示の PR は別です（corsweb2024 の 501 と 499。501 は 382 の続きです）。**その PR が develop に merge されるまで、5-1 節を実行しません。** 5-1 節のブロックは、develop の `ja.json` を読み、0 件のときは止まります。
+2. cor-jp.com の GA4 は、プライバシーポリシーに Google Analytics の開示が入ってから有効にします。2026-11-06 の時点で、develop の ja のポリシー（`src/i18n/locales/ja.json`）に「Google Analytics」は 0 件です。開示の PR は別です。「Google Analytics」の開示を入れるのは、corsweb2024 の 499 です。**499 が develop に merge されるまで、5-1 節を実行しません。** 5-1 節のブロックは、develop の `ja.json` を読み、0 件のときは止まります。501 は 382 の続きで、ポリシー全体の改訂です。corsweb の release の前に入れます（当日の順番の 7）。
 3. PR の merge は 1 本ごとに寺田さんの Yes です。
 4. corsweb の release PR は、develop への merge がすべて終わってから作ります。release PR の head は develop そのものなので、develop に push があるたびに、main に要る承認（1 件）が取り消されます。
 
@@ -414,7 +414,7 @@ curl -s --compressed https://griftai.org/ | grep -oE 'G-3E8328E5V6' | wc -l
 | griftai.org のリリース後にタグが消えた | Pages の Production に変数がない。名前が違う（`PUBLIC_` から始まる必要がある）。値の形が崩れている（バッククォート、小文字、`UA-` で始まる旧 ID、GA4 と Clarity の取り違え。崩れた値は、サイトが何も出さずに捨てる） | 5-2 節を見直し、Production に 2 つあるかを確かめる。値は 2 節の 5 と 3 節の 4 の `grep -E` に通して形を確かめる。直したあと、main の最新コミットで本番ビルドをやり直す（画面の操作は未確認） |
 | 数字がダッシュボードに出ない | ストリームの URL や Project の Website が実際のホストと違う。ブラウザの広告ブロックで止まっている | 本番 HTML で ID が一致していれば、サイト側は届いている。ブラウザの開発者ツールの Network で `gtag/js?id=` と `clarity.ms/tag/` のリクエストを見る |
 | preview の PR で数字が出ない | 仕様 | preview では計測しない（社内の確認で解析が汚れないようにするため） |
-| 5-1 節のブロックが「開示がありません」で止まる | develop の ja のポリシーに、まだ「Google Analytics」がない。または、develop の読み取りに失敗した | 開示の PR（corsweb2024 の 501 と 499）が develop に入るまで待つ。入ったあとも止まるなら、`gh api 'repos/Cor-Incorporated/corsweb2024/contents/src/i18n/locales/ja.json?ref=develop' -H 'Accept: application/vnd.github.raw'` の出力に、`Google Analytics` が入っているかを見る |
+| 5-1 節のブロックが「開示がありません」で止まる | develop の ja のポリシーに、まだ「Google Analytics」がない。または、develop の読み取りに失敗した | 開示の PR（corsweb2024 の 499）が develop に入るまで待つ。入ったあとも止まるなら、`gh api 'repos/Cor-Incorporated/corsweb2024/contents/src/i18n/locales/ja.json?ref=develop' -H 'Accept: application/vnd.github.raw'` の出力に、`Google Analytics` が入っているかを見る |
 | release PR のブロックが「release-pr-body.md を develop から読めません」で止まる | この手順書を直した PR（当日の順番の 0）が、develop に入っていない | 0 を先に済ませる。release PR を作ったあとに develop が動いたときは、2. のブロックを打ち直し、承認を取り直す |
 | griftai の release PR で `Quality Check` が落ちる | step `Check cor-voice copy matches corsweb2024 develop` が、corsweb2024 の develop の `.claude/skills/cor-voice/` と griftai の写しの違いを見つけた（107 の検査） | check の詳細で step の名前を見る。写しを揃える PR を griftai の develop に入れる。develop が動くので、2. のブロックを打ち直す |
 | release PR の `h5-admission` が `H5-FAIL: admission fee incomplete` で落ちる | 本文に H5 のマーカーがない。2. のブロックを通らずに、本文を 1 行で作った | 2. のブロックをもう一度打つ。本文が作り直される。ブロックが「構造パスの変更が … だけではありません」で止まるときは、混じった変更の PR を見て、`release-pr-body.md` のマーカーで足りるかを人が判断する |
