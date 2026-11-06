@@ -1046,7 +1046,7 @@
       },
       {
         "label": "Consultas",
-        "value": "A través del punto de contacto establecido en el apartado 11."
+        "value": "A través del punto de contacto establecido en el apartado 10."
       }
     ],
     "purposeTitle": "2. Información personal recopilada y finalidad de su uso",
@@ -1065,7 +1065,7 @@
           },
           {
             "label": "Uso de la Recepción con IA",
-            "value": "La información recopilada a través de la Recepción con IA (Cloudia) de la página de contacto, su finalidad del uso y la forma de su tratamiento son los que se establecen en el apartado 10."
+            "value": "La información recopilada a través de la Recepción con IA (Cloudia) de la página de contacto, su finalidad del uso y la forma de su tratamiento son los que se establecen en el apartado 9."
           }
         ]
       },
@@ -1078,7 +1078,7 @@
           },
           {
             "label": "Finalidad del uso",
-            "value": "Gestión de recursos humanos y relaciones laborales (contratación, asignación, evaluación, salarios, primas, jubilación, etc.) / cálculo de nóminas, retención en origen y demás procesos fiscales, así como los trámites de seguridad social y seguro laboral (incluida la Información Personal Específica; véase el apartado 4) / registro objetivo de la jornada laboral y cumplimiento de los deberes de gestión de la salud y de protección de la seguridad / obtención y supervisión de registros (logs) para la gestión de la seguridad de la información (detección y respuesta ante accesos no autorizados, fugas de información, infecciones por malware, etc.; el alcance de la recopilación se rige por el apartado 9 y por las normas internas) / contactos de emergencia, prestaciones sociales y demás aspectos de gestión derivados del contrato de trabajo."
+            "value": "Gestión de recursos humanos y relaciones laborales (contratación, asignación, evaluación, salarios, primas, jubilación, etc.) / cálculo de nóminas, retención en origen y demás procesos fiscales, así como los trámites de seguridad social y seguro laboral (incluida la Información Personal Específica; véase el apartado 4) / registro objetivo de la jornada laboral y cumplimiento de los deberes de gestión de la salud y de protección de la seguridad / obtención y supervisión de registros (logs) para la gestión de la seguridad de la información (detección y respuesta ante accesos no autorizados, fugas de información, infecciones por malware, etc.; el alcance de la recopilación se rige por las normas internas) / contactos de emergencia, prestaciones sociales y demás aspectos de gestión derivados del contrato de trabajo."
           }
         ]
       },
@@ -1198,14 +1198,7 @@
         ]
       },
       {
-        "title": "9. Tratamiento relativo a la obtención y supervisión de registros (logs) (para empleados)",
-        "body": [
-          "Con el fin de gestionar la seguridad de la información, gestionar las relaciones laborales y registrar objetivamente la jornada laboral, la Empresa obtiene y supervisa, en los terminales y servicios en la nube utilizados para el trabajo, los registros (logs) relacionados con la actividad laboral (autenticación, ejecución de procesos, metadatos de comunicación, accesos a datos internos, configuración de software, asistencia/tiempo de uso). La Empresa no obtiene contenido privado (contenido de navegación personal, contenido de cuentas personales, pulsaciones de teclas).",
-          "La finalidad, el alcance, el responsable, las condiciones de consulta y el periodo de conservación de la obtención y supervisión de registros (logs) se rigen por lo establecido en las normas internas «Reglamento de Obtención de Registros y Monitorización» y «Aviso y Consentimiento sobre la Monitorización de Empleados»."
-        ]
-      },
-      {
-        "title": "10. Tratamiento de la información personal en la Recepción con IA (Cloudia)",
+        "title": "9. Tratamiento de la información personal en la Recepción con IA (Cloudia)",
         "body": [
           "La Empresa ofrece en su página de contacto un servicio de recepción basado en IA (Cloudia; en adelante, la «Recepción con IA»). La Recepción con IA utiliza IA generativa para ordenar el contenido de su consulta y, a continuación, lo traslada al personal de la Empresa junto con los datos de contacto que usted introduzca en el último paso. El tratamiento de la información personal en la Recepción con IA se rige por lo dispuesto en el presente apartado y por las demás disposiciones de esta Política.",
           "(1) Información recopilada: (i) el contenido de su consulta en la Recepción con IA (el texto escrito en el chat) y las respuestas de la IA; (ii) el tipo de consulta y la información que indica la procedencia de su visita (la posición en la página de origen, los parámetros UTM, etc.); (iii) el nombre, la dirección de correo electrónico, la razón social y el contenido de la consulta que usted introduzca en el paso de traslado; (iv) el resumen de la consulta, los elementos organizados, como la fase de la consulta, y el resultado de la clasificación del tipo de consulta, generados por la IA; y (v) información como la dirección IP obtenida con ocasión de la comunicación, para prevenir el uso indebido.",
@@ -1226,7 +1219,7 @@
         ]
       }
     ],
-    "inquiryTitle": "11. Punto de contacto para consultas",
+    "inquiryTitle": "10. Punto de contacto para consultas",
     "inquiryLead": "Las solicitudes de divulgación, entre otras, de los datos personales en posesión de la Empresa, así como las reclamaciones y consultas relativas al tratamiento de la información personal, se atienden en el siguiente punto de contacto.",
     "inquiryTable": [
       {
@@ -1238,7 +1231,7 @@
         "value": "Para las solicitudes de divulgación y similares (apartado 7), contáctenos en company@cor-jp.com adjuntando documentos que acrediten su identidad. Las reclamaciones y consultas relativas al tratamiento de información personal también se atienden a través de Cloudia (chat con IA) en nuestra página de contacto."
       }
     ],
-    "revisionTitle": "12. Modificación de la presente política",
+    "revisionTitle": "11. Modificación de la presente política",
     "revisionBody": [
       "La Empresa podrá modificar la presente política por motivos como reformas legales, cambios en su actividad empresarial u otras circunstancias. En caso de modificación, publicará el contenido modificado en el sitio web de la Empresa u otros medios. Cuando realice cambios importantes, los dará a conocer por un medio adecuado."
     ],
