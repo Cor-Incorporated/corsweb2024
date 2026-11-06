@@ -44,7 +44,7 @@ P3 の場所へ移る（merge 前）:
 cd ~/Developer/corsweb/.worktrees/claude/billing-20261106
 ```
 
-鍵なしで動く検査を先に通す（通信しない。`41 passed, 0 failed` と `71 passed, 0 failed` が出ること）:
+鍵なしで動く検査を先に通す（通信しない。`43 passed, 0 failed`、`71 passed, 0 failed`、`6 passed, 0 failed` が出ること）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -52,6 +52,10 @@ bash docs/billing/tests/test-apply-plans.sh | tail -1
 
 ```bash
 bash docs/billing/tests/test-subscribe.sh | tail -1
+```
+
+```bash
+bash docs/billing/tests/test-gitleaksignore.sh | tail -1
 ```
 
 ## T. テストモード

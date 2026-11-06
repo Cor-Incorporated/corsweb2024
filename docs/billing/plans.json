@@ -9,7 +9,7 @@
     "max_installments": 36
   },
   "tax_rate": {
-    "key": "jp_consumption_tax_10",
+    "id": "jp_consumption_tax_10",
     "display_name": "消費税",
     "percentage": 10,
     "inclusive": false,

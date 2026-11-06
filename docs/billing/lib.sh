@@ -176,7 +176,7 @@ price_id_by_lookup() {
 # plans.json の税率（metadata.plan_key）の id を返す。無いか 2 件以上なら止まる。
 tax_rate_id() {
   local key n
-  key="$(jq -r '.tax_rate.key' "$PLANS")"
+  key="$(jq -r '.tax_rate.id' "$PLANS")"
   api_ok "税率の一覧 GET /v1/tax_rates" GET /v1/tax_rates --data-urlencode "active=true" --data-urlencode "limit=100"
   n="$(jq --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)] | length' <<<"$RESP_BODY")"
   [ "$n" -eq 1 ] || die 3 "metadata.plan_key=$key の税率が $n 件（1 件のはず）。先に apply-plans.sh --apply --mode $MODE を実行する"

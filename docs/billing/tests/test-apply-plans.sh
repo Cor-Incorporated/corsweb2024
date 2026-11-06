@@ -7,7 +7,7 @@
 #   3. 鍵のモードが --mode と違えば、POST を 1 回もせずに止まる（exit 3）
 #   4. 本番は端末で live と打たなければ、POST を 1 回もせずに止まる（exit 64）
 #   5. 既存と一致すれば POST しない（冪等）。金額が食い違えば期待値と観測値を出して止まる（exit 3）
-#   6. plans.json の事故入力（税込で登録、100 倍、小数、税率の内税、回数の欠落、枠に金額なし）を exit 2 で落とす
+#   6. plans.json の事故入力（税込で登録、100 倍、小数、税率の内税、回数の欠落、枠に金額なし、税率の識別子の欠落）を exit 2 で落とす
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -126,6 +126,9 @@ check_bad noinstall 'del(.prices[4].installments)' 'installments は 1〜36'
 check_bad premiumnull '(.prices[1].enabled) = true' '整数の円'
 check_bad dupkey '(.prices[2].lookup_key) = "business_dossier_basic_monthly"' 'lookup_key が重複'
 check_bad currency '(.currency) = "usd"' 'currency が jpy でない'
+# 税率の識別子は tax_rate.id。旧い項目名（gitleaks が generic-api-key と誤検出した名前）に戻すと落ちる
+check_bad taxidmissing 'del(.tax_rate.id)' 'tax_rate.id の形が違う'
+check_bad taxidoldname '.tax_rate |= with_entries(if .key == "id" then .key = "key" else . end)' 'tax_rate.id の形が違う'
 
 # 使い方の誤り
 KEY_FOR_RUN="" run empty "$PLANS" --apply
