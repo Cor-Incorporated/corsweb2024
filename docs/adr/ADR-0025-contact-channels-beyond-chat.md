@@ -91,7 +91,7 @@
 - Cloudia（Cor-Incorporated/cloudia）: 伝言の入口、Turnstile のウィジェット、計測イベント。
 - corsweb: `/contact` の Cloudia の案内に資料のリンク（I）。`/contact/chat/` の代わりのページに伝言の入口（`HandoffForm.astro` の入力欄と、`ContactChat.astro` の送信の処理を流用できる。目的の欄は足す）。contact-edge が `/contact/` へ戻すときの状態の受け渡し（#352）。`workers/contact-chat` の `source` の許可、ルールでの振り分け、分類をサーバー側で決めること、`TURNSTILE_SECRET` の設定（ウィジェットの後）。`src/config/contact-guards.ts` の B-3（自己ループの禁止）と C（未配信の判定）に、伝言の入口を足しても通ることをテストで固定する。
 - ADR-0005・ADR-0012・ADR-0013: Cloudia の障害時に最小限の伝言の入口を戻すので、2026-09-13 に撤回した fallback（ADR-0005 の §6、ADR-0012 と ADR-0013 の fallback フォーム）を一部改める。`/contact` には出さない点と、問い合わせが contact-chat に集まる点（ADR-0013 の一極集中）は変えない。
-- プライバシーポリシー: B と A は今の Cloudia と同じ項目を新しい経路で集める。#382 の第10項と L8（同意の文言）に響く。ポリシーはこの ADR では直さない。
+- プライバシーポリシー: B と A は今の Cloudia と同じ項目を新しい経路で集める。AI受付の項（#382 では第10項、#501 で第9項に繰り上げ）と L8（同意の文言）に響く。ポリシーはこの ADR では直さない。
 - 本番の Worker のデプロイと、Turnstile の秘密情報の設定は、代表が行う（手順は B を入れる PR に書く）。
 
 ## 決めてほしいこと（代表）
