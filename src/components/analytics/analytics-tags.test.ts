@@ -104,6 +104,12 @@ describe('resolveAnalyticsTags (ADR-0004 計測タグの ID)', () => {
     ['クエリを足そうとする', 'G-ABC123&l=x'],
     ['バッククォートを含む（手順書のコード表記の混入）', '`G-ABC123`'],
     ['小文字', 'g-abc123'],
+    ['前に文字が付いている（先頭の検査が外れると通る）', 'XG-ABC123'],
+    ['別の ID の後ろに G- が続く', 'UA-1 G-ABC'],
+    ['G- だけで中身がない', 'G-'],
+    ['アンダースコアを含む', 'G-AB_C'],
+    ['ハイフンを含む', 'G-AB-C'],
+    ['ドットとスラッシュを含む（パスのたどり。他の文字は大文字と数字だけ）', 'G-AB/../X'],
   ])('形式の崩れた PUBLIC_GA4_ID（%s）は出さない', async (_label, value) => {
     vi.stubEnv('PUBLIC_SITE_ENV', 'production');
     const { resolveAnalyticsTags } = await load();

@@ -16,7 +16,7 @@
 
 次の条件がすべて満たされたときだけ、その計測のタグが出ます。
 
-1. production のビルドである。`PUBLIC_SITE_ENV=production`。`deploy.yml` は main への push のときだけ production にし、ID もそのときだけ渡す。PR と develop のビルドには ID を渡さない（`config/site.ts` の `isAnalyticsEnabled` も production 以外を止める）
+1. production のビルドである。`PUBLIC_SITE_ENV=production`。`deploy.yml` は main への push のときだけ production にし、ID もそのときだけ渡す。PR と develop のビルドには ID を渡さない（`config/site.ts` の `isAnalyticsEnabled` も production 以外を止める）。**`PUBLIC_SITE_ENV` が未設定のときも production 扱い**（`getSiteEnv`）なので、手元の `.env` に計測の ID を置かない。置くと、手元の `npm run dev` や `build` でもタグが出る
 2. iframe 専用のページではない。`<Layout analytics={false}>` のページ（`/contact/chat/`）は出さない。Cloudia ランチャーが同じ訪問者に二重に計測するのを防ぐため（ADR-0004）
 3. その計測の ID が設定されている。未設定なら何も出さない
 4. GA4 の ID は `^G-[A-Z0-9]+$` に合う。前後の空白と改行は取り除く。合わない値（別の ID、引用符、`&`、バッククォートを含む値）は出さず、script の URL にも入れない
@@ -30,7 +30,8 @@ GA4 のタグは、View Transitions でページを移っても 1 回しか読�
 | ID 未設定なら出さない | `analytics-tags.test.ts` の「未設定」「空文字」「空白だけ」「改行だけ」 | 未設定でも ID を返す |
 | production 以外では出さない | 同「preview」「development」 | 本番ゲートを外す |
 | iframe ページでは出さない | 同「enabled=false」 | `enabled` を無視する |
-| 形式の崩れた GA4 の ID は出さない | 同「形式の崩れた PUBLIC_GA4_ID」7 件 | 形式の検査を外す |
+| 形式の崩れた GA4 の ID は出さない | 同「形式の崩れた PUBLIC_GA4_ID」の表（別の ID、UA、引用符、空白、クエリ、バッククォート、小文字、前に文字が付く、`G-` だけ、`_`、`-`、`.` と `/`） | 形式の検査を外す、緩める |
+| ID を渡す式が main への push に限られる | `analytics-env-link.test.ts`（`deploy.yml` の行を完全一致で比べる） | かっこを外す、条件を外す |
 | 前後の空白と改行は取り除く | 同「前後の空白と改行は取り除く」 | 取り除かずに形式の検査へ渡す |
 | production の既存の条件（`isAnalyticsEnabled`） | `src/config/__tests__/site.test.ts` | 条件を OR にする |
 
