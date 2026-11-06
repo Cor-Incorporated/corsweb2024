@@ -124,77 +124,95 @@ gh variable list -R Cor-Incorporated/corsweb2024 | grep '^PUBLIC_GA4_ID'
 
 ### 6-1　cor-jp.com
 
-1. GA4 を足す PR 497（`feat/ga4-analytics-20261106`）を develop に merge します。merge は、寺田さんの Yes と、PR のコメントにあるレビュー記録の `Reviewed-Head` が先です。`--match-head-commit` に渡すのは、PR の今の head ではなく `Reviewed-Head` の sha です。
+この節と次の節の各ブロックは、前のブロックの変数に頼りません。ブロックごとに別のシェルで打っても動きます。変数が空のときは、`${変数:?…}` の行で止まります。`pr=<…>` の行だけは、2. で出た番号に書き換えます（書き換えずに貼ると、構文エラーで止まります）。
+
+1. GA4 を足す PR 497（`feat/ga4-analytics-20261106`）を develop に merge します。merge は、寺田さんの Yes と、PR のコメントにあるレビュー記録の `Reviewed-Head` が先です。`--match-head-commit` に渡すのは、PR の今の head ではなく `Reviewed-Head` の sha です。head が `Reviewed-Head` と違えば、GitHub が merge を断ります。
+
+develop への merge に、承認は要りません。必須の check は `h5-admission`、`Chromium visual text audit`、`verify` です（2026-11-06 に branch protection を読んだ結果）。次のブロックは、`Reviewed-Head` を読み（記録がなければ止まる）、check が通るのを待ち、通ったときだけ merge します。
 
 ```bash
-gh pr view 497 -R Cor-Incorporated/corsweb2024 --json comments -q '[.comments[].body | capture("Reviewed-Head: (?<sha>[0-9a-f]{40})").sha] | last'
-gh pr view 497 -R Cor-Incorporated/corsweb2024 --json headRefOid -q .headRefOid
-```
-
-1 行目が `Reviewed-Head` の sha です（空行ならレビュー記録がないので merge しません）。2 行目が今の head です。2 つが同じときだけ、次に進みます。develop への merge に承認は要りません。必須の check は `h5-admission`、`Chromium visual text audit`、`verify` です（2026-11-06 に branch protection を読んだ結果）。
-
-```bash
-gh pr merge 497 -R Cor-Incorporated/corsweb2024 --merge --match-head-commit <1 行目の sha>
+reviewed=$(gh pr view 497 -R Cor-Incorporated/corsweb2024 --json comments -q '[.comments[].body | capture("Reviewed-Head: (?<sha>[0-9a-f]{40})").sha] | last'); : "${reviewed:?Reviewed-Head の記録がありません。merge しません}"
+gh pr checks 497 -R Cor-Incorporated/corsweb2024 --watch --fail-fast && gh pr merge 497 -R Cor-Incorporated/corsweb2024 --merge --match-head-commit "$reviewed"
 gh pr view 497 -R Cor-Incorporated/corsweb2024 --json state,mergeCommit
 ```
 
-2. develop から main へ release PR を作ります。head は develop です（別の branch は `guard` で落ちます）。本文に、作った時点の develop の sha を書きます。
+2. develop から main へ release PR を作ります。head は develop です（別の branch は `guard` で落ちます）。本文に、作った時点の develop の sha を `head: <sha>` の行で書きます。すでに開いている release PR があるときは作りません。
 
 ```bash
-gh pr create -R Cor-Incorporated/corsweb2024 --base main --head develop --title "release: $(date +%F) develop → main" --body "head: $(gh api repos/Cor-Incorporated/corsweb2024/commits/develop -q .sha)"
-pr=$(gh pr list -R Cor-Incorporated/corsweb2024 --base main --head develop --json number -q '.[0].number'); echo "release PR: $pr"
+[ "$(gh pr list -R Cor-Incorporated/corsweb2024 --base main --head develop --json number -q length)" = "0" ] && gh pr create -R Cor-Incorporated/corsweb2024 --base main --head develop --title "release: $(date +%F) develop → main" --body "head: $(gh api repos/Cor-Incorporated/corsweb2024/commits/develop -q .sha)"
+gh pr list -R Cor-Incorporated/corsweb2024 --base main --head develop --json number,headRefOid
 ```
 
-3. main は承認 1 件が必須です。承認は寺田さん以外の人が行います。直近のリリース PR（483、489、491）は、いずれも `cloudia-Cor` が承認しました。必須の check は `build_and_deploy`、`Chromium visual text audit`、`guard`、`h5-admission`、`verify` の 5 つで、必須の workflow に `gitleaks.yml` もあります。すべて通ってから、2. で本文に書いた develop の sha を `--match-head-commit` に渡して merge します。
+1 行目が何も表示しないときは、すでに開いている release PR があります。2 行目に出た PR を確かめます。2 行目に出た `number` が release PR の番号です。この番号を、3. と 4. の `pr=` に書きます。
+
+3. main は承認 1 件が必須です。承認は寺田さん以外の人が行います。直近のリリース PR（483、489、491）は、いずれも `cloudia-Cor` が承認しました。必須の check は `build_and_deploy`、`Chromium visual text audit`、`guard`、`h5-admission`、`verify` の 5 つで、必須の workflow に `gitleaks.yml` もあります。次のブロックは、承認された commit と本文の develop の sha が同じで、check が通ったときだけ merge します。
 
 ```bash
-body_sha=$(gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json body -q .body | grep -oE '[0-9a-f]{40}' | head -1); echo "$body_sha"
-gh pr merge "$pr" -R Cor-Incorporated/corsweb2024 --merge --match-head-commit "$body_sha"
+pr=<2. で出た release PR の番号>
+body_sha=$(gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json body -q .body | grep -oE '^head: [0-9a-f]{40}' | cut -d' ' -f2); : "${body_sha:?本文に head: <sha> の行がありません}"
+approved=$(gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json reviews -q '[.reviews[] | select(.state == "APPROVED") | .commit.oid] | last'); : "${approved:?承認がまだありません}"
+if [ "$approved" = "$body_sha" ]; then gh pr checks "$pr" -R Cor-Incorporated/corsweb2024 --watch --fail-fast && gh pr merge "$pr" -R Cor-Incorporated/corsweb2024 --merge --match-head-commit "$body_sha"; else echo "承認された commit ($approved) と本文の sha ($body_sha) が違います。merge しません"; fi
 ```
 
-4. main への push で `deploy.yml` が走り、variable の値がビルドに渡ります。merge commit の run を探し、終わるまで待ちます。`conclusion` が `success` なら終わっています。`run` が空なら、数十秒おいて 2 行目をもう一度打ちます。
+承認された commit と本文の sha が違うときは、develop が進んでいます。本文の sha を今の develop に書き直し、承認を取り直します。
 
 ```bash
-sha=$(gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json mergeCommit -q .mergeCommit.oid)
-run=$(gh run list -R Cor-Incorporated/corsweb2024 --workflow deploy.yml --commit "$sha" --event push --json databaseId -q '.[0].databaseId'); echo "run: $run"
+pr=<2. で出た release PR の番号>
+gh pr edit "$pr" -R Cor-Incorporated/corsweb2024 --body "head: $(gh api repos/Cor-Incorporated/corsweb2024/commits/develop -q .sha)"
+```
+
+4. main への push で `deploy.yml` が走り、variable の値がビルドに渡ります。merge commit の run を探し、終わるまで待ちます。`conclusion` が `success` なら終わっています。merge していないときと、run がまだ無いときは、止まります。
+
+```bash
+pr=<2. で出た release PR の番号>
+sha=$(gh pr view "$pr" -R Cor-Incorporated/corsweb2024 --json mergeCommit -q .mergeCommit.oid); : "${sha:?merge commit がありません。merge したかを確かめます}"
+run=$(gh run list -R Cor-Incorporated/corsweb2024 --workflow deploy.yml --commit "$sha" --event push --json databaseId -q '.[0].databaseId'); : "${run:?run がまだありません。数十秒おいて、このブロックを打ち直します}"
 gh run watch "$run" -R Cor-Incorporated/corsweb2024 --exit-status
 ```
 
 ### 6-2　griftai.org（5-2 節のあと）
 
-1. 直書きを env に変える PR 108（`fix/analytics-ids-env-20261106`）を develop に merge します。6-1 の 1. と同じく、`Reviewed-Head` を読み、今の head と同じことを確かめてから merge します。
+6-1 と同じく、各ブロックは前のブロックの変数に頼りません。`pr=<…>` の行は、2. で出た番号に書き換えます。
+
+1. 直書きを env に変える PR 108（`fix/analytics-ids-env-20261106`）を develop に merge します。merge は、寺田さんの Yes と、PR のコメントにある `Reviewed-Head` が先です。
+
+griftai は develop にも main にも、必須の check と承認の設定がありません（2026-11-06 に読んだ結果。main の ruleset は `required_approving_review_count` が 0 で、必須の workflow は `gitleaks.yml` だけです）。GitHub は CI の結果で merge を止めてくれないので、次のブロックは、CI（`Quality Check`、`E2E Smoke Tests`、`h5-admission`、`Cloudflare Pages`）が通ったときだけ merge する形に繋いであります。CI が落ちたときは、merge の行は実行されません。
 
 ```bash
-gh pr view 108 -R Cor-Incorporated/griftai --json comments -q '[.comments[].body | capture("Reviewed-Head: (?<sha>[0-9a-f]{40})").sha] | last'
-gh pr view 108 -R Cor-Incorporated/griftai --json headRefOid -q .headRefOid
+reviewed=$(gh pr view 108 -R Cor-Incorporated/griftai --json comments -q '[.comments[].body | capture("Reviewed-Head: (?<sha>[0-9a-f]{40})").sha] | last'); : "${reviewed:?Reviewed-Head の記録がありません。merge しません}"
+gh pr checks 108 -R Cor-Incorporated/griftai --watch --fail-fast && gh pr merge 108 -R Cor-Incorporated/griftai --merge --match-head-commit "$reviewed"
+gh pr view 108 -R Cor-Incorporated/griftai --json state,mergeCommit
 ```
 
-1 行目が `Reviewed-Head` の sha（空行ならレビュー記録がないので merge しません）、2 行目が今の head です。2 つが同じときだけ、次で merge します。griftai は develop にも main にも、必須の check と承認の設定がありません（2026-11-06 に読んだ結果。main の ruleset は `required_approving_review_count` が 0 で、必須の workflow は `gitleaks.yml` だけです）。そのため、CI（`Quality Check`、`E2E Smoke Tests`、`h5-admission`、`Cloudflare Pages`）が `SUCCESS` になったことを、merge の前に目で確かめます。
+2. develop から main へ release PR を作ります。本文に、作った時点の develop の sha を `head: <sha>` の行で書きます。すでに開いている release PR があるときは作りません。
 
 ```bash
-gh pr checks 108 -R Cor-Incorporated/griftai --watch --fail-fast
-gh pr merge 108 -R Cor-Incorporated/griftai --merge --match-head-commit <1 行目の sha>
+[ "$(gh pr list -R Cor-Incorporated/griftai --base main --head develop --json number -q length)" = "0" ] && gh pr create -R Cor-Incorporated/griftai --base main --head develop --title "release: $(date +%F) develop → main" --body "head: $(gh api repos/Cor-Incorporated/griftai/commits/develop -q .sha)"
+gh pr list -R Cor-Incorporated/griftai --base main --head develop --json number,headRefOid
 ```
 
-2. develop から main へ release PR を作ります。本文に、作った時点の develop の sha を書きます。
+1 行目が何も表示しないときは、すでに開いている release PR があります。2 行目に出た `number` が release PR の番号です。この番号を、3. と 4. の `pr=` に書きます。
+
+3. release PR の CI が通ったときだけ、本文に書いた develop の sha を `--match-head-commit` に渡して merge します。main への merge で、Cloudflare Pages が本番をビルドします。main の merge で必須なのは、ruleset の `gitleaks.yml` だけですが、CI（上の 4 つ）と `gitleaks` が通ったことを確かめてから進めます。
 
 ```bash
-gh pr create -R Cor-Incorporated/griftai --base main --head develop --title "release: $(date +%F) develop → main" --body "head: $(gh api repos/Cor-Incorporated/griftai/commits/develop -q .sha)"
-pr=$(gh pr list -R Cor-Incorporated/griftai --base main --head develop --json number -q '.[0].number'); echo "release PR: $pr"
+pr=<2. で出た release PR の番号>
+body_sha=$(gh pr view "$pr" -R Cor-Incorporated/griftai --json body -q .body | grep -oE '^head: [0-9a-f]{40}' | cut -d' ' -f2); : "${body_sha:?本文に head: <sha> の行がありません}"
+gh pr checks "$pr" -R Cor-Incorporated/griftai --watch --fail-fast && gh pr merge "$pr" -R Cor-Incorporated/griftai --merge --match-head-commit "$body_sha"
 ```
 
-3. release PR の CI が通ったことを確かめてから、本文に書いた develop の sha を `--match-head-commit` に渡して merge します。main への merge で、Cloudflare Pages が本番をビルドします。
+本文の sha と release PR の head が違うときは、develop が進んでいます。`--match-head-commit` が merge を断ります。本文の sha を今の develop に書き直し、CI を待ち直します。
 
 ```bash
-gh pr checks "$pr" -R Cor-Incorporated/griftai --watch --fail-fast
-body_sha=$(gh pr view "$pr" -R Cor-Incorporated/griftai --json body -q .body | grep -oE '[0-9a-f]{40}' | head -1); echo "$body_sha"
-gh pr merge "$pr" -R Cor-Incorporated/griftai --merge --match-head-commit "$body_sha"
+pr=<2. で出た release PR の番号>
+gh pr edit "$pr" -R Cor-Incorporated/griftai --body "head: $(gh api repos/Cor-Incorporated/griftai/commits/develop -q .sha)"
 ```
 
 4. 本番のビルドが成功したかは、merge commit の check で見ます。名前が `Cloudflare Pages` の check の `conclusion` が `success` になれば終わっています。merge の直後は、出力が空か `"conclusion": null` です。まだ check が作られていないか、実行中なので、数分おいてもう一度打ちます。同じコミットに `Deploy to Cloudflare Pages` という check もありますが、こちらは GitHub Actions の job で、今は `skipped` です（Cloudflare の secret が未設定のため）。見るのは前者だけです。
 
 ```bash
-sha=$(gh pr view "$pr" -R Cor-Incorporated/griftai --json mergeCommit -q .mergeCommit.oid)
+pr=<2. で出た release PR の番号>
+sha=$(gh pr view "$pr" -R Cor-Incorporated/griftai --json mergeCommit -q .mergeCommit.oid); : "${sha:?merge commit がありません。merge したかを確かめます}"
 gh api "repos/Cor-Incorporated/griftai/commits/$sha/check-runs" -q '.check_runs[] | select(.name == "Cloudflare Pages") | {name, conclusion}'
 ```
 
