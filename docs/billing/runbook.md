@@ -17,14 +17,14 @@
 | 1 | P1・P5: Stripe と Clerk のアカウントを確かめる（画面） | 10 分 | なし |
 | 2 | T1: テストモードの鍵を用意する（画面） | 5 分 | 1 |
 | 3 | T2〜T4: テストモードに商品・価格・税率を作り、冪等を確かめる | 5 分 | 2、この PR の merge（または P3 の worktree） |
-| 4 | T5: 開発費が 12 回で止まることを実測する | 5 分（スクリプトの待ち 2〜3 分） | 3 |
+| 4 | T5: 開発費が 12 回で止まることを、始め方 now と align の 2 回で実測する | 10 分（スクリプトの待ち 1 回 2〜3 分） | 3 |
 | 5 | T6: 顧客 1 社をテストモードで 1 周する（ブラウザでテスト用カードを払う） | 15 分 | 3・4 |
-| 6 | L1〜L3: 本番の鍵を用意し、本番に商品・価格・税率を作る | 10 分 | 4 が `VERIFY ok`、5 が通った |
+| 6 | L1〜L3: 本番の鍵を用意し、本番に商品・価格・税率を作る | 10 分 | 4 が 2 回とも `VERIFY ok`、5 が通った |
 | 7 | C0: Clerk に顧客の組織を作る（画面） | 10 分 | 1 |
 | 8 | C1: 契約書と台帳 | 契約の進み次第 | 台帳の置き場所（P4）が決まっている |
 | 9 | C2〜C3: Customer と basic を作り、支払いページの URL を受け取る | 5 分 | 6・7・8 |
 | 10 | C4: URL を顧客へ送る（23 時間以内に払ってもらう） | 顧客の支払い次第 | 9 |
-| 11 | C5〜C6: 支払いを確かめ、開発費の schedule を作る | 5 分 | 10、4 が `VERIFY ok`、台帳の回数 |
+| 11 | C5〜C6: 支払いを確かめ、開発費の schedule を作る | 5 分 | 10、4 が 2 回とも `VERIFY ok`、台帳の回数と始め方 |
 | 12 | C7: 製品側の準備と Access の許可（XESM は `contract-to-use.md`、business-dossier は `onboarding.md`） | 製品側の手順書の所要（business-dossier は約 20 分、未計測） | 11 |
 | 13 | C8: 過去の月の未回収分を回収する | 依頼元との確認次第 | README 8 章の方法を寺田が決める |
 
@@ -121,13 +121,19 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode test' "$log"
 
 ### T5. 分割が 12 回で止まることを確かめる（test clock）
 
+C6 の 2 つの始め方（`now` と `align`）を、両方とも通す（どちらを使う顧客が来ても、本番の前に測ってある状態にする）。
+
 ```bash
-bash docs/billing/verify-installments.sh 2>&1 | tee ~/billing-verify-$(date +%Y%m%d-%H%M%S).log
+bash docs/billing/verify-installments.sh --start now 2>&1 | tee ~/billing-verify-now-$(date +%Y%m%d-%H%M%S).log
 ```
 
-- 鍵を聞かれたら、テストモードの鍵を貼る。所要は 2〜3 分（clock を 14 回進める。1 回ごとに 7 秒以上あける）。
-- 開発費は、本番の C6 と同じく basic の次の請求日から始める（`--start align` が既定）。要求の本体は `subscribe.sh` と同じ `lib.sh` の組み立てを使うので、本番で送る要求そのものを実測する。`--start now` も 1 回通すと、すぐ始める場合も確かめられる。
-- 最後に次の 2 行が出ること:
+```bash
+bash docs/billing/verify-installments.sh --start align 2>&1 | tee ~/billing-verify-align-$(date +%Y%m%d-%H%M%S).log
+```
+
+- それぞれ鍵を聞かれたら、テストモードの鍵を貼る。所要は 1 回 2〜3 分（clock を 14 回進める。1 回ごとに 7 秒以上あける）。
+- 要求の本体は `subscribe.sh` と同じ `lib.sh` の組み立てを使うので、本番の C6 で送る要求そのものを実測する。
+- 2 回とも、最後に次の 2 行が出ること:
   - `VERIFY 開発費: 支払い済み 12 件（期待 12）、それ以外 0 件（期待 0）、額の違う請求書 0 件（期待 0。各回 税込 8800 円・税 800 円）、subscription=canceled（期待 canceled）`
   - `VERIFY ok: 開発費は 12 回請求して止まった（13 回目は無い）`
 - 途中の `VERIFY basic …: status=active、保存されたカード=pm_…` は、basic の最初の支払いでカードが保存されたことの実測。
@@ -238,8 +244,8 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode live' "$log"
 | 社名・請求先のメール | 申込票から | C2 |
 | サービス | `business-dossier` か `xesm` | C3・C5 |
 | 製品側の組織 | business-dossier は起動の slug（bd-deploy の報告 6 章の推奨は `c01`）、XESM は組織名（XESM の `contract-to-use.md` 手順 6 の取得コマンドの出力） | C3 |
-| 開発費の Stripe で請求する回数 | `12 − 回収済み − Stripe 以外で請求する回数`（README 8 章） | C5 |
-| 月ごとの請求の方法・請求日・入金日 | 二重請求を防ぐため | C7 |
+| 開発費の Stripe で請求する回数 | `12 − 回収済み − Stripe 以外で請求する回数`（README 8 章） | C6 |
+| 月ごとの請求の方法・請求日・入金日 | 二重請求を防ぐため。カードで払う最初の月で C6 の `<開始>` が決まる | C6・C8 |
 
 ### C2. Customer を作る
 
@@ -283,7 +289,7 @@ bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
 
 `SUB … service=<サービス> plan=basic status=active … card=保存済み` が出ること。`status=incomplete` のままなら、まだ払われていない。そのときは `PAY_URL <sub_…> https://…` の行に支払いページの URL が出る（送り直すときはこの URL を使う）。
 
-### C6. 開発費の schedule を作る（開発費がある顧客だけ。T5 が合格してから）
+### C6. 開発費の schedule を作る（開発費がある顧客だけ。T5 の now と align が両方合格してから）
 
 `<回数>` は台帳の「開発費の Stripe で請求する回数」。`<開始>` は台帳の「月ごとの請求の方法」で決める。
 
