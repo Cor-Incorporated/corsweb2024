@@ -84,7 +84,11 @@ class RenderTest(unittest.TestCase):
         self.assertTrue(any("上限" in p and "AGENTS.md" in p for p in problems), problems)
 
     def test_repository_source_is_not_empty(self):
-        self.assertIn("cor_voice_lint.py", render.read_source())
+        source = render.read_source()
+        self.assertIn("cor_voice_lint.py", source)
+        # 入口は検査の手順を voice_gate.py の init と check で閉じる（どのハーネスでも同じ手順）
+        for command in ("voice_gate.py init", "voice_gate.py check", "review.md", "result.md"):
+            self.assertIn(command, source)
 
 
 def rule_ids(text: str, scene: str = "company") -> list[str]:

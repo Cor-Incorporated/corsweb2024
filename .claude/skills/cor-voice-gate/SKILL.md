@@ -20,6 +20,16 @@ If the agent-server copy is older, refresh from Mac before checking.
 - Every harness reads the same short entry: the generated block in `AGENTS.md` (Codex, OpenCode, Pi, dsh, Grok) and `CLAUDE.md` (Claude Code), and `.cursor/rules/cor-voice.mdc` (Cursor). The entry points at the skills and lists the checks; it never copies rule bodies (ADR-0026).
 - Source: `references/harness-entry.md`. After editing it, run `python3 -I .claude/skills/cor-voice-gate/scripts/render_harness_entries.py --write` in both repos. `--check` (run by each repo's unit tests) fails when an entry was edited by hand, a source edit was not rendered, or `AGENTS.md` grows past Codex's 32 KiB read limit.
 
+## Gate record (files and commands; the same in every harness)
+The gate is closed in files and `python3` commands, so every harness, or a person at a shell, runs the same steps. No harness feature (skill auto-loading, hooks, harness environment variables) is needed.
+1. `python3 -I .claude/skills/cor-voice-gate/scripts/voice_gate.py init --run-dir <dir> --draft <draft> --scene <company|founder|tech|mail|founder-x> --doc-type <type> --gate <fast|full> --material <request> --material <materials>` (add `--source <original>` when polishing an existing text). Put `<dir>` under `.yomiyasu/gate/` (ignored by git) or outside the repository. Keep the request and the materials in separate files: in one file, yomiyasu took the materials as the original of a similar draft and reported the request's 「3 文」 as a lost number (`meaning_risk 1`, measured 2026-11-05).
+2. Polish the draft and fill `<dir>/review.md`: one row per Semantic Review item (plus the §10.2 rows for Full) with verdict `pass` / `fail` / `n/a` and the basis. The rows are generated from this file on every run; nothing is copied, so a new item here appears in the next `init`. Set the line `- 読んだ下書きの sha256:` to the draft you actually read: `check` fails when it differs from the current draft (an edit after a pass needs a new review), and also when this SKILL.md changed after `init`.
+3. `python3 -I .claude/skills/cor-voice-gate/scripts/voice_gate.py check --run-dir <dir>` runs `cor_voice_lint.py check`, `yomiyasu_check.py run --fact-gaps` and `verify`, reads `review.md`, and writes `<dir>/result.json` and `<dir>/result.md`. Exit 0 (`"passed": true`) is the only gate-passed state. Exit 1 lists the reasons; fix and run `check` again.
+- Fact-gap candidates do not stop the gate by themselves: adding 「必ず採用の判断が速くなります。」 measured `meaning_risk 0` and one fact gap on 2026-11-05. `result.md` lists every candidate; decide them in S5 / S14.
+- The note editor reflect (items 19–20) is a browser step and is not closed by these commands. Keep `note_preedit_<id>.md` and the UI proof, and mark S19 / S20 in `review.md`.
+- A passed gate is not permission to publish or send.
+- Run without any harness: `docs/evidence/voice-gate-no-harness-20261105/`.
+
 ## Priority
 1. ADR / CLAUDE.md wording rules for the product
 2. yomiyasu: keep meaning; do not add facts
@@ -44,8 +54,8 @@ If the agent-server copy is older, refresh from Mac before checking.
 7. **Thread / publish context:** before any X (or similar) publish or fix, check how the timeline will look after the action (parent post, replies, deletes). Fix the odd post itself when possible; do not delete a parent and leave only a reply (orphan reply + bare URL reply is a failed fix). Prefer rewrite-in-place or delete-and-repost as a clean standalone with the same substance and URL.
 8. **Semantic Review (required, Fast and Full)** — checklist below. Fail any item → rewrite or escalate; do not mark ready for review.
 9. Apply corsweb blog-guardrails rules in spirit (no retired brand names, no ISMS-as-certified, no *.web.app / draftKey / internal notes).
-10. **Second reader:** the bot that wrote the draft must not be the only gate. Another bot (SNS統括, 発信QA, or Grok Bot) must re-read Semantic Review + open the cited run path on the agent server. If `ls` cannot open the run path, treat as not passed.
-11. Return polished path + **absolute agent-server run path** (`<agent-server>/<case>/.yomiyasu/runs/<ID>` or equivalent) + `meaning_risk` count + what changed + questions for Terada. Do not post, schedule, or ship without explicit approval.
+10. **Second reader:** the bot that wrote the draft must not be the only gate. Another bot (SNS統括, 発信QA, or Grok Bot) must re-read `review.md` against Semantic Review and re-run `voice_gate.py check --run-dir <dir>` on the same files (on the agent server, the run dir sits in the case folder). If the run dir cannot be opened or the re-run does not exit 0, treat as not passed.
+11. Return polished path + **run dir path** (absolute on the agent server; it holds `result.json`, `review.md` and `.yomiyasu/runs/<ID>`) + `meaning_risk` count + what changed + questions for Terada. Do not post, schedule, or ship without explicit approval.
 
 ## Semantic Review (required)
 
@@ -147,7 +157,7 @@ Pick the gate before polishing. Any one "Full" condition → Full.
 | Technical / safety | — (never Fast-only) | **技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, 「検証した」「実証」「試験済み」, ISO 13849 / IEC 61508 等の規格参照, スイカ割りデモを安全の根拠に使う, AIが停止判断する記述 → Full + item 21 (2026-10-29)** |
 | Source | Terada's own handwriting | AI draft |
 
-- Fast: register → cor-voice fast checklist (5 items) + 4 machine checks below + **whole-post tone check** + **Semantic Review** → `check run` and `verify` (never skipped) → meaning_risk hard stop (same-document only).
+- Fast: register → cor-voice fast checklist (5 items) + 4 machine checks below + **whole-post tone check** + **Semantic Review** → `check run` and `verify` (never skipped; `voice_gate.py check` runs both with the lint) → meaning_risk hard stop (same-document only).
 - Full: Steps 1–11 above (include Semantic Review item 12 / 18 / 21 when topic matches) + §10.2 pre-publish table.
 - Fast still runs items 13 and 15 (state conflation and P0 vocab are hard stops in every gate), and item 21 when the topic is technical / safety. When reflecting into note editor, items 19–20 are also hard stops (Full-level for that step).
 - Fast machine checks (provisional thresholds):
