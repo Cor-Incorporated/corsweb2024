@@ -144,7 +144,14 @@ bash docs/billing/verify-installments.sh 2>&1 | tee ~/billing-verify-$(date +%Y%
    bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email company@cor-jp.com --apply --mode test
    ```
 
-   同じコマンドをすぐもう一度実行し、`OK customer cus_…`（検索で見つかった）か、`NOTE 顧客の作成: … 前回の結果が返った` のあとの `CREATED customer` で **1 の id と同じもの** が出ることを確かめる（同じ顧客を 2 つ作らないこと、前回の結果の見分けが実物の通信でも効くことの実測）。違う id が出たら、統括へ渡す。
+   同じコマンドをすぐ（1 分以内に）もう一度実行し、出た行で次のように判定する（前回の結果の見分けが、実物の通信でも効くかの実測）。
+
+   | 出た行 | 判定 |
+   |---|---|
+   | `NOTE 顧客の作成: … 前回の結果が返った` のあとに、1 と同じ id の `CREATED customer` | 合格。前回の結果の見分けを実物の通信で測れた |
+   | `NOTE` の行が無いまま、1 と同じ id の `CREATED customer` | **不合格**。前回の結果の見分けが効いていない。本番（L）へ進まず、統括へ渡す |
+   | `OK customer cus_…`（検索で先に見つかった） | 測れていない。検索が追いついたため。前回の結果の見分けは「実物の通信では未測定」として記録する |
+   | 1 と違う id | **不合格**。同じ顧客が 2 つできた。本番へ進まず、統括へ渡す |
 
 2. basic を作る。`<cus_…>` は 1 の出力の id。控え忘れたら `bash docs/billing/subscribe.sh find --code cor-test --mode test` の `FOUND` の行で取れる。
 
