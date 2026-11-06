@@ -211,13 +211,13 @@ gh run watch "$run" -R Cor-Incorporated/corsweb2024 --exit-status
 
 1. 直書きを env に変える PR 108（`fix/analytics-ids-env-20261106`）を develop に merge します。merge は、寺田さんの Yes と、PR のコメントにある `Reviewed-Head` が先です。
 
-griftai は develop にも main にも、必須の check と承認の設定がありません（2026-11-06 に読んだ結果。main の ruleset は `required_approving_review_count` が 0 で、必須の workflow は `gitleaks.yml` だけです）。GitHub は CI の結果で merge を止めてくれません。そこで次のブロックは、`Quality Check`、`E2E Smoke Tests`、`h5-admission`、`Cloudflare Pages` の 4 つが、すべて `pass` のときだけ merge します。同じ名前の check が複数あっても（PR の実行と push の実行）、同じ名前のものがすべて `pass` でなければ止まります。`skipping` も止まります。`A11y Tests (non-blocking)` は、落ちても止めません。
+griftai は develop にも main にも、必須の check と承認の設定がありません（2026-11-06 に読んだ結果。main の ruleset は `required_approving_review_count` が 0 で、必須の workflow は `gitleaks.yml` だけです）。GitHub は CI の結果で merge を止めてくれません。そこで次のブロックは、`Quality Check`、`E2E Smoke Tests`、`h5-admission`、`Cloudflare Pages` の 4 つが、すべて `pass` のときだけ merge します。同じ名前の check が複数あっても（PR の実行と push の実行）、同じ名前のものがすべて `pass` でなければ止まります。`skipping` も止まります。`A11y Tests (non-blocking)` は、落ちても止めません。`--fail-fast` は付けません。止めなくてよい check（`A11y Tests (non-blocking)` など）が先に落ちたとき、待たずに抜けてしまうためです。
 
 ```bash
 (
 set -eu
 reviewed=$(gh pr view 108 -R Cor-Incorporated/griftai --json comments -q '[.comments[].body | capture("Reviewed-Head: (?<sha>[0-9a-f]{40})").sha] | last'); : "${reviewed:?Reviewed-Head の記録がありません。merge しません}"
-gh pr checks 108 -R Cor-Incorporated/griftai --watch --fail-fast || echo "（check が落ちたか、まだ終わっていません。下で名前ごとに確かめます）"
+gh pr checks 108 -R Cor-Incorporated/griftai --watch || echo "（check が落ちたか、まだ終わっていません。下で名前ごとに確かめます）"
 ok=$(gh pr checks 108 -R Cor-Incorporated/griftai --json name,bucket -q '["Quality Check","E2E Smoke Tests","h5-admission","Cloudflare Pages"] as $need | . as $all | [$need[] | . as $n | ([$all[] | select(.name == $n)] | (length > 0 and all(.bucket == "pass")))] | all')
 [ "$ok" = "true" ] || { echo "必要な 4 つの check が、まだ全部は pass になっていません"; gh pr checks 108 -R Cor-Incorporated/griftai; exit 1; }
 gh pr merge 108 -R Cor-Incorporated/griftai --merge --match-head-commit "$reviewed"
@@ -247,7 +247,7 @@ set -eu
 pr=RELEASE_PR_NUMBER
 printf '%s' "$pr" | grep -qE '^[0-9]+$' || { echo "pr=RELEASE_PR_NUMBER の行を、2. で出た release PR の番号（数字）に書き換えてください"; exit 1; }
 body_sha=$(gh pr view "$pr" -R Cor-Incorporated/griftai --json body -q .body | grep -oE '^head: [0-9a-f]{40}' | cut -d' ' -f2); : "${body_sha:?本文に head: <sha> の行がありません}"
-gh pr checks "$pr" -R Cor-Incorporated/griftai --watch --fail-fast || echo "（check が落ちたか、まだ終わっていません。下で名前ごとに確かめます）"
+gh pr checks "$pr" -R Cor-Incorporated/griftai --watch || echo "（check が落ちたか、まだ終わっていません。下で名前ごとに確かめます）"
 ok=$(gh pr checks "$pr" -R Cor-Incorporated/griftai --json name,bucket -q '["Quality Check","E2E Smoke Tests","h5-admission","Cloudflare Pages"] as $need | . as $all | [$need[] | . as $n | ([$all[] | select(.name == $n)] | (length > 0 and all(.bucket == "pass")))] | all')
 [ "$ok" = "true" ] || { echo "必要な 4 つの check が、まだ全部は pass になっていません"; gh pr checks "$pr" -R Cor-Incorporated/griftai; exit 1; }
 gh pr merge "$pr" -R Cor-Incorporated/griftai --merge --match-head-commit "$body_sha"
