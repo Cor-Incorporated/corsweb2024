@@ -1,0 +1,51 @@
+{
+  "format": "cor-voice-gate-input",
+  "format_version": 1,
+  "created_at": "2026-11-05T07:27:00Z",
+  "gate": "full",
+  "scene": "company",
+  "doc_type": "promo",
+  "draft": "../../../draft.md",
+  "sources": [],
+  "materials": [
+    "../../../request.md",
+    "../../../material.md"
+  ],
+  "checklist": {
+    "skill_sha256": "d577aa4019ffd7f3d4eafa0cf615d21d9a12872b166ef6c7a89faed18e68e7bc",
+    "items": [
+      "T",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "S8",
+      "S9",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S16",
+      "S17",
+      "S18",
+      "S19",
+      "S20",
+      "S21",
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10"
+    ]
+  }
+}
