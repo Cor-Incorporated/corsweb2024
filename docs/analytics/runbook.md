@@ -1,13 +1,14 @@
 # アクセス解析（GA4・Clarity）を Cor. 所有にそろえる手順書
 
-実行する人: 寺田康佑（ブラウザの作業と、PR ごとの Yes）と、エージェント（`gh` と `curl` のコマンド）。対象は cor-jp.com と griftai.org の 2 サイトです。
+実行する人: 寺田康佑（ブラウザの作業、5-1 節のブロック、7 節の `curl`、PR ごとの Yes）と、エージェント（`gh` のコマンド）。対象は cor-jp.com と griftai.org の 2 サイトです。
 
 この手順書は、corsweb（Cor-Incorporated/corsweb2024）と griftai（Cor-Incorporated/griftai）の `docs/analytics/runbook.md` に同じ文面で置いてあります。コードの変更は 2 つの PR に入っていて、どちらも 2026-11-06 に develop へ merge 済みです。corsweb は PR 497、griftai は PR 108 です。本番（main）には、まだ出していません。
 
 誰が手を動かすか:
 
 - ブラウザの作業（2・3・4 節と 5-2 節）は、寺田さんの手が要ります。GA4、Clarity、Cloudflare にサインインして行います。
-- `gh` と `curl` のコマンドは、エージェントが打ちます。merge と本番への反映は、PR ごとの寺田さんの Yes のあとです。寺田さんが自分で打ってもかまいません。同じ文面で動きます。
+- `gh` のコマンドは、エージェントが打ちます。merge と本番への反映は、PR ごとの寺田さんの Yes のあとです。寺田さんが自分で打ってもかまいません。同じ文面で動きます。
+- 5-1 節のブロックと、7 節の `curl` は、寺田さんが端末で打ちます。5-1 節のブロックは測定 ID を聞くので、端末のないエージェントでは読み取れずに終わります。エージェントの環境は、外部への `curl` を止めます。
 
 ## 当日の順番（2026-11-07 朝）
 
@@ -15,11 +16,12 @@
 
 | 順 | 誰が | どこで何をするか | 詳細 | 前提 |
 |---|---|---|---|---|
+| 0 | エージェントと寺田さん | この手順書を直した PR（corsweb2024 の 500 と griftai の 109）を develop に merge する。済んでいれば飛ばす | ― | 7 と 8 より前。release PR のブロックが、develop の `docs/analytics/release-pr-body.md` を読む |
 | 1 | 寺田さん | analytics.google.com で、GA4 のプロパティ `cor-jp.com` を作り、測定 ID（`G-` で始まる値）を控える | 2 節 | なし |
 | 2 | 寺田さん | analytics.google.com で、`G-3E8328E5V6` が Cor. のものかを確かめる。違えば、griftai.org 用のプロパティを作り、測定 ID を控える | 4 節 | なし |
 | 3 | 寺田さん | clarity.microsoft.com で、プロジェクト `griftai.org` を作り、Project ID を控える | 3 節 | なし |
 | 4 | 寺田さん | Cloudflare のダッシュボードの Workers & Pages で、`griftai` の Production に変数を 2 つ足す（`PUBLIC_GA4_ID` と `PUBLIC_CLARITY_ID`） | 5-2 節 | 2 と 3 が終わっている |
-| 5 | corsweb-voice と寺田さん | プライバシーポリシーの PR（corsweb2024 の 382 と 499）を develop に merge する。この手順書の外の作業です | ― | 顧問弁護士の回答は 2026-11-06 に届いている |
+| 5 | corsweb-voice（プライバシーポリシーの PR の担当セッション）と寺田さん | プライバシーポリシーの PR（corsweb2024 の 382 と 499）を develop に merge する。382 は今 base が `main` なので、develop に付け替えてから merge する。この手順書の外の作業です | ― | 顧問弁護士の回答は、統括の連絡では 2026-11-06 に届いている |
 | 6 | 寺田さん | 端末に 5-1 節のブロックを貼り、聞かれたら 1 の測定 ID を貼る | 5-1 節 | 5 が終わっている。ブロックが develop を読み、開示がなければ止まる |
 | 7 | エージェントと寺田さん | corsweb の release PR を作り、承認を取り、merge する | 6-1 節 | 5 と 6 が終わり、develop への merge が止まっている |
 | 8 | エージェントと寺田さん | griftai の release PR を作り、merge する | 6-2 節 | 4 が終わっている |
@@ -180,17 +182,35 @@ gh pr view 497 -R Cor-Incorporated/corsweb2024 --json state,mergeCommit
 
 `release-pr-body.md` には H5 のマーカーが入っています。この release は `.github/workflows/deploy.yml` を変えるので、`h5-admission` が H5 の 3 点（陰性テスト、台帳、廃止条件）と減算の宣言を求めるためです。本文が `head: <sha>` の 1 行だけだと、`H5-FAIL: admission fee incomplete` で止まります。2026-11-06 に、手元で `scripts/h5-admission-check.sh` に `deploy.yml` を変える差分と 1 行の本文を当てて、終了コード 1 を確かめました。
 
-ブロックは、変更された構造パスが `.github/workflows/deploy.yml` の 1 つだけのときに進みます。構造パスの式は、`scripts/h5-admission-check.sh` の `_H5_STRUCT_RE` と同じです。ほかのパスが混じっていると、`release-pr-body.md` のマーカーが説明していない変更なので、パスを出して止まります。止まったときは、混じった変更の PR を見て、マーカーが足りるかを、エージェントと寺田さんが判断します。
+ブロックは、次の 2 つがそろったときに進みます。1 つ目は、変更された構造パスが `.github/workflows/deploy.yml` の 1 つだけであること。2 つ目は、その構造パスを変えた PR が、497 の 1 本だけであること。構造パスの式は、`scripts/h5-admission-check.sh` の `_H5_STRUCT_RE` と同じです。ファイル名だけを見ると、別の PR が同じファイルを変えても気づけません。そこで、PR ごとにも数えます。外れると、パスか PR の番号を出して止まります。止まったときは、その PR を見て、`release-pr-body.md` のマーカーが足りるかを、エージェントと寺田さんが判断します。
+
+作る前に、develop に宛てた開いている PR を見ます。draft でないものが残っていれば、merge が終わるのを待ちます。
+
+```bash
+gh pr list -R Cor-Incorporated/corsweb2024 --base develop --state open --json number,title,isDraft
+```
 
 ```bash
 (
 set -euo pipefail
 repo=Cor-Incorporated/corsweb2024
+want="497"
+struct='^(hooks/.+\.sh|scripts/.+\.sh|settings\.json|\.github/workflows/)'
 sha=$(gh api "repos/$repo/commits/develop" -q .sha) || { echo "develop の sha を読めません"; exit 1; }
-paths=$(gh api --paginate "repos/$repo/compare/main...develop?per_page=100" -q '.files[].filename' | grep -E '^(hooks/.+\.sh|scripts/.+\.sh|settings\.json|\.github/workflows/)' || true)
+files=$(gh api --paginate "repos/$repo/compare/main...develop?per_page=100" -q '.files[].filename') || { echo "差分のファイル一覧を読めません"; exit 1; }
+[ "$(printf '%s\n' "$files" | wc -l | tr -d ' ')" -lt 300 ] || { echo "差分が 300 ファイル以上です。構造パスを見落とす恐れがあるので、人が確かめます"; exit 1; }
+paths=$(printf '%s\n' "$files" | grep -E "$struct" || true)
 [ "$paths" = ".github/workflows/deploy.yml" ] || { echo "構造パスの変更が deploy.yml だけではありません。本文のマーカーが足りるかを、人が判断します:"; echo "$paths"; exit 1; }
-tpl=$(gh api "repos/$repo/contents/docs/analytics/release-pr-body.md?ref=develop" -H 'Accept: application/vnd.github.raw') || { echo "release-pr-body.md を読めません"; exit 1; }
 merged=$(gh api --paginate "repos/$repo/compare/main...develop?per_page=100" -q '.commits[] | select((.parents | length) > 1) | .commit.message | split("\n")[0] | capture("Merge pull request #(?<n>[0-9]+)").n') || { echo "develop に入った PR の一覧を読めません"; exit 1; }
+touching=""
+while read -r pr; do
+[ -n "$pr" ] || continue
+fl=$(gh api --paginate "repos/$repo/pulls/$pr/files?per_page=100" -q '.[].filename') || { echo "PR $pr のファイル一覧を読めません"; exit 1; }
+if printf '%s\n' "$fl" | grep -E "$struct" >/dev/null; then touching="$touching$pr"$'\n'; fi
+done <<< "$merged"
+got=$(printf '%s' "$touching" | sort -n | paste -sd' ' -)
+[ "$got" = "$want" ] || { echo "構造パスを変える PR が、想定（$want）と違います: $got"; exit 1; }
+tpl=$(gh api "repos/$repo/contents/docs/analytics/release-pr-body.md?ref=develop" -H 'Accept: application/vnd.github.raw') || { echo "release-pr-body.md を develop から読めません。当日の順番の 0（この手順書の PR）が develop に入っているかを確かめます"; exit 1; }
 f=$(mktemp)
 trap 'rm -f "$f"' EXIT
 {
@@ -257,17 +277,35 @@ griftai は develop にも main にも、必須の check と承認の設定が�
 
 `release-pr-body.md` には H5 のマーカーが入っています。この release は `.github/workflows/ci.yml` を変えるので、`h5-admission` が H5 の 3 点（陰性テスト、台帳、廃止条件）と減算の宣言を求めるためです。本文が `head: <sha>` の 1 行だけだと、`H5-FAIL: admission fee incomplete` で止まります。2026-11-06 に、手元で griftai の `scripts/h5-admission-check.sh` に、`ci.yml` を変える差分と 1 行の本文を当てて、終了コード 1 を確かめました。
 
-ブロックは、変更された構造パスが `.github/workflows/ci.yml` の 1 つだけのときに進みます。構造パスの式は、`scripts/h5-admission-check.sh` の `_H5_STRUCT_RE` と同じです。ほかのパスが混じっていると、`release-pr-body.md` のマーカーが説明していない変更なので、パスを出して止まります。止まったときは、混じった変更の PR を見て、マーカーが足りるかを、エージェントと寺田さんが判断します。
+ブロックは、次の 2 つがそろったときに進みます。1 つ目は、変更された構造パスが `.github/workflows/ci.yml` の 1 つだけであること。2 つ目は、その構造パスを変えた PR が、107 と 108 の 2 本だけであること。107 は cor-voice の写しを corsweb2024 の develop と比べる検査、108 は ID の環境変数化です。構造パスの式は、`scripts/h5-admission-check.sh` の `_H5_STRUCT_RE` と同じです。ファイル名だけを見ると、別の PR が同じファイルを変えても気づけません。そこで、PR ごとにも数えます。外れると、パスか PR の番号を出して止まります。止まったときは、その PR を見て、`release-pr-body.md` のマーカーが足りるかを、エージェントと寺田さんが判断します。
+
+作る前に、develop に宛てた開いている PR を見ます。draft でないものが残っていれば、merge が終わるのを待ちます。
+
+```bash
+gh pr list -R Cor-Incorporated/griftai --base develop --state open --json number,title,isDraft
+```
 
 ```bash
 (
 set -euo pipefail
 repo=Cor-Incorporated/griftai
+want="107 108"
+struct='^(hooks/.+\.sh|scripts/.+\.sh|settings\.json|\.github/workflows/)'
 sha=$(gh api "repos/$repo/commits/develop" -q .sha) || { echo "develop の sha を読めません"; exit 1; }
-paths=$(gh api --paginate "repos/$repo/compare/main...develop?per_page=100" -q '.files[].filename' | grep -E '^(hooks/.+\.sh|scripts/.+\.sh|settings\.json|\.github/workflows/)' || true)
+files=$(gh api --paginate "repos/$repo/compare/main...develop?per_page=100" -q '.files[].filename') || { echo "差分のファイル一覧を読めません"; exit 1; }
+[ "$(printf '%s\n' "$files" | wc -l | tr -d ' ')" -lt 300 ] || { echo "差分が 300 ファイル以上です。構造パスを見落とす恐れがあるので、人が確かめます"; exit 1; }
+paths=$(printf '%s\n' "$files" | grep -E "$struct" || true)
 [ "$paths" = ".github/workflows/ci.yml" ] || { echo "構造パスの変更が ci.yml だけではありません。本文のマーカーが足りるかを、人が判断します:"; echo "$paths"; exit 1; }
-tpl=$(gh api "repos/$repo/contents/docs/analytics/release-pr-body.md?ref=develop" -H 'Accept: application/vnd.github.raw') || { echo "release-pr-body.md を読めません"; exit 1; }
 merged=$(gh api --paginate "repos/$repo/compare/main...develop?per_page=100" -q '.commits[] | select((.parents | length) > 1) | .commit.message | split("\n")[0] | capture("Merge pull request #(?<n>[0-9]+)").n') || { echo "develop に入った PR の一覧を読めません"; exit 1; }
+touching=""
+while read -r pr; do
+[ -n "$pr" ] || continue
+fl=$(gh api --paginate "repos/$repo/pulls/$pr/files?per_page=100" -q '.[].filename') || { echo "PR $pr のファイル一覧を読めません"; exit 1; }
+if printf '%s\n' "$fl" | grep -E "$struct" >/dev/null; then touching="$touching$pr"$'\n'; fi
+done <<< "$merged"
+got=$(printf '%s' "$touching" | sort -n | paste -sd' ' -)
+[ "$got" = "$want" ] || { echo "構造パスを変える PR が、想定（$want）と違います: $got"; exit 1; }
+tpl=$(gh api "repos/$repo/contents/docs/analytics/release-pr-body.md?ref=develop" -H 'Accept: application/vnd.github.raw') || { echo "release-pr-body.md を develop から読めません。当日の順番の 0（この手順書の PR）が develop に入っているかを確かめます"; exit 1; }
 f=$(mktemp)
 trap 'rm -f "$f"' EXIT
 {
@@ -285,6 +323,8 @@ gh pr list -R Cor-Incorporated/griftai --base main --head develop --json number,
 最後の行に出た `number` が release PR の番号です。この番号を、3. と 4. の `pr=RELEASE_PR_NUMBER` の行に書きます。作った直後は check がまだ出ていないことがあります。3. で `no checks reported` と出て止まったら、数十秒おいて 3. のブロックを打ち直します。
 
 3. release PR の CI が通ったときだけ、本文に書いた develop の sha を `--match-head-commit` に渡して merge します。main への merge で、Cloudflare Pages が本番をビルドします。main の merge で GitHub が強制するのは、ruleset の `gitleaks.yml` だけです。CI の 4 つは、次のブロックが確かめます。
+
+`Quality Check` は、corsweb2024 の develop の `.claude/skills/cor-voice/` と、griftai の写しを比べます（107 の検査）。corsweb の develop でその領域が動くと、この check が落ちます（8 節）。Pages の production branch が `main` であることは、設定画面では未確認です。過去の release PR（105）が、同じ前提で運用されました。
 
 ```bash
 (
@@ -367,6 +407,8 @@ curl -s --compressed https://griftai.org/ | grep -oE 'G-3E8328E5V6' | wc -l
 | 数字がダッシュボードに出ない | ストリームの URL や Project の Website が実際のホストと違う。ブラウザの広告ブロックで止まっている | 本番 HTML で ID が一致していれば、サイト側は届いている。ブラウザの開発者ツールの Network で `gtag/js?id=` と `clarity.ms/tag/` のリクエストを見る |
 | preview の PR で数字が出ない | 仕様 | preview では計測しない（社内の確認で解析が汚れないようにするため） |
 | 5-1 節のブロックが「開示がありません」で止まる | develop の ja のポリシーに、まだ「Google Analytics」がない。または、develop の読み取りに失敗した | 開示の PR（corsweb2024 の 382 と 499）が develop に入るまで待つ。入ったあとも止まるなら、`gh api 'repos/Cor-Incorporated/corsweb2024/contents/src/i18n/locales/ja.json?ref=develop' -H 'Accept: application/vnd.github.raw'` の出力に、`Google Analytics` が入っているかを見る |
+| release PR のブロックが「release-pr-body.md を develop から読めません」で止まる | この手順書を直した PR（当日の順番の 0）が、develop に入っていない | 0 を先に済ませる。release PR を作ったあとに develop が動いたときは、2. のブロックを打ち直し、承認を取り直す |
+| griftai の release PR で `Quality Check` が落ちる | step `Check cor-voice copy matches corsweb2024 develop` が、corsweb2024 の develop の `.claude/skills/cor-voice/` と griftai の写しの違いを見つけた（107 の検査） | check の詳細で step の名前を見る。写しを揃える PR を griftai の develop に入れる。develop が動くので、2. のブロックを打ち直す |
 | release PR の `h5-admission` が `H5-FAIL: admission fee incomplete` で落ちる | 本文に H5 のマーカーがない。2. のブロックを通らずに、本文を 1 行で作った | 2. のブロックをもう一度打つ。本文が作り直される。ブロックが「構造パスの変更が … だけではありません」で止まるときは、混じった変更の PR を見て、`release-pr-body.md` のマーカーで足りるかを人が判断する |
 
 ```bash
@@ -375,7 +417,7 @@ gh variable list -R Cor-Incorporated/corsweb2024 --json name,value -q '.[] | sel
 
 ## 9. 元に戻す
 
-- cor-jp.com の GA4 を止める: variable を消します。タグが消えるのは、次の main への push でビルドし直したあとです。すぐには止まりません。
+- cor-jp.com の GA4 を止める: variable を消します。タグが消えるのは、次の main への push でビルドし直したあとです。すぐには止まりません。手動実行（`workflow_dispatch`）はビルドだけで本番に出さないので、止める手段になりません（`deploy.yml` のコメントで確認）。今すぐ止める経路は、確かめていません（未確認）。確かめた経路は、新しい release PR（承認つき）で main に push する方法だけです。
 
 ```bash
 gh variable delete PUBLIC_GA4_ID -R Cor-Incorporated/corsweb2024
