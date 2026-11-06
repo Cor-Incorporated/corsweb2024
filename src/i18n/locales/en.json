@@ -668,7 +668,7 @@
     }
   },
   "contactConsent": {
-    "purpose": "The information you provide will be used solely to respond to your inquiry and to contact you.",
+    "purpose": "The information you provide will be used within the scope of the purposes of use set out in our Privacy Policy.",
     "linkBefore": "For details on how we handle personal information, please review our ",
     "linkText": "Privacy Policy",
     "linkAfter": ".",
@@ -689,7 +689,7 @@
     "chatError": "Something went wrong. Please try sending your message again.",
     "readyNotice": "Thank you! Please fill in your contact details below and submit.",
     "consent": {
-      "purpose": "The information you provide will be used solely to respond to your inquiry and to contact you.",
+      "purpose": "The information you provide will be used within the scope of the purposes of use set out in our Privacy Policy.",
       "linkBefore": "For details on how we handle personal information, please review our ",
       "linkText": "Privacy Policy",
       "linkAfter": ".",
@@ -1019,7 +1019,7 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "lastUpdate": "Effective date: October 20, 2026 (Version 0.4, Draft)",
+    "lastUpdate": "Effective date: November 6, 2026 (Version 1.0)",
     "note": "The Japanese version is the authoritative text. This English translation is provided for convenience.",
     "intro": "Cor. Inc. (hereinafter referred to as \"the Company\") recognizes the importance of the personal information it handles and, in accordance with the Act on the Protection of Personal Information (hereinafter the \"APPI\") and other relevant laws and regulations and guidelines, as well as the information security management system based on ISO/IEC 27001:2022 (JIS Q 27001:2023), handles the personal information of customers, employees, job applicants, and all other individuals appropriately. The Company protects personal information in accordance with the following policy.",
     "businessTitle": "1. Business Information",
@@ -1119,7 +1119,15 @@
         "body": [
           "The Company handles personal information using cloud services such as Google Workspace (shared drives), Google Cloud (GCP / Secret Manager), GitHub, and Bitwarden.",
           "In connection with the use of these cloud services, personal data may be handled in foreign countries (cross-border transfer). When the Company provides personal data to a third party located overseas (including cases where data is handled overseas through cloud services), the Company handles such data appropriately in accordance with Article 28 of the APPI, by means such as obtaining the prior consent of the individual, or by confirming that the relevant third party has established a system conforming to the standards prescribed by said Act, or by other means prescribed by laws and regulations.",
-          "When carrying out a cross-border transfer, the Company provides, upon the request of the individual and as prescribed by laws and regulations, information regarding the name of the country in which the transferee is located, the systems for the protection of personal information in that country, and the measures taken by the transferee.",
+          "The information required by laws and regulations when the Company provides personal data to a third party located overseas is as follows."
+        ],
+        "list": [
+          "Name of the destination country: United States",
+          "The system for the protection of personal information in the United States: please refer to the information on foreign personal information protection systems (United States) published by the Personal Information Protection Commission of Japan.",
+          "Measures taken by the recipient for the protection of personal information: the measures set out in the privacy policies and data processing terms published by each business"
+        ],
+        "bodyAfter": [
+          "In addition, where the Company relies on confirming that a third party located overseas has established a system conforming to the standards prescribed by the APPI, the Company provides, upon the request of the individual and as prescribed by laws and regulations, information on the measures the Company takes to ensure that the third party continuously implements such measures.",
           "* With respect to Specific Personal Information (My Number), the Company does not provide it to third parties located overseas, in accordance with the My Number Act."
         ]
       },
@@ -1169,7 +1177,8 @@
           "Access control: Based on the zero-trust approach, the Company controls access to personal data through multi-factor authentication (MFA), device posture verification, and the principle of least privilege. For Specific Personal Information, access privileges are configured so that only the personnel in charge of the relevant affairs can access it.",
           "Encryption: Disk encryption (FileVault) is enabled on business devices, and communications are encrypted using TLS or the like. Encryption at rest is enabled for data stored in the cloud.",
           "Logging and detection: Access to personal data is subject to minimal logs relevant to business operations (which do not collect private content), and is recorded and monitored.",
-          "Disposal: Personal data that is no longer needed is disposed of by a method that renders it irrecoverable."
+          "Disposal: Personal data that is no longer needed is disposed of by a method that renders it irrecoverable.",
+          "Understanding the external environment: The Company uses cloud services and other services provided by U.S. businesses, and personal data may be handled outside Japan, including in the United States. The Company implements security control measures after understanding the system for the protection of personal information in the United States."
         ]
       },
       {
@@ -1200,7 +1209,7 @@
         "body": [
           "On its contact page, the Company provides an AI-based reception service (Cloudia; hereinafter the \"AI Reception\"). The AI Reception uses generative AI to organize the content of your consultation and then hands it over to the Company's staff together with the contact details you enter at the final step. The handling of personal information in the AI Reception is governed by this Section and by the other provisions of this Policy.",
           "(1) Information collected: (i) the content of your consultation in the AI Reception (text entered in the chat) and the AI's responses; (ii) the type of consultation and information indicating the source of your visit (the position on the referring page, UTM parameters, etc.); (iii) your name, email address, company name, and inquiry message entered at the handover step; (iv) the summary of your consultation, organized items such as the stage of your consultation, and the result of classifying the type of inquiry, as generated by the AI; and (v) information such as IP addresses obtained in the course of communications for the prevention of misuse.",
-          "(2) Purposes of use: (i) responding to your consultation and organizing its content; (ii) handing it over to the Company's staff, and responding to your inquiry and contacting you (including sending a confirmation-of-receipt email); (iii) classifying the type of inquiry (including identifying sales solicitations, nuisance messages, and the like); and (iv) preventing misuse and operating the AI Reception securely. The summaries and classifications produced by the AI are used as reference material for staff when considering how to respond; decisions on how to respond are made by the Company's staff.",
+          "(2) Purposes of use: (i) responding to your consultation and organizing its content; (ii) handing it over to the Company's staff, and responding to your inquiry and contacting you (including sending a confirmation-of-receipt email); (iii) classifying the type of inquiry (including identifying sales solicitations, nuisance messages, and the like); and (iv) preventing misuse and operating the AI Reception securely. The summaries and classifications produced by the AI are used as reference material for staff when considering how to respond; decisions on how to respond are made by the Company's staff. The Company does not use information collected through the AI Reception to train generative AI models.",
           "(3) Outsourcing: To the extent necessary to operate the AI Reception, the Company outsources all or part of the handling of personal information to the following businesses (see Section 3)."
         ],
         "list": [
@@ -1236,7 +1245,7 @@
     "securityLinkPrefix": "For our information security framework, see also our ",
     "securityLinkText": "Security",
     "securityLinkSuffix": " page.",
-    "footer": "Version 0.4 (Draft) / Effective date: October 20, 2026 / Prepared by: Cor. Inc. / Responsible: Personal Information Protection Manager (ISMS Management Officer, Nagisa Terada)",
+    "footer": "Version 1.0 / Effective date: November 6, 2026 / Prepared by: Cor. Inc. / Responsible: Personal Information Protection Manager (ISMS Management Officer, Nagisa Terada)",
     "footerNote": "* This Policy is a summary and mapping of the internal rule \"Personal Information and Specific Personal Information Handling Regulations\" for the purpose of external publication. Where the content of the two differs, it shall be interpreted in accordance with laws and regulations and the intent of said regulations."
   },
   "security": {
