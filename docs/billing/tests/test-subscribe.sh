@@ -88,6 +88,15 @@ FAKE_SEARCH=one run subscribe.sh customer --code sample-co --name x --email bill
 expect "既にある customer は作らない" 0 0 "OK customer cus_existing"
 FAKE_SEARCH=two run subscribe.sh customer --code sample-co --name x --email billing@example.test --apply --mode test
 expect "customer_code が 2 件なら exit 3" 3 0 "2 件ある"
+FAKE_SEARCH=none run subscribe.sh customer --code sample-co --name x --email billing@example.test --clerk-org org_abc123 --apply --mode test
+expect "Clerk の組織 id を付けて customer を作る" 0 1 "clerk_org_id=org_abc123"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'metadata\[clerk_org_id\]=org_abc123' && ok "Customer の metadata に clerk_org_id を送る" || ng "metadata[clerk_org_id] が無い"
+FAKE_SEARCH=one_clerk run subscribe.sh customer --code sample-co --name x --email billing@example.test --clerk-org org_abc123 --apply --mode test
+expect "既存の顧客の clerk_org_id が違えば書き換えずに exit 3" 3 0 "期待 org_abc123、観測 org_other"
+run subscribe.sh customer --code sample-co --name x --email billing@example.test --clerk-org "org abc"
+expect "--clerk-org の形の誤りは exit 64" 64 0 "--clerk-org は英数字と下線"
+run subscribe.sh basic --customer cus_x --service xesm --tenant 組織 --clerk-org org_abc123
+expect "--clerk-org は customer でだけ使う（exit 64）" 64 0 "customer でだけ使う"
 
 # 3. 重複と前提
 FAKE_SUBS=basic_active run subscribe.sh basic --customer cus_x --service business-dossier --tenant c01 --apply --mode test

@@ -115,6 +115,7 @@ invoices_list() {
 customer_search() {
   case "${FAKE_SEARCH:-none}" in
     one) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co"}}]}' ;;
+    one_clerk) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","clerk_org_id":"org_other"}}]}' ;;
     two) respond 200 '{"object":"search_result","data":[{"id":"cus_a","metadata":{}},{"id":"cus_b","metadata":{}}]}' ;;
     *) respond 200 '{"object":"search_result","data":[]}' ;;
   esac

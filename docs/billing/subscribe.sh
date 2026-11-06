@@ -6,7 +6,7 @@
 # 鍵・モードの扱いは lib.sh と同じ（鍵は表示しない・引数に載せない、書く前に livemode を確かめる）。
 #
 # サブコマンド:
-#   customer --code <顧客コード> --name <社名> --email <請求先のメール>   Customer を作る（あれば作らない）
+#   customer --code <顧客コード> --name <社名> --email <請求先のメール> [--clerk-org <Clerk の組織の id>]  Customer を作る（あれば作らない）
 #   find     --code <顧客コード>                                          Customer の id を探す（読むだけ）
 #   basic    --customer <cus_…> --service <サービス> --tenant <製品側の組織>  basic の subscription と最初の支払いページ
 #   devfee   --customer <cus_…> --service <サービス> --count <回数> --start align|now|YYYY-MM-DD
@@ -33,6 +33,7 @@ OPT_TENANT=""
 OPT_COUNT=""
 OPT_START=""
 OPT_SUB=""
+OPT_CLERK=""
 
 usage() {
   sed -n '8,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -56,6 +57,7 @@ set_opt() {
     --count) OPT_COUNT="$2" ;;
     --start) OPT_START="$2" ;;
     --subscription) OPT_SUB="$2" ;;
+    --clerk-org) OPT_CLERK="$2" ;;
   esac
 }
 
@@ -71,7 +73,7 @@ parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --apply) DO_APPLY=1 ;;
-      --mode | --plans | --code | --name | --email | --customer | --service | --tenant | --count | --start | --subscription)
+      --mode | --plans | --code | --name | --email | --customer | --service | --tenant | --count | --start | --subscription | --clerk-org)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         set_opt "$1" "$2"
         shift
@@ -143,6 +145,10 @@ validate_inputs() {
   if [ -n "$OPT_CUSTOMER" ]; then
     [[ "$OPT_CUSTOMER" =~ ^cus_[A-Za-z0-9]+$ ]] || die 64 "--customer は cus_ で始まる id（観測: $OPT_CUSTOMER）"
   fi
+  if [ -n "$OPT_CLERK" ]; then
+    [ "$CMD" = "customer" ] || die 64 "--clerk-org は customer でだけ使う"
+    [[ "$OPT_CLERK" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 64 "--clerk-org は英数字と下線（64 文字まで。観測: $OPT_CLERK）"
+  fi
   case "$CMD" in
     find | status) [ -n "$MODE" ] || die 64 "$CMD は読むだけ。--mode test か --mode live が要る（--apply は要らない）" ;;
   esac
@@ -165,8 +171,8 @@ expected_total() {
 
 print_plan() {
   case "$CMD" in
-    customer) printf 'PLAN customer: GET /v1/customers/search で customer_code=%s を探し、無ければ POST /v1/customers（name=%s、email=%s、metadata[customer_code]=%s）\n' \
-      "$OPT_CODE" "$OPT_NAME" "$OPT_EMAIL" "$OPT_CODE" ;;
+    customer) printf 'PLAN customer: GET /v1/customers/search で customer_code=%s を探し、無ければ POST /v1/customers（name=%s、email=%s、metadata[customer_code]=%s、metadata[clerk_org_id]=%s）\n' \
+      "$OPT_CODE" "$OPT_NAME" "$OPT_EMAIL" "$OPT_CODE" "${OPT_CLERK:-（なし）}" ;;
     find) printf 'PLAN find: GET /v1/customers/search で customer_code=%s を探す（読むだけ）\n' "$OPT_CODE" ;;
     basic) printf 'PLAN basic: %s の basic（%s、%s/月）を %s に。default_incomplete・カードは最初の支払いで保存・消費税を付ける・metadata[tenant]=%s。最初の請求書の支払いページの URL を出す（23 時間で失効）\n' \
       "$OPT_SERVICE" "$(plans_lookup "$OPT_SERVICE" basic)" "$(price_summary "$(plans_lookup "$OPT_SERVICE" basic)")" "$OPT_CUSTOMER" "$OPT_TENANT" ;;
@@ -191,21 +197,37 @@ do_find() {
   printf 'DONE find: %s 件（作った直後は検索に出るまで最大 1 分ほどかかる）\n' "$(jq '.data | length' <<<"$RESP_BODY")"
 }
 
+existing_customer_ok() {
+  local id clerk
+  id="$(jq -r '.data[0].id' <<<"$RESP_BODY")"
+  clerk="$(jq -r '.data[0].metadata.clerk_org_id // empty' <<<"$RESP_BODY")"
+  if [ -n "$OPT_CLERK" ] && [ -n "$clerk" ] && [ "$clerk" != "$OPT_CLERK" ]; then
+    die 3 "顧客 $id（customer_code=$OPT_CODE）の clerk_org_id が違う（期待 $OPT_CLERK、観測 $clerk）。書き換えない"
+  fi
+  printf 'OK customer %s: customer_code=%s は既にある（作らない）\n' "$id" "$OPT_CODE"
+  if [ -n "$OPT_CLERK" ] && [ -z "$clerk" ]; then
+    printf 'NOTE 既存の顧客 %s に clerk_org_id が無い。このスクリプトは既存を書き換えない（付けるかは寺田）\n' "$id"
+  fi
+}
+
 do_customer() {
   local n
+  local -a clerk_meta=()
   api_ok "顧客の検索" GET /v1/customers/search --data-urlencode "query=metadata['customer_code']:'$OPT_CODE'" --data-urlencode "limit=10"
   n="$(jq '.data | length' <<<"$RESP_BODY")"
   [ "$n" -le 1 ] || die 3 "customer_code=$OPT_CODE の顧客が $n 件ある: $(jq -r '[.data[].id] | join(", ")' <<<"$RESP_BODY")（1 件のはず）"
   if [ "$n" -eq 1 ]; then
-    printf 'OK customer %s: customer_code=%s は既にある（作らない）\n' "$(jq -r '.data[0].id' <<<"$RESP_BODY")" "$OPT_CODE"
+    existing_customer_ok
     return 0
   fi
+  if [ -n "$OPT_CLERK" ]; then clerk_meta=(--data-urlencode "metadata[clerk_org_id]=$OPT_CLERK"); fi
   api_ok "顧客の作成 POST /v1/customers" POST /v1/customers \
     --data-urlencode "name=$OPT_NAME" \
     --data-urlencode "email=$OPT_EMAIL" \
     --data-urlencode "metadata[customer_code]=$OPT_CODE" \
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
-  printf 'CREATED customer %s（customer_code=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_CODE"
+    --data-urlencode "metadata[managed_by]=$MANAGED_BY" \
+    ${clerk_meta[@]+"${clerk_meta[@]}"}
+  printf 'CREATED customer %s（customer_code=%s、clerk_org_id=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_CODE" "${OPT_CLERK:-なし}"
 }
 
 do_basic() {

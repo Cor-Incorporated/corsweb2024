@@ -14,7 +14,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [verify-installments.sh](verify-installments.sh) | テストモード専用。test clock で、開発費が N 回で止まることと、basic の最初の支払いでカードが保存されることを実測する |
 | [lib.sh](lib.sh) | 3 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 35 項目、`test-subscribe.sh` 46 項目。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 35 項目、`test-subscribe.sh` 51 項目。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -22,6 +22,57 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 - 利用料は 1 サービスあたり 10,000 円（税別）/ 月。今のシステムは basic プラン。あとから premium プランを足せる形にする。
 - 設計開発費用は 8,000 円（税別）/ 月 × 12 回の分割。Stripe に「開発費用」の特別プランを作って回収する。
 - 開始月・回収済みの回数・未回収の月は顧客ごとに違うので、非公開の台帳に書く（8 章）。
+- 追加の決定（寺田、2026-11-06 14:0x）: business-dossier と XESM のアカウントは Clerk で管理する。Clerk のアカウントと Stripe のサブスクリプションを紐づけ、今後の Cor. のサービスの共通の基盤にする（1A 章）。
+
+## 1A. 身元は Clerk、課金は Stripe
+
+身元の正本は Clerk（利用者と組織）、課金の正本は Stripe にする。2 つを顧客の組織ごとに紐づけたものが、Cor. のサービスに共通の契約の基盤になる。business-dossier と XESM は、その上に載る最初の 2 つのサービス。
+
+```text
+Clerk（身元の正本）
+  組織 org_…（顧客の会社）── privateMetadata に stripe_customer_id ──▶ Stripe（課金の正本）
+    └ 利用者（メールアドレス）                                          Customer cus_…（metadata.clerk_org_id）
+        │                                                                 ├ basic の subscription（サービスごと）
+        │                                                                 └ 開発費の schedule（N 回で止まる）
+        ▼                                                                       │
+Cloudflare Access（入口）                                              支払い → 開ける / 解約 → 閉じる
+  今週: 許可メールに利用者を足す（寺田の手）                          （今週は寺田の手。来週以降は通知で）
+  来週以降: Clerk を OIDC の IdP にして、Clerk のログインで通す
+        │
+        ▼
+製品側: business-dossier（お客様ごとの起動 bd-<slug>）／ XESM（組織 Tenant）
+```
+
+### Clerk Billing を使うか
+
+Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Billing）がある。今回の要件と照らすと、次の理由で**使わない**。
+
+| 要件 | Clerk Billing | Clerk + 自前の Stripe（推奨） |
+|---|---|---|
+| 円で請求 | 不可。請求の通貨は USD だけ [22] | 可。JPY はゼロ小数 [4] |
+| 消費税（税別 10%） | 不可。税と VAT に未対応 [22] | 可。手動の税率（`tax_type=jct`）[5] |
+| 12 回で止まる開発費 | 文書に記載なし（未確認）。期間は月払いか年払い [22] | 可。schedule の `duration` + `end_behavior=cancel` [9]（T5 で実測） |
+| 組織（B2B）のプラン | 可。組織が持つプラン [23] | 可。Stripe の Customer を組織ごとに作り、Clerk の組織と紐づける |
+| プランで使える機能を切る | 可。`has({ plan })`・`has({ feature })` [23] | 自前で持つ（Clerk の組織の metadata に契約中のサービスを書き、製品側で読む。来週以降） |
+| 既存の Stripe の商品と価格 | 使えない。Clerk のプランは Stripe の商品と同期しない [23] | plans.json の商品と価格をそのまま使う |
+| 手数料 | Stripe の手数料に加えて 0.7% [24] | Stripe の手数料だけ |
+| 3D セキュア | 未対応。3DS の確認が要る支払いは失敗する [22] | Stripe の支払いページで扱える（日本のカードでの動きは T6 で確かめる） |
+
+紐づけ方:
+
+- Stripe の Customer の `metadata.clerk_org_id` に Clerk の組織の id を入れる（`subscribe.sh customer --clerk-org`）。
+- Clerk の側には `privateMetadata.stripe_customer_id` を入れる。private metadata はバックエンドと webhook だけが読み書きでき、Clerk の文書も Stripe の顧客 id を例に挙げている [25]。**これは利用者（user）の metadata の文書で、組織（organization）の metadata の文書はまだ読んでいない（未確認）。**
+- Clerk の組織は無料の範囲で使える（1 アプリあたり 100 組織まで、1 組織 20 人まで）[24]。
+
+## 1B. 入口の段階案
+
+| 段階 | 時期 | 入口 | 支払いとの結びつけ |
+|---|---|---|---|
+| 0 | 今週 | Cloudflare Access の許可メール（XESM の `contract-to-use.md` 手順 8、business-dossier の `onboarding.md`） | 寺田が支払いを確かめてから、手でメールを足す（5 章） |
+| 1 | 来週以降 | Clerk を OIDC の IdP にして Access に登録する。Clerk は OAuth 2.0 / OIDC の提供者になれる [26]。Access の generic OIDC は Client ID・Client secret・Auth URL・Token URL・Certificate URL（JWKS）を要る [27] | Access のポリシーはメール（Emails）か OIDC の claim で絞れる [27]。組織の id（`org_id`）を claim に入れる `user:org:read` のスコープを Access が要求できるかは**未確認** [26][27] |
+| 2 | その後 | 製品が Clerk で直接ログインする（XESM は Keycloak に Clerk を外部の IdP としてつなぐ、business-dossier はローカル認証を Clerk に置き換える） | 製品が Clerk の組織の metadata（契約中のサービス）を読んで機能を切る |
+
+段階 1 と 2 は設計だけで、試していない。段階 1 の Client secret は、`register-secret-verified.sh` に査読済みの recipe が無いため手順に書かず保留にする（7 章と同じ）。
 
 ## 1. 商品と価格
 
@@ -71,13 +122,14 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 - 顧客が basic を解約しても、開発費の schedule は止めない（分割で払う約束の残り）。途中で解約したときに残りをどう扱うか（一括で請求するか）は契約書で決める（未決）。
 - 顧客ポータルからは、schedule に管理された subscription を顧客が解約できない [14]。開発費を顧客が誤って止めることはない。今週はポータルを使わない。
 
-## 4. 顧客の識別（Stripe の顧客 ↔ Access の許可 ↔ 製品側の組織）
+## 4. 顧客の識別（Clerk の組織 ↔ Stripe の顧客 ↔ Access の許可 ↔ 製品側の組織）
 
-3 つの記録を、顧客コード（英小文字・数字・ハイフン。XESM の申込票の「顧客コード」と同じ規則）で結ぶ。
+4 つの記録を、Clerk の組織の id と顧客コード（英小文字・数字・ハイフン。XESM の申込票の「顧客コード」と同じ規則）で結ぶ。
 
 | 記録 | 正本 | 入れるもの |
 |---|---|---|
-| 契約者（会社） | Stripe の Customer | 社名、請求先のメールアドレス、`metadata.customer_code` |
+| 身元（会社と利用者） | Clerk の組織（Organization） | 組織の id（`org_…`）、利用者のメール、`privateMetadata.stripe_customer_id`（1A 章。Clerk の設定は寺田） |
+| 契約者（会社） | Stripe の Customer | 社名、請求先のメールアドレス、`metadata.customer_code`、`metadata.clerk_org_id` |
 | 使うサービスとプラン | Stripe の Subscription | 価格（lookup_key で分かる）、`metadata.customer_code`、`metadata.service`、`metadata.tenant` |
 | 入口（利用者ごと） | Cloudflare Access のポリシーの許可メール | 利用者のメールアドレス（1 社に複数）。**Stripe には写さない**（利用者のメールを決済事業者へ複製しない） |
 | 製品側 | business-dossier: お客様ごとの起動（`bd-<slug>`、bd-deploy の報告 2 章）。XESM: 組織（Tenant。組織名で探す） | `metadata.tenant` に、business-dossier なら slug（例の形: `c01`）、XESM なら組織名を入れる |
@@ -138,7 +190,8 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | プラン（basic / premium の枠） | 1 章 | `prices[].plan`・`enabled` | T2・C3 | premium の金額は未定 |
 | 開発費の分割 | 3 章 | `prices[].installments` | T5・T6・C6 | 「ちょうど 12 回」は T5 の実測待ち（AI のレーンは偽の応答でしか通していない） |
 | 税 | 2 章 | `tax_rate`・`tax_behavior` | T2・C3 の CHECK | 適格請求書の要件は未確認 |
-| 顧客の識別 | 4 章 | `services` | C1〜C3 | 実際の行は repo に書かない。台帳の置き場所が未決 |
+| 顧客の識別 | 1A・4 章 | `services` | C1〜C3 | 実際の行は repo に書かない。台帳の置き場所が未決。Clerk の組織の metadata の文書は未確認 |
+| 身元（Clerk）と入口の段階 | 1A・1B 章 | — | C0（Clerk の組織を作る） | Clerk のアプリの作成は寺田。段階 1・2 は設計だけ |
 | 支払い → 入口を開ける | 5 章 | `services[].entry` | C2〜C7 | 支払いページにカードが出るかは T6 で確かめる |
 | 解約 → 入口を閉じる | 6 章 | — | D1〜D4 | XESM の利用者の無効化手順が無い |
 | 未回収分 | 8 章 | — | C8 | 顧客ごとの数字は非公開の台帳 |
@@ -168,6 +221,12 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 19. test clock（作成・進め方・上限）: https://docs.stripe.com/api/test_clocks/advance 、https://docs.stripe.com/billing/testing/test-clocks/api-advanced-usage
 20. subscription の更新（`cancel_at_period_end`）: https://docs.stripe.com/api/subscriptions/update
 21. テスト用のカード（`pm_card_visa`、`4242 4242 4242 4242`）: https://docs.stripe.com/testing
+22. Clerk Billing の概要（USD だけ、税と VAT に未対応、月払いか年払い、3DS に未対応、返金に未対応）: https://clerk.com/docs/billing/overview
+23. Clerk Billing の組織のプラン（`has()`、既存の Stripe の商品と同期しない）: https://clerk.com/docs/nextjs/guides/billing/for-b2b
+24. Clerk の料金（Billing の 0.7%、組織は 100 まで無料）: https://clerk.com/pricing
+25. Clerk の metadata（public / private / unsafe、Stripe の顧客 id の例）: https://clerk.com/docs/users/metadata
+26. Clerk を IdP にする（OAuth 2.0 / OIDC、スコープ `user:org:read` と `org_id`）: https://clerk.com/docs/advanced-usage/clerk-idp 、https://clerk.com/docs/guides/configure/auth-strategies/oauth/how-clerk-implements-oauth
+27. Cloudflare Access の generic OIDC と、ポリシーの OIDC claim: https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/generic-oidc/ 、https://developers.cloudflare.com/cloudflare-one/access-controls/policies/
 
 ## 12. 確かめたい点（寺田）
 

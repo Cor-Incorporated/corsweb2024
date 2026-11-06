@@ -16,6 +16,7 @@
 | P2 | 手元の Mac に `jq` と `curl` がある | — | 実測済み（14:01）: `/usr/bin/jq`（jq-1.7.1-apple）、`/usr/bin/curl`（8.7.1） |
 | P3 | 作業する場所 | 寺田 | PR の merge 前は `~/Developer/corsweb/.worktrees/claude/billing-20261106`、merge 後は `~/Developer/corsweb`（develop） |
 | P4 | 非公開の台帳の置き場所 | 寺田 | **未決**。列は C1 の表 |
+| P5 | Clerk のアカウントとアプリケーション（組織の機能を有効にする） | 寺田（画面の作業） | **未確認**。Clerk Billing は使わない（README 1A 章）。Clerk の鍵はこのレーンが触らない |
 
 P3 の場所へ移る（merge 前）:
 
@@ -23,7 +24,7 @@ P3 の場所へ移る（merge 前）:
 cd ~/Developer/corsweb/.worktrees/claude/billing-20261106
 ```
 
-鍵なしで動く検査を先に通す（通信しない。`35 passed, 0 failed` と `46 passed, 0 failed` が出ること）:
+鍵なしで動く検査を先に通す（通信しない。`35 passed, 0 failed` と `51 passed, 0 failed` が出ること）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -169,6 +170,13 @@ bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-
 
 ## C. 顧客 1 社: 契約 → 入口を開ける（本番）
 
+### C0. Clerk に顧客の組織を作る（寺田、画面の作業）
+
+- P5 の Clerk のアプリケーションに、顧客の会社の組織を作り、組織の id（`org_…`）を控える。**画面の場所と名前は未確認。**
+- 今週は、入口は Access の許可メールのまま（README 1B 章の段階 0）。Clerk の組織は C2 で Stripe の顧客に紐づけるために作る。
+- Clerk の組織の `privateMetadata.stripe_customer_id` に C2 の `cus_…` を入れる作業は、Clerk の鍵が要るので寺田が行う。やり方（画面か API か）は**未確認**。
+- Clerk の準備が間に合わないときは、C2 を `--clerk-org` なしで実行してよい。あとから紐づけるときは、Stripe の顧客の metadata に `clerk_org_id` を足す（このスクリプトは既存の顧客を書き換えないので、寺田が画面で足す。画面の文言は未確認）。
+
 ### C1. 契約と台帳（寺田）
 
 契約書を交わし、申込票を受け取り、非公開の台帳（P4）に 1 行足す。台帳の列:
@@ -176,6 +184,7 @@ bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-
 | 列 | 中身 | 使う手順 |
 |---|---|---|
 | 顧客コード | 英小文字・数字・ハイフン（40 文字まで。XESM の申込票の顧客コードと同じ規則） | C2・C3 |
+| Clerk の組織の id | C0 で控えた `org_…` | C2 |
 | 社名・請求先のメール | 申込票から | C2 |
 | サービス | `business-dossier` か `xesm` | C3・C5 |
 | 製品側の組織 | business-dossier は起動の slug（bd-deploy の報告 6 章の推奨は `c01`）、XESM は組織名（XESM の `contract-to-use.md` 手順 6 の取得コマンドの出力） | C3 |
@@ -184,17 +193,17 @@ bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-
 
 ### C2. Customer を作る
 
-`<顧客コード>`・`<社名>`・`<請求先のメール>` は台帳の同じ名前の列。まず dry-run（`--apply` なし）で PLAN を読む。
+`<顧客コード>`・`<社名>`・`<請求先のメール>`・`<Clerk の組織の id>` は台帳の同じ名前の列。まず dry-run（`--apply` なし）で PLAN を読む。
 
 ```bash
-bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール>
+bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール> --clerk-org <Clerk の組織の id>
 ```
 
 ```bash
-bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール> --clerk-org <Clerk の組織の id> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
 ```
 
-`CREATED customer cus_…`（既にあれば `OK customer cus_…`）が出ること。id は次で取り直せる（作った直後は 1 分ほど出ないことがある）:
+`CREATED customer cus_…（customer_code=…、clerk_org_id=org_…）`（既にあれば `OK customer cus_…`）が出ること。既存の顧客の `clerk_org_id` が違えば `STOP: … の clerk_org_id が違う（期待 …、観測 …）` で止まる。id は次で取り直せる（作った直後は 1 分ほど出ないことがある）:
 
 ```bash
 bash docs/billing/subscribe.sh find --code <顧客コード> --mode live
@@ -304,4 +313,5 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 | T2〜T6、L2〜L3 | できる（コマンド、テスト用の値、出るべき行がある） | 鍵の用意（T1・L1）は画面の作業で、画面の文言は未確認。支払いページにカードが出るかは T6 で確かめる |
 | C2〜C6、D1〜D2 | できる（`<…>` は台帳の同じ名前の列、`cus_…` と `sub_…` は取得コマンドがある） | 台帳の置き場所（P4）が未決。開発費の回数は台帳の値で、10 月以降の扱い（統括への報告の J4）が決まるまで決まらない |
 | C7、D2 の Access | 製品側の手順書へ渡す | Access の画面の文言は製品側の手順書でも未確認 |
+| C0 | **できない** | Clerk の画面の文言と、組織の private metadata の書き方が未確認 |
 | D3 | **できない** | XESM のお客様用の無効化の手順が無い（xesm の W6） |
