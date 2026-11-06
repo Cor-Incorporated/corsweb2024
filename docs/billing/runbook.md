@@ -285,14 +285,21 @@ bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
 
 ### C6. 開発費の schedule を作る（開発費がある顧客だけ。T5 が合格してから）
 
-`<回数>` は台帳の「開発費の Stripe で請求する回数」。`--start align` は、basic の次の請求日に合わせる（同じ日に 2 つの請求が出る）。
+`<回数>` は台帳の「開発費の Stripe で請求する回数」。`<開始>` は台帳の「月ごとの請求の方法」で決める。
+
+| 台帳で、カードで払う最初の月が | `<開始>` | 動き |
+|---|---|---|
+| basic の最初の支払いと同じ月 | `now`（C5 で basic の支払いを確かめた直後、同じ日に実行する） | 開発費の 1 回目をすぐ請求する。2 回目からは basic とほぼ同じ日に毎月 |
+| basic の次の請求の月 | `align` | basic の次の請求日から始める（同じ日に 2 つの請求が出る） |
+
+`align` で始めると、basic の最初の月の開発費はカードで請求されない。その月を請求書で回収しないなら `now` にする。
 
 ```bash
-bash docs/billing/subscribe.sh devfee --customer <cus_…> --service <サービス> --count <回数> --start align
+bash docs/billing/subscribe.sh devfee --customer <cus_…> --service <サービス> --count <回数> --start <開始>
 ```
 
 ```bash
-bash docs/billing/subscribe.sh devfee --customer <cus_…> --service <サービス> --count <回数> --start align --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+bash docs/billing/subscribe.sh devfee --customer <cus_…> --service <サービス> --count <回数> --start <開始> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
 ```
 
 `CREATED schedule … <回数> 回` と `CHECK phases[0]: 開始 … → 終了 …` が出ること。開始と終了の日付を台帳に書く。
