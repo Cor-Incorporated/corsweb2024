@@ -1127,14 +1127,16 @@
         ],
         "list": [
           "Microsoft Clarity (proveedor: Microsoft Corporation / Estados Unidos): registra la visualización de páginas y las interacciones como clics y desplazamientos, y las analiza mediante mapas de calor y repeticiones de sesión. La información obtenida se trata fuera de Japón, incluido Estados Unidos.",
-          "Cloudflare Web Analytics (proveedor: Cloudflare, Inc. / Estados Unidos): obtiene información estadística, como el número de visualizaciones de página. No utiliza cookies que rastreen a personas."
+          "Cloudflare Web Analytics (proveedor: Cloudflare, Inc. / Estados Unidos): obtiene información estadística, como el número de visualizaciones de página. No utiliza cookies que rastreen a personas.",
+          "Google Analytics 4 (proveedor: Google LLC / Estados Unidos): identifica el navegador mediante cookies (como _ga) y agrega las visualizaciones de página, las fuentes de referencia, la información del navegador y del dispositivo y el tiempo de permanencia. La Compañía utiliza los resultados para mejorar el sitio web. La información obtenida se trata fuera de Japón, incluido Estados Unidos."
         ],
         "bodyAfter": [
           "La Compañía no utiliza la información obtenida mediante estas herramientas con el fin de identificar a personas, ni la combina con otra información en su poder para identificarlas. El tratamiento de la información obtenida se rige asimismo por las políticas de privacidad de cada proveedor.",
-          "Dado que el tratamiento de información por parte de Microsoft Clarity implica una transferencia transfronteriza a Estados Unidos, la Compañía la trata de forma adecuada conforme a los métodos establecidos en el apartado 4 (Uso de servicios en la nube y cesión a terceros situados en el extranjero).",
+          "Dado que el tratamiento de información por parte de Microsoft Clarity y Google Analytics implica una transferencia transfronteriza a Estados Unidos, la Compañía la trata de forma adecuada conforme a los métodos establecidos en el apartado 4 (Uso de servicios en la nube y cesión a terceros situados en el extranjero).",
           "En las repeticiones de sesión, el texto introducido en los formularios se enmascara y se configura de modo que la Compañía no pueda visualizarlo. No se utiliza con el fin de registrar información sensible, como el contenido de las consultas.",
           "Si desea detener la recopilación de información, puede utilizar los siguientes métodos: (1) enviar una señal de Global Privacy Control (GPC) mediante su navegador o una extensión (Microsoft Clarity admite GPC); o (2) seleccionar Microsoft en la página de exclusión que proporciona la Digital Advertising Alliance. Tenga en cuenta que Microsoft Clarity no responde a las señales Do Not Track (DNT) del navegador. Además, aunque desactive las cookies, se sigue recopilando información básica, como el número de visualizaciones de página, y las sesiones registradas simplemente se fragmentan. Si desactiva las cookies, es posible que algunas funciones del sitio web no estén disponibles.",
-          "La exclusión mediante el método (2) se almacena en una cookie, por lo que eliminar o desactivar las cookies también borra dicha configuración. Para conservarla, utilice el método (1), Global Privacy Control (GPC), o la extensión del navegador que proporciona la Digital Advertising Alliance que se indica a continuación (disponible únicamente en Estados Unidos, Canadá y Argentina)."
+          "La exclusión mediante el método (2) se almacena en una cookie, por lo que eliminar o desactivar las cookies también borra dicha configuración. Para conservarla, utilice el método (1), Global Privacy Control (GPC), o la extensión del navegador que proporciona la Digital Advertising Alliance que se indica a continuación (disponible únicamente en Estados Unidos, Canadá y Argentina).",
+          "Si desea detener la recopilación de información por parte de Google Analytics, puede añadir a su navegador el complemento de inhabilitación de Google Analytics que proporciona Google (compatible con Chrome, Safari, Firefox y Microsoft Edge). El complemento impide que el JavaScript de Google Analytics (gtag.js) envíe a Google Analytics información sobre su visita. No impide la recopilación que realiza la Compañía con otras herramientas (Microsoft Clarity y Cloudflare Web Analytics)."
         ],
         "links": [
           {
@@ -1152,6 +1154,22 @@
           {
             "label": "Protect My Choices (conserva su exclusión)",
             "href": "https://youradchoices.com/pmc"
+          },
+          {
+            "label": "Política de Privacidad de Google",
+            "href": "https://policies.google.com/privacy"
+          },
+          {
+            "label": "Cómo usa Google la información de sitios o apps que utilizan nuestros servicios",
+            "href": "https://policies.google.com/technologies/partner-sites"
+          },
+          {
+            "label": "Complemento de inhabilitación de Google Analytics para navegadores",
+            "href": "https://tools.google.com/dlpage/gaoptout"
+          },
+          {
+            "label": "Uso de cookies en sitios web (Ayuda de Google Analytics)",
+            "href": "https://support.google.com/analytics/answer/11397207"
           }
         ]
       },

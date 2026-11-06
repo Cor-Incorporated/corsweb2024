@@ -1127,14 +1127,16 @@
         ],
         "list": [
           "Microsoft Clarity (provider: Microsoft Corporation / United States): Records page views and interactions such as clicks and scrolling, and analyzes them as heatmaps and session replays. The information obtained is handled outside Japan, including in the United States.",
-          "Cloudflare Web Analytics (provider: Cloudflare, Inc. / United States): Obtains statistical information such as page view counts. It does not use cookies that track individuals."
+          "Cloudflare Web Analytics (provider: Cloudflare, Inc. / United States): Obtains statistical information such as page view counts. It does not use cookies that track individuals.",
+          "Google Analytics 4 (provider: Google LLC / United States): Identifies the browser with cookies (such as _ga) and aggregates page views, referral sources, browser and device information, and time spent. The Company uses the results to improve the website. The information obtained is handled outside Japan, including in the United States."
         ],
         "bodyAfter": [
           "The Company does not use the information obtained through these tools for the purpose of identifying individuals, nor does it combine such information with other information held by the Company to identify individuals. The handling of the information obtained is also subject to the privacy policies of each provider.",
-          "Because the handling of information by Microsoft Clarity involves a cross-border transfer to the United States, the Company handles such data appropriately by the methods set out in Section 4 (Use of Cloud Services and Provision to Third Parties Located Overseas).",
+          "Because the handling of information by Microsoft Clarity and Google Analytics involves a cross-border transfer to the United States, the Company handles such data appropriately by the methods set out in Section 4 (Use of Cloud Services and Provision to Third Parties Located Overseas).",
           "In session replays, text entered into input forms is masked and configured so that it cannot be viewed by the Company. Session replay is not used for the purpose of recording sensitive information such as the content of inquiries.",
           "If you wish to stop the collection of information, the following methods are available: (1) sending a Global Privacy Control (GPC) signal via your browser or an extension (Microsoft Clarity supports GPC); or (2) selecting Microsoft on the opt-out page provided by the Digital Advertising Alliance. Please note that Microsoft Clarity does not respond to browser Do Not Track (DNT) signals. In addition, even if you disable cookies, basic information such as page view counts continues to be collected, and recorded sessions are simply fragmented. If you disable cookies, some functions of the website may become unavailable.",
-          "The opt-out under method (2) is stored in a cookie, so deleting or disabling cookies also clears that setting. To keep it, please use method (1), Global Privacy Control (GPC), or the browser extension provided by the Digital Advertising Alliance linked below (available only in the United States, Canada and Argentina)."
+          "The opt-out under method (2) is stored in a cookie, so deleting or disabling cookies also clears that setting. To keep it, please use method (1), Global Privacy Control (GPC), or the browser extension provided by the Digital Advertising Alliance linked below (available only in the United States, Canada and Argentina).",
+          "If you wish to stop the collection of information by Google Analytics, you can add the Google Analytics opt-out browser add-on provided by Google to your browser (supported browsers: Chrome, Safari, Firefox and Microsoft Edge). The add-on stops the Google Analytics JavaScript (gtag.js) from sending information about your visit to Google Analytics. It does not stop the collection by the other tools used by the Company (Microsoft Clarity and Cloudflare Web Analytics)."
         ],
         "links": [
           {
@@ -1152,6 +1154,22 @@
           {
             "label": "Protect My Choices (preserves your opt-out)",
             "href": "https://youradchoices.com/pmc"
+          },
+          {
+            "label": "Google Privacy Policy",
+            "href": "https://policies.google.com/privacy"
+          },
+          {
+            "label": "How Google uses information from sites or apps that use our services",
+            "href": "https://policies.google.com/technologies/partner-sites"
+          },
+          {
+            "label": "Google Analytics opt-out browser add-on",
+            "href": "https://tools.google.com/dlpage/gaoptout"
+          },
+          {
+            "label": "Cookie usage on websites (Google Analytics Help)",
+            "href": "https://support.google.com/analytics/answer/11397207"
           }
         ]
       },

@@ -541,14 +541,16 @@
         ],
         "list": [
           "Microsoft Clarity（提供者: Microsoft Corporation／米国）: ページの閲覧状況、クリック・スクロール等の操作を記録し、ヒートマップ及びセッション再生として分析します。取得された情報は米国を含む国外で取り扱われます。",
-          "Cloudflare Web Analytics（提供者: Cloudflare, Inc.／米国）: ページ表示回数等の統計情報を取得します。個人を追跡するCookieは使用しません。"
+          "Cloudflare Web Analytics（提供者: Cloudflare, Inc.／米国）: ページ表示回数等の統計情報を取得します。個人を追跡するCookieは使用しません。",
+          "Google Analytics 4（提供者: Google LLC／米国）: ページの閲覧状況、参照元、ブラウザ・端末情報、滞在時間等を、Cookie（_ga 等）でブラウザを識別して集計し、ウェブサイトの改善に利用します。取得された情報は米国を含む国外で取り扱われます。"
         ],
         "bodyAfter": [
           "これらのツールにより取得される情報は、当社が個人を特定する目的で利用することはなく、また当社が保有する他の情報と結び付けて個人を識別する用途には利用しません。取得される情報の取扱いは、各提供者のプライバシーポリシーにも従います。",
-          "Microsoft Clarityによる情報の取扱いは米国への越境移転を伴うため、当社は第4項（クラウドサービスの利用及び外国にある第三者への提供）に定める方法により適正に取り扱います。",
+          "Microsoft Clarity及びGoogle Analyticsによる情報の取扱いは米国への越境移転を伴うため、当社は第4項（クラウドサービスの利用及び外国にある第三者への提供）に定める方法により適正に取り扱います。",
           "セッション再生においては、入力フォームに入力された文字列等はマスキングされ、当社が閲覧できない設定で運用します。お問い合わせ内容等の機微な情報を記録する目的では使用しません。",
           "情報の取得の停止をご希望の場合は、次の方法をご利用いただけます。①ブラウザ又は拡張機能により Global Privacy Control（GPC）の信号を送信する方法（Microsoft Clarity は GPC に対応しています。）、②Digital Advertising Alliance が提供するオプトアウトのページで Microsoft を選択する方法。なお、Microsoft Clarity はブラウザの Do Not Track（DNT）信号には対応していません。また、Cookie を無効化した場合でも、ページの表示回数等の基本的な情報は引き続き取得され、記録されるセッションが分割される扱いとなります。Cookie を無効化すると、ウェブサイトの一部の機能が利用できなくなる可能性があります。",
-          "②の方法によるオプトアウトの設定はCookieに保存されるため、Cookieを削除又は無効化すると当該設定も解除されます。設定を保持したい場合は、①のGlobal Privacy Control（GPC）による方法をご利用いただくか、下記のDigital Advertising Allianceが提供するブラウザ拡張（米国・カナダ・アルゼンチンでのみ提供）をご利用ください。"
+          "②の方法によるオプトアウトの設定はCookieに保存されるため、Cookieを削除又は無効化すると当該設定も解除されます。設定を保持したい場合は、①のGlobal Privacy Control（GPC）による方法をご利用いただくか、下記のDigital Advertising Allianceが提供するブラウザ拡張（米国・カナダ・アルゼンチンでのみ提供）をご利用ください。",
+          "Google Analyticsによる情報の取得の停止をご希望の場合は、Googleが提供する「Google アナリティクス オプトアウト アドオン」をブラウザに追加する方法をご利用いただけます（Chrome、Safari、Firefox、Microsoft Edgeに対応）。このアドオンは、Google AnalyticsのJavaScript（gtag.js）が閲覧情報をGoogle Analyticsへ送ることを止めます。当社が他のツール（Microsoft Clarity、Cloudflare Web Analytics）で行う取得は止めません。"
         ],
         "links": [
           {
@@ -566,6 +568,22 @@
           {
             "label": "Protect My Choices（設定の保持）",
             "href": "https://youradchoices.com/pmc"
+          },
+          {
+            "label": "Google プライバシー ポリシー",
+            "href": "https://policies.google.com/privacy"
+          },
+          {
+            "label": "Google のサービスを使用するサイトやアプリから収集した情報の Google による使用",
+            "href": "https://policies.google.com/technologies/partner-sites"
+          },
+          {
+            "label": "Google アナリティクス オプトアウト アドオン",
+            "href": "https://tools.google.com/dlpage/gaoptout"
+          },
+          {
+            "label": "ウェブサイトでの Cookie の使用（Google アナリティクス ヘルプ）",
+            "href": "https://support.google.com/analytics/answer/11397207"
           }
         ]
       },
