@@ -11,7 +11,7 @@
 | [ADR-0001](./ADR-0001-cms-studiocms.md) | CMS に StudioCMS（Astroネイティブ・SSR・libSQL）を採用 | **Superseded by ADR-0017** (2026-09-27)（未導入） |
 | [ADR-0002](./ADR-0002-hosting-firebase-app-hosting.md) | ホスティングを Firebase App Hosting（cor-jp-web）＋Astro SSR に移行（静的SSGから） | **Superseded by ADR-0017** (2026-09-27)（未実施・静的のまま） |
 | [ADR-0003](./ADR-0003-db-supabase-postgres.md) | DB に Supabase（Postgres・東京 ap-northeast-1・既存org再利用）を採用。PII は対象外（別管理） | **Superseded by ADR-0017** (2026-09-27)（利用 0 件。プロジェクトは 2026-10-26 に削除） |
-| [ADR-0004](./ADR-0004-analytics-cloudflare-clarity.md) | 計測を Cloudflare Web Analytics＋Microsoft Clarity（cookieless 優先・Clarity は PP 明記。ファネルイベント含む） | Accepted (2026-06-13) / rev 2026-07-10 / rev 2026-07-17（Clarity のタグと PP の開示） |
+| [ADR-0004](./ADR-0004-analytics-cloudflare-clarity.md) | 計測を Cloudflare Web Analytics＋Microsoft Clarity（cookieless 優先・Clarity は PP 明記。ファネルイベント含む） | Accepted (2026-06-13) / rev 2026-07-10 / rev 2026-07-17（Clarity のタグと PP の開示）/ rev 2026-11-06（GA4 を足す。有効化は PP の公開のあと） |
 | [ADR-0005](./ADR-0005-contact-phased-migration.md) | Contact 段階移行（Phase2 = Cloudia UI + contact-chat Worker） | Accepted (2026-06-13) / rev 2026-07-10 / **rev 2026-09-13（§6 撤回・Cloudia 一本化）** |
 | [ADR-0006](./ADR-0006-i18n-single-source.md) | i18n source of truth を `src/utils/i18n.ts` に一本化（`*.json` 廃止） | **Superseded** (2026-09-27)（正本は `src/i18n/locales/*.json`） |
 | [ADR-0007](./ADR-0007-external-expression-guardrails.md) | 対外表現ガードレール（ISMS・旧事業・社名・証拠ルール） | Accepted (2026-06-13) / rev 2026-07-10 / 一部置換 2026-10-20（ISMS の表現と Grift の項を ADR-0022 で置き換え） |

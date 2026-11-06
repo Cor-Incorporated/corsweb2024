@@ -1145,14 +1145,16 @@
         ],
         "list": [
           "Microsoft Clarity（提供方：Microsoft Corporation／美国）：记录页面浏览情况以及点击、滚动等操作，并以热图和会话回放的形式进行分析。所获取的信息将在包括美国在内的日本境外处理。",
-          "Cloudflare Web Analytics（提供方：Cloudflare, Inc.／美国）：获取页面浏览次数等统计信息。不使用追踪个人的 Cookie。"
+          "Cloudflare Web Analytics（提供方：Cloudflare, Inc.／美国）：获取页面浏览次数等统计信息。不使用追踪个人的 Cookie。",
+          "Google Analytics 4（提供方：Google LLC／美国）：通过 Cookie（_ga 等）识别浏览器，统计页面浏览情况、来源、浏览器和设备信息、停留时间等，并用于改进网站。所获取的信息将在包括美国在内的日本境外处理。"
         ],
         "bodyAfter": [
           "本公司不会将通过这些工具获取的信息用于识别个人的目的，也不会将其与本公司持有的其他信息相结合用于识别个人。所获取信息的处理亦遵循各提供方的隐私政策。",
-          "由于 Microsoft Clarity 对信息的处理涉及向美国的跨境转移，本公司将按照第4项（云服务的利用及向境外第三方的提供）规定的方法进行适当处理。",
+          "由于 Microsoft Clarity 和 Google Analytics 对信息的处理涉及向美国的跨境转移，本公司将按照第4项（云服务的利用及向境外第三方的提供）规定的方法进行适当处理。",
           "在会话回放中，输入表单中所填写的文字等将被屏蔽，并以本公司无法查看的设置运行。不会用于记录咨询内容等敏感信息的目的。",
           "如希望停止信息的收集，可采用以下方式：①通过浏览器或扩展程序发送 Global Privacy Control（GPC）信号（Microsoft Clarity 支持 GPC）；②在 Digital Advertising Alliance 提供的退出页面中选择 Microsoft。请注意，Microsoft Clarity 不响应浏览器的 Do Not Track（DNT）信号。此外，即使停用 Cookie，页面浏览次数等基本信息仍会被收集，仅是所记录的会话被分割。停用 Cookie 后，网站的部分功能可能无法使用。",
-          "通过方式②进行的退出设置保存在 Cookie 中，因此删除或停用 Cookie 也会一并清除该设置。如希望保留该设置，请使用方式①的 Global Privacy Control（GPC），或使用下方由 Digital Advertising Alliance 提供的浏览器扩展程序（仅在美国、加拿大和阿根廷提供）。"
+          "通过方式②进行的退出设置保存在 Cookie 中，因此删除或停用 Cookie 也会一并清除该设置。如希望保留该设置，请使用方式①的 Global Privacy Control（GPC），或使用下方由 Digital Advertising Alliance 提供的浏览器扩展程序（仅在美国、加拿大和阿根廷提供）。",
+          "如希望停止 Google Analytics 对信息的收集，可在浏览器中添加 Google 提供的“Google Analytics 停用浏览器插件”（支持 Chrome、Safari、Firefox 和 Microsoft Edge）。该插件会阻止 Google Analytics 的 JavaScript（gtag.js）将您的访问信息发送给 Google Analytics。它不会阻止本公司通过其他工具（Microsoft Clarity、Cloudflare Web Analytics）进行的收集。"
         ],
         "links": [
           {
@@ -1170,6 +1172,22 @@
           {
             "label": "Protect My Choices（保留退出设置）",
             "href": "https://youradchoices.com/pmc"
+          },
+          {
+            "label": "Google 隐私权政策",
+            "href": "https://policies.google.com/privacy"
+          },
+          {
+            "label": "Google 如何使用来自使用我们服务的网站或应用的信息",
+            "href": "https://policies.google.com/technologies/partner-sites"
+          },
+          {
+            "label": "Google Analytics 停用浏览器插件",
+            "href": "https://tools.google.com/dlpage/gaoptout"
+          },
+          {
+            "label": "Google Analytics 帮助：网站上的 Cookie 使用情况",
+            "href": "https://support.google.com/analytics/answer/11397207"
           }
         ]
       },
