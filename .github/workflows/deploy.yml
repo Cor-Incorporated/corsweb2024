@@ -61,6 +61,9 @@ jobs:
           # 解析データが汚染されるため（Analytics.astro 側でも production 以外は出力しない）。
           PUBLIC_CLARITY_ID: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CLARITY_ID || '' }}
           PUBLIC_CF_BEACON_TOKEN: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.PUBLIC_CF_BEACON_TOKEN || '' }}
+          # GA4 の測定 ID（G-…）はページのソースに出る公開値なので、Repository variable で渡す。
+          # secret にも置ける（variable があればそちらが先）。登録は docs/analytics/runbook.md。
+          PUBLIC_GA4_ID: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && (vars.PUBLIC_GA4_ID || secrets.PUBLIC_GA4_ID) || '' }}
 
       - name: Audit build output before deploying
         # デプロイする前にビルド結果を監査する（secret の混入、第三者 CDN からのコード、壊れた JSON-LD、

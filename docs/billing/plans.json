@@ -1,0 +1,118 @@
+{
+  "schema": "cor-billing-plans.v1",
+  "note": "Stripe の商品・価格・税率の宣言。apply-plans.sh がこのファイルだけを読んで作る。金額はすべて税別の円（JPY はゼロ小数通貨なので unit_amount 10000 = 10,000 円）。顧客ごとの情報はここに書かない（公開リポジトリ）。",
+  "stripe_api_version": "2026-10-28.endive",
+  "currency": "jpy",
+  "limits": {
+    "min_unit_amount_jpy": 50,
+    "max_unit_amount_jpy": 100000,
+    "max_installments": 36
+  },
+  "tax_rate": {
+    "key": "jp_consumption_tax_10",
+    "display_name": "消費税",
+    "percentage": 10,
+    "inclusive": false,
+    "country": "JP",
+    "jurisdiction": "JP",
+    "tax_type": "jct"
+  },
+  "services": [
+    {
+      "service": "business-dossier",
+      "product": "cor_business_dossier",
+      "dev_fee_product": "cor_devfee_business_dossier",
+      "entry": "Cloudflare Access の allow メール（business-dossier の docs/deploy/onboarding.md）"
+    },
+    {
+      "service": "xesm",
+      "product": "cor_xesm",
+      "dev_fee_product": "cor_devfee_xesm",
+      "entry": "Cloudflare Access の allow メール（xesm の docs/implementation/customer-test-env/contract-to-use.md 手順 8）"
+    }
+  ],
+  "products": [
+    {
+      "id": "cor_business_dossier",
+      "name": "business-dossier 利用料",
+      "service": "business-dossier",
+      "kind": "service"
+    },
+    {
+      "id": "cor_xesm",
+      "name": "XESM 利用料",
+      "service": "xesm",
+      "kind": "service"
+    },
+    {
+      "id": "cor_devfee_business_dossier",
+      "name": "business-dossier 設計開発費用（分割）",
+      "service": "business-dossier",
+      "kind": "dev_fee"
+    },
+    {
+      "id": "cor_devfee_xesm",
+      "name": "XESM 設計開発費用（分割）",
+      "service": "xesm",
+      "kind": "dev_fee"
+    }
+  ],
+  "prices": [
+    {
+      "lookup_key": "business_dossier_basic_monthly",
+      "product": "cor_business_dossier",
+      "plan": "basic",
+      "enabled": true,
+      "unit_amount_jpy_excl_tax": 10000,
+      "interval": "month",
+      "tax_behavior": "exclusive"
+    },
+    {
+      "lookup_key": "business_dossier_premium_monthly",
+      "product": "cor_business_dossier",
+      "plan": "premium",
+      "enabled": false,
+      "unit_amount_jpy_excl_tax": null,
+      "interval": "month",
+      "tax_behavior": "exclusive"
+    },
+    {
+      "lookup_key": "xesm_basic_monthly",
+      "product": "cor_xesm",
+      "plan": "basic",
+      "enabled": true,
+      "unit_amount_jpy_excl_tax": 10000,
+      "interval": "month",
+      "tax_behavior": "exclusive"
+    },
+    {
+      "lookup_key": "xesm_premium_monthly",
+      "product": "cor_xesm",
+      "plan": "premium",
+      "enabled": false,
+      "unit_amount_jpy_excl_tax": null,
+      "interval": "month",
+      "tax_behavior": "exclusive"
+    },
+    {
+      "lookup_key": "business_dossier_devfee_monthly",
+      "product": "cor_devfee_business_dossier",
+      "plan": "dev_fee",
+      "enabled": true,
+      "unit_amount_jpy_excl_tax": 8000,
+      "interval": "month",
+      "tax_behavior": "exclusive",
+      "installments": 12
+    },
+    {
+      "lookup_key": "xesm_devfee_monthly",
+      "product": "cor_devfee_xesm",
+      "plan": "dev_fee",
+      "enabled": true,
+      "unit_amount_jpy_excl_tax": 8000,
+      "interval": "month",
+      "tax_behavior": "exclusive",
+      "installments": 12
+    }
+  ]
+}

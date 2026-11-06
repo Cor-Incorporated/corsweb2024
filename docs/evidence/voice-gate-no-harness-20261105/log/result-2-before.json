@@ -1,0 +1,113 @@
+{
+  "format": "cor-voice-gate-result",
+  "format_version": 1,
+  "passed": false,
+  "checked_at": "2026-11-05T07:36:41Z",
+  "gate": "fast",
+  "scene": "company",
+  "doc_type": "promo",
+  "draft": {
+    "path": "../draft.md",
+    "sha256": "af6c031a0596c88bf6ad2df7ad8a53fa99b86852d1bbc85ac583791c6b426cc6"
+  },
+  "cor_voice_lint": {
+    "errors": 1,
+    "warns": 1,
+    "findings": [
+      {
+        "rule_id": "exclamation",
+        "level": "warn",
+        "line": 1,
+        "message": "感嘆符は使わない（引用と製品名を除く）",
+        "source": "cor-voice §4"
+      },
+      {
+        "rule_id": "trial_word",
+        "level": "error",
+        "line": 3,
+        "message": "「試行」は使わない。紹介会社・採用担当向けは「テスト導入（PoC）」、CTA は「自社でテストしてみる」",
+        "source": "cor-voice §6 / ADR-0022"
+      }
+    ]
+  },
+  "yomiyasu": {
+    "run": {
+      "exit": 0,
+      "status": "executed",
+      "run_id": "20261105T073640Z-aa8a71b0",
+      "status_line": "yomiyasu-check: executed via=run run=20261105T073640Z-aa8a71b0 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1",
+      "meaning_risk_count": 1,
+      "meaning_risks": [
+        {
+          "kind": "certainty_review",
+          "subkind": "strengthened",
+          "old_line": 2,
+          "new_line": 2,
+          "old": "点数や順位は出さない。",
+          "new": "点数や順位は出さないので、採用の判断が必ず速くなります。"
+        }
+      ],
+      "fact_gap_count": 0,
+      "fact_gaps": []
+    },
+    "verify": {
+      "exit": 0,
+      "status": "executed",
+      "status_line": "yomiyasu-check: executed via=verify run=20261105T073640Z-aa8a71b0 attempt=1 final=sha256:af6c031a0596 mode=compose doc_type=promo checks=lint,diff,materials meaning_risk=1 replay=skipped"
+    }
+  },
+  "review": {
+    "rows": 22,
+    "expected": 22,
+    "problems": [
+      "T（Whole-post tone check (Step 6)）が未記入です",
+      "S1（Sentence completeness）が未記入です",
+      "S2（Habit / frequency implication）が未記入です",
+      "S3（Motive from the reader’s seat）が未記入です",
+      "S4（Relationship / debt）が未記入です",
+      "S5（Factual framing）が未記入です",
+      "S6（meaning_risk_count == 0）が未記入です",
+      "S7（Publish-path preview）が未記入です",
+      "S8（No duplicate / orphan posts）が未記入です",
+      "S9（Dialect）が未記入です",
+      "S10（Mail extras (when email)）が未記入です",
+      "S11（No draft / edit URLs in body (hard stop before Postiz or any one-tap publish)）が未記入です",
+      "S12（Security / architecture framing (when the piece touches trust boundary, edge, zero trust, cloud vs local, or “what we sell”)）が未記入です",
+      "S13（State labeling (2026-10-29 reviewer report §7.1) — hard stop on conflation）が未記入です",
+      "S14（Numbers / comparison / safety minimums (§7.2)）が未記入です",
+      "S15（P0 vocabulary (§要旨, §3, §4.1–4.5) — hard stop）が未記入です",
+      "S16（Story shape (§7.4)）が未記入です",
+      "S17（Personal vs company (§2.3)）が未記入です",
+      "S18（Boundary / stop-design articles (続稿① n083decbc281b 境界・安全停止 and successors; Terada decision 2026-10-29)）が未記入です",
+      "S19（note 編集UI反映（when reflecting into editor.note.com）— hard stop（寺田承認 2026-10-29））が未記入です",
+      "S20（公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（寺田承認 2026-10-29））が未記入です",
+      "S21（技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（寺田承認 2026-10-29））が未記入です"
+    ]
+  },
+  "reasons": [
+    "cor_voice_lint.py の error が 1 件あります（error は直すまで渡さない）",
+    "yomiyasu run の meaning_risk が 1 件です（0 になるまで渡さない）",
+    "記入表: T（Whole-post tone check (Step 6)）が未記入です",
+    "記入表: S1（Sentence completeness）が未記入です",
+    "記入表: S2（Habit / frequency implication）が未記入です",
+    "記入表: S3（Motive from the reader’s seat）が未記入です",
+    "記入表: S4（Relationship / debt）が未記入です",
+    "記入表: S5（Factual framing）が未記入です",
+    "記入表: S6（meaning_risk_count == 0）が未記入です",
+    "記入表: S7（Publish-path preview）が未記入です",
+    "記入表: S8（No duplicate / orphan posts）が未記入です",
+    "記入表: S9（Dialect）が未記入です",
+    "記入表: S10（Mail extras (when email)）が未記入です",
+    "記入表: S11（No draft / edit URLs in body (hard stop before Postiz or any one-tap publish)）が未記入です",
+    "記入表: S12（Security / architecture framing (when the piece touches trust boundary, edge, zero trust, cloud vs local, or “what we sell”)）が未記入です",
+    "記入表: S13（State labeling (2026-10-29 reviewer report §7.1) — hard stop on conflation）が未記入です",
+    "記入表: S14（Numbers / comparison / safety minimums (§7.2)）が未記入です",
+    "記入表: S15（P0 vocabulary (§要旨, §3, §4.1–4.5) — hard stop）が未記入です",
+    "記入表: S16（Story shape (§7.4)）が未記入です",
+    "記入表: S17（Personal vs company (§2.3)）が未記入です",
+    "記入表: S18（Boundary / stop-design articles (続稿① n083decbc281b 境界・安全停止 and successors; Terada decision 2026-10-29)）が未記入です",
+    "記入表: S19（note 編集UI反映（when reflecting into editor.note.com）— hard stop（寺田承認 2026-10-29））が未記入です",
+    "記入表: S20（公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（寺田承認 2026-10-29））が未記入です",
+    "記入表: S21（技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（寺田承認 2026-10-29））が未記入です"
+  ]
+}
