@@ -6,6 +6,8 @@
 # 流れ: test clock → 顧客（clock 付き・メールなし）→ テスト用のカード（pm_card_visa）→ basic の subscription
 #       → 最初の請求書を払う → basic にカードが保存されたか → そのカードで開発費の schedule（N 回）
 #       → clock を 31 日ずつ N+2 回進める → 開発費の請求書を数える。
+# basic と schedule の要求は、subscribe.sh と同じ lib.sh の build_basic_args / build_devfee_args で作る
+# （本番で使う要求そのものを実測する）。開始は既定で align（本番の C6 と同じく basic の次の請求日）。
 # 合格: 支払い済み N 件・それ以外の請求書 0 件・各回 税込（plans.json の額）・subscription が canceled。
 # test clock は自動で消える（作成の応答の deletes_after を出す）。このスクリプトは何も消さない。
 #
@@ -19,6 +21,10 @@ PLANS="$SCRIPT_DIR/plans.json"
 MODE="test"
 SERVICE="business-dossier"
 COUNT=""
+START="align"
+BASIC_PM=""
+BASIC_PERIOD_END=""
+SCHED_ID=""
 readonly STEP_SECONDS=$((31 * 24 * 3600))
 readonly POLL_SECONDS="${VERIFY_POLL_SECONDS:-3}"
 readonly POLL_MAX="${VERIFY_POLL_MAX:-60}"
@@ -27,8 +33,9 @@ readonly MIN_STEP_SECONDS="${VERIFY_MIN_STEP_SECONDS:-7}"
 usage() {
   cat <<'EOF'
 使い方（テストモードだけ。寺田が実行）:
-  bash docs/billing/verify-installments.sh [--service business-dossier|xesm] [--count N] [--plans <path>]
-  --count の既定は plans.json の installments（12）。所要は 2〜3 分（clock を 1 回進めるごとに 7 秒以上あける）。
+  bash docs/billing/verify-installments.sh [--service business-dossier|xesm] [--count N] [--start align|now] [--plans <path>]
+  --count の既定は plans.json の installments（12）。--start の既定は align（本番の C6 と同じ）。
+  所要は 2〜3 分（clock を 1 回進めるごとに 7 秒以上あける）。
 鍵: 環境変数 COR_BILLING_API_KEY。無ければ表示しない入力で受ける。
 EOF
 }
@@ -36,11 +43,12 @@ EOF
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --service | --count | --plans)
+      --service | --count | --start | --plans)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         case "$1" in
           --service) SERVICE="$2" ;;
           --count) COUNT="$2" ;;
+          --start) START="$2" ;;
           --plans) PLANS="$2" ;;
         esac
         shift
@@ -58,6 +66,7 @@ validate_inputs() {
   max="$(jq -r --arg lk "$(plans_lookup "$SERVICE" dev_fee)" '.prices[] | select(.lookup_key == $lk) | .installments' "$PLANS")"
   if [ -z "$COUNT" ]; then COUNT="$max"; fi
   [[ "$COUNT" =~ ^[0-9]+$ ]] && [ "$COUNT" -ge 1 ] && [ "$COUNT" -le "$max" ] || die 64 "--count は 1〜$max（観測: $COUNT）"
+  case "$START" in align | now) ;; *) die 64 "--start は align か now（観測: $START）" ;; esac
 }
 
 expected_total() {
@@ -79,41 +88,34 @@ wait_clock_ready() {
   die 4 "clock $clock が $((POLL_MAX * POLL_SECONDS)) 秒たっても ready にならない（観測 status=$status）"
 }
 
-# basic を作って最初の請求書を払い、保存されたカードの id を返す。
+# basic を作って最初の請求書を払い、保存されたカードを BASIC_PM、次の請求日を BASIC_PERIOD_END に入れる。
 setup_basic() {
-  local cus="$1" pm="$2" price="$3" txr="$4" sub inv saved
-  api_ok "basic の作成" POST /v1/subscriptions \
-    --data-urlencode "customer=$cus" --data-urlencode "items[0][price]=$price" \
-    --data-urlencode "default_tax_rates[0]=$txr" --data-urlencode "collection_method=charge_automatically" \
-    --data-urlencode "payment_behavior=default_incomplete" \
-    --data-urlencode "payment_settings[save_default_payment_method]=on_subscription" \
-    --data-urlencode "metadata[service]=$SERVICE" --data-urlencode "metadata[plan]=basic" \
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+  local cus="$1" pm="$2" price="$3" txr="$4" sub inv
+  build_basic_args "$cus" "$price" "$txr" "$SERVICE"
+  api_ok "basic の作成" POST /v1/subscriptions "${BASIC_ARGS[@]}"
   sub="$(jq -r '.id' <<<"$RESP_BODY")"
   inv="$(jq -r '.latest_invoice | if type == "object" then .id else . end' <<<"$RESP_BODY")"
   api_ok "basic の最初の請求書を払う" POST "/v1/invoices/$inv/pay" --data-urlencode "payment_method=$pm"
   api_ok "basic の読取" GET "/v1/subscriptions/$sub"
-  saved="$(jq -r '.default_payment_method // empty | if type == "object" then .id else . end' <<<"$RESP_BODY")"
-  printf 'VERIFY basic %s: status=%s、保存されたカード=%s\n' "$sub" "$(jq -r '.status' <<<"$RESP_BODY")" "${saved:-なし}" >&2
-  [ -n "$saved" ] || die 5 "VERIFY NG: basic の最初の支払いのあと、subscription にカードが保存されなかった（default_payment_method が空）"
-  printf '%s' "$saved"
+  BASIC_PM="$(jq -r '.default_payment_method // empty | if type == "object" then .id else . end' <<<"$RESP_BODY")"
+  BASIC_PERIOD_END="$(jq -r '.items.data[0].current_period_end // empty' <<<"$RESP_BODY")"
+  printf 'VERIFY basic %s: status=%s、保存されたカード=%s、次の請求日=%s\n' "$sub" "$(jq -r '.status' <<<"$RESP_BODY")" \
+    "${BASIC_PM:-なし}" "$(fmt_jst "${BASIC_PERIOD_END:-なし}")"
+  [ -n "$BASIC_PM" ] || die 5 "VERIFY NG: basic の最初の支払いのあと、subscription にカードが保存されなかった（default_payment_method が空）"
 }
 
+# 開発費の schedule を作り、SCHED_ID に入れる。
 create_schedule() {
-  local cus="$1" pm="$2" price="$3" txr="$4"
-  api_ok "開発費の schedule の作成" POST /v1/subscription_schedules \
-    --data-urlencode "customer=$cus" --data-urlencode "start_date=now" --data-urlencode "end_behavior=cancel" \
-    --data-urlencode "default_settings[default_payment_method]=$pm" \
-    --data-urlencode "default_settings[collection_method]=charge_automatically" \
-    --data-urlencode "phases[0][items][0][price]=$price" --data-urlencode "phases[0][items][0][quantity]=1" \
-    --data-urlencode "phases[0][duration][interval]=month" --data-urlencode "phases[0][duration][interval_count]=$COUNT" \
-    --data-urlencode "phases[0][default_tax_rates][0]=$txr" \
-    --data-urlencode "phases[0][metadata][plan]=dev_fee" --data-urlencode "phases[0][metadata][service]=$SERVICE" \
-    --data-urlencode "metadata[plan]=dev_fee" --data-urlencode "metadata[service]=$SERVICE" \
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
-  printf 'VERIFY schedule %s: status=%s、phases[0] %s → %s\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$(jq -r '.status' <<<"$RESP_BODY")" \
-    "$(fmt_jst "$(jq -r '.phases[0].start_date' <<<"$RESP_BODY")")" "$(fmt_jst "$(jq -r '.phases[0].end_date' <<<"$RESP_BODY")")" >&2
-  jq -r '.id' <<<"$RESP_BODY"
+  local cus="$1" price="$2" txr="$3" start="now"
+  if [ "$START" = "align" ]; then
+    [[ "$BASIC_PERIOD_END" =~ ^[0-9]+$ ]] || die 5 "VERIFY NG: basic の current_period_end を読めない（観測: ${BASIC_PERIOD_END:-なし}）"
+    start="$BASIC_PERIOD_END"
+  fi
+  build_devfee_args "$cus" "$start" "$BASIC_PM" "$price" "$txr" "$COUNT" "$SERVICE"
+  api_ok "開発費の schedule の作成" POST /v1/subscription_schedules "${DEVFEE_ARGS[@]}"
+  SCHED_ID="$(jq -r '.id' <<<"$RESP_BODY")"
+  printf 'VERIFY schedule %s: start=%s、status=%s、phases[0] %s → %s\n' "$SCHED_ID" "$START" "$(jq -r '.status' <<<"$RESP_BODY")" \
+    "$(fmt_jst "$(jq -r '.phases[0].start_date' <<<"$RESP_BODY")")" "$(fmt_jst "$(jq -r '.phases[0].end_date' <<<"$RESP_BODY")")"
 }
 
 advance_all() {
@@ -152,9 +154,10 @@ judge() {
 }
 
 main() {
-  local basic_lk dev_lk basic_price dev_price txr start clock cus pm card sched want_total want_tax
+  local basic_lk dev_lk basic_price dev_price txr start clock cus pm want_total want_tax
   parse_args "$@"
-  require_tools jq curl
+  require_tools jq
+  require_curl
   bash "$SCRIPT_DIR/apply-plans.sh" --plans "$PLANS" >/dev/null || die 2 "plans.json の検査で不合格"
   validate_inputs
   load_api_version
@@ -162,7 +165,7 @@ main() {
   dev_lk="$(plans_lookup "$SERVICE" dev_fee)"
   want_total="$(expected_total "$dev_lk")"
   want_tax=$((want_total - $(jq -r --arg lk "$dev_lk" '.prices[] | select(.lookup_key == $lk) | .unit_amount_jpy_excl_tax' "$PLANS")))
-  printf 'mode: verify-installments（テストモード専用）service=%s count=%s\n' "$SERVICE" "$COUNT"
+  printf 'mode: verify-installments（テストモード専用）service=%s count=%s start=%s\n' "$SERVICE" "$COUNT" "$START"
   printf 'PLAN test clock → 顧客 → pm_card_visa → basic（%s）→ 最初の請求書を払う → 開発費の schedule（%s × %s 回）→ clock を %s 回進める → 数える\n' \
     "$basic_lk" "$dev_lk" "$COUNT" "$((COUNT + 2))"
   read_key
@@ -179,10 +182,10 @@ main() {
   cus="$(jq -r '.id' <<<"$RESP_BODY")"
   api_ok "テスト用のカードを付ける" POST /v1/payment_methods/pm_card_visa/attach --data-urlencode "customer=$cus"
   pm="$(jq -r '.id' <<<"$RESP_BODY")"
-  card="$(setup_basic "$cus" "$pm" "$basic_price" "$txr")"
-  sched="$(create_schedule "$cus" "$card" "$dev_price" "$txr")"
+  setup_basic "$cus" "$pm" "$basic_price" "$txr"
+  create_schedule "$cus" "$dev_price" "$txr"
   advance_all "$clock" "$start"
-  judge "$sched" "$want_total" "$want_tax"
+  judge "$SCHED_ID" "$want_total" "$want_tax"
 }
 
 main "$@"

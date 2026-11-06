@@ -4,18 +4,26 @@
 #
 # 鍵の扱い（3 本とも同じ）:
 #   - 環境変数 COR_BILLING_API_KEY、無ければ端末から表示しない入力で受ける。
-#   - 読んだ直後に環境変数から消す。表示しない・ファイルに書かない・curl の引数に載せない
+#   - 読み込んだ時点で環境変数の export を外し、子プロセスへ継承させない。読んだ直後に消す。
+#   - 表示しない・ファイルに書かない・curl の引数に載せない
 #     （curl の設定を標準入力で渡す。printf は shell の組込みなので、プロセス一覧にも出ない）。
+#   - curl は -q を最初に付けて ~/.curlrc を読ませない（verbose などで鍵がログに出るのを防ぐ）。
+#   - bash -x（set -x）では鍵がトレースに出るので、読み込んだ時点で止まる。
+#   - 鍵を聞く文と本番の確認の文は /dev/tty に出す（パイプやログに混ざらない）。
 # モード: 書く前・読む前に GET /v1/balance の livemode を読み、--mode と食い違えば止まる。
 #   鍵の接頭辞では見分けない（形式を決め打ちしない）。
+# 冪等: POST は Idempotency-Key 付き。Stripe が前回の結果を返したとき（Idempotent-Replayed: true）は、
+#   check_replay で今の状態を読み直し、期待と違えば止まる（「作った」と誤って出さない）。
 
 readonly API_BASE="https://api.stripe.com"
 readonly MANAGED_BY="corsweb/docs/billing/plans.json"
-MODE="${MODE:-}"
+MODE=""
 API_KEY=""
 API_VERSION=""
 RESP_BODY=""
 RESP_CODE=""
+RESP_REPLAYED=""
+export -n COR_BILLING_API_KEY
 
 die() {
   local code="$1"
@@ -24,11 +32,29 @@ die() {
   exit "$code"
 }
 
+case "$-" in
+  *x*) die 64 "set -x（bash -x）では鍵がトレースに出るので実行しない" ;;
+esac
+
 require_tools() {
   local t
   for t in "$@"; do
     command -v "$t" >/dev/null 2>&1 || die 64 "$t が要る"
   done
+}
+
+# %header{} を使うので curl 7.84 以上が要る。
+require_curl() {
+  local v major minor
+  require_tools curl
+  v="$(curl --version | head -1 | cut -d' ' -f2)"
+  major="${v%%.*}"
+  minor="${v#*.}"
+  minor="${minor%%.*}"
+  [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || die 64 "curl の版を読めない（観測: $v）"
+  if [ "$major" -lt 7 ] || { [ "$major" -eq 7 ] && [ "$minor" -lt 84 ]; }; then
+    die 64 "curl 7.84 以上が要る（観測: $v）"
+  fi
 }
 
 load_api_version() {
@@ -51,12 +77,13 @@ idempotency_key() {
   printf 'cor-billing-%s-%s' "$MODE" "${digest:0:32}"
 }
 
-# api METHOD PATH [--data-urlencode k=v ...] → RESP_CODE と RESP_BODY に入れる。
+# api METHOD PATH [--data-urlencode k=v ...] → RESP_CODE・RESP_REPLAYED・RESP_BODY に入れる。
 api() {
   local method="$1" path="$2"
   shift 2
-  local escaped out
-  local -a args=(-sS -g -X "$method" --max-time 30 -K - -H "Stripe-Version: $API_VERSION" --write-out '\n%{http_code}')
+  local escaped out rest
+  local -a args=(-q -sS -g -X "$method" --max-time 30 -K - -H "Stripe-Version: $API_VERSION"
+    --write-out '\n%header{idempotent-replayed}\n%{http_code}')
   if [ "$method" = "POST" ]; then
     args+=(-H "Idempotency-Key: $(idempotency_key "$path" "$@")")
   elif [ "$method" = "GET" ]; then
@@ -65,9 +92,24 @@ api() {
   escaped="${API_KEY//\\/\\\\}"
   escaped="${escaped//\"/\\\"}"
   out="$(printf 'header = "Authorization: Bearer %s"\n' "$escaped" | curl "${args[@]}" "$@" "$API_BASE$path")" \
-    || die 4 "curl が失敗した（$method $path）"
+    || die 4 "curl が失敗した（$method $path）。POST なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、status か Stripe の画面で今の状態を確かめる"
   RESP_CODE="${out##*$'\n'}"
-  RESP_BODY="${out%$'\n'*}"
+  rest="${out%$'\n'*}"
+  RESP_REPLAYED="${rest##*$'\n'}"
+  RESP_BODY="${rest%$'\n'*}"
+}
+
+# 直前の POST が「同じ Idempotency-Key の前回の結果」だったら、今の状態を読み直して確かめる。
+# check_replay <説明> <GET のパス> <今の状態として正しい条件（jq）> <観測として出す値（jq）> [GET の引数 ...]
+# 正しければ RESP_BODY は読み直した結果になる。違えば止まる。
+check_replay() {
+  local what="$1" path="$2" cond="$3" shown="$4"
+  shift 4
+  [ "$RESP_REPLAYED" = "true" ] || return 0
+  printf 'NOTE %s: 24 時間以内に同じ内容で送った要求の、前回の結果が返った（Idempotent-Replayed）。今の状態を読み直す\n' "$what"
+  api_ok "$what の読み直し" GET "$path" "$@"
+  jq -e "$cond" <<<"$RESP_BODY" >/dev/null \
+    || die 3 "$what: 前回の結果が返ったが、今の状態が期待と違う（観測: $(jq -c "$shown" <<<"$RESP_BODY")）。何も変わっていない。24 時間以上あけて実行し直すか、status で確かめる"
 }
 
 api_error_text() {
@@ -95,9 +137,9 @@ read_key() {
     API_KEY="$COR_BILLING_API_KEY"
   else
     [ -t 0 ] || die 64 "鍵が無い: COR_BILLING_API_KEY を設定するか、端末から実行する（表示しない入力で受ける）"
-    printf '%s モードの鍵を貼り付けて Enter（画面には出ない）: ' "$MODE" >&2
+    printf '%s モードの鍵を貼り付けて Enter（画面には出ない）: ' "$MODE" >/dev/tty
     IFS= read -rs API_KEY
-    printf '\n' >&2
+    printf '\n' >/dev/tty
   fi
   unset COR_BILLING_API_KEY
   [ -n "$API_KEY" ] || die 64 "鍵が空"
@@ -116,7 +158,7 @@ confirm_live() {
   local ans=""
   [ "$MODE" = "live" ] || return 0
   [ -t 0 ] || die 64 "本番は端末から実行する（live と打つ確認が要る）。何も書いていない"
-  printf '本番（live）に上の PLAN を実行します。続けるなら live と打って Enter: ' >&2
+  printf '本番（live）に上の PLAN を実行します。続けるなら live と打って Enter: ' >/dev/tty
   IFS= read -r ans
   [ "$ans" = "live" ] || die 64 "確認の入力が live でないので止めた（観測: '${ans}'）。何も書いていない"
 }
@@ -138,6 +180,47 @@ tax_rate_id() {
   n="$(jq --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)] | length' <<<"$RESP_BODY")"
   [ "$n" -eq 1 ] || die 3 "metadata.plan_key=$key の税率が $n 件（1 件のはず）。先に apply-plans.sh --apply --mode $MODE を実行する"
   jq -r --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)][0].id' <<<"$RESP_BODY"
+}
+
+# basic の subscription を作る要求の本体。subscribe.sh と verify-installments.sh が同じものを使う
+# （T5 の実測が、本番で使う要求そのものを通るように）。結果は BASIC_ARGS に入れる。
+# build_basic_args <customer> <price> <tax_rate> <service>
+build_basic_args() {
+  BASIC_ARGS=(
+    --data-urlencode "customer=$1"
+    --data-urlencode "items[0][price]=$2"
+    --data-urlencode "default_tax_rates[0]=$3"
+    --data-urlencode "collection_method=charge_automatically"
+    --data-urlencode "payment_behavior=default_incomplete"
+    --data-urlencode "payment_settings[save_default_payment_method]=on_subscription"
+    --data-urlencode "metadata[service]=$4"
+    --data-urlencode "metadata[plan]=basic"
+    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+    --data-urlencode "expand[0]=latest_invoice"
+  )
+}
+
+# 開発費の schedule を作る要求の本体（count 回の月払いで止まる）。結果は DEVFEE_ARGS に入れる。
+# build_devfee_args <customer> <start: now か epoch 秒> <payment_method> <price> <tax_rate> <count> <service>
+build_devfee_args() {
+  DEVFEE_ARGS=(
+    --data-urlencode "customer=$1"
+    --data-urlencode "start_date=$2"
+    --data-urlencode "end_behavior=cancel"
+    --data-urlencode "default_settings[default_payment_method]=$3"
+    --data-urlencode "default_settings[collection_method]=charge_automatically"
+    --data-urlencode "phases[0][items][0][price]=$4"
+    --data-urlencode "phases[0][items][0][quantity]=1"
+    --data-urlencode "phases[0][duration][interval]=month"
+    --data-urlencode "phases[0][duration][interval_count]=$6"
+    --data-urlencode "phases[0][default_tax_rates][0]=$5"
+    --data-urlencode "phases[0][metadata][service]=$7"
+    --data-urlencode "phases[0][metadata][plan]=dev_fee"
+    --data-urlencode "metadata[service]=$7"
+    --data-urlencode "metadata[plan]=dev_fee"
+    --data-urlencode "metadata[installments_in_stripe]=$6"
+    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+  )
 }
 
 # plans.json から、サービスの有効な価格の lookup_key を返す（plan = basic か dev_fee）。

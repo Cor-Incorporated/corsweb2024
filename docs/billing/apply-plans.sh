@@ -197,6 +197,7 @@ ensure_tax_rate() {
     --data-urlencode "metadata[plan_key]=$key" \
     --data-urlencode "metadata[managed_by]=$MANAGED_BY"
   require_ok "税率の作成 POST /v1/tax_rates"
+  check_replay "税率の作成" "/v1/tax_rates/$(jq -r '.id' <<<"$RESP_BODY")" '.active == true' '{id, active, percentage}'
   printf 'CREATED tax_rate %s: %s\n' "$key" "$(jq -r '.id' <<<"$RESP_BODY")"
 }
 
@@ -212,6 +213,7 @@ ensure_product() {
       --data-urlencode "metadata[kind]=$(jq -r '.kind' <<<"$want")" \
       --data-urlencode "metadata[managed_by]=$MANAGED_BY"
     require_ok "商品 $id の作成 POST /v1/products"
+    check_replay "商品 $id の作成" "/v1/products/$id" '.active == true' '{id, active, name}'
     printf 'CREATED product %s\n' "$id"
     return 0
   fi
@@ -263,12 +265,13 @@ ensure_price() {
     --data-urlencode "metadata[managed_by]=$MANAGED_BY" \
     ${extra[@]+"${extra[@]}"}
   require_ok "価格 $lk の作成 POST /v1/prices"
+  check_replay "価格 $lk の作成" "/v1/prices/$(jq -r '.id' <<<"$RESP_BODY")" '.active == true' '{id, active, unit_amount}'
   printf 'CREATED price %s: %s\n' "$lk" "$(jq -r '.id' <<<"$RESP_BODY")"
 }
 
 apply_all() {
   local id lk
-  require_tools curl
+  require_curl
   read_key
   check_mode
   confirm_live

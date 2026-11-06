@@ -106,6 +106,17 @@ expect "basic を作り、支払いページの URL を出す" 0 1 "PAY_URL http
 printf '%s' "$LOG" | grep '^ARGV' | grep -q 'payment_settings\[save_default_payment_method\]=on_subscription' \
   && ok "basic はカードを保存する設定で作る" || ng "save_default_payment_method が無い"
 printf '%s' "$LOG" | grep '^ARGV' | grep -q 'default_tax_rates\[0\]=txr_fake' && ok "basic に消費税を付ける" || ng "default_tax_rates が無い"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'items\[0\]\[price\]=price_fake' && ok "basic は plans.json の価格で作る" || ng "items[0][price] が無い"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'payment_behavior=default_incomplete' && ok "basic は default_incomplete で作る" || ng "payment_behavior が無い"
+FAKE_SUBS=none FAKE_REPLAY=1 FAKE_SUB_STATUS=incomplete_expired FAKE_INV_STATUS=void run subscribe.sh basic --customer cus_x --service business-dossier --tenant c01 --apply --mode test
+expect "replay で前回の basic が失効していれば URL を出さずに exit 3" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
+printf '%s' "$OUT" | grep -q '^PAY_URL' && ng "失効した basic の URL を出した" || ok "失効した basic の URL は出さない"
+FAKE_SUBS=none FAKE_REPLAY=1 FAKE_SUB_STATUS=incomplete FAKE_INV_STATUS=open run subscribe.sh basic --customer cus_x --service business-dossier --tenant c01 --apply --mode test
+expect "replay でも前回の basic がまだ払える状態なら URL を出す" 0 1 "PAY_URL https://invoice.example.test/i/1"
+FAKE_SUBS=basic_incomplete run subscribe.sh status --customer cus_x --mode test
+expect "status は未払いの basic の支払いページの URL を出す" 0 0 "PAY_URL sub_inc https://invoice.example.test/i/9"
+FAKE_SEARCH=none FAKE_REPLAY=1 run subscribe.sh customer --code sample-co --name x --email billing@example.test --apply --mode test
+expect "replay で顧客が残っていれば続ける" 0 1 "Idempotent-Replayed"
 FAKE_SUBS=none FAKE_BASIC_TOTAL=10000 run subscribe.sh basic --customer cus_x --service business-dossier --tenant c01 --apply --mode test
 expect "税込の額の違い（消費税が付いていない）は URL を出さずに exit 3" 3 1 "期待 11000、観測 10000"
 printf '%s' "$OUT" | grep -q '^PAY_URL' && ng "額が違うのに URL を出した" || ok "額が違えば URL を出さない"
@@ -121,10 +132,20 @@ printf '%s' "$LOG" | grep '^ARGV' | grep -q 'phases\[0\]\[duration\]\[interval_c
 printf '%s' "$LOG" | grep '^ARGV' | grep -q 'end_behavior=cancel' && ok "schedule は end_behavior=cancel" || ng "end_behavior=cancel が無い"
 printf '%s' "$LOG" | grep '^ARGV' | grep -q "start_date=1767225600" && ok "--start align は basic の期間末に合わせる" || ng "start_date が basic の期間末でない"
 printf '%s' "$LOG" | grep '^ARGV' | grep -q 'default_settings\[default_payment_method\]=pm_fake' && ok "schedule は basic のカードを使う" || ng "default_payment_method が無い"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'phases\[0\]\[duration\]\[interval\]=month' && ok "schedule の単位は month" || ng "interval=month が無い"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'phases\[0\]\[default_tax_rates\]\[0\]=txr_fake' && ok "schedule に消費税を付ける" || ng "phases の default_tax_rates が無い"
+FAKE_SUBS=basic_active FAKE_REPLAY=1 FAKE_SCHED_STATUS=canceled run subscribe.sh devfee --customer cus_x --service business-dossier --count 8 --start align --apply --mode test
+expect "replay で前回の schedule が終わっていれば exit 3" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
+FAKE_SUBS=basic_active FAKE_REPLAY=1 FAKE_SCHED_STATUS=not_started run subscribe.sh devfee --customer cus_x --service business-dossier --count 8 --start align --apply --mode test
+expect "replay でも前回の schedule が生きていれば続ける" 0 1 "CREATED schedule sub_sched_1"
 FAKE_SUB_PLAN=dev_fee run subscribe.sh cancel --subscription sub_x --apply --mode test
 expect "開発費の subscription は解約しない" 3 0 "basic でない"
 FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --apply --mode test
 expect "basic を期間末で止める" 0 1 "CANCEL_AT_PERIOD_END sub_x"
+printf '%s' "$LOG" | grep '^ARGV' | grep '\[-X\] \[POST\]' | grep -q 'cancel_at_period_end=true' && ok "解約は cancel_at_period_end=true を送る" || ng "cancel_at_period_end=true が無い"
+FAKE_SUB_PLAN=basic FAKE_REPLAY=1 FAKE_CANCEL_STATE=false run subscribe.sh cancel --subscription sub_x --apply --mode test
+expect "replay で解約が効いていなければ exit 3（取り消した解約の再実行）" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
+printf '%s' "$OUT" | grep -q '^CANCEL_AT_PERIOD_END' && ng "効いていない解約を出した" || ok "効いていない解約は出さない"
 FAKE_SUBS=basic_active run subscribe.sh status --customer cus_x --mode test
 expect "status は読むだけ" 0 0 "SUB sub_basic service=business-dossier plan=basic status=active"
 
@@ -132,6 +153,14 @@ expect "status は読むだけ" 0 0 "SUB sub_basic service=business-dossier plan
 FAKE_DEV_INVOICES=12 run verify-installments.sh
 expect "12 件・他 0・canceled は合格" 0 - "VERIFY ok: 開発費は 12 回請求して止まった（13 回目は無い）"
 [ "$(count "$LOG" 'CALL POST /v1/test_helpers/test_clocks/clock_fake/advance')" -eq 14 ] && ok "clock を 14 回（N+2）進める" || ng "advance の回数: $(count "$LOG" 'advance')"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'start_date=1767225600' && ok "verify は既定で align（basic の次の請求日に始める）" || ng "verify の start_date が align でない"
+printf '%s' "$LOG" | grep '^ARGV' | grep 'subscription_schedules' | grep -q 'phases\[0\]\[duration\]\[interval\]=month' \
+  && ok "verify の schedule は subscribe.sh と同じ組み立て（month）" || ng "verify の schedule に interval=month が無い"
+printf '%s' "$LOG" | grep '^ARGV' | grep '/v1/subscriptions\]' | grep -q 'payment_settings\[save_default_payment_method\]=on_subscription' \
+  && ok "verify の basic は subscribe.sh と同じ組み立て" || ng "verify の basic にカードの保存の設定が無い"
+FAKE_DEV_INVOICES=12 run verify-installments.sh --start now
+expect "verify --start now も合格" 0 - "VERIFY ok"
+printf '%s' "$LOG" | grep '^ARGV' | grep -q 'start_date=now' && ok "verify --start now は start_date=now" || ng "start_date=now が無い"
 FAKE_DEV_INVOICES=13 run verify-installments.sh
 expect "13 件なら不合格 exit 5（F2: 13 回目の請求）" 5 - "支払い済み 13 件（期待 12）"
 FAKE_DEV_INVOICES=12 FAKE_DEV_OPEN=1 run verify-installments.sh

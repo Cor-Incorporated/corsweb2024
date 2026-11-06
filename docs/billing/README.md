@@ -14,7 +14,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [verify-installments.sh](verify-installments.sh) | テストモード専用。test clock で、開発費が N 回で止まることと、basic の最初の支払いでカードが保存されることを実測する |
 | [lib.sh](lib.sh) | 3 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 35 項目、`test-subscribe.sh` 51 項目。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 41 項目、`test-subscribe.sh` 70 項目。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -23,6 +23,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 - 設計開発費用は 8,000 円（税別）/ 月 × 12 回の分割。Stripe に「開発費用」の特別プランを作って回収する。
 - 開始月・回収済みの回数・未回収の月は顧客ごとに違うので、非公開の台帳に書く（8 章）。
 - 追加の決定（寺田、2026-11-06 14:0x）: business-dossier と XESM のアカウントは Clerk で管理する。Clerk のアカウントと Stripe のサブスクリプションを紐づけ、今後の Cor. のサービスの共通の基盤にする（1A 章）。
+- 1A 章の形（身元は Clerk の組織、課金は自前の Stripe、Clerk Billing は使わない、紐づけは双方の metadata、入口は段階 0 → 1 → 2）で進める（寺田、2026-11-06 14:5x）。
 
 ## 1A. 身元は Clerk、課金は Stripe
 
@@ -45,7 +46,7 @@ Cloudflare Access（入口）                                              支�
 
 ### Clerk Billing を使うか
 
-Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Billing）がある。今回の要件と照らすと、次の理由で**使わない**。
+Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Billing）がある。今回の要件と照らすと、次の理由で**使わない**。表の Clerk Billing の列は、2026-11-06 に [22]〜[24] の公式文書を読んで確かめた（Clerk Billing は機能の追加が続いているので、使うかを見直すときは読み直す）。
 
 | 要件 | Clerk Billing | Clerk + 自前の Stripe（推奨） |
 |---|---|---|
@@ -73,6 +74,11 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 | 2 | その後 | 製品が Clerk で直接ログインする（XESM は Keycloak に Clerk を外部の IdP としてつなぐ、business-dossier はローカル認証を Clerk に置き換える） | 製品が Clerk の組織の metadata（契約中のサービス）を読んで機能を切る |
 
 段階 1 と 2 は設計だけで、試していない。段階 1 の Client secret は、`register-secret-verified.sh` に査読済みの recipe が無いため手順に書かず保留にする（7 章と同じ）。
+
+段階 1 の前提条件（どちらも未確認。今週の段階 0 には影響しない）:
+
+1. Clerk の組織（organization）の private metadata に、バックエンドから `stripe_customer_id` を書けること。読んだのは利用者（user）の metadata の文書だけ [25]。
+2. Cloudflare Access が、Clerk に `user:org:read` のスコープを要求し、`org_id` の claim でポリシーを絞れること。Access の文書の「OIDC のスコープに対応しない」という一文の読み方が定まらない [27]。満たせないときは、段階 1 のポリシーをメール（Emails）で絞る。
 
 ## 1. 商品と価格
 

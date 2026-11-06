@@ -8,6 +8,26 @@
 - 顧客ごとの値（社名、メール、残りの回数）は、この手順書にもリポジトリにも書かない。非公開の台帳に書く（C1）。
 - `tee` で残すログには、顧客の社名とメールが入る。ログはホームの直下に置き、リポジトリに入れない。
 
+## 寺田の手の一覧（順番・所要・前提）
+
+所要はどれも見込みで、まだ測っていない。1 周目に実際の所要を書き足す。
+
+| 順 | 手順 | 所要（見込み） | 前提 |
+|---|---|---|---|
+| 1 | P1・P5: Stripe と Clerk のアカウントを確かめる（画面） | 10 分 | なし |
+| 2 | T1: テストモードの鍵を用意する（画面） | 5 分 | 1 |
+| 3 | T2〜T4: テストモードに商品・価格・税率を作り、冪等を確かめる | 5 分 | 2、この PR の merge（または P3 の worktree） |
+| 4 | T5: 開発費が 12 回で止まることを実測する | 5 分（スクリプトの待ち 2〜3 分） | 3 |
+| 5 | T6: 顧客 1 社をテストモードで 1 周する（ブラウザでテスト用カードを払う） | 15 分 | 3・4 |
+| 6 | L1〜L3: 本番の鍵を用意し、本番に商品・価格・税率を作る | 10 分 | 4 が `VERIFY ok`、5 が通った |
+| 7 | C0: Clerk に顧客の組織を作る（画面） | 10 分 | 1 |
+| 8 | C1: 契約書と台帳 | 契約の進み次第 | 台帳の置き場所（P4）が決まっている |
+| 9 | C2〜C3: Customer と basic を作り、支払いページの URL を受け取る | 5 分 | 6・7・8 |
+| 10 | C4: URL を顧客へ送る（23 時間以内に払ってもらう） | 顧客の支払い次第 | 9 |
+| 11 | C5〜C6: 支払いを確かめ、開発費の schedule を作る | 5 分 | 10、4 が `VERIFY ok`、台帳の回数 |
+| 12 | C7: 製品側の準備と Access の許可（XESM は `contract-to-use.md`、business-dossier は `onboarding.md`） | 製品側の手順書の所要（business-dossier は約 20 分、未計測） | 11 |
+| 13 | C8: 過去の月の未回収分を回収する | 依頼元との確認次第 | README 8 章の方法を寺田が決める |
+
 ## 0. 前提
 
 | # | 内容 | 実行者 | 状態（2026-11-06） |
@@ -24,7 +44,7 @@ P3 の場所へ移る（merge 前）:
 cd ~/Developer/corsweb/.worktrees/claude/billing-20261106
 ```
 
-鍵なしで動く検査を先に通す（通信しない。`35 passed, 0 failed` と `51 passed, 0 failed` が出ること）:
+鍵なしで動く検査を先に通す（通信しない。`41 passed, 0 failed` と `70 passed, 0 failed` が出ること）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -83,11 +103,21 @@ bash docs/billing/apply-plans.sh --apply --mode test 2>&1 | tee ~/billing-apply-
 
 ### T4. もう一度実行して、何も作られないことを確かめる（冪等）
 
+ログのパスを決め、もう一度実行し、ログを数える（3 つとも同じ端末で続けて打つ）。
+
 ```bash
-bash docs/billing/apply-plans.sh --apply --mode test 2>&1 | tee ~/billing-apply-test-$(date +%Y%m%d-%H%M%S).log | grep -c '^CREATED'
+log=~/billing-apply-test-$(date +%Y%m%d-%H%M%S).log
 ```
 
-鍵を貼ったあと、最後に `0` が出ること（全部 `OK … 既存と一致`）。
+```bash
+bash docs/billing/apply-plans.sh --apply --mode test 2>&1 | tee "$log"
+```
+
+```bash
+grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode test' "$log"
+```
+
+`0` と `1` が出ること（作ったものは 0 件、最後まで通ったのが 1 件）。`DONE` が `0` なら、途中で止まっている（ログの `STOP:` の行を読む）。
 
 ### T5. 分割が 12 回で止まることを確かめる（test clock）
 
@@ -96,6 +126,7 @@ bash docs/billing/verify-installments.sh 2>&1 | tee ~/billing-verify-$(date +%Y%
 ```
 
 - 鍵を聞かれたら、テストモードの鍵を貼る。所要は 2〜3 分（clock を 14 回進める。1 回ごとに 7 秒以上あける）。
+- 開発費は、本番の C6 と同じく basic の次の請求日から始める（`--start align` が既定）。要求の本体は `subscribe.sh` と同じ `lib.sh` の組み立てを使うので、本番で送る要求そのものを実測する。`--start now` も 1 回通すと、すぐ始める場合も確かめられる。
 - 最後に次の 2 行が出ること:
   - `VERIFY 開発費: 支払い済み 12 件（期待 12）、それ以外 0 件（期待 0）、額の違う請求書 0 件（期待 0。各回 税込 8800 円・税 800 円）、subscription=canceled（期待 canceled）`
   - `VERIFY ok: 開発費は 12 回請求して止まった（13 回目は無い）`
@@ -162,11 +193,21 @@ bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-
 
 ### L3. もう一度実行して、何も作られないことを確かめる
 
+T4 と同じ形で、モードだけ live にする（`live` と打つ確認が出る）。
+
 ```bash
-bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee ~/billing-apply-live-$(date +%Y%m%d-%H%M%S).log | grep -c '^CREATED'
+log=~/billing-apply-live-$(date +%Y%m%d-%H%M%S).log
 ```
 
-最後に `0` が出ること。
+```bash
+bash docs/billing/apply-plans.sh --apply --mode live 2>&1 | tee "$log"
+```
+
+```bash
+grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode live' "$log"
+```
+
+`0` と `1` が出ること。
 
 ## C. 顧客 1 社: 契約 → 入口を開ける（本番）
 
@@ -231,7 +272,7 @@ bash docs/billing/subscribe.sh basic --customer <cus_…> --service <サービ�
 bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
 ```
 
-`SUB … service=<サービス> plan=basic status=active … card=保存済み` が出ること。`status=incomplete` のままなら、まだ払われていない。
+`SUB … service=<サービス> plan=basic status=active … card=保存済み` が出ること。`status=incomplete` のままなら、まだ払われていない。そのときは `PAY_URL <sub_…> https://…` の行に支払いページの URL が出る（送り直すときはこの URL を使う）。
 
 ### C6. 開発費の schedule を作る（開発費がある顧客だけ。T5 が合格してから）
 
@@ -296,7 +337,12 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 | `STOP: 既存の価格 … が plans.json と違う: unit_amount 期待 10000 観測 …`（exit 3） | 前に違う金額で作った価格が残っている | 上書きはしない。新しい lookup_key で作るか、古い価格を使わないようにするかを寺田が決める |
 | `STOP: 既存の税率 … が plans.json と違う`（exit 3） | 前に違う率・国で作った税率が残っている | 率と国は変えられない。作り直すかを寺田が決める |
 | `STOP: 価格 … が無い。先に apply-plans.sh …`（exit 3） | そのモードで T3（または L2）をまだ実行していない | T3（L2）を先に実行する |
-| `STOP: この顧客には … の basic が既にある`（exit 3） | 同じ顧客・同じサービスに basic がある | `status` で状態を読む。`incomplete` のままなら C4 の URL を送り直すか、23 時間の失効を待って C3 からやり直す |
+| `STOP: この顧客には … の basic が既にある`（exit 3） | 同じ顧客・同じサービスに basic がある | `status` で状態を読む。`incomplete` のままなら、`status` の `PAY_URL` の行の URL を送り直す。失効（`incomplete_expired`）していれば C3 からやり直す |
+| `NOTE …: 24 時間以内に同じ内容で送った要求の、前回の結果が返った` のあと `STOP: … 今の状態が期待と違う`（exit 3） | 24 時間以内に同じ内容で作り直そうとした（失効した basic の作り直し、取り消した解約のやり直し、消した商品の作り直し） | 何も変わっていない。24 時間以上あけて同じコマンドを実行するか、`status` で今の状態を確かめる |
+| `NOTE …: … 前回の結果が返った` のあと、そのまま `CREATED` や `CANCEL_AT_PERIOD_END` が出る | 前回の作成や解約がまだ生きている（読み直して確かめた） | そのまま進めてよい |
+| `STOP: curl が失敗した（POST …）。POST なら書き込みが届いた可能性がある`（exit 4） | 通信が途中で切れた、30 秒で時間切れ | 同じコマンドを続けて実行しない。`status`（顧客の作成なら `find`）で今の状態を確かめてから決める |
+| `STOP: curl 7.84 以上が要る`（exit 64） | 手元の curl が古い | `curl --version` で版を確かめる。2026-11-06 の手元の Mac は 8.7.1 |
+| `STOP: set -x（bash -x）では鍵がトレースに出るので実行しない`（exit 64） | `bash -x` で動かした | `-x` を付けずに実行する |
 | `STOP: … の basic が active でない` / `カードが保存されていない`（exit 3） | 最初の支払いがまだ | C5 で `status=active`・`card=保存済み` になってから C6 |
 | `STOP: 最初の請求書の税込の額が違う`（exit 3） | 消費税が付いていない、または価格が違う | URL を送らない。統括へ渡す |
 | `STOP: --start に過去の日付は使わない`（exit 64） | 過去の日付を渡した（過去の日付は遡って請求される） | `align` か今日以降の日付にする |

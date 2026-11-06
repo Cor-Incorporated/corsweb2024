@@ -227,11 +227,26 @@ do_customer() {
     --data-urlencode "metadata[customer_code]=$OPT_CODE" \
     --data-urlencode "metadata[managed_by]=$MANAGED_BY" \
     ${clerk_meta[@]+"${clerk_meta[@]}"}
+  check_replay "顧客の作成" "/v1/customers/$(jq -r '.id' <<<"$RESP_BODY")" '(.deleted // false) == false' '{id, deleted}'
   printf 'CREATED customer %s（customer_code=%s、clerk_org_id=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_CODE" "${OPT_CLERK:-なし}"
 }
 
+# 最初の請求書の額を plans.json と照らし、支払いページの URL を出す（RESP_BODY は latest_invoice を展開した subscription）。
+report_first_invoice() {
+  local lk="$1" want total taxes url
+  want="$(expected_total "$lk")"
+  total="$(jq -r '.latest_invoice.total // empty' <<<"$RESP_BODY")"
+  taxes="$(jq -r '[.latest_invoice.total_taxes[]?.amount] | add // 0' <<<"$RESP_BODY")"
+  [ "$total" = "$want" ] || die 3 "最初の請求書の税込の額が違う（期待 $want、観測 ${total:-なし}、税 $taxes）。支払いページの URL を送らない（払われなければ 23 時間で失効する）"
+  printf 'CHECK ok: 最初の請求書 税込 %s 円（うち消費税 %s 円）\n' "$total" "$taxes"
+  url="$(jq -r '.latest_invoice.hosted_invoice_url // empty' <<<"$RESP_BODY")"
+  [ -n "$url" ] || die 3 "最初の請求書に支払いページの URL が無い（観測 status=$(jq -r '.latest_invoice.status // "-"' <<<"$RESP_BODY")）。status で確かめる"
+  printf 'PAY_URL %s\n' "$url"
+  printf 'NOTE この URL を顧客へ送る（送信は寺田）。23 時間以内に払われないと subscription は incomplete_expired になり、作り直しになる\n'
+}
+
 do_basic() {
-  local lk price txr code existing want total taxes
+  local lk price txr code existing
   lk="$(plans_lookup "$OPT_SERVICE" basic)"
   price="$(price_id_by_lookup "$lk")"
   txr="$(tax_rate_id)"
@@ -240,27 +255,15 @@ do_basic() {
   existing="$(jq -r --arg s "$OPT_SERVICE" '[.data[] | select(.metadata.service == $s and .metadata.plan == "basic"
     and (.status | IN("active", "trialing", "past_due", "unpaid", "incomplete", "paused"))) | "\(.id)(\(.status))"] | join(" ")' <<<"$RESP_BODY")"
   [ -z "$existing" ] || die 3 "この顧客には $OPT_SERVICE の basic が既にある: $existing（作らない）"
-  api_ok "basic の作成 POST /v1/subscriptions" POST /v1/subscriptions \
-    --data-urlencode "customer=$OPT_CUSTOMER" \
-    --data-urlencode "items[0][price]=$price" \
-    --data-urlencode "default_tax_rates[0]=$txr" \
-    --data-urlencode "collection_method=charge_automatically" \
-    --data-urlencode "payment_behavior=default_incomplete" \
-    --data-urlencode "payment_settings[save_default_payment_method]=on_subscription" \
+  build_basic_args "$OPT_CUSTOMER" "$price" "$txr" "$OPT_SERVICE"
+  api_ok "basic の作成 POST /v1/subscriptions" POST /v1/subscriptions "${BASIC_ARGS[@]}" \
     --data-urlencode "metadata[customer_code]=$code" \
-    --data-urlencode "metadata[service]=$OPT_SERVICE" \
-    --data-urlencode "metadata[plan]=basic" \
-    --data-urlencode "metadata[tenant]=$OPT_TENANT" \
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY" \
+    --data-urlencode "metadata[tenant]=$OPT_TENANT"
+  check_replay "basic の作成" "/v1/subscriptions/$(jq -r '.id' <<<"$RESP_BODY")" \
+    '.status == "incomplete" and .latest_invoice.status == "open"' '{id, status, invoice: .latest_invoice.status}' \
     --data-urlencode "expand[0]=latest_invoice"
   printf 'CREATED subscription %s（%s basic、status=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_SERVICE" "$(jq -r '.status' <<<"$RESP_BODY")"
-  want="$(expected_total "$lk")"
-  total="$(jq -r '.latest_invoice.total // empty' <<<"$RESP_BODY")"
-  taxes="$(jq -r '[.latest_invoice.total_taxes[]?.amount] | add // 0' <<<"$RESP_BODY")"
-  [ "$total" = "$want" ] || die 3 "最初の請求書の税込の額が違う（期待 $want、観測 ${total:-なし}、税 $taxes）。支払いページの URL を送らない（払われなければ 23 時間で失効する）"
-  printf 'CHECK ok: 最初の請求書 税込 %s 円（うち消費税 %s 円）\n' "$total" "$taxes"
-  printf 'PAY_URL %s\n' "$(jq -r '.latest_invoice.hosted_invoice_url // "（無い）"' <<<"$RESP_BODY")"
-  printf 'NOTE この URL を顧客へ送る（送信は寺田）。23 時間以内に払われないと subscription は incomplete_expired になり、作り直しになる\n'
+  report_first_invoice "$lk"
 }
 
 basic_for_devfee() {
@@ -295,25 +298,12 @@ do_devfee() {
   existing="$(jq -r --arg s "$OPT_SERVICE" '[.data[] | select(.metadata.service == $s and .metadata.plan == "dev_fee"
     and (.status | IN("not_started", "active"))) | "\(.id)(\(.status))"] | join(" ")' <<<"$RESP_BODY")"
   [ -z "$existing" ] || die 3 "この顧客には $OPT_SERVICE の開発費の schedule が既にある: $existing（作らない）"
-  api_ok "開発費の schedule の作成 POST /v1/subscription_schedules" POST /v1/subscription_schedules \
-    --data-urlencode "customer=$OPT_CUSTOMER" \
-    --data-urlencode "start_date=$start" \
-    --data-urlencode "end_behavior=cancel" \
-    --data-urlencode "default_settings[default_payment_method]=$pm" \
-    --data-urlencode "default_settings[collection_method]=charge_automatically" \
-    --data-urlencode "phases[0][items][0][price]=$price" \
-    --data-urlencode "phases[0][items][0][quantity]=1" \
-    --data-urlencode "phases[0][duration][interval]=month" \
-    --data-urlencode "phases[0][duration][interval_count]=$OPT_COUNT" \
-    --data-urlencode "phases[0][default_tax_rates][0]=$txr" \
+  build_devfee_args "$OPT_CUSTOMER" "$start" "$pm" "$price" "$txr" "$OPT_COUNT" "$OPT_SERVICE"
+  api_ok "開発費の schedule の作成 POST /v1/subscription_schedules" POST /v1/subscription_schedules "${DEVFEE_ARGS[@]}" \
     --data-urlencode "phases[0][metadata][customer_code]=$code" \
-    --data-urlencode "phases[0][metadata][service]=$OPT_SERVICE" \
-    --data-urlencode "phases[0][metadata][plan]=dev_fee" \
-    --data-urlencode "metadata[customer_code]=$code" \
-    --data-urlencode "metadata[service]=$OPT_SERVICE" \
-    --data-urlencode "metadata[plan]=dev_fee" \
-    --data-urlencode "metadata[installments_in_stripe]=$OPT_COUNT" \
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+    --data-urlencode "metadata[customer_code]=$code"
+  check_replay "開発費の schedule の作成" "/v1/subscription_schedules/$(jq -r '.id' <<<"$RESP_BODY")" \
+    '.status | IN("not_started", "active")' '{id, status}'
   printf 'CREATED schedule %s（%s 開発費、status=%s、%s 回）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_SERVICE" "$(jq -r '.status' <<<"$RESP_BODY")" "$OPT_COUNT"
   printf 'CHECK phases[0]: 開始 %s → 終了 %s\n' "$(fmt_jst "$(jq -r '.phases[0].start_date' <<<"$RESP_BODY")")" "$(fmt_jst "$(jq -r '.phases[0].end_date' <<<"$RESP_BODY")")"
 }
@@ -322,8 +312,11 @@ do_status() {
   local devs id
   api_ok "顧客の読取" GET "/v1/customers/$OPT_CUSTOMER"
   printf 'CUSTOMER %s customer_code=%s name=%s\n' "$OPT_CUSTOMER" "$(jq -r '.metadata.customer_code // "-"' <<<"$RESP_BODY")" "$(jq -r '.name // "-"' <<<"$RESP_BODY")"
-  api_ok "subscription の一覧" GET /v1/subscriptions --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=all" --data-urlencode "limit=100"
+  api_ok "subscription の一覧" GET /v1/subscriptions --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=all" \
+    --data-urlencode "limit=100" --data-urlencode "expand[0]=data.latest_invoice"
   jq -r '.data[] | "SUB \(.id) service=\(.metadata.service // "-") plan=\(.metadata.plan // "-") status=\(.status) cancel_at_period_end=\(.cancel_at_period_end) period_end=\(.items.data[0].current_period_end // "-") card=\(if .default_payment_method then "保存済み" else "なし" end)"' <<<"$RESP_BODY"
+  jq -r '.data[] | select(.status == "incomplete" and (.latest_invoice | type) == "object" and .latest_invoice.status == "open")
+    | "PAY_URL \(.id) \(.latest_invoice.hosted_invoice_url // "（無い）")"' <<<"$RESP_BODY"
   devs="$(jq -r '.data[] | select(.metadata.plan == "dev_fee") | .id' <<<"$RESP_BODY")"
   api_ok "schedule の一覧" GET /v1/subscription_schedules --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "limit=100"
   jq -r '.data[] | "SCHEDULE \(.id) service=\(.metadata.service // "-") status=\(.status) installments_in_stripe=\(.metadata.installments_in_stripe // "-") subscription=\(.subscription // "-")"' <<<"$RESP_BODY"
@@ -344,6 +337,9 @@ do_cancel() {
     return 0
   fi
   api_ok "期間末で止める POST /v1/subscriptions/$OPT_SUB" POST "/v1/subscriptions/$OPT_SUB" --data-urlencode "cancel_at_period_end=true"
+  check_replay "期間末で止める" "/v1/subscriptions/$OPT_SUB" '.cancel_at_period_end == true' '{id, status, cancel_at_period_end}'
+  [ "$(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")" = "true" ] \
+    || die 3 "$OPT_SUB の cancel_at_period_end が true にならなかった（観測: $(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")）"
   printf 'CANCEL_AT_PERIOD_END %s: %s に終わる。終わったら Access の許可から外す（runbook D2）\n' \
     "$OPT_SUB" "$(fmt_jst "$(jq -r '.items.data[0].current_period_end // .cancel_at // "-"' <<<"$RESP_BODY")")"
 }
@@ -364,7 +360,7 @@ main() {
       fi
       ;;
   esac
-  require_tools curl
+  require_curl
   load_api_version
   read_key
   check_mode

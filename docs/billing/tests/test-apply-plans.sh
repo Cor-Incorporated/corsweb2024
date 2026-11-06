@@ -66,6 +66,25 @@ printf '%s' "$OUT" | grep -qF "$DUMMY_KEY" && ng "鍵が出力に出た" || ok "
 printf '%s' "$LOG" | grep '^ARGV' | grep -qF "$DUMMY_KEY" && ng "鍵が curl の引数に載った" || ok "鍵は curl の引数に載らない"
 [ "$(count "$LOG" '^STDIN_AUTH no')" -eq 0 ] && ok "鍵は全部の呼出しで標準入力から渡る" || ng "標準入力に鍵の無い呼出しがある"
 printf '%s' "$LOG" | grep '^ARGV' | grep -q 'Stripe-Version: 2026-10-28.endive' && ok "API の版を固定して送る" || ng "Stripe-Version が無い"
+[ "$(printf '%s\n' "$LOG" | grep '^FIRST ' | grep -vc '^FIRST -q$' || true)" -eq 0 ] && [ "$(count "$LOG" '^FIRST -q$')" -gt 0 ] \
+  && ok "curl は全部 -q が最初の引数（~/.curlrc を読まない）" || ng "-q が最初でない呼出しがある"
+
+# 前回の結果が返ったとき（Idempotent-Replayed）、今の状態が期待と違えば「作った」と出さずに止まる
+FAKE_REPLAY=1 FAKE_ACTIVE=false KEY_FOR_RUN="$DUMMY_KEY" run empty "$PLANS" --apply --mode test
+[ "$RC" -eq 3 ] && printf '%s' "$OUT" | grep -q '前回の結果が返ったが、今の状態が期待と違う' && ok "replay で税率が無効なら exit 3" || ng "replay の扱い rc=$RC: $OUT"
+printf '%s' "$OUT" | grep -q '^CREATED tax_rate' && ng "replay なのに CREATED と出た" || ok "replay では CREATED と出さない"
+FAKE_CURL_VERSION=7.79.1 KEY_FOR_RUN="$DUMMY_KEY" run empty "$PLANS" --apply --mode test
+[ "$RC" -eq 64 ] && printf '%s' "$OUT" | grep -q '7.84 以上' && ok "古い curl（7.79）は exit 64" || ng "古い curl rc=$RC"
+
+# bash -x と、環境変数の MODE
+set +e
+OUT="$(PATH="$WORK/bin:$PATH" bash -x "$SCRIPT" --plans "$PLANS" </dev/null 2>&1)"; RC=$?
+set -e
+[ "$RC" -eq 64 ] && printf '%s' "$OUT" | grep -q 'set -x' && ok "bash -x では止まる" || ng "bash -x rc=$RC"
+set +e
+OUT="$(MODE=live PATH="$WORK/bin:$PATH" bash "$SCRIPT" --plans "$PLANS" --apply </dev/null 2>&1)"; RC=$?
+set -e
+[ "$RC" -eq 64 ] && printf '%s' "$OUT" | grep -q -- '--apply には --mode' && ok "環境変数の MODE=live は使わない（--mode が要る）" || ng "環境変数の MODE rc=$RC: $OUT"
 
 # 3. 鍵のモード違い
 KEY_FOR_RUN="$DUMMY_KEY" run livemismatch "$PLANS" --apply --mode test

@@ -4,8 +4,14 @@
 # 応答の中身は FAKE_PLANS（plans.json）から作る。
 set -euo pipefail
 
+if [ "${1:-}" = "--version" ]; then
+  printf 'curl %s (fake)\n' "${FAKE_CURL_VERSION:-8.7.1}"
+  exit 0
+fi
+
 stdin_text="$(cat)"
 {
+  printf 'FIRST %s\n' "${1:-}"
   printf 'ARGV'
   for a in "$@"; do printf ' [%s]' "$a"; done
   printf '\n'
@@ -30,8 +36,12 @@ done
 path="${url#https://api.stripe.com}"
 printf 'CALL %s %s\n' "$method" "$path" >>"$FAKE_LOG"
 
+# 本文 + 改行 + Idempotent-Replayed の値 + 改行 + HTTP 状態（curl の --write-out と同じ形）。
+# FAKE_REPLAY=1 なら POST の応答を「前回の結果」として返す。
 respond() {
-  printf '%s\n%s' "$2" "$1"
+  local replayed=""
+  if [ "$method" = "POST" ] && [ "${FAKE_REPLAY:-}" = "1" ]; then replayed="true"; fi
+  printf '%s\n%s\n%s' "$2" "$replayed" "$1"
 }
 
 balance() {
@@ -78,6 +88,7 @@ basic_sub_json() {
 subscriptions_list() {
   case "${FAKE_SUBS:-none}" in
     basic_active | basic_nopm) respond 200 "{\"object\":\"list\",\"has_more\":false,\"data\":[$(basic_sub_json)]}" ;;
+    basic_incomplete) respond 200 '{"object":"list","has_more":false,"data":[{"id":"sub_inc","status":"incomplete","cancel_at_period_end":false,"default_payment_method":null,"latest_invoice":{"id":"in_9","status":"open","hosted_invoice_url":"https://invoice.example.test/i/9"},"metadata":{"service":"xesm","plan":"basic"},"items":{"data":[{"current_period_end":1767225600}]}}]}' ;;
     *) respond 200 '{"object":"list","has_more":false,"data":[]}' ;;
   esac
 }
@@ -90,7 +101,8 @@ subscription_get() {
   fi
   local pm='"pm_fake"'
   if [ "${FAKE_PM:-}" = "none" ]; then pm='null'; fi
-  respond 200 "{\"id\":\"$id\",\"status\":\"active\",\"cancel_at_period_end\":false,\"default_payment_method\":$pm,\"metadata\":{\"plan\":\"${FAKE_SUB_PLAN:-basic}\",\"service\":\"business-dossier\"},\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}"
+  local inv="{\"id\":\"in_1\",\"status\":\"${FAKE_INV_STATUS:-open}\",\"hosted_invoice_url\":\"https://invoice.example.test/i/1\",\"total\":11000,\"total_taxes\":[{\"amount\":1000}]}"
+  respond 200 "{\"id\":\"$id\",\"status\":\"${FAKE_SUB_STATUS:-active}\",\"cancel_at_period_end\":${FAKE_CANCEL_STATE:-false},\"default_payment_method\":$pm,\"latest_invoice\":$inv,\"metadata\":{\"plan\":\"${FAKE_SUB_PLAN:-basic}\",\"service\":\"business-dossier\"},\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}"
 }
 
 subscription_create() {
@@ -133,7 +145,8 @@ case "$method:$path" in
   POST:/v1/subscriptions) subscription_create ;;
   POST:/v1/subscriptions/*) respond 200 "{\"id\":\"${path#/v1/subscriptions/}\",\"cancel_at_period_end\":true,\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}" ;;
   GET:/v1/subscription_schedules) schedules_list ;;
-  GET:/v1/subscription_schedules/*) respond 200 '{"id":"sub_sched_1","status":"canceled","subscription":"sub_dev"}' ;;
+  GET:/v1/subscription_schedules/*) respond 200 "{\"id\":\"sub_sched_1\",\"status\":\"${FAKE_SCHED_STATUS:-canceled}\",\"subscription\":\"sub_dev\"}" ;;
+  GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;
   POST:/v1/subscription_schedules) respond 200 "{\"id\":\"sub_sched_1\",\"status\":\"not_started\",\"subscription\":null,\"phases\":[{\"start_date\":$PERIOD_END,\"end_date\":$((PERIOD_END + 31536000))}]}" ;;
   GET:/v1/invoices) invoices_list ;;
   POST:/v1/invoices/*/pay) respond 200 '{"id":"in_1","status":"paid"}' ;;
