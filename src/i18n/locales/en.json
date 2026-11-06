@@ -1019,7 +1019,7 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "lastUpdate": "Effective date: November 6, 2026 (Version 1.0)",
+    "lastUpdate": "Effective date: November 7, 2026 (Version 1.0)",
     "note": "The Japanese version is the authoritative text. This English translation is provided for convenience.",
     "intro": "Cor. Inc. (hereinafter referred to as \"the Company\") recognizes the importance of the personal information it handles and, in accordance with the Act on the Protection of Personal Information (hereinafter the \"APPI\") and other relevant laws and regulations and guidelines, as well as the information security management system based on ISO/IEC 27001:2022 (JIS Q 27001:2023), handles the personal information of customers, employees, job applicants, and all other individuals appropriately. The Company protects personal information in accordance with the following policy.",
     "businessTitle": "1. Business Information",
@@ -1122,13 +1122,19 @@
           "The information required by laws and regulations when the Company provides personal data to a third party located overseas is as follows."
         ],
         "list": [
-          "Name of the destination country: United States",
-          "The system for the protection of personal information in the United States: please refer to the information on foreign personal information protection systems (United States) published by the Personal Information Protection Commission of Japan.",
+          "Name of the country where the recipient business is located: United States (the facilities where processing takes place may be in countries other than the United States).",
+          "The system for the protection of personal information in the United States: please refer to the information on the United States in the Survey on Foreign Personal Information Protection Systems published by the Personal Information Protection Commission of Japan (link below).",
           "Measures taken by the recipient for the protection of personal information: the measures set out in the privacy policies and data processing terms published by each business"
         ],
         "bodyAfter": [
           "In addition, where the Company relies on confirming that a third party located overseas has established a system conforming to the standards prescribed by the APPI, the Company provides, upon the request of the individual and as prescribed by laws and regulations, information on the measures the Company takes to ensure that the third party continuously implements such measures.",
           "* With respect to Specific Personal Information (My Number), the Company does not provide it to third parties located overseas, in accordance with the My Number Act."
+        ],
+        "links": [
+          {
+            "label": "Personal Information Protection Commission of Japan: Survey on Foreign Personal Information Protection Systems (in Japanese)",
+            "href": "https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku"
+          }
         ]
       },
       {
@@ -1238,7 +1244,7 @@
     "securityLinkPrefix": "For our information security framework, see also our ",
     "securityLinkText": "Security",
     "securityLinkSuffix": " page.",
-    "footer": "Version 1.0 / Effective date: November 6, 2026 / Prepared by: Cor. Inc. / Responsible: Personal Information Protection Manager (ISMS Management Officer, Nagisa Terada)",
+    "footer": "Version 1.0 / Effective date: November 7, 2026 / Prepared by: Cor. Inc. / Responsible: Personal Information Protection Manager (ISMS Management Officer, Nagisa Terada)",
     "footerNote": "* This Policy is a summary and mapping of the internal rule \"Personal Information and Specific Personal Information Handling Regulations\" for the purpose of external publication. Where the content of the two differs, it shall be interpreted in accordance with laws and regulations and the intent of said regulations."
   },
   "security": {

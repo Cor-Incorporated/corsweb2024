@@ -1019,7 +1019,7 @@
   },
   "privacy": {
     "title": "Política de Protección de Datos Personales (Política de Privacidad)",
-    "lastUpdate": "Fecha de referencia: 6 de noviembre de 2026 (Versión 1.0)",
+    "lastUpdate": "Fecha de referencia: 7 de noviembre de 2026 (Versión 1.0)",
     "note": "La versión en japonés es el texto auténtico. Esta traducción al español se ofrece únicamente a título informativo.",
     "intro": "Cor. Inc. (en adelante, «la Empresa») reconoce la importancia de la información personal que trata y gestiona adecuadamente la información personal de clientes, empleados, candidatos a empleo y demás personas, de conformidad con la Ley de Protección de Información Personal (en adelante, la «Ley de Protección de Información Personal»), demás leyes y reglamentos pertinentes, directrices y el sistema de gestión de la seguridad de la información basado en la norma ISO/IEC 27001:2022 (JIS Q 27001:2023). La Empresa protege la información personal con arreglo a la siguiente política.",
     "businessTitle": "1. Información de la empresa",
@@ -1122,13 +1122,19 @@
           "La información que exige la ley cuando la Empresa cede datos personales a un tercero situado en el extranjero es la siguiente."
         ],
         "list": [
-          "Nombre del país de destino: Estados Unidos",
-          "Régimen de protección de la información personal en Estados Unidos: consulte la información sobre los regímenes extranjeros de protección de la información personal (Estados Unidos) publicada por la Comisión de Protección de Información Personal de Japón.",
+          "Nombre del país en que se encuentra la empresa destinataria: Estados Unidos (las instalaciones en las que se realiza el tratamiento pueden encontrarse en países distintos de Estados Unidos).",
+          "Régimen de protección de la información personal en Estados Unidos: consulte la información sobre Estados Unidos del estudio sobre los regímenes extranjeros de protección de la información personal publicado por la Comisión de Protección de Información Personal de Japón (enlace más abajo).",
           "Medidas adoptadas por el destinatario para proteger la información personal: las medidas establecidas en las políticas de privacidad y en las condiciones de tratamiento de datos publicadas por cada empresa"
         ],
         "bodyAfter": [
           "Además, cuando la Empresa se base en comprobar que un tercero situado en el extranjero ha implantado un sistema conforme a los criterios establecidos en la Ley de Protección de Información Personal, facilitará al interesado, a petición de este y conforme a lo dispuesto por la ley, información sobre las medidas que adopta la Empresa para garantizar que dicho tercero aplique dichas medidas de forma continuada.",
           "* Respecto de la Información Personal Específica (My Number), no se realizará cesión alguna a terceros situados en el extranjero, de conformidad con la Ley My Number."
+        ],
+        "links": [
+          {
+            "label": "Comisión de Protección de Información Personal de Japón: estudio sobre los regímenes extranjeros (en japonés)",
+            "href": "https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku"
+          }
         ]
       },
       {
@@ -1238,7 +1244,7 @@
     "securityLinkPrefix": "Para conocer nuestro marco de seguridad de la información, consulte también nuestra página de ",
     "securityLinkText": "Seguridad",
     "securityLinkSuffix": ".",
-    "footer": "Versión: 1.0 / Fecha de referencia: 6 de noviembre de 2026 / Elaborado por: Cor. Inc. / Responsable: Responsable de Protección de Información Personal (Responsable de Gestión del ISMS, Nagisa Terada)",
+    "footer": "Versión: 1.0 / Fecha de referencia: 7 de noviembre de 2026 / Elaborado por: Cor. Inc. / Responsable: Responsable de Protección de Información Personal (Responsable de Gestión del ISMS, Nagisa Terada)",
     "footerNote": "* La presente política es un resumen, con fines de publicación externa, de la norma interna «Reglamento de Tratamiento de Información Personal e Información Personal Específica», correspondiéndose ambos documentos; en caso de discrepancia entre ellos, se interpretará conforme a las leyes y reglamentos y al espíritu de dicha norma."
   },
   "security": {
