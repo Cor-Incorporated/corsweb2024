@@ -44,7 +44,7 @@ P3 の場所へ移る（merge 前）:
 cd ~/Developer/corsweb/.worktrees/claude/billing-20261106
 ```
 
-鍵なしで動く検査を先に通す（通信しない。`41 passed, 0 failed` と `70 passed, 0 failed` が出ること）:
+鍵なしで動く検査を先に通す（通信しない。`41 passed, 0 failed` と `71 passed, 0 failed` が出ること）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -143,6 +143,8 @@ bash docs/billing/verify-installments.sh 2>&1 | tee ~/billing-verify-$(date +%Y%
    ```bash
    bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email company@cor-jp.com --apply --mode test
    ```
+
+   同じコマンドをすぐもう一度実行し、`OK customer cus_…`（検索で見つかった）か、`NOTE 顧客の作成: … 前回の結果が返った` のあとの `CREATED customer` で **1 の id と同じもの** が出ることを確かめる（同じ顧客を 2 つ作らないこと、前回の結果の見分けが実物の通信でも効くことの実測）。違う id が出たら、統括へ渡す。
 
 2. basic を作る。`<cus_…>` は 1 の出力の id。控え忘れたら `bash docs/billing/subscribe.sh find --code cor-test --mode test` の `FOUND` の行で取れる。
 

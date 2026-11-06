@@ -143,6 +143,8 @@ expect "開発費の subscription は解約しない" 3 0 "basic でない"
 FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --apply --mode test
 expect "basic を期間末で止める" 0 1 "CANCEL_AT_PERIOD_END sub_x"
 printf '%s' "$LOG" | grep '^ARGV' | grep '\[-X\] \[POST\]' | grep -q 'cancel_at_period_end=true' && ok "解約は cancel_at_period_end=true を送る" || ng "cancel_at_period_end=true が無い"
+FAKE_SUB_PLAN=basic FAKE_REPLAY_RAW=1 FAKE_CANCEL_STATE=false run subscribe.sh cancel --subscription sub_x --apply --mode test
+expect "replay の値が「True + CR」でも見落とさない" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
 FAKE_SUB_PLAN=basic FAKE_REPLAY=1 FAKE_CANCEL_STATE=false run subscribe.sh cancel --subscription sub_x --apply --mode test
 expect "replay で解約が効いていなければ exit 3（取り消した解約の再実行）" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
 printf '%s' "$OUT" | grep -q '^CANCEL_AT_PERIOD_END' && ng "効いていない解約を出した" || ok "効いていない解約は出さない"

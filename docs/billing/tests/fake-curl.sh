@@ -41,6 +41,8 @@ printf 'CALL %s %s\n' "$method" "$path" >>"$FAKE_LOG"
 respond() {
   local replayed=""
   if [ "$method" = "POST" ] && [ "${FAKE_REPLAY:-}" = "1" ]; then replayed="true"; fi
+  # 実物の curl が値の末尾に CR を残す・大文字で返す場合の形（FAKE_REPLAY_RAW=1）
+  if [ "$method" = "POST" ] && [ "${FAKE_REPLAY_RAW:-}" = "1" ]; then replayed=$'True\r'; fi
   printf '%s\n%s\n%s' "$2" "$replayed" "$1"
 }
 

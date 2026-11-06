@@ -96,6 +96,7 @@ api() {
   RESP_CODE="${out##*$'\n'}"
   rest="${out%$'\n'*}"
   RESP_REPLAYED="${rest##*$'\n'}"
+  RESP_REPLAYED="$(printf '%s' "${RESP_REPLAYED%$'\r'}" | tr '[:upper:]' '[:lower:]')"
   RESP_BODY="${rest%$'\n'*}"
 }
 

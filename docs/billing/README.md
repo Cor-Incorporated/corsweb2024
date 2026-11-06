@@ -14,7 +14,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [verify-installments.sh](verify-installments.sh) | テストモード専用。test clock で、開発費が N 回で止まることと、basic の最初の支払いでカードが保存されることを実測する |
 | [lib.sh](lib.sh) | 3 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 41 項目、`test-subscribe.sh` 70 項目。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 41 項目、`test-subscribe.sh` 71 項目。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
