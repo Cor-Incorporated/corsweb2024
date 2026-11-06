@@ -1118,7 +1118,7 @@
         "title": "4. Use of Cloud Services and Provision to Third Parties Located Overseas (Article 28 of the APPI)",
         "body": [
           "The Company handles personal information using cloud services such as Google Workspace (shared drives), Google Cloud (GCP / Secret Manager), GitHub, and Bitwarden.",
-          "In connection with the use of these cloud services, personal data may be handled in foreign countries (cross-border transfer). When the Company provides personal data to a third party located overseas (including cases where data is handled overseas through cloud services), the Company handles such data appropriately in accordance with Article 28 of the APPI, by means such as obtaining the prior consent of the individual, or by confirming that the relevant third party has established a system conforming to the standards prescribed by said Act, or by other means prescribed by laws and regulations.",
+          "In connection with the use of these cloud services, personal data may be handled in foreign countries (cross-border transfer). When the Company provides personal data to a third party located overseas (including cases where the Company uses cloud services provided by businesses located overseas), the Company handles such data appropriately in accordance with Article 28 of the APPI, by means such as obtaining the prior consent of the individual, or by confirming that the relevant third party has established a system conforming to the standards prescribed by said Act, or by other means prescribed by laws and regulations. Where data is handled overseas in cloud services that the Company uses under contracts with businesses in Japan, the Company implements security control measures based on its understanding of the external environment described in Section 6 (Security Control Measures).",
           "The information required by laws and regulations when the Company provides personal data to a third party located overseas is as follows."
         ],
         "list": [
@@ -1202,7 +1202,7 @@
           "Encryption: Disk encryption (FileVault) is enabled on business devices, and communications are encrypted using TLS or the like. Encryption at rest is enabled for data stored in the cloud.",
           "Logging and detection: Access to personal data is subject to minimal logs relevant to business operations (which do not collect private content), and is recorded and monitored.",
           "Disposal: Personal data that is no longer needed is disposed of by a method that renders it irrecoverable.",
-          "Understanding the external environment: The Company uses cloud services and other services provided by U.S. businesses, and personal data may be handled outside Japan, including in the United States. The Company implements security control measures after understanding the system for the protection of personal information in the United States."
+          "Understanding the external environment: The Company uses cloud services and other services provided by U.S. businesses, and personal data may be handled in the United States. In addition, the generative AI service used for the AI Reception (Section 9 (3)) is used with a setting that does not restrict the processing location to Japan, so the country where processing takes place cannot be identified. The Company implements security control measures after understanding the system for the protection of personal information in the United States."
         ]
       },
       {
