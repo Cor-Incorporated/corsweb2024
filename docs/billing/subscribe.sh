@@ -12,7 +12,7 @@
 #   devfee   --customer <cus_…> --service <サービス> --count <回数> --start align|now|YYYY-MM-DD
 #                                                                         開発費の schedule（count 回で止まる）
 #   status   --customer <cus_…>                                           契約の一覧（読むだけ）
-#   cancel   --subscription <sub_…>                                       basic を期間末で止める（basic 以外は止めない）
+#   cancel   --subscription <sub_…> --accepted <受理日 YYYY-MM-DD>         basic を受理日の 1 か月後の同じ日の終わりで止める（basic 以外は止めない）
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の不合格 / 3 = 既存と食い違い・前提が足りない・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方・入力の誤り
@@ -34,6 +34,9 @@ OPT_COUNT=""
 OPT_START=""
 OPT_SUB=""
 OPT_CLERK=""
+OPT_ACCEPTED=""
+CANCEL_END_DATE=""
+CANCEL_AT=""
 
 usage() {
   sed -n '8,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -58,6 +61,7 @@ set_opt() {
     --start) OPT_START="$2" ;;
     --subscription) OPT_SUB="$2" ;;
     --clerk-org) OPT_CLERK="$2" ;;
+    --accepted) OPT_ACCEPTED="$2" ;;
   esac
 }
 
@@ -73,7 +77,7 @@ parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --apply) DO_APPLY=1 ;;
-      --mode | --plans | --code | --name | --email | --customer | --service | --tenant | --count | --start | --subscription | --clerk-org)
+      --mode | --plans | --code | --name | --email | --customer | --service | --tenant | --count | --start | --subscription | --clerk-org | --accepted)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         set_opt "$1" "$2"
         shift
@@ -118,6 +122,18 @@ check_start() {
   [[ ! "$OPT_START" < "$today" ]] || die 64 "--start に過去の日付は使わない（過去の日付は遡って請求される。観測: $OPT_START、今日: $today）"
 }
 
+# 受理日は今日か過去の実在する日付。終了日（受理日の 1 か月後の同じ日の終わり）は未来であること。
+check_accepted() {
+  local today now
+  [[ "$OPT_ACCEPTED" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "--accepted は受理日 YYYY-MM-DD（観測: $OPT_ACCEPTED）"
+  valid_date "$OPT_ACCEPTED" || die 64 "--accepted が実在する日付ではない（観測: $OPT_ACCEPTED）"
+  today="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+  [[ ! "$OPT_ACCEPTED" > "$today" ]] || die 64 "--accepted に未来の日付は使わない（受理した日を入れる。観測: $OPT_ACCEPTED、今日: $today）"
+  set_cancel_at "$OPT_ACCEPTED"
+  now="$(date '+%s')"
+  [ "$CANCEL_AT" -gt "$now" ] || die 64 "終了日 $CANCEL_END_DATE は既に過ぎている（受理日 $OPT_ACCEPTED。Stripe は過去の終了日を受け付けない。寺田が判断）"
+}
+
 validate_inputs() {
   case "$MODE" in "" | test | live) ;; *) die 64 "--mode は test か live（観測: $MODE）" ;; esac
   if [ "$DO_APPLY" -eq 1 ] && [ -z "$MODE" ]; then die 64 "--apply には --mode test か --mode live が要る"; fi
@@ -136,9 +152,11 @@ validate_inputs() {
       check_service; check_count; check_start ;;
     status) need --customer "$OPT_CUSTOMER" ;;
     cancel)
-      need --subscription "$OPT_SUB"
-      [[ "$OPT_SUB" =~ ^sub_[A-Za-z0-9]+$ ]] || die 64 "--subscription は sub_ で始まる id（観測: $OPT_SUB）" ;;
+      need --subscription "$OPT_SUB"; need --accepted "$OPT_ACCEPTED"
+      [[ "$OPT_SUB" =~ ^sub_[A-Za-z0-9]+$ ]] || die 64 "--subscription は sub_ で始まる id（観測: $OPT_SUB）"
+      check_accepted ;;
   esac
+  if [ -n "$OPT_ACCEPTED" ] && [ "$CMD" != "cancel" ]; then die 64 "--accepted は cancel でだけ使う"; fi
   if [ -n "$OPT_CODE" ]; then
     [[ "$OPT_CODE" =~ ^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$ ]] || die 64 "--code は英小文字・数字・ハイフン（40 文字まで。観測: $OPT_CODE）"
   fi
@@ -179,7 +197,8 @@ print_plan() {
     devfee) printf 'PLAN devfee: %s の開発費（%s、%s）を %s に schedule で。start=%s、end_behavior=cancel、カードは %s の basic の subscription のもの\n' \
       "$OPT_SERVICE" "$(plans_lookup "$OPT_SERVICE" dev_fee)" "$(price_summary "$(plans_lookup "$OPT_SERVICE" dev_fee)" "$OPT_COUNT")" "$OPT_CUSTOMER" "$OPT_START" "$OPT_SERVICE" ;;
     status) printf 'PLAN status: %s の subscription・schedule・開発費の支払い回数を読む（読むだけ）\n' "$OPT_CUSTOMER" ;;
-    cancel) printf 'PLAN cancel: %s を期間末で止める（cancel_at_period_end=true）。metadata.plan が basic でなければ止めない\n' "$OPT_SUB" ;;
+    cancel) printf 'PLAN cancel: %s を %s の終わり（cancel_at=%s、%s）で止める。受理日 %s の %s か月後の同じ日。終了日を含む期間は日割りで請求され、返金はしない。metadata.plan が basic でなければ止めない。終了日が支払い済みの期間の中なら止めない\n' \
+      "$OPT_SUB" "$CANCEL_END_DATE" "$CANCEL_AT" "$(fmt_jst "$CANCEL_AT")" "$OPT_ACCEPTED" "$(jq -r '.cancellation.notice_months' "$PLANS")" ;;
   esac
 }
 
@@ -314,7 +333,7 @@ do_status() {
   printf 'CUSTOMER %s customer_code=%s name=%s\n' "$OPT_CUSTOMER" "$(jq -r '.metadata.customer_code // "-"' <<<"$RESP_BODY")" "$(jq -r '.name // "-"' <<<"$RESP_BODY")"
   api_ok "subscription の一覧" GET /v1/subscriptions --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=all" \
     --data-urlencode "limit=100" --data-urlencode "expand[0]=data.latest_invoice"
-  jq -r '.data[] | "SUB \(.id) service=\(.metadata.service // "-") plan=\(.metadata.plan // "-") status=\(.status) cancel_at_period_end=\(.cancel_at_period_end) period_end=\(.items.data[0].current_period_end // "-") card=\(if .default_payment_method then "保存済み" else "なし" end)"' <<<"$RESP_BODY"
+  jq -r '.data[] | "SUB \(.id) service=\(.metadata.service // "-") plan=\(.metadata.plan // "-") status=\(.status) cancel_at_period_end=\(.cancel_at_period_end) cancel_at=\(.cancel_at // "-") period_end=\(.items.data[0].current_period_end // "-") card=\(if .default_payment_method then "保存済み" else "なし" end)"' <<<"$RESP_BODY"
   jq -r '.data[] | select(.status == "incomplete" and (.latest_invoice | type) == "object" and .latest_invoice.status == "open")
     | "PAY_URL \(.id) \(.latest_invoice.hosted_invoice_url // "（無い）")"' <<<"$RESP_BODY"
   devs="$(jq -r '.data[] | select(.metadata.plan == "dev_fee") | .id' <<<"$RESP_BODY")"
@@ -326,28 +345,45 @@ do_status() {
   done
 }
 
+# 解約: cancel_at を「受理日の 1 か月後の同じ日の終わり」に置く（特商法ページと plans.json の cancellation）。
+# 終了日が次の期間に入るとき、Stripe はその期間を必ず日割りで請求する（proration_behavior では止められない）。
+# 終了日が支払い済みの期間の中だと、差額が顧客の残高に戻る（返金しない方針と合わない）ので止める。
 do_cancel() {
-  local plan status
+  local plan status existing cur_end
   api_ok "subscription の読取" GET "/v1/subscriptions/$OPT_SUB"
   plan="$(jq -r '.metadata.plan // "-"' <<<"$RESP_BODY")"
   status="$(jq -r '.status' <<<"$RESP_BODY")"
   [ "$plan" = "basic" ] || die 3 "$OPT_SUB は basic でない（観測 plan=$plan）。開発費は止めない（契約書に従う）"
-  if [ "$(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")" = "true" ]; then
-    printf 'OK cancel %s: 既に期間末で止まる設定（status=%s）\n' "$OPT_SUB" "$status"
+  case "$status" in
+    active | past_due | trialing) ;;
+    *) die 3 "$OPT_SUB は解約できる状態でない（観測 status=$status）" ;;
+  esac
+  existing="$(jq -r '.cancel_at // empty' <<<"$RESP_BODY")"
+  if [ "$existing" = "$CANCEL_AT" ]; then
+    printf 'OK cancel %s: 既に %s に終わる設定（status=%s）\n' "$OPT_SUB" "$(fmt_jst "$CANCEL_AT")" "$status"
     return 0
   fi
-  api_ok "期間末で止める POST /v1/subscriptions/$OPT_SUB" POST "/v1/subscriptions/$OPT_SUB" --data-urlencode "cancel_at_period_end=true"
-  check_replay "期間末で止める" "/v1/subscriptions/$OPT_SUB" '.cancel_at_period_end == true' '{id, status, cancel_at_period_end}'
-  [ "$(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")" = "true" ] \
-    || die 3 "$OPT_SUB の cancel_at_period_end が true にならなかった（観測: $(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")）"
-  printf 'CANCEL_AT_PERIOD_END %s: %s に終わる。終わったら Access の許可から外す（runbook D2）\n' \
-    "$OPT_SUB" "$(fmt_jst "$(jq -r '.items.data[0].current_period_end // .cancel_at // "-"' <<<"$RESP_BODY")")"
+  [ -z "$existing" ] || die 3 "$OPT_SUB には既に別の終了日時がある（期待 $(fmt_jst "$CANCEL_AT")、観測 $(fmt_jst "$existing")）。書き換えない（寺田が判断）"
+  [ "$(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")" != "true" ] \
+    || die 3 "$OPT_SUB は期間末で止まる設定（cancel_at_period_end=true）。受理日から数えた終了日 $CANCEL_END_DATE と違うので書き換えない（寺田が判断）"
+  cur_end="$(jq -r '.items.data[0].current_period_end // empty' <<<"$RESP_BODY")"
+  [[ "$cur_end" =~ ^[0-9]+$ ]] || die 3 "$OPT_SUB の current_period_end を読めない（観測: ${cur_end:-なし}）"
+  [ "$CANCEL_AT" -ge "$cur_end" ] \
+    || die 3 "終了日時 $(fmt_jst "$CANCEL_AT") が支払い済みの期間（$(fmt_jst "$cur_end") まで）の中にある。このまま止めると差額が顧客の残高に戻り、返金しない方針と合わない。止めない（寺田が判断）"
+  api_ok "終了日時を付ける POST /v1/subscriptions/$OPT_SUB" POST "/v1/subscriptions/$OPT_SUB" --data-urlencode "cancel_at=$CANCEL_AT"
+  check_replay "終了日時を付ける" "/v1/subscriptions/$OPT_SUB" ".cancel_at == $CANCEL_AT" '{id, status, cancel_at}'
+  [ "$(jq -r '.cancel_at // empty' <<<"$RESP_BODY")" = "$CANCEL_AT" ] \
+    || die 3 "$OPT_SUB の cancel_at が $CANCEL_AT にならなかった（観測: $(jq -r '.cancel_at // "なし"' <<<"$RESP_BODY")）"
+  printf 'CANCEL_AT %s: %s に終わる（受理日 %s → 終了日 %s の終わり）。終了日を含む期間は日割りで請求される。終わったら Access の許可から外す（runbook D2）\n' \
+    "$OPT_SUB" "$(fmt_jst "$CANCEL_AT")" "$OPT_ACCEPTED" "$CANCEL_END_DATE"
 }
 
 main() {
   parse_args "$@"
   require_tools jq
   bash "$SCRIPT_DIR/apply-plans.sh" --plans "$PLANS" >/dev/null || die 2 "plans.json の検査で不合格（bash docs/billing/apply-plans.sh を実行して NG の行を見る）"
+  # 契約・解約を作るサブコマンドは、plans.json の請求の形をこのスクリプトが実装しているときだけ動く（dry-run も止める）
+  case "$CMD" in basic | devfee | cancel) require_implemented_billing ;; esac
   validate_inputs
   if [ -n "$MODE" ]; then printf 'mode: %s --mode %s\n' "$CMD" "$MODE"; else printf 'mode: %s dry-run（通信しない・鍵を読まない）\n' "$CMD"; fi
   print_plan

@@ -12,10 +12,14 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BILLING="$(cd "$HERE/.." && pwd)"
-PLANS="$BILLING/plans.json"
+REAL_PLANS="$BILLING/plans.json"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/billing-sub-test.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/bin"
+# 実装済みの形（same_day_advance）の写しで、既存の動きを確かめる。本物の plans.json（month_end）では、
+# 契約・解約を作るサブコマンドが止まることを、ファイルの末尾で確かめる。
+PLANS="$WORK/plans-same-day.json"
+jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", first_month: "full_month"}' "$REAL_PLANS" >"$PLANS"
 cp "$HERE/fake-curl.sh" "$WORK/bin/curl"
 chmod +x "$WORK/bin/curl"
 DUMMY_KEY="dummy-key-for-leak-check-7f3a9c"
@@ -34,7 +38,7 @@ run() {
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
     COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" VERIFY_POLL_SECONDS=0 VERIFY_MIN_STEP_SECONDS=0 \
-    bash "$BILLING/$script" "$@" </dev/null 2>&1)"
+    bash "$BILLING/$script" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
   RC=$?
   set -e
   LOG="$(cat "$WORK/log")"
@@ -138,16 +142,62 @@ FAKE_SUBS=basic_active FAKE_REPLAY=1 FAKE_SCHED_STATUS=canceled run subscribe.sh
 expect "replay で前回の schedule が終わっていれば exit 3" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
 FAKE_SUBS=basic_active FAKE_REPLAY=1 FAKE_SCHED_STATUS=not_started run subscribe.sh devfee --customer cus_x --service business-dossier --count 8 --start align --apply --mode test
 expect "replay でも前回の schedule が生きていれば続ける" 0 1 "CREATED schedule sub_sched_1"
-FAKE_SUB_PLAN=dev_fee run subscribe.sh cancel --subscription sub_x --apply --mode test
+# 解約: 受理日の 1 か月後の同じ日（無い月は月末）の終わり = 翌日の日本時間 0:00（特商法ページ・plans.json の cancellation）
+# 日付の計算は、実装と別に書いた値で確かめる
+date_fn() { bash -c '. "$1/lib.sh"; PLANS="$2"; shift 2; "$@"' _ "$BILLING" "$PLANS" "$@"; }
+for c in "2026-11-05 2026-12-05" "2026-12-15 2027-01-15" "2026-03-31 2026-04-30" "2027-01-31 2027-02-28" "2028-01-31 2028-02-29" "2026-08-31 2026-09-30"; do
+  set -- $c
+  got="$(date_fn add_months_clamped "$1" 1)"
+  [ "$got" = "$2" ] && ok "受理日 $1 の 1 か月後は $2" || ng "受理日 $1 の 1 か月後: 期待 $2 観測 $got"
+done
+for c in "2026-02-30 no" "2027-02-29 no" "2028-02-29 yes" "2100-02-29 no" "2000-02-29 yes" "2026-13-01 no"; do
+  set -- $c
+  if date_fn valid_date "$1"; then got=yes; else got=no; fi
+  [ "$got" = "$2" ] && ok "日付 $1 の実在 = $2" || ng "日付 $1 の実在: 期待 $2 観測 $got"
+done
+for c in "2026-11-05 1796482800" "2027-01-31 1803826800" "2028-01-31 1835449200"; do
+  set -- $c
+  got="$(bash -c '. "$1/lib.sh"; PLANS="$3"; set_cancel_at "$2"; printf "%s" "$CANCEL_AT"' _ "$BILLING" "$1" "$PLANS")"
+  [ "$got" = "$2" ] && ok "受理日 $1 の終了日時は $2（終了日の翌日 0:00 JST）" || ng "受理日 $1 の終了日時: 期待 $2 観測 $got"
+done
+TODAY="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+WANT_AT="$(bash -c '. "$1/lib.sh"; PLANS="$3"; set_cancel_at "$2"; printf "%s" "$CANCEL_AT"' _ "$BILLING" "$TODAY" "$PLANS")"
+TOMORROW="$(TZ=Asia/Tokyo date -r "$(($(date '+%s') + 86400))" '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Tokyo date -d tomorrow '+%Y-%m-%d')"
+run subscribe.sh cancel --subscription sub_x
+expect "解約は受理日が要る" 64 0 "cancel には --accepted が要る"
+run subscribe.sh cancel --subscription sub_x --accepted "$TOMORROW"
+expect "未来の受理日は exit 64" 64 0 "未来の日付は使わない"
+run subscribe.sh cancel --subscription sub_x --accepted 2026-02-30
+expect "実在しない受理日は exit 64" 64 0 "実在する日付ではない"
+run subscribe.sh cancel --subscription sub_x --accepted 2020-01-15
+expect "終了日が過ぎた受理日は exit 64" 64 0 "既に過ぎている"
+run subscribe.sh status --customer cus_x --accepted "$TODAY" --mode test
+expect "--accepted は cancel でだけ使う" 64 0 "cancel でだけ使う"
+run subscribe.sh cancel --subscription sub_x --accepted "$TODAY"
+expect "解約の dry-run は終了日と終了日時を出す" 0 0 "cancel_at=$WANT_AT"
+FAKE_SUB_PLAN=dev_fee run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
 expect "開発費の subscription は解約しない" 3 0 "basic でない"
-FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --apply --mode test
-expect "basic を期間末で止める" 0 1 "CANCEL_AT_PERIOD_END sub_x"
-printf '%s' "$LOG" | grep '^ARGV' | grep '\[-X\] \[POST\]' | grep -q 'cancel_at_period_end=true' && ok "解約は cancel_at_period_end=true を送る" || ng "cancel_at_period_end=true が無い"
-FAKE_SUB_PLAN=basic FAKE_REPLAY_RAW=1 FAKE_CANCEL_STATE=false run subscribe.sh cancel --subscription sub_x --apply --mode test
+FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "basic に受理日から数えた終了日時を付ける" 0 1 "CANCEL_AT sub_x"
+printf '%s' "$LOG" | grep '^ARGV' | grep '\[-X\] \[POST\]' | grep -qF "[cancel_at=$WANT_AT]" && ok "解約は cancel_at=$WANT_AT を送る" || ng "cancel_at=$WANT_AT が無い"
+printf '%s' "$LOG" | grep '^ARGV' | grep '\[-X\] \[POST\]' | grep -q 'cancel_at_period_end\|proration_behavior' && ng "期間末の解約か日割りの指定を送った" || ok "期間末の解約も日割りの指定も送らない"
+FAKE_SUB_PLAN=basic FAKE_PERIOD_END=$(($(date '+%s') + 90 * 86400)) run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "終了日時が支払い済みの期間の中なら止めない（差額が残高に戻るため）" 3 0 "支払い済みの期間（"
+FAKE_SUB_PLAN=basic FAKE_CANCEL_AT="$WANT_AT" run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "同じ終了日時が付いていれば何もしない" 0 0 "OK cancel sub_x: 既に"
+FAKE_SUB_PLAN=basic FAKE_CANCEL_AT=1999999999 run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "別の終了日時は書き換えない" 3 0 "既に別の終了日時がある"
+FAKE_SUB_PLAN=basic FAKE_CANCEL_STATE=true run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "期間末で止まる設定は書き換えない" 3 0 "cancel_at_period_end=true"
+FAKE_SUB_PLAN=basic FAKE_SUB_STATUS=canceled run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "終わった subscription は解約しない" 3 0 "解約できる状態でない"
+FAKE_SUB_PLAN=basic FAKE_CANCEL_ECHO=wrong run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "応答の cancel_at が違えば exit 3" 3 1 "にならなかった"
+FAKE_SUB_PLAN=basic FAKE_REPLAY_RAW=1 run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
 expect "replay の値が「True + CR」でも見落とさない" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
-FAKE_SUB_PLAN=basic FAKE_REPLAY=1 FAKE_CANCEL_STATE=false run subscribe.sh cancel --subscription sub_x --apply --mode test
-expect "replay で解約が効いていなければ exit 3（取り消した解約の再実行）" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
-printf '%s' "$OUT" | grep -q '^CANCEL_AT_PERIOD_END' && ng "効いていない解約を出した" || ok "効いていない解約は出さない"
+FAKE_SUB_PLAN=basic FAKE_REPLAY=1 run subscribe.sh cancel --subscription sub_x --accepted "$TODAY" --apply --mode test
+expect "replay で終了日時が付いていなければ exit 3（取り消した解約の再実行）" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
+printf '%s' "$OUT" | grep -q '^CANCEL_AT ' && ng "効いていない解約を出した" || ok "効いていない解約は出さない"
 FAKE_SUBS=basic_active run subscribe.sh status --customer cus_x --mode test
 expect "status は読むだけ" 0 0 "SUB sub_basic service=business-dossier plan=basic status=active"
 
@@ -179,6 +229,30 @@ SCN=live run verify-installments.sh
 expect "本番の鍵なら何も作らずに exit 3" 3 0 "観測 livemode=true"
 run verify-installments.sh --mode live
 expect "verify に --mode は無い（exit 64）" 64 0 "テストモード専用"
+
+# 本物の plans.json（billing.closing=month_end、2026-11-07 の決定）では、まだ実装していないので契約・解約を作らない
+TODAY_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+RUN_PLANS="$REAL_PLANS" FAKE_SUBS=basic_active run subscribe.sh basic --customer cus_x --service xesm --tenant 組織 --apply --mode test
+expect "month_end では basic を作らない" 3 0 "まだ実装していない"
+[ -z "$LOG" ] && ok "month_end の basic は curl を呼ばない" || ng "month_end の basic が curl を呼んだ"
+RUN_PLANS="$REAL_PLANS" run subscribe.sh basic --customer cus_x --service xesm --tenant 組織
+expect "month_end では basic の dry-run も止まる" 3 0 "billing.closing=month_end"
+RUN_PLANS="$REAL_PLANS" FAKE_SUBS=basic_active run subscribe.sh devfee --customer cus_x --service business-dossier --count 8 --start align --apply --mode test
+expect "month_end では開発費の schedule を作らない" 3 0 "まだ実装していない"
+RUN_PLANS="$REAL_PLANS" FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --accepted "$TODAY_JST" --apply --mode test
+expect "month_end では解約を作らない" 3 0 "まだ実装していない"
+RUN_PLANS="$REAL_PLANS" run verify-installments.sh
+expect "month_end では verify-installments も何も作らない" 3 0 "まだ実装していない"
+RUN_PLANS="$REAL_PLANS" run subscribe.sh customer --code sample-co --name テスト株式会社 --email billing@example.test
+expect "month_end でも customer の dry-run は動く" 0 0 "DONE dry-run"
+RUN_PLANS="$REAL_PLANS" FAKE_SUBS=basic_active run subscribe.sh status --customer cus_x --mode test
+expect "month_end でも status（読むだけ）は動く" 0 0 "SUB sub_basic"
+# 前の形の写しを --plans で渡しても、本番には作らない（独立レビューの指摘）
+SCN=live FAKE_SUBS=basic_active run subscribe.sh basic --customer cus_x --service xesm --tenant 組織 --apply --mode live
+expect "前の形の写しでも本番の basic は作らない" 3 0 "本番に契約・解約を作らない"
+[ -z "$LOG" ] && ok "前の形の写しの本番は curl を呼ばない" || ng "前の形の写しの本番が curl を呼んだ"
+SCN=live FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --accepted "$TODAY_JST" --apply --mode live
+expect "前の形の写しでも本番の解約は作らない" 3 0 "本番に契約・解約を作らない"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
