@@ -53,7 +53,7 @@ git -C ~/Developer/corsweb worktree add ~/Developer/corsweb/.worktrees/claude/bi
 cd ~/Developer/corsweb/.worktrees/claude/billing-invoice-20261107
 ```
 
-鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`209 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
+鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`233 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -386,7 +386,15 @@ README の 8 章。請求書（銀行振込）で請求済みの月は、その�
 
 ### M1. 月末の翌日（毎月 1 日）: 先月分の請求書を作る
 
-台帳の顧客のうち、先月に契約があった顧客（先月が終了の月の顧客を含む）ごとに実行する。`<先月>` は `TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m'` の値（下のコマンドがそのまま入れる）。
+台帳の顧客のうち、先月に契約があった顧客（先月が終了の月の顧客を含む）ごとに実行する。`<先月>` は `TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m'` の値（下のコマンドがそのまま入れる）。今月の分は、締めの日（月の末日）より前は `STOP: 今月（…）の分は、締めの日（…）から作る` で止まる。
+
+振込の顧客（台帳の支払い方法が `transfer`）がいる月は、先に同じ端末で振込先を入れる。値は当社の振込先（銀行名・支店・口座の種類・番号・名義）で、請求書の下に載る。リポジトリにもログにも書かない（ログには文字数だけが出る）:
+
+```bash
+read -r -p '振込先（1 行。例: お振込先: ○○銀行 ○○支店 普通 1234567 カ）コア）: ' COR_BILLING_TRANSFER_FOOTER && export COR_BILLING_TRANSFER_FOOTER
+```
+
+入れ忘れると、振込の顧客の `invoice` は `STOP: … 振込先（環境変数 COR_BILLING_TRANSFER_FOOTER）が無い` で止まる（何も作らない）。カードの顧客の請求書には載らない。
 
 ```bash
 bash docs/billing/subscribe.sh invoice --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
@@ -397,6 +405,7 @@ bash docs/billing/subscribe.sh invoice --customer <cus_…> --month "$(TZ=Asia/T
 3. `CHECK ok: 小計 … 円（税別）・明細 … 行は計算と一致`、`INVOICE in_… <先月>: status=open 税込 … 円（うち消費税 … 円）支払期限 <今月の末日> 23:59 JST` が出ること。台帳に請求日と税込の額を書く。
 4. 最初の月は、請求書のメールが顧客に届くかを寺田が確かめる（**未実測**。送り先は Customer の請求先のメール）。
 5. `DONE invoice: … 分に請求するものが無い` は、契約の開始の月より前か、終了の月より後。何も作っていない。
+6. 確定のあとの送付で止まったら（通信の失敗など）、同じコマンドをもう一度実行する。`NOTE … は確定済みだが、送った記録が無い … 送り直す` のあと `SENT in_… <先月>: 送り直した` が出ること。送った記録は Customer の metadata `invoice_sent` に残る。
 
 ### M2. 期限の日（毎月の末日）: カードの顧客の先月分を払う
 
@@ -410,8 +419,14 @@ bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/To
 
 ### M3. 振込の顧客の入金を確かめる
 
-- 支払い方法が `transfer` の顧客は、請求書のとおり期限の日までに振り込んでもらう。`charge` は止まる（`STOP: … の支払い方法が card でない`）。
-- 入金を確かめたら、台帳に入金日を書く。Stripe の請求書を「支払い済み」にする画面の操作は**未確認**（請求書は open のまま残る）。
+- 支払い方法が `transfer` の顧客は、請求書の下の振込先へ、期限の日までに振り込んでもらう。`charge` は止まる（`STOP: … の支払い方法が card でない`）。
+- 入金を通帳か銀行の画面で確かめたら、その月の請求書を支払い済みにする（引き落とさない。open のままだと、請求書のページから二重に払われうる）。`<入金日>` は入金を確かめた日（YYYY-MM-DD）:
+
+```bash
+bash docs/billing/subscribe.sh mark-paid --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --paid-on <入金日> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+```
+
+- `PLAN mark-paid: 請求書 in_…（<先月> 分、税込 … 円）を、入金日 <入金日> の振込で支払い済みにする` を読み、額が入金と同じときだけ `live` と打つ。`MARKED_PAID in_… <先月>: …` が出ること。台帳に入金日を書く。額が違うとき（振込手数料を引かれた、など）は実行せず、寺田が決める。
 
 ## D. 解約 → 入口を閉じる（本番）
 

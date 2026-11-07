@@ -13,6 +13,7 @@
 #   cancel     --customer <cus_…> --service <サービス> --accepted <受理日 YYYY-MM-DD>
 #   invoice    --customer <cus_…> --month YYYY-MM
 #   charge     --customer <cus_…> --month YYYY-MM [--early-test]
+#   mark-paid  --customer <cus_…> --month YYYY-MM --paid-on <入金日 YYYY-MM-DD>
 #   simulate   --start YYYY-MM-DD --devfee-count <回数> [--end YYYY-MM-DD] [--billing-from YYYY-MM] --months <月数> [--service <サービス>]
 #   status     --customer <cus_…>
 #
@@ -24,6 +25,7 @@
 # invoice    その月の請求書を作り、確定して送る（明細は lib.sh の billing_lines。支払期限は翌月末日）
 # charge     その月の open の請求書を、保存したカードで払う（カードの顧客だけ。期限の日から。
 #            --early-test はテストモードだけ期限前でも払う。本番では使えない）
+# mark-paid  振込の顧客の、その月の open の請求書を「Stripe の外で支払い済み」にする（paid_out_of_band。引き落とさない）
 # simulate   通信せずに、月ごとの明細と合計を出す
 # status     契約の metadata、今月と先月の請求書、保存したカード（読むだけ）
 #
@@ -51,6 +53,8 @@ OPT_MONTH=""
 OPT_END=""
 OPT_MONTHS=""
 OPT_BILL_FROM=""
+OPT_PAID_ON=""
+TRANSFER_FOOTER=""
 OPT_EARLY=0
 CANCEL_END_DATE=""
 DUE_DATE=""
@@ -66,7 +70,7 @@ CS_STATUS=""
 CS_URL=""
 
 usage() {
-  sed -n '8,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
 例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
@@ -93,6 +97,7 @@ set_opt() {
     --end) OPT_END="$2" ;;
     --months) OPT_MONTHS="$2" ;;
     --billing-from) OPT_BILL_FROM="$2" ;;
+    --paid-on) OPT_PAID_ON="$2" ;;
   esac
 }
 
@@ -101,7 +106,7 @@ parse_args() {
   CMD="$1"
   shift
   case "$CMD" in
-    customer | find | contract | card-setup | cancel | invoice | charge | simulate | status) ;;
+    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status) ;;
     -h | --help) usage; exit 0 ;;
     *) usage >&2; die 64 "知らないサブコマンド: $CMD" ;;
   esac
@@ -109,7 +114,7 @@ parse_args() {
     case "$1" in
       --apply) DO_APPLY=1 ;;
       --early-test) OPT_EARLY=1 ;;
-      --mode | --plans | --code | --name | --email | --clerk-org | --payment | --customer | --service | --start | --devfee-count | --accepted | --month | --end | --months | --billing-from)
+      --mode | --plans | --code | --name | --email | --clerk-org | --payment | --customer | --service | --start | --devfee-count | --accepted | --month | --end | --months | --billing-from | --paid-on)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         set_opt "$1" "$2"
         shift
@@ -180,14 +185,26 @@ check_accepted() {
   CANCEL_END_DATE="$(cancel_end_date "$OPT_ACCEPTED")"
 }
 
-# 請求書を作れるのは今月か先月の分だけ（日本時間）。
+# 請求書を作れるのは先月の分と、締めの日（月の末日、日本時間）からの今月の分だけ（月末締め）。
 check_invoice_month() {
-  local this last
-  this="$(today_jst)"
-  this="${this:0:7}"
+  local today this last end
+  today="$(today_jst)"
+  this="${today:0:7}"
   last="$(ym_add "$this" -1)"
   [[ ! "$OPT_MONTH" > "$this" ]] || die 64 "--month に未来の月は使わない（観測: $OPT_MONTH、今月: $this）"
   [[ ! "$OPT_MONTH" < "$last" ]] || die 64 "--month は今月か先月（$last）だけ（観測: $OPT_MONTH）。それより前の月は寺田が判断"
+  if [ "$OPT_MONTH" = "$this" ]; then
+    end="$(month_last_date "$this")"
+    [ "$today" = "$end" ] || die 64 "今月（$this）の分は、締めの日（$end）から作る（月末締め。今日: $today）"
+  fi
+}
+
+# 振込の入金日は、今日か過去の実在する日付。
+check_paid_on() {
+  local today
+  check_date --paid-on "$OPT_PAID_ON"
+  today="$(today_jst)"
+  [[ ! "$OPT_PAID_ON" > "$today" ]] || die 64 "--paid-on に未来の日付は使わない（入金を確かめた日を入れる。観測: $OPT_PAID_ON、今日: $today）"
 }
 
 # 保存したカードで払うのは、支払期限の日（翌月末日、日本時間）から。
@@ -236,6 +253,7 @@ validate_command() {
       check_service; check_accepted ;;
     invoice) need --customer "$OPT_CUSTOMER"; need --month "$OPT_MONTH"; check_month; check_invoice_month ;;
     charge) need --customer "$OPT_CUSTOMER"; need --month "$OPT_MONTH"; check_month; check_charge_day ;;
+    mark-paid) need --customer "$OPT_CUSTOMER"; need --month "$OPT_MONTH"; need --paid-on "$OPT_PAID_ON"; check_month; check_paid_on ;;
     simulate) need --start "$OPT_START"; need --devfee-count "$OPT_DEVFEE"; check_simulate ;;
   esac
 }
@@ -248,12 +266,13 @@ validate_inputs() {
   scope --email "$OPT_EMAIL" "customer"
   scope --clerk-org "$OPT_CLERK" "customer"
   scope --payment "$OPT_PAYMENT" "customer"
-  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge status"
+  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status"
   scope --service "$OPT_SERVICE" "contract cancel simulate"
   scope --start "$OPT_START" "contract simulate"
   scope --devfee-count "$OPT_DEVFEE" "contract simulate"
   scope --accepted "$OPT_ACCEPTED" "cancel"
-  scope --month "$OPT_MONTH" "invoice charge"
+  scope --month "$OPT_MONTH" "invoice charge mark-paid"
+  scope --paid-on "$OPT_PAID_ON" "mark-paid"
   scope --end "$OPT_END" "simulate"
   scope --months "$OPT_MONTHS" "simulate"
   scope --billing-from "$OPT_BILL_FROM" "contract simulate"
@@ -286,6 +305,8 @@ print_plan() {
       "$OPT_CUSTOMER" "$s" "$OPT_ACCEPTED" "$(jq -r '.cancellation.notice_months' "$PLANS")" "$CANCEL_END_DATE" "$s" "${CANCEL_END_DATE:0:7}" ;;
     invoice) printf 'PLAN invoice: %s の %s 分の請求書（send_invoice、支払期限 %s 23:59:59 JST = due_date %s）。明細は Customer の metadata の契約から計算する。同じ月の請求書があれば作らない。draft → 明細 → 小計の照合 → finalize → send\n' \
       "$OPT_CUSTOMER" "$OPT_MONTH" "$DUE_DATE" "$DUE_EPOCH" ;;
+    mark-paid) printf 'PLAN mark-paid: %s の %s 分の open の請求書を、入金日 %s で「Stripe の外で支払い済み」にする（POST /v1/invoices/{id}/pay、paid_out_of_band=true。引き落とさない）。振込の顧客（metadata.payment=transfer）だけ\n' \
+      "$OPT_CUSTOMER" "$OPT_MONTH" "$OPT_PAID_ON" ;;
     charge) printf 'PLAN charge: %s の %s 分の open の請求書を、保存したカードで払う（POST /v1/invoices/{id}/pay。支払期限 %s）。カードの顧客（metadata.payment=card）だけ\n' \
       "$OPT_CUSTOMER" "$OPT_MONTH" "$DUE_DATE" ;;
     status) printf 'PLAN status: %s の契約の metadata、今月と先月の請求書、保存したカードを読む（読むだけ）\n' "$OPT_CUSTOMER" ;;
@@ -503,7 +524,8 @@ create_draft() {
     --data-urlencode "collection_method=send_invoice" --data-urlencode "due_date=$DUE_EPOCH" \
     --data-urlencode "auto_advance=false" --data-urlencode "pending_invoice_items_behavior=exclude" \
     --data-urlencode "metadata[billing_month]=$OPT_MONTH" --data-urlencode "metadata[customer_code]=$(cust_meta customer_code)" \
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+    --data-urlencode "metadata[managed_by]=$MANAGED_BY" \
+    ${TRANSFER_FOOTER:+--data-urlencode "footer=$TRANSFER_FOOTER"}
   check_replay "請求書の作成" "/v1/invoices/$(jq -r '.id' <<<"$RESP_BODY")" '.status == "draft"' '{id, status}'
   INV_JSON="$RESP_BODY"
   printf 'CREATED invoice %s（draft、%s 分）\n' "$(jq -r '.id' <<<"$INV_JSON")" "$OPT_MONTH"
@@ -537,20 +559,44 @@ finish_invoice() {
   api_ok "請求書の確定 POST /v1/invoices/$inv/finalize" POST "/v1/invoices/$inv/finalize"
   check_replay "請求書の確定" "/v1/invoices/$inv" '.status | IN("open", "paid")' '{id, status}'
   [ "$(jq -r '.status' <<<"$RESP_BODY")" = "open" ] || die 3 "確定した請求書 $inv が open でない（観測 status=$(jq -r '.status' <<<"$RESP_BODY")）"
-  api_ok "請求書の送付 POST /v1/invoices/$inv/send" POST "/v1/invoices/$inv/send"
-  check_replay "請求書の送付" "/v1/invoices/$inv" '.status | IN("open", "paid")' '{id, status}'
+  send_invoice "$inv"
   printf 'INVOICE %s %s: status=%s 税込 %s 円（うち消費税 %s 円）支払期限 %s\n' "$inv" "$OPT_MONTH" "$(jq -r '.status' <<<"$RESP_BODY")" \
     "$(jq -r '.total' <<<"$RESP_BODY")" "$(jq -r '[.total_taxes[]?.amount] | add // 0' <<<"$RESP_BODY")" "$(fmt_jst "$(jq -r '.due_date // "-"' <<<"$RESP_BODY")")"
   printf 'INVOICE_URL %s\n' "$(jq -r '.hosted_invoice_url // "（無い）"' <<<"$RESP_BODY")"
 }
 
 # 同じ月の請求書があるとき: open / paid は作らない。draft は前回が途中で止まったもの（明細が 0 行なら足し、計算と合えば確定する）。
+# 送ったことを Customer の metadata.invoice_sent（「YYYY-MM:in_…」を新しい順に 3 件まで、カンマ区切り）に書く。
+# 確定のあと送付が失敗したとき、やり直しで送り直すため（請求書の metadata を確定のあと変えられるかは文書に無い）。
+invoice_sent_entry() { printf '%s:%s' "$OPT_MONTH" "$1"; }
+was_sent() {
+  case ",$(cust_meta invoice_sent)," in *",$(invoice_sent_entry "$1"),"*) return 0 ;; *) return 1 ;; esac
+}
+send_invoice() {
+  local inv="$1" entry list
+  api_ok "請求書の送付 POST /v1/invoices/$inv/send" POST "/v1/invoices/$inv/send"
+  check_replay "請求書の送付" "/v1/invoices/$inv" '.status | IN("open", "paid")' '{id, status}'
+  local sent="$RESP_BODY"
+  entry="$(invoice_sent_entry "$inv")"
+  list="$(jq -rn --arg cur "$(cust_meta invoice_sent)" --arg e "$entry" '[$e] + ([$cur | split(",")[] | select(. != "" and . != $e)] | .[0:2]) | join(",")')"
+  put_meta "送ったことを書く" "(.metadata.invoice_sent // \"\") | split(\",\") | index(\"$entry\") != null" "invoice_sent=$list"
+  CUST_JSON="$RESP_BODY"
+  RESP_BODY="$sent"
+}
+
 resume_invoice() {
   local id status n
   id="$(jq -r '.id' <<<"$INV_JSON")"
   status="$(jq -r '.status' <<<"$INV_JSON")"
   case "$status" in
     open | paid)
+      if [ "$status" = "open" ] && ! was_sent "$id"; then
+        printf 'NOTE %s 分の請求書 %s は確定済みだが、送った記録が無い（前回は送付の前後で止まった）。送り直す\n' "$OPT_MONTH" "$id"
+        confirm_live
+        send_invoice "$id"
+        printf 'SENT %s %s: 送り直した（status=%s）\n' "$id" "$OPT_MONTH" "$(jq -r '.status' <<<"$RESP_BODY")"
+        return 0
+      fi
       printf 'OK invoice %s: %s 分の請求書 %s は既にある（status=%s、税込 %s 円）。作らない\n' "$OPT_CUSTOMER" "$OPT_MONTH" "$id" "$status" "$(jq -r '.total // "-"' <<<"$INV_JSON")"
       return 0 ;;
     draft) ;;
@@ -568,9 +614,20 @@ resume_invoice() {
   finish_invoice "$id"
 }
 
+# 振込の顧客の請求書には、振込先を footer に入れる。値は COR_BILLING_TRANSFER_FOOTER（寺田が端末で入れる。リポジトリに書かない）。
+load_transfer_footer() {
+  TRANSFER_FOOTER=""
+  [ "$(cust_meta payment)" = "transfer" ] || return 0
+  TRANSFER_FOOTER="${COR_BILLING_TRANSFER_FOOTER:-}"
+  [ -n "$TRANSFER_FOOTER" ] || die 3 "$OPT_CUSTOMER は振込の顧客だが、振込先（環境変数 COR_BILLING_TRANSFER_FOOTER）が無い。請求書に振込先を載せられないので作らない（runbook M1）"
+  [ "${#TRANSFER_FOOTER}" -le 2000 ] || die 64 "COR_BILLING_TRANSFER_FOOTER が 2000 文字を超える（観測: ${#TRANSFER_FOOTER} 文字）"
+  printf 'NOTE 振込の顧客: 請求書の footer に振込先（%s 文字）を入れる\n' "${#TRANSFER_FOOTER}"
+}
+
 do_invoice() {
   local id
   load_customer
+  load_transfer_footer
   invoice_lines "$OPT_MONTH"
   print_lines "$OPT_MONTH"
   if [ "$LINES_N" -eq 0 ]; then
@@ -589,6 +646,30 @@ do_invoice() {
   id="$(jq -r '.id' <<<"$INV_JSON")"
   add_items "$id" "$txr"
   finish_invoice "$id"
+}
+
+# 振込を受けたら、その月の請求書を「Stripe の外で支払い済み」にする（引き落とさない）。
+# open のままだと、請求書のページから二重に払われうる。
+do_mark_paid() {
+  local pay id status
+  load_customer
+  pay="$(cust_meta payment)"
+  [ "$pay" = "transfer" ] || die 3 "$OPT_CUSTOMER の支払い方法が transfer でない（観測 payment=${pay:-なし}）。カードの顧客は charge で払う"
+  find_month_invoice "$OPT_MONTH"
+  [ -n "$INV_JSON" ] || die 3 "$OPT_MONTH 分の請求書が無い（invoice を先に）"
+  id="$(jq -r '.id' <<<"$INV_JSON")"
+  status="$(jq -r '.status' <<<"$INV_JSON")"
+  case "$status" in
+    paid) printf 'OK mark-paid %s: %s 分の請求書 %s は支払い済み（何もしない）\n' "$OPT_CUSTOMER" "$OPT_MONTH" "$id"; return 0 ;;
+    open) ;;
+    *) die 3 "$OPT_MONTH 分の請求書 $id は status=$status（open でない）。何もしない" ;;
+  esac
+  printf 'PLAN mark-paid: 請求書 %s（%s 分、税込 %s 円）を、入金日 %s の振込で支払い済みにする（paid_out_of_band=true）\n' "$id" "$OPT_MONTH" "$(jq -r '.total // "-"' <<<"$INV_JSON")" "$OPT_PAID_ON"
+  confirm_live
+  api_ok "支払い済みにする POST /v1/invoices/$id/pay" POST "/v1/invoices/$id/pay" --data-urlencode "paid_out_of_band=true"
+  check_replay "支払い済みにする" "/v1/invoices/$id" '.status == "paid"' '{id, status}'
+  [ "$(jq -r '.status' <<<"$RESP_BODY")" = "paid" ] || die 3 "請求書 $id が支払い済みにならなかった（観測 status=$(jq -r '.status' <<<"$RESP_BODY")）"
+  printf 'MARKED_PAID %s %s: 入金日 %s の振込で支払い済みにした（税込 %s 円）。台帳の入金日に %s を書く\n' "$id" "$OPT_MONTH" "$OPT_PAID_ON" "$(jq -r '.total // "-"' <<<"$RESP_BODY")" "$OPT_PAID_ON"
 }
 
 do_charge() {
@@ -706,7 +787,7 @@ main() {
   read_key
   check_mode
   # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
-  case "$CMD" in find | status | invoice | charge) ;; *) confirm_live ;; esac
+  case "$CMD" in find | status | invoice | charge | mark-paid) ;; *) confirm_live ;; esac
   "do_${CMD//-/_}"
 }
 
