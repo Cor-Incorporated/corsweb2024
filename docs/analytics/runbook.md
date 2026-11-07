@@ -2,7 +2,7 @@
 
 実行する人: 寺田康佑（ブラウザの作業、5-1 節のブロック、7 節の `curl`、PR ごとの Yes）と、エージェント（`gh` のコマンド）。対象は cor-jp.com と griftai.org の 2 サイトです。
 
-この手順書は、corsweb（Cor-Incorporated/corsweb2024）と griftai（Cor-Incorporated/griftai）の `docs/analytics/runbook.md` に同じ文面で置いてあります。コードの変更は 2 つの PR に入っていて、どちらも 2026-11-06 に develop へ merge 済みです。corsweb は PR 497、griftai は PR 108 です。corsweb の release PR 503 は、2026-11-07T01:19:15Z（10:19 JST）に main へ merge しました。merge commit は `9d62a18ef5ac8cc1c94f11c8a136db04f4086b43` で、deploy は、その直後は実行中でした。griftai の release PR は 110 で、まだ open です。
+この手順書は、corsweb（Cor-Incorporated/corsweb2024）と griftai（Cor-Incorporated/griftai）の `docs/analytics/runbook.md` に同じ文面で置いてあります。コードの変更は 2 つの PR に入っていて、どちらも 2026-11-06 に develop へ merge 済みです。corsweb は PR 497、griftai は PR 108 です。corsweb の release PR 503 は、2026-11-07T01:19:15Z（10:19 JST）に main へ merge しました。merge commit は `9d62a18ef5ac8cc1c94f11c8a136db04f4086b43` で、deploy は 2026-11-07T01:25:04Z に成功しました（run `42323421644`）。griftai の release PR は 110 で、まだ open です。
 
 誰が手を動かすか:
 
@@ -27,32 +27,32 @@
 | 8 | エージェントと寺田さん | griftai の release PR を作り、merge する | 6-2 節 | 4 が終わっている |
 | 9 | 寺田さん | 本番の HTML とダッシュボードを見る | 7 節 | 7 と 8 が終わっている |
 
-2026-11-07 10 時台の時点で、0 から 6 は済んでいます。7 は、503 の merge まで済んでいます。0 と 5 は、develop に merge 済みです。1 から 4 と 6 は、寺田さんが実施しました。値は 0 節に書きました。Cloudflare の画面と GitHub の読み戻しで確かめた記録によります。残るのは、corsweb の deploy の確認（9）と、griftai の release（8）です。
+2026-11-07 10 時台の時点で、0 から 6 は済んでいます。7 は、503 の merge まで済んでいます。0 と 5 は、develop に merge 済みです。1 から 4 と 6 は、2026-11-07 に実施済みです。値は 0 節に書きました。Cloudflare の画面と GitHub の読み戻しで確かめた、実施記録によります。corsweb の deploy は成功しました。残るのは、cor-jp.com の本番の HTML の確認（9）と、griftai の release（8）です。
 
 merge の Yes は、PR ごとに、PR の番号を指して言います。エージェントが、その PR の `Reviewed-Head` か本文の `head: <sha>` を示します。
 
 ## 0. 何がどう変わるか（現在値 → 設定値）
 
-作業の前の値は 2026-11-06 に測りました。作業のあとの値は、2026-11-07 に寺田さんが登録した値です。corsweb の variable は、`gh variable list` で読み戻しました（2026-11-07T00:54:47Z）。Pages の変数は、寺田さんの記録によります。保存後に画面を再読み込みして、確かめています。
+作業の前の値は 2026-11-06 に測りました。作業のあとの値は、2026-11-07 に登録した値です。corsweb の variable は、`gh variable list` で値を読み戻しました。更新時刻は 2026-11-07T00:54:47Z です。Pages の変数は、実施記録によります。保存後に画面を再読み込みして、確かめています。
 
 | サイト | 計測 | 作業の前の値 | 登録した値（2026-11-07） | 値を置く場所 |
 |---|---|---|---|---|
 | cor-jp.com | Clarity | `z97a0rwaoh`（本番 HTML で確認）。secret `PUBLIC_CLARITY_ID` は 2026-11-06T03:34:46Z に更新済み | 変えない（`z97a0rwaoh`） | corsweb2024 の secret |
-| cor-jp.com | GA4 | なし。variable に `PUBLIC_GA4_ID` がない（variable は `CMS_DEPLOY_ENABLED` だけ） | `G-56XKQHYW4E`。プロパティ `cor-jp.com`（ID `562862691`）の Web ストリーム。2026-11-07T00:54:47Z に登録 | corsweb2024 の variable `PUBLIC_GA4_ID` |
+| cor-jp.com | GA4 | なし。variable に `PUBLIC_GA4_ID` がない（variable は `CMS_DEPLOY_ENABLED` だけ） | `G-56XKQHYW4E`。既存のプロパティ `Cor.`（ID `562862691`）を `cor-jp.com` に改名して再利用した。ストリームと測定 ID は変えていない。2026-11-07T00:54:47Z に登録 | corsweb2024 の variable `PUBLIC_GA4_ID` |
 | griftai.org | Clarity | `wk1nad97m0`。コードに直書き。GMO 所有の見込み（未確認） | `z9odztz8ov`。新しいプロジェクト `griftai.org` の Project ID | Cloudflare Pages の `griftai`、Production の変数 `PUBLIC_CLARITY_ID` |
 | griftai.org | GA4 | `G-3E8328E5V6`。コードに直書き。所有は未確認 | `G-RK7E60SN6X`。新しいプロパティ `griftai.org`（ID `563024737`）の Web ストリーム。旧 ID は、Cor. の管理権限を確認できなかったので使わない（4 節） | 同じく Production の変数 `PUBLIC_GA4_ID` |
 
 cor-jp.com は、503 が main に入った deploy（2026-11-07T01:19Z に開始）が成功したあと、本番に出ます。griftai.org は、griftai の release PR（110）が main に入り、Pages がビルドしたあとに出ます。
 
-2026-11-07 09:59 JST（00:59Z）の本番の HTML は、まだ作業の前の値でした。cor-jp.com は GA4 なしと `clarity.ms/tag/z97a0rwaoh`、griftai.org は `G-3E8328E5V6` と `wk1nad97m0` です（寺田さんの記録）。
+2026-11-07 09:59 JST（00:59Z）の本番の HTML は、まだ作業の前の値でした。cor-jp.com は GA4 なしと `clarity.ms/tag/z97a0rwaoh`、griftai.org は `G-3E8328E5V6` と `wk1nad97m0` です（実施記録）。
 
 - griftai の GitHub には secret も variable もありません（`gh secret list -R Cor-Incorporated/griftai` と `gh variable list -R Cor-Incorporated/griftai` は、2026-11-07 も、どちらも 0 件）。本番は Cloudflare Pages の Git 連携がビルドします。ビルド時の値は、GitHub ではなく Pages の設定に置きます。
-- Pages の Production には、`PUBLIC_GA4_ID` と `PUBLIC_CLARITY_ID` を Plain text で登録しました。Preview には入れていません。登録前は、この 2 つはありませんでした（寺田さんの記録）。この手順書の書き手は、Pages の画面を自分では読めていません。
+- Pages の Production には、`PUBLIC_GA4_ID` と `PUBLIC_CLARITY_ID` を Plain text で登録しました。Preview には入れていません。登録前は、この 2 つはありませんでした（実施記録）。この手順書の書き手は、Pages の画面を自分では読めていません。
 
 ## 1. 守る順序（飛ばすと計測が止まる、または開示なしで計測が始まる）
 
 1. griftai.org は、ID をコードから外します。Pages の Production に変数を入れる前に release すると、griftai.org の GA4 と Clarity が止まります。**5-2 節を、6-2 節より先に**します。
-2. cor-jp.com の GA4 は、プライバシーポリシーに Google Analytics の開示が入ってから有効にします。2026-11-06 の時点で、develop の ja のポリシー（`src/i18n/locales/ja.json`）に「Google Analytics」は 0 件でした。2026-11-07 01 時台に 499 が develop に入り、3 件になりました。開示の PR は別です。「Google Analytics」の開示を入れるのは、corsweb2024 の 499 です。**499 が develop に merge されるまで、5-1 節を実行しません。** 5-1 節のブロックは、develop の `ja.json` を読み、0 件のときは止まります。501 は 382 の続きで、ポリシー全体の改訂です。corsweb の release の前に入れます（当日の順番の 7）。
+2. cor-jp.com の GA4 は、プライバシーポリシーに Google Analytics の開示が入ってから有効にします。2026-11-06 の時点で、develop の ja のポリシー（`src/i18n/locales/ja.json`）に「Google Analytics」は 0 件でした。2026-11-06T16:05:22Z（2026-11-07 01:05 JST）に 499 が develop に入り、3 件になりました。開示の PR は別です。「Google Analytics」の開示を入れるのは、corsweb2024 の 499 です。**499 が develop に merge されるまで、5-1 節を実行しません。** 5-1 節のブロックは、develop の `ja.json` を読み、0 件のときは止まります。501 は 382 の続きで、ポリシー全体の改訂です。corsweb の release の前に入れます（当日の順番の 7）。
 3. PR の merge は 1 本ごとに寺田さんの Yes です。
 4. corsweb の release PR は、develop への merge がすべて終わってから作ります。release PR の head は develop そのものなので、develop に push があるたびに、main に要る承認（1 件）が取り消されます。
 
@@ -112,7 +112,7 @@ echo '<この節の 3 で取った Project ID>' | grep -E '^[A-Za-z0-9]+$'
 
 2026-11-07 の結果です。Analytics のプロパティ選択画面で、`G-3E8328E5V6` と `griftai` を検索しました。該当は確認できませんでした。これは GMO 所有の確かな証拠ではありません。Cor. の管理権限を確認できなかった、という結果です。
 
-判断がつかないときの扱いに従い、新しいプロパティ `griftai.org`（ID `563024737`）とストリームを作りました。測定 ID は `G-RK7E60SN6X` です。旧プロパティの履歴は、新しいプロパティに移していません（寺田さんの記録）。
+判断がつかないときの扱いに従い、新しいプロパティ `griftai.org`（ID `563024737`）とストリームを作りました。測定 ID は `G-RK7E60SN6X` です。旧プロパティの履歴は、新しいプロパティに移していません（実施記録）。
 
 ## 5. 値を登録する
 
@@ -196,7 +196,7 @@ gh pr view 497 -R Cor-Incorporated/corsweb2024 --json state,mergeCommit
 
 ファイル名だけを見ると、別の PR が同じファイルを変えても気づけません。そこで、PR ごとにも数えます。PR の数え方は、「Merge pull request #」の merge commit を見ます。squash や rebase で develop に入った PR は、数えられません。この repo は merge commit で運用していて、今の履歴にその形はありません。
 
-外れると、パスか PR の番号を出して止まります。止まったときは、その PR を見て、`release-pr-body.md` のマーカーが足りるかを、エージェントと寺田さんが判断します。
+外れると、パスか PR の番号を出して止まります。`want` の値は、2026-11-07 の release だけに合わせています。次の release では、構造パスを変える PR を確かめて、`want` と、本文の元の `release-pr-body.md` のマーカーを直します。止まったときは、その PR を見て、`release-pr-body.md` のマーカーが足りるかを、エージェントと寺田さんが判断します。
 
 作る前に、develop に宛てた開いている PR を見ます。draft でないものが残っていれば、merge が終わるのを待ちます。draft のうち、501 と 499 は、この release の前に merge する PR です（行 5）。それ以外の draft を release に入れるかは、寺田さんが決めます。
 
@@ -295,7 +295,7 @@ griftai は develop にも main にも、必須の check と承認の設定が�
 
 ファイル名だけを見ると、別の PR が同じファイルを変えても気づけません。そこで、PR ごとにも数えます。PR の数え方は、「Merge pull request #」の merge commit を見ます。squash や rebase で develop に入った PR は、数えられません。この repo は merge commit で運用していて、今の履歴にその形はありません。
 
-外れると、パスか PR の番号を出して止まります。止まったときは、その PR を見て、`release-pr-body.md` のマーカーが足りるかを、エージェントと寺田さんが判断します。
+外れると、パスか PR の番号を出して止まります。`want` の値は、2026-11-07 の release だけに合わせています。次の release では、構造パスを変える PR を確かめて、`want` と、本文の元の `release-pr-body.md` のマーカーを直します。止まったときは、その PR を見て、`release-pr-body.md` のマーカーが足りるかを、エージェントと寺田さんが判断します。
 
 作る前に、develop に宛てた開いている PR を見ます。draft でないものが残っていれば、merge が終わるのを待ちます。draft を release の前に入れるかは、寺田さんが決めます。
 
