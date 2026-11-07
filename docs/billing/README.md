@@ -13,7 +13,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [subscribe.sh](subscribe.sh) | 顧客 1 社の契約と毎月末の請求書（1C 章の作り方 B）。`customer`・`find`・`contract`・`card-setup`・`cancel`・`invoice`・`charge`・`simulate`・`status`。既定は dry-run |
 | [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 209 項目、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 235 項目、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -226,7 +226,9 @@ Stripe の公式文書（2026-11-07 に読んだ）で分かったこと:
 5. カードが保存されたことを確かめる（`subscribe.sh status` の `CARD pm_…`）。
 6. 製品側の準備: XESM は `contract-to-use.md` の手順 3〜7、business-dossier は `docs/deploy/onboarding.md`。
 7. Access の許可メールに、顧客の利用者を足す（**公開スイッチ。寺田のみ**）。初回のログインを見届ける。
-8. 毎月: 月末の翌日に `invoice --month <先月>`、期限の日（翌月末日）にカードの顧客だけ `charge --month <その月>`（runbook M1〜M3）。
+8. 毎月: 月末の翌日に `invoice --month <先月>`、期限の日（翌月末日）にカードの顧客だけ `charge --month <その月>`（runbook M1〜M3）。今月の分は締めの日（月の末日）からしか作れない。
+9. 振込の顧客: 請求書の `footer` に当社の振込先を載せる（値は環境変数 `COR_BILLING_TRANSFER_FOOTER`。リポジトリに書かない。無ければ `invoice` は止まる）。入金を確かめたら `mark-paid --month <その月> --paid-on <入金日>` で、その請求書を Stripe の外で支払い済みにする（`invoices/pay` の `paid_out_of_band=true`。引き落とさない [33]）。open のままだと、請求書のページから二重に払われうる。
+10. 確定のあと送付で止まった請求書は、やり直しで送り直す（送った記録は Customer の metadata `invoice_sent`。請求書の metadata を確定のあと変えられるかは文書に無いため）。
 
 ## 6. 解約 → 入口を閉じる
 

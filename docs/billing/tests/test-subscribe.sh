@@ -136,7 +136,7 @@ expect "cancel の dry-run は終了日（1 か月後の同じ日）を出す" 0
 run status --customer cus_x --accepted "$TODAY" --mode test
 expect "--accepted は cancel でだけ使う" 64 0 "cancel でだけ使う"
 run contract --customer cus_x --service xesm --start 2026-11-15 --devfee-count 3 --month "$LAST"
-expect "--month は invoice と charge でだけ使う" 64 0 "invoice charge でだけ使う"
+expect "--month は invoice と charge でだけ使う" 64 0 "invoice charge mark-paid でだけ使う"
 run contract --customer cus_x --service xesm --start 2026-11-15 --devfee-count 3 --clerk-org org_abc123
 expect "--clerk-org は customer でだけ使う" 64 0 "customer でだけ使う"
 run status --customer cus_x
@@ -282,8 +282,9 @@ done
 # 7. invoice（先月分。契約は先月 15 日に開始、開発費 12 回）
 INV_META="$(meta card "$LAST-15" 12)"
 FAKE_CUST_META="$INV_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
-expect "invoice は請求書を作り、確定して送る" 0 5 "CHECK ok: 小計 18000 円（税別）・明細 2 行は計算と一致"
-eq "POST の順は draft → 明細 → finalize → send" "$(post_seq)" "/v1/invoices /v1/invoiceitems /v1/invoiceitems /v1/invoices/in_new/finalize /v1/invoices/in_new/send"
+expect "invoice は請求書を作り、確定して送る" 0 6 "CHECK ok: 小計 18000 円（税別）・明細 2 行は計算と一致"
+eq "POST の順は draft → 明細 → finalize → send → 送った記録" "$(post_seq)" "/v1/invoices /v1/invoiceitems /v1/invoiceitems /v1/invoices/in_new/finalize /v1/invoices/in_new/send /v1/customers/cus_x"
+check_arg "送ったことを Customer の metadata に書く" "metadata[invoice_sent]=$LAST:in_new"
 check_arg "請求書は send_invoice" "collection_method=send_invoice"
 check_arg "支払期限は翌月末日 23:59:59 JST（$DUE_LAST）" "due_date=$DUE_LAST"
 check_arg "auto_advance=false" "auto_advance=false"
@@ -296,9 +297,17 @@ check_arg "明細は作った下書きに付ける" "invoice=in_new"
 check_arg "初月の期間は開始日の 0:00 JST から" "period[start]=$(jst_epoch "$LAST-15 00:00:00")"
 [ "$(count "$LOG" '^STDIN_AUTH no')" -eq 0 ] && ok "鍵は全部の呼出しで標準入力から渡る" || ng "標準入力に鍵の無い呼出しがある"
 printf '%s' "$LOG" | grep '^ARGV' | grep -qF "$DUMMY_KEY" && ng "invoice で鍵が curl の引数に載った" || ok "invoice でも鍵は curl の引数に載らない"
-FAKE_CUST_META="$INV_META" FAKE_INV_STATE=open run invoice --customer cus_x --month "$LAST" --apply --mode test
+INV_META_SENT="$(jq -c --arg s "$LAST:in_open" '. + {invoice_sent: $s}' <<<"$INV_META")"
+FAKE_CUST_META="$INV_META_SENT" FAKE_INV_STATE=open run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "同じ月の請求書があれば作らない（F2: 2 枚目）" 0 0 "OK invoice cus_x: $LAST 分の請求書 in_open は既にある"
-FAKE_CUST_META="$INV_META" FAKE_INV_STATE=open FAKE_INV_WHERE=list FAKE_INV_MONTH="$LAST" run invoice --customer cus_x --month "$LAST" --apply --mode test
+# 確定のあと送付で止まった請求書（送った記録が無い）は、やり直しで送り直す（独立レビューの MEDIUM）
+FAKE_CUST_META="$INV_META" FAKE_INV_STATE=open run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "送った記録の無い確定済みの請求書は送り直す" 0 2 "SENT in_open $LAST: 送り直した"
+eq "送り直しは send → 送った記録" "$(post_seq)" "/v1/invoices/in_open/send /v1/customers/cus_x"
+FAKE_CUST_META="$(jq -c --arg s "2026-01:in_old" '. + {invoice_sent: $s}' <<<"$INV_META")" FAKE_INV_STATE=open run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "別の月の記録しか無ければ送り直す" 0 2 "SENT in_open"
+check_arg "記録は新しい順に足す" "metadata[invoice_sent]=$LAST:in_open,2026-01:in_old"
+FAKE_CUST_META="$INV_META_SENT" FAKE_INV_STATE=open FAKE_INV_WHERE=list FAKE_INV_MONTH="$LAST" run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "検索に出る前でも一覧で見つけて作らない" 0 0 "in_open は既にある"
 FAKE_CUST_META="$INV_META" FAKE_INV_STATE=two run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "同じ月の請求書が 2 件なら exit 3" 3 0 "請求書が 2 件ある"
@@ -308,9 +317,9 @@ FAKE_CUST_META="$INV_META" FAKE_SUBTOTAL_BUMP=1 run invoice --customer cus_x --m
 expect "小計が計算と違えば確定しない" 3 3 "確定しない"
 printf '%s' "$LOG" | grep -q '^CALL POST .*/finalize' && ng "小計が違うのに確定した" || ok "小計が違えば finalize を呼ばない"
 FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft FAKE_DRAFT_SUBTOTAL=18000 FAKE_DRAFT_LINES=2 run invoice --customer cus_x --month "$LAST" --apply --mode test
-expect "明細まで済んだ下書きは確定して送る" 0 2 "INVOICE in_draft"
+expect "明細まで済んだ下書きは確定して送る" 0 3 "INVOICE in_draft"
 FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft run invoice --customer cus_x --month "$LAST" --apply --mode test
-expect "明細の無い下書きには明細を足して送る" 0 4 "INVOICE in_draft"
+expect "明細の無い下書きには明細を足して送る" 0 5 "INVOICE in_draft"
 FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft FAKE_DRAFT_SUBTOTAL=10000 FAKE_DRAFT_LINES=1 run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "途中までの下書きは確定しない" 3 0 "確定しない"
 FAKE_CUST_META="$(meta card)" run invoice --customer cus_x --month "$LAST" --apply --mode test
@@ -320,7 +329,7 @@ expect "開始の月より前の月は作らない（F2）" 0 0 "請求するも
 FAKE_CUST_META="$(meta card "$(ym_shift "$LAST" -6)-15" 12 "$(ym_shift "$LAST" -1)-05")" run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "終了の月より後の月は作らない（F2）" 0 0 "請求するものが無い"
 FAKE_CUST_META="$(meta card "$(ym_shift "$LAST" -5)-15" 12 "$LAST-05")" run invoice --customer cus_x --month "$LAST" --apply --mode test
-expect "終了の月（6 か月目）には残りを足す" 0 7 "TOTAL $LAST 126000 円（税別、明細 4 行）"
+expect "終了の月（6 か月目）には残りを足す" 0 8 "TOTAL $LAST 126000 円（税別、明細 4 行）"
 check_arg "終了の月に開発費の残り 6 回 = 48,000 円" "amount=48000"
 FAKE_CUST_META="$INV_META" FAKE_REPLAY=1 FAKE_INV_GET_STATUS=void run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "replay で前回の請求書が下書きでなければ exit 3" 3 1 "前回の結果が返ったが、今の状態が期待と違う"
@@ -418,7 +427,7 @@ FAKE_CUST_META="$BF_META" run invoice --customer cus_x --month "$LAST" --apply -
 expect "bill_from より前の月の invoice は止める（その月は請求書払いで請求済み）" 3 0 "より前を請求しない"
 BF_META2="$(jq -c --arg b "$LAST" '. + {contract_xesm_bill_from: $b}' <<<"$(meta card "$TWO_AGO-10" 12)")"
 FAKE_CUST_META="$BF_META2" run invoice --customer cus_x --month "$LAST" --apply --mode test
-expect "bill_from の月からは請求する（2 か月目として 1 か月分 + 開発費 2 回目）" 0 5 "CHECK ok: 小計 18000 円"
+expect "bill_from の月からは請求する（2 か月目として 1 か月分 + 開発費 2 回目）" 0 6 "CHECK ok: 小計 18000 円"
 printf '%s\n' "$LOG" | grep '^ARGV' | grep -qF '2/12 回目' && ok "bill_from の月は初月の扱いにしない（開発費は元の開始月から数えて 2 回目）" || ng "開発費の明細に 2/12 回目が無い"
 check_no_arg "bill_from の月に初月の明細を作らない" "初月"
 # 元の開始日から数える（独立レビューの例）: 2026-06-10 開始、bill_from 2026-11、2027-03-15 終了。
@@ -430,6 +439,57 @@ has_line "bill_from より前の月（10 月）は 0" "TOTAL 2026-10 0"
 has_line "bill_from の月（11 月）は 1 か月分（初月の扱いにしない）" "LINE 2026-11 usage 10000 "
 has_line "最後の月は日割り（15/31 日 = 4,838）" "LINE 2027-03 usage_prorated 4838 "
 has_line "残りの期間分は元の開始日から数える（25,162）" "LINE 2027-03 remaining_usage 25162 "
+
+# 15. 独立レビューの MEDIUM（寺田 2026-11-07「直す」）: 今月の分は締めの日（月の末日）からだけ作る
+END_THIS="$(TZ=Asia/Tokyo date -r "$(($(jst_epoch "$NEXT-01 00:00:00") - 1))" '+%Y-%m-%d' 2>/dev/null || TZ=Asia/Tokyo date -d "@$(($(jst_epoch "$NEXT-01 00:00:00") - 1))" '+%Y-%m-%d')"
+run invoice --customer cus_x --month "$THIS"
+if [ "$TODAY" = "$END_THIS" ]; then
+  expect "今月の末日（締めの日）は今月の分を作れる" 0 0 "PLAN invoice"
+else
+  expect "今月の分は締めの日（$END_THIS）より前は exit 64" 64 0 "締めの日（$END_THIS）から作る"
+fi
+run invoice --customer cus_x --month "$LAST"
+expect "先月の分はいつでも作れる" 0 0 "PLAN invoice"
+
+# 16. 振込の顧客の請求書には、振込先（COR_BILLING_TRANSFER_FOOTER）を footer に入れる。無ければ作らない
+TR_META="$(meta transfer "$LAST-15" 12)"
+FAKE_CUST_META="$TR_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "振込先の無い振込の顧客の請求書は作らない" 3 0 "振込先（環境変数 COR_BILLING_TRANSFER_FOOTER）が無い"
+COR_BILLING_TRANSFER_FOOTER="お振込先: テスト銀行 本店 普通 0000000" FAKE_CUST_META="$TR_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "振込の顧客の請求書は作る" 0 6 "NOTE 振込の顧客: 請求書の footer に振込先"
+check_arg "振込先を footer に入れる" "footer=お振込先: テスト銀行 本店 普通 0000000"
+COR_BILLING_TRANSFER_FOOTER="お振込先: テスト銀行" FAKE_CUST_META="$(meta card "$LAST-15" 12)" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "カードの顧客の請求書も作る" 0 6 "CHECK ok"
+check_no_arg "カードの顧客の請求書に振込先を入れない" "footer="
+
+# 17. mark-paid: 振込を受けたら、その月の請求書を Stripe の外で支払い済みにする（引き落とさない）
+run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY"
+expect "mark-paid の dry-run は paid_out_of_band を出す" 0 0 "paid_out_of_band=true"
+run mark-paid --customer cus_x --month "$LAST" --paid-on "$TOMORROW"
+expect "未来の入金日は exit 64" 64 0 "未来の日付は使わない"
+run mark-paid --customer cus_x --month "$LAST"
+expect "mark-paid には入金日が要る" 64 0 "mark-paid には --paid-on が要る"
+run charge --customer cus_x --month "$LAST" --paid-on "$TODAY"
+expect "--paid-on は mark-paid でだけ使う" 64 0 "--paid-on は mark-paid でだけ使う"
+FAKE_CUST_META="$(meta card "$LAST-15" 12)" FAKE_INV_STATE=open run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "カードの顧客は mark-paid しない" 3 0 "transfer でない"
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "振込の顧客の open の請求書を支払い済みにする" 0 1 "MARKED_PAID in_open $LAST"
+check_arg "Stripe の外での支払いとして記録する" "paid_out_of_band=true"
+check_no_arg "mark-paid はカードで払わない" "payment_method="
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=paid run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "支払い済みなら何もしない" 0 0 "OK mark-paid"
+FAKE_CUST_META="$TR_META" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "請求書が無ければ exit 3" 3 0 "請求書が無い"
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_PAY_STATUS=open run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "支払い済みにならなければ exit 3" 3 1 "支払い済みにならなかった"
+SCN=live FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode live
+expect "本番の mark-paid は live と打たなければ何もしない" 64 0 "本番は端末から実行する"
+# 独立レビューの HIGH: 月を取り違えて新しい月を支払い済みにしない（支払い済みは取り消せない）
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$TWO_AGO" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: $TWO_AGO（in_older）"
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$THIS" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "後の月の open の請求書は止める理由にならない" 0 1 "MARKED_PAID in_open $LAST"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
