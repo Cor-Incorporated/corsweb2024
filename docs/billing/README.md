@@ -160,8 +160,8 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 決まっていること（寺田、2026-11-07）: 解約は、当社がお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は月末）に終わる。例: 11 月 5 日に受理したら 12 月 5 日。それまでは日割りで請求し、支払い済みの料金は返金しない。開発費は最初の 1 年（12 回）で回収する。宣言は `plans.json` の `cancellation`（`notice_months: 1`、`final_period: prorated`、`refund: none`）で、特商法ページの解約条件の行とは `tests/test-tokushoho-link.sh` が結ぶ。
 
 1. 解約の申し出を受理したら、寺田が basic の subscription に終了日時を付ける（`subscribe.sh cancel --accepted <受理日>`）。終了日時は「受理日の 1 か月後の同じ日の終わり」（翌日の日本時間 0:00）で、`cancel_at` に入れる [10]。スクリプトは basic 以外（開発費）を止めない。
-   - 終了日時は今の期間の終わり以降に来る（受理日は今の期間の中にあり、期間は 1 か月なので）。`cancel_at` が次の期間に入ると、Stripe はその期間を必ず日割りで請求する（`proration_behavior` では止められない）[28]。按分は秒単位 [29]。
-   - Stripe は解約で自動の返金をしない。終了日時が支払い済みの期間の中だと差額が顧客の残高に戻る [29] ので、スクリプトはその場合に止まる（受理日の記録が遅れたとき）。
+   - 終了日時は、ふつうは今の期間の終わり以降に来る（受理日は今の期間の中にあり、期間は 1 か月なので）。ただし請求日が 29〜31 日の顧客は例外がある。Stripe は短い月には末日に請求し、次の月はもとの日に戻るため、例えば請求日 31 日で 2 月 28 日に更新された日に受理すると、終了日は 3 月 28 日、支払い済みの期間は 3 月 31 日までになる（独立レビューの再現、2026-11-07）。`cancel_at` が次の期間に入ると、Stripe はその期間を必ず日割りで請求する（`proration_behavior` では止められない）[28]。按分は秒単位 [29]。
+   - Stripe は解約で自動の返金をしない。終了日時が支払い済みの期間の中だと差額が顧客の残高に戻る [29] ので、スクリプトはその場合に止まる（受理日の記録が遅れたときと、上の請求日 29〜31 日のとき）。止まったあとどう扱うかは未決（12 章の 7）。
    - 終了日を含む期間の請求額は、まだ実測していない（test clock で測る手順は無い。T7）。
 2. 終了日時に subscription が終わる（通知 `customer.subscription.deleted` [16]）。**先に Access の許可から利用者を外し**、入口を閉じる。
 3. 製品側の利用者を無効にする。XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
@@ -230,7 +230,7 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 17. 残高の `livemode`: https://docs.stripe.com/api/balance/balance_object
 18. サンドボックス: https://docs.stripe.com/sandboxes
 19. test clock（作成・進め方・上限）: https://docs.stripe.com/api/test_clocks/advance 、https://docs.stripe.com/billing/testing/test-clocks/api-advanced-usage
-20. subscription の更新（`cancel_at_period_end`）: https://docs.stripe.com/api/subscriptions/update
+20. subscription の更新（`cancel_at_period_end`。2026-11-07 から解約は `cancel_at` を使う [28]）: https://docs.stripe.com/api/subscriptions/update
 21. テスト用のカード（`pm_card_visa`、`4242 4242 4242 4242`）: https://docs.stripe.com/testing
 22. Clerk Billing の概要（USD だけ、税と VAT に未対応、月払いか年払い、3DS に未対応、返金に未対応）: https://clerk.com/docs/billing/overview
 23. Clerk Billing の組織のプラン（`has()`、既存の Stripe の商品と同期しない）: https://clerk.com/docs/nextjs/guides/billing/for-b2b
@@ -249,3 +249,4 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 4. 開発費の途中解約のとき（最初の 1 年のうちに basic を解約したとき）、残りの回数を続けて請求するか、一括で請求するか。
 5. 支払いが失敗してから入口を閉じるまでの日数。
 6. 開始月から今月までの各月を、どの方法（請求書か Stripe か）で請求するか（8 章。顧客ごとの数字は非公開の台帳）。
+7. 請求日が 29〜31 日の顧客で、終了日時が支払い済みの期間の中に来たとき（6 章）、どう扱うか。特商法ページの支払時期の「初回と同じ日」も、短い月には末日になる。

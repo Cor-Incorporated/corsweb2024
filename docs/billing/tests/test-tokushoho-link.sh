@@ -36,7 +36,8 @@ check() {
   check_cancellation "$plans" "$page"
 }
 
-# en / zh / ko / es の同じページ（src/pages/<lang>/legal/tokushoho.astro）の月額と、日本法・日本語版が正本の注記
+# en / zh / ko / es の同じページ（src/pages/<lang>/legal/tokushoho.astro）の月額だけを見る。
+# 解約条件と、日本法・日本語版が正本の注記は見ていない（ja の解約条件だけを check_cancellation が見る）
 check_locales() {
   local amount="$1" page="$2" dir lang file want
   dir="$(dirname "$page")"
