@@ -10,11 +10,10 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 |---|---|
 | [plans.json](plans.json) | 商品・価格・税率の宣言（機械可読）。金額は税別の円 |
 | [apply-plans.sh](apply-plans.sh) | plans.json を読んで Stripe に冪等に作る。既定は dry-run（通信しない・鍵を読まない） |
-| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約（Customer・basic・開発費の schedule）、状態の読取、basic の期間末の解約。既定は dry-run |
-| [verify-installments.sh](verify-installments.sh) | テストモード専用。test clock で、開発費が N 回で止まることと、basic の最初の支払いでカードが保存されることを実測する |
-| [lib.sh](lib.sh) | 3 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し） |
-| [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 43 項目、`test-subscribe.sh` 71 項目、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）。CI では回らないので手で回す |
+| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約と毎月末の請求書（1C 章の作り方 B）。`customer`・`find`・`contract`・`card-setup`・`cancel`・`invoice`・`charge`・`simulate`・`status`。既定は dry-run |
+| [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
+| [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 235 項目、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -25,6 +24,8 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 - 追加の決定（寺田、2026-11-06 14:0x）: business-dossier と XESM のアカウントは Clerk で管理する。Clerk のアカウントと Stripe のサブスクリプションを紐づけ、今後の Cor. のサービスの共通の基盤にする（1A 章）。
 - 1A 章の形（身元は Clerk の組織、課金は自前の Stripe、Clerk Billing は使わない、紐づけは双方の metadata、入口は段階 0 → 1 → 2）で進める（寺田、2026-11-06 14:5x）。
 
+- 請求の形の決定（寺田、2026-11-07）: 全ての顧客を月末締め・翌月末払いにそろえ、初月は 1 か月分、最低利用期間は契約から 1 年（その後は月単位）、解約は受理日の 1 か月後の同じ日に終わり（最後の月は日割り）、終了日が 1 年未満なら残りの期間分の利用料と開発費の残りを一括で請求する（1C 章）。Stripe での作り方は B（毎月末に請求書）に決まった。B は `subscribe.sh` に実装した（1C 章の「実装の状態」）。
+
 ## 1A. 身元は Clerk、課金は Stripe
 
 身元の正本は Clerk（利用者と組織）、課金の正本は Stripe にする。2 つを顧客の組織ごとに紐づけたものが、Cor. のサービスに共通の契約の基盤になる。business-dossier と XESM は、その上に載る最初の 2 つのサービス。
@@ -33,10 +34,10 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 Clerk（身元の正本）
   組織 org_…（顧客の会社）── privateMetadata に stripe_customer_id ──▶ Stripe（課金の正本）
     └ 利用者（メールアドレス）                                          Customer cus_…（metadata.clerk_org_id）
-        │                                                                 ├ basic の subscription（サービスごと）
-        │                                                                 └ 開発費の schedule（N 回で止まる）
+        │                                                                 ├ 契約の metadata（サービスごとの開始日・開発費の回数・終了日）
+        │                                                                 └ 毎月末の請求書（その月の利用料・開発費の 1 回分）
         ▼                                                                       │
-Cloudflare Access（入口）                                              支払い → 開ける / 解約 → 閉じる
+Cloudflare Access（入口）                                              契約 → 開ける / 解約 → 閉じる
   今週: 許可メールに利用者を足す（寺田の手）                          （今週は寺田の手。来週以降は通知で）
   来週以降: Clerk を OIDC の IdP にして、Clerk のログインで通す
         │
@@ -52,12 +53,12 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 |---|---|---|
 | 円で請求 | 不可。請求の通貨は USD だけ [22] | 可。JPY はゼロ小数 [4] |
 | 消費税（税別 10%） | 不可。税と VAT に未対応 [22] | 可。手動の税率（`tax_type=jct`）[5] |
-| 12 回で止まる開発費 | 文書に記載なし（未確認）。期間は月払いか年払い [22] | 可。schedule の `duration` + `end_behavior=cancel` [9]（T5 で実測） |
+| 12 回で止まる開発費 | 文書に記載なし（未確認）。期間は月払いか年払い [22] | 可。毎月の請求書の明細で、契約した回数まで数える（`subscribe.sh invoice`。3 章） |
 | 組織（B2B）のプラン | 可。組織が持つプラン [23] | 可。Stripe の Customer を組織ごとに作り、Clerk の組織と紐づける |
 | プランで使える機能を切る | 可。`has({ plan })`・`has({ feature })` [23] | 自前で持つ（Clerk の組織の metadata に契約中のサービスを書き、製品側で読む。来週以降） |
 | 既存の Stripe の商品と価格 | 使えない。Clerk のプランは Stripe の商品と同期しない [23] | plans.json の商品と価格をそのまま使う |
 | 手数料 | Stripe の手数料に加えて 0.7% [24] | Stripe の手数料だけ |
-| 3D セキュア | 未対応。3DS の確認が要る支払いは失敗する [22] | Stripe の支払いページで扱える（日本のカードでの動きは T6 で確かめる） |
+| 3D セキュア | 未対応。3DS の確認が要る支払いは失敗する [22] | カードの保存は Checkout のページ（`mode=setup`）で行う。期限の日に当社が保存したカードで払うとき、日本のカードで追加の確認を求められるかは**未実測**（T で確かめる） |
 
 紐づけ方:
 
@@ -69,7 +70,7 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 
 | 段階 | 時期 | 入口 | 支払いとの結びつけ |
 |---|---|---|---|
-| 0 | 今週 | Cloudflare Access の許可メール（XESM の `contract-to-use.md` 手順 8、business-dossier の `onboarding.md`） | 寺田が支払いを確かめてから、手でメールを足す（5 章） |
+| 0 | 今週 | Cloudflare Access の許可メール（XESM の `contract-to-use.md` 手順 8、business-dossier の `onboarding.md`） | 寺田が契約とカードの保存を確かめてから、手でメールを足す（5 章） |
 | 1 | 来週以降 | Clerk を OIDC の IdP にして Access に登録する。Clerk は OAuth 2.0 / OIDC の提供者になれる [26]。Access の generic OIDC は Client ID・Client secret・Auth URL・Token URL・Certificate URL（JWKS）を要る [27] | Access のポリシーはメール（Emails）か OIDC の claim で絞れる [27]。組織の id（`org_id`）を claim に入れる `user:org:read` のスコープを Access が要求できるかは**未確認** [26][27] |
 | 2 | その後 | 製品が Clerk で直接ログインする（XESM は Keycloak に Clerk を外部の IdP としてつなぐ、business-dossier はローカル認証を Clerk に置き換える） | 製品が Clerk の組織の metadata（契約中のサービス）を読んで機能を切る |
 
@@ -80,9 +81,86 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 1. Clerk の組織（organization）の private metadata に、バックエンドから `stripe_customer_id` を書けること。読んだのは利用者（user）の metadata の文書だけ [25]。
 2. Cloudflare Access が、Clerk に `user:org:read` のスコープを要求し、`org_id` の claim でポリシーを絞れること。Access の文書の「OIDC のスコープに対応しない」という一文の読み方が定まらない [27]。満たせないときは、段階 1 のポリシーをメール（Emails）で絞る。
 
+## 1C. 請求の形（寺田、2026-11-07 の決定）
+
+### 決まったこと
+
+- 全ての顧客を、月末締め・翌月末払いにそろえる。初月は、利用の開始日にかかわらず 1 か月分を請求する（開発費用の回収のため）。
+- 最低利用期間は契約から 1 年。その後は月単位の契約で、1 年ごとの自動更新にはしない。
+- 解約は、受理日の 1 か月後の同じ日（同じ日が無い月は、その月の末日）に終わる。終了日を含む月の利用料は、終了日までの日割りで計算し、その月の末日の締めで請求する（2026-11-07 11:4x。11:3x の「受理した月の末日」はやめた）。
+- 終了日が契約から 1 年未満なら、残りの期間分の利用料と、設計開発費用の分割の残りを、終了日を含む月の末日の締めで一括して請求する。どちらも違約金ではなく、契約した対価の残りとして扱う。ページでも「解約手数料」の語は使わない。
+- 根拠: 顧問弁護士との MTG（tl;dv 6ae826bc…）で、1 年契約で途中解約時に残りの期間分を支払う内容は問題ない範囲、との見解を得た（寺田 2026-11-07 了承済み扱い）。
+- 注記: テスター（無償や割引の試用）を設けるときは、解約料を設けず、本契約と別の書面にする。
+- Stripe での作り方は B（下の表）に決まった（寺田 2026-11-07 11:4x）。
+- 宣言は `plans.json` の `billing`（`closing: month_end`、`payment_due: end_of_next_month`、`first_month: full_month`）、`minimum_term`（`months: 12`、`on_early_termination: remaining_term_fees`、`dev_fee_on_early_termination: remaining_lump_sum`）、`cancellation`（`ends: accepted_plus_notice`、`notice_months: 1`、`final_period: prorated`、`refund: none`）。特商法ページの支払時期と解約条件の行とは、`tests/test-tokushoho-link.sh` が結ぶ。
+
+### 実装の状態
+
+**B は実装した（2026-11-07）。** `lib.sh` の `IMPLEMENTED_BILLING_CLOSING` は `month_end` で、`plans.json` の `billing.closing` と同じ。2 つは `tests/test-subscribe.sh` が結ぶ（片方だけ変えると、両方の値を出して落ちる）。前の形（`same_day_advance`）の写しを `--plans` で渡すと、新しいサブコマンドはテストモードでも本番でも、dry-run でも何もせずに止まる（exit 3）。前の形の部品（`basic`・`devfee`・前の `cancel`、`verify-installments.sh`）は外した。
+
+契約と請求の記録は、Stripe の Customer の metadata に置く（subscription は使わない）。
+
+| metadata | 書くサブコマンド | 中身 |
+|---|---|---|
+| `payment` | `customer --payment` | `card`（期限の日に当社が保存したカードで払う）か `transfer`（請求書のとおり振り込んでもらう） |
+| `contract_<サービス>_start` | `contract --start` | 契約の開始日。開始の月を 1 か月目と数える |
+| `contract_<サービス>_devfee_count` | `contract --devfee-count` | 開発費の回数（0〜12）。開始の月から 1 回ずつ |
+| `contract_<サービス>_end` | `cancel --accepted` | 終了日（受理日の 1 か月後の同じ日） |
+| `card_setup_session` | `card-setup` | カードを保存する Checkout のページの id（`charge` がここからカードをたどる） |
+
+毎月の流れ:
+
+1. 月末の翌日に、寺田が顧客ごとに `invoice --month <先月>` を実行する。明細は `lib.sh` の `billing_lines` が計算する（`simulate` も同じ関数を使う）。サービスごとに、その月の利用料（開始の月は 1 か月分、終了の月は日割り）、開発費の 1 回分、終了の月が最低利用期間の中なら残りの期間分の利用料と開発費の残り。円未満は切り捨て。明細ごとに消費税と期間を付ける。
+2. スクリプトは draft を作り、明細を足し、小計（税別）と明細の数を計算と照らしてから確定し（finalize）、送る（send）。違えば確定しない。同じ顧客・同じ月の請求書が既にあれば作らない（metadata の `billing_month` で探す）。作れるのは今月か先月の分だけ。
+3. 支払期限は翌月末日の 23:59:59（日本時間）。カードの顧客は、期限の日に寺田が `charge --month <その月>` を実行する（保存したカードで `invoices/pay`）。期限の日より前と、振込の顧客には払わない。
+
+テストモードでまだ測っていないこと（**未実測（T で確かめる）**）:
+
+- 請求書のメール。テストモードでは送られない（Stripe の文書）。本番で最初の 1 通を寺田が確かめる。
+- `invoices/pay` の成功。偽の応答でしか通していない。
+- Checkout の setup のあと、カードが顧客に付くか（`charge` が SetupIntent の `payment_method` で払えるか）。
+- 明細ごとの消費税の端数（今の金額では 10% で端数が出ないが、日割りと残りの期間分では出る。切り捨てか四捨五入かは Stripe の計算）。
+- `due_date` が未来である必要があるか（文書に記載が無い。未確認）。作れる月を今月と先月に限っているので、期限はいつも今月末か来月末で、未来になる。
+- invoice item の `customer` と invoice の `currency` は、2026-11-07 に確かめた API の一覧に入っていない（未照合）。テストモードで 400 が出たら、この 2 つを疑う。
+
+### Stripe での作り方（B に決まった）
+
+Stripe の公式文書（2026-11-07 に読んだ）で分かったこと:
+
+- 毎月の末日に請求の区切りを置ける（`billing_cycle_anchor_config[day_of_month]=31`。31 日が無い月は末日）[30]。
+- 定額の subscription は、いつも期間の初めに前払いで請求される。後払い（期間が終わってから請求）は、使用量に応じた価格だけに書かれている [30]。
+- 期間の途中で始めて `proration_behavior=none` にすると、最初の区切りまでは無料になる。最初の短い期間に 1 か月分を請求する方法は書かれていない [30]。
+- カードの自動引き落とし（`charge_automatically`）は、請求書の確定から遅らせられない [31]。請求書払い（`send_invoice`）は、顧客が請求書のページか振込で払う [31]。
+- 単発の請求書には支払期限の日時（`due_date`）を付けられる。請求書の明細には期間と税率を付けられる [32]。開いている請求書を、保存したカードで当社から払える（`POST /v1/invoices/{id}/pay`）[33]。
+
+| | 作り方 | 良い点 | 弱い点 |
+|---|---|---|---|
+| **B（決定）** | subscription を使わず、毎月末日に顧客ごとの請求書を 1 枚作る（その月の利用料、初月は 1 か月分、最後の月は日割り、開発費の 1 回分、終了日が 1 年未満なら残りの期間分の利用料と開発費の残りの一括）。支払期限は翌月末日（`due_date`）。カードの顧客は、期限の日に保存したカードで当社が払う（`invoices/pay`）。振込の顧客は請求書のとおり | 決まったことを全部そのまま書ける。今の請求書払いの顧客とも同じ形になる | 毎月末と毎月の期限の日に、スクリプトを動かす人か仕組みが要る（初めは寺田、あとで自動化）。カードを最初に保存する手順（Checkout の setup など）を新しく作る |
+| 代替 A（採らない） | subscription のまま、区切りを毎月末日にし、カードを自動で引き落とす | Stripe の標準の動きで、毎月の作業が無い | 前払いになる（月末に翌月分を払う）。「翌月末払い」と書けない |
+| 代替 C（採らない） | subscription のまま、区切りを毎月末日にし、請求書払い（`send_invoice`、`days_until_due` 30 日前後）にする | 毎月の作業が少ない | 前払いの請求書に期限を付ける形で、明細の期間は翌月になる。期限は日数でしか書けない |
+
+### 残りの期間分の利用料と開発費の残りの数え方（推奨。寺田に確かめる）
+
+- 契約の月（初月。短くても 1 か月分）を 1 か月目と数え、12 か月目の末日までを最低利用期間とする（「ご契約から 1 年間」をこう数える）。
+- 最後の月の日割り = 10,000 円 × 終了日の日にち ÷ その月の日数、税別、円未満は切り捨て。
+- 残りの期間分の利用料 = max(0, 10,000 円 × 12 − 終了日までに請求した利用料（初月は 1 か月分、最後の月は日割り）)、税別。終了日が 12 か月目の末日より後なら 0。
+- 開発費の残り = 8,000 円 × max(0, 契約した回数 − 終了日を含む月までに請求した回数)、税別。残りの期間分の利用料と同じ請求書で一括。
+- 例（仮の数字）: 11 月 15 日に契約（11 月が 1 か月目）、3 月 5 日に受理 → 4 月 5 日に終了。利用料は 11〜3 月の 5 か月分 50,000 円と、4 月の日割り 10,000 × 5 ÷ 30 = 1,666 円。残りの期間分の利用料 = 120,000 − 51,666 = 68,334 円。開発費は 11〜4 月の 6 回を請求済みなら、残り 6 回 = 48,000 円。4 月末の締めの請求書に足し、5 月末が支払期限。
+- 残りの期間分の利用料と開発費の残りに消費税をかけるかは、税理士に確かめる（12 章の 2 と同じ相談）。どちらも対価の残りなので、毎月の利用料と同じく課税と見るのが自然（未確認）。
+
+### 前からの顧客への適用
+
+新しい請求の形・最低利用期間・残りの期間分の支払いは、さかのぼって当てない。前からの顧客は、2026-11 分から月末締め・翌月末払いに切り替える（10 月分は請求書のまま）。最低利用期間と残りの期間分の支払いは、書面で合意してから当て、元の契約月から数える（寺田 2026-11-07）。顧客ごとの値（社名・開始月・請求の方法）は、このリポジトリには書かず、非公開の台帳に書く（8 章）。
+
+**決まったこと（寺田、2026-11-07 12:4x）:** 前からの顧客の `contract` は、`--start` に元の契約日を入れ、`--billing-from <この仕組みで請求を始める月>`（例: `2026-11`）を足す。Customer の metadata に `contract_<サービス>_bill_from` が入る。
+
+- 最低利用期間・初月・開発費の回数は、元の契約日から数える（`--devfee-count` は契約した回数のまま。請求書払いで回収した回は、その月に請求済みとして数える）。
+- `invoice` は `bill_from` より前の月を作らない（exit 3。その月は請求書払いで請求済み）。`bill_from` の月の利用料は 1 か月分で、初月の扱いにはしない。
+- `bill_from` は一度書いたら変えない。契約を書いたあとから `bill_from` を足すこともしない（二重請求の元になる）。
+
 ## 1. 商品と価格
 
-どのサービスを使うかは、顧客の subscription に入れた価格で決まる。価格 → 商品 → 商品の `metadata.service` → 開ける入口（Cloudflare Access）の順にたどる。
+どのサービスを使うかは Customer の metadata（`contract_<サービス>_start`）で決まる。サービス → plans.json の `services[].entry` → 開ける入口（Cloudflare Access）の順にたどる。作り方 B の請求書は価格（Price）を使わず、plans.json の金額を明細の `amount` に入れる。商品と価格は、台帳として Stripe に作っておく（`apply-plans.sh`）。
 
 | 商品 id | 商品名（請求書に出る。寺田が確定） | 種類 | 価格の lookup_key | 金額（税別） | 状態 |
 |---|---|---|---|---|---|
@@ -96,7 +174,7 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 - 商品の id は自分で決めた固定値にする（Stripe は商品 id の上書きを許す [1]）。価格は `lookup_key` で探す [2]。どちらも、何度実行しても同じものを指すため（冪等）。
 - 開発費は、サービスごとに別の商品にする。請求書の行に商品名が出るので、どのサービスの開発費かが顧客に分かる。
 - 価格の金額は、作ったあとに変えられない（価格の更新で変えられる項目に `unit_amount` が無い [3]）。金額を変えるときは、新しい lookup_key で価格を作り直す。`apply-plans.sh` は、既存の価格が plans.json と違えば上書きせずに止まる。
-- premium を足すときは、plans.json の premium の行に金額を入れ、`enabled: true` にして `apply-plans.sh` を実行する。既存の顧客を basic から移すときは、subscription の価格を差し替える。日割りにするかは寺田が決める（未決）。
+- premium を足すときは、plans.json の premium の行に金額を入れ、`enabled: true` にして `apply-plans.sh` を実行する。今の `subscribe.sh` の明細は basic の金額だけを読むので、premium の顧客を請求するには `lib.sh` の `load_amounts` と契約の metadata（どのプランか）も足す。日割りにするかは寺田が決める（未決）。
 - 金額はゼロ小数の円で書く。`unit_amount` の 10000 は 10,000 円 [4]。JPY の最低請求額は 50 円 [4]。plans.json の上限（`limits.max_unit_amount_jpy` = 100,000 円）は、100 倍の打ち間違い（1,000,000）を落とすためにある。
 
 ## 2. 税
@@ -105,7 +183,7 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 |---|---|---|
 | 価格の表示 | すべて税別。価格の `tax_behavior` は `exclusive` | 一度 `inclusive` か `exclusive` にすると変えられない [2]。税込で作る事故は戻せないので、plans.json の検査と `apply-plans.sh` の照合の両方で落とす |
 | 消費税の計算 | 手動の税率（Tax Rate）を 1 つ作る: 表示名「消費税」、10%、`inclusive=false`、国 `JP`、`tax_type=jct` | 税率の項目と `jct` の値 [5]。率と国は作成後に変えられない [5] |
-| 税率の付け方 | subscription と subscription schedule の各フェーズの `default_tax_rates` に付ける | どちらにも付けられる [6]。手動の税率と自動計算は同じフェーズで混ぜられない [6] |
+| 税率の付け方 | 請求書の明細ごとの `tax_rates[]` に付ける（`subscribe.sh invoice`） | 明細に税率を付けられる [32]。手動の税率と自動計算（Stripe Tax）は混ぜない |
 | 自動計算（Stripe Tax） | 今は使わない | 日本は対象だが、費用が取引ごとに 0.5%（API 経由は 1 取引 65 円）かかる [7]。顧客は国内の事業者で、税率は 10% の 1 つだけ。Stripe Tax が消費税をどう扱うかは未確認 |
 | 適格請求書 | Cor の登録番号を、アカウントの税 ID（`jp_trn`）として請求書の PDF に載せられる [8] | **Stripe の請求書が適格請求書の要件を満たすかは未確認**（文書に記載なし）。寺田（税理士）が確かめる |
 
@@ -113,20 +191,14 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 
 ## 3. 開発費の分割（12 回で止める）
 
-| 案 | 中身 | 良い点 | 弱い点 |
-|---|---|---|---|
-| **A（推奨）** | 開発費の商品に月額の価格を作り、顧客ごとに subscription schedule を 1 フェーズで作る。`phases[0].duration` を `interval=month`、`interval_count=<残りの回数>`、`end_behavior=cancel` | 回数で止まる。止め忘れが無い。開始日を先の日付にできる [9] | 「ちょうど N 回請求する」と書いた文書は無い。**テストモードの test clock で N 回目の次が請求されないことを実測してから使う**（`verify-installments.sh`、runbook T5） |
-| B | 普通の subscription に `cancel_at`（終了日時）を付ける | 作るのは 1 回 | 期間の途中に `cancel_at` が来ると日割りが起きる [10]。期間の境目ちょうどのときの動きは未確認 |
-| C | 毎月、寺田が 1 回分の請求書を作る | Stripe の機能に頼らない | 顧客 × サービスごとに 12 回の手作業。漏れと二重請求の危険 |
+作り方 B（1C 章）では、開発費は毎月の請求書の明細の 1 行になる。subscription schedule は使わない（前の案 A の schedule と、それを test clock で測る `verify-installments.sh` は外した）。
 
-次の点に気をつける。
-
-- subscription schedule の `iterations`（回数）は、API の版 `2025-09-30.clover` で削除された [11]。今の版（`2026-10-28.endive` [12]）では `duration` か `end_date` を使う [9]。Stripe の使い方の案内（分割払いの例）は、まだ `iterations` で書かれている [13]。`apply-plans.sh` は `Stripe-Version: 2026-10-28.endive` を固定して送る。
-- schedule の作成には、カードを保存する設定（`payment_behavior` / `payment_settings`）が無い。カードは basic の最初の支払いで保存し（5 章）、schedule の `default_settings.default_payment_method` にそのカードを指定する（この項目はある [9]）。**この組み合わせを通しで書いた文書は無い**ので、`verify-installments.sh` で実測してから使う（runbook T5）。
-- test clock は 1 回に「最短の subscription の 2 期間」までしか進められず、1 つの clock に顧客は 3 人まで [19]。`verify-installments.sh` は 31 日ずつ N+2 回進める。
-- 残りの回数は顧客ごとに決まる: `12 − 回収済みの回数 − Stripe 以外で請求する回数`。値は非公開の台帳に書く（8 章）。
-- 顧客が basic を解約しても、開発費の schedule は止めない（分割で払う約束の残り）。途中で解約したときに残りをどう扱うか（一括で請求するか）は契約書で決める（未決）。
-- 顧客ポータルからは、schedule に管理された subscription を顧客が解約できない [14]。開発費を顧客が誤って止めることはない。今週はポータルを使わない。
+- 回数は Customer の metadata `contract_<サービス>_devfee_count`（0〜12。plans.json の `installments` が上限）。`subscribe.sh contract --devfee-count` で書く。
+- 開始の月を 1 回目として、毎月 1 回分（税別 8,000 円）を請求する。契約した回数の次の月からは請求しない（13 回目は無い。`tests/test-subscribe.sh` が確かめる）。
+- 終了日が最低利用期間の中なら、終了の月の請求書に残りの回数分を一括で足す（`8,000 × (契約した回数 − 終了の月までに請求した回数)`）。
+- 回数は顧客ごとに決まる。前からの顧客の残りの回数と数え方は 1C 章の「確かめたい点」。値は非公開の台帳に書く（8 章）。
+- 回数を数えるのはスクリプトで、Stripe の機能ではない。Stripe 側に「あと何回」の記録は無い。請求書の明細の説明（`… 6/12 回目`）と metadata の `kind=devfee` が記録になる。
+- 前の案で使った API の注意（subscription schedule の `iterations` は API の版 `2025-09-30.clover` で削除された [11] など）は、B では当たらない。
 
 ## 4. 顧客の識別（Clerk の組織 ↔ Stripe の顧客 ↔ Access の許可 ↔ 製品側の組織）
 
@@ -135,37 +207,46 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 | 記録 | 正本 | 入れるもの |
 |---|---|---|
 | 身元（会社と利用者） | Clerk の組織（Organization） | 組織の id（`org_…`）、利用者のメール、`privateMetadata.stripe_customer_id`（1A 章。Clerk の設定は寺田） |
-| 契約者（会社） | Stripe の Customer | 社名、請求先のメールアドレス、`metadata.customer_code`、`metadata.clerk_org_id` |
-| 使うサービスとプラン | Stripe の Subscription | 価格（lookup_key で分かる）、`metadata.customer_code`、`metadata.service`、`metadata.tenant` |
+| 契約者（会社） | Stripe の Customer | 社名、請求先のメールアドレス、`metadata.customer_code`、`metadata.clerk_org_id`、`metadata.payment` |
+| 使うサービスと契約 | Stripe の Customer の metadata | `contract_<サービス>_start`・`_devfee_count`・`_end`（1C 章の表） |
+| 毎月の請求 | Stripe の請求書（月に 1 枚） | `metadata.billing_month`、`metadata.customer_code`。明細の `metadata.service`・`metadata.kind` |
 | 入口（利用者ごと） | Cloudflare Access のポリシーの許可メール | 利用者のメールアドレス（1 社に複数）。**Stripe には写さない**（利用者のメールを決済事業者へ複製しない） |
-| 製品側 | business-dossier: お客様ごとの起動（`bd-<slug>`、bd-deploy の報告 2 章）。XESM: 組織（Tenant。組織名で探す） | `metadata.tenant` に、business-dossier なら slug（例の形: `c01`）、XESM なら組織名を入れる |
+| 製品側 | business-dossier: お客様ごとの起動（`bd-<slug>`、bd-deploy の報告 2 章）。XESM: 組織（Tenant。組織名で探す） | business-dossier なら slug（例の形: `c01`）、XESM なら組織名。作り方 B では Stripe に入れず、非公開の台帳に書く |
 
 実際の行（どの顧客が、どのメールで、どの組織か）は、Stripe・Access・製品側にそれぞれあり、このリポジトリには書かない。突き合わせの手順は runbook C3。
 
-## 5. 支払い → 入口を開ける（今週は手動）
+## 5. 契約 → 入口を開ける（今週は手動）
 
-入口（Access の許可）は支払いを確かめてから最後に開ける。それまでの作業は顧客から見えない。詳しい手順は runbook C1〜C8。
+作り方 B では、最初の支払いは契約の月の翌月末日（期限の日）に来る。入口は、支払いではなく契約とカードの保存（カードの顧客）を確かめてから開ける。どこまで確かめてから開けるかは寺田が決める（12 章の 10）。詳しい手順は runbook C0〜C7。
 
 1. 契約書を交わし、非公開の台帳に 1 行足す（寺田）。
-2. Stripe に Customer を作る（`subscribe.sh customer`）。
-3. basic の subscription を作る（`subscribe.sh basic`）。`payment_behavior=default_incomplete`、`payment_settings[save_default_payment_method]=on_subscription`、`default_tax_rates` に消費税。最初の支払いが済むとカードが subscription の既定になる [15]。スクリプトは、最初の請求書の税込の額が plans.json と合うことを確かめてから支払いページの URL を出す。
-4. 支払いページの URL を、寺田が顧客へ送る（送信は寺田）。**23 時間以内に払われないと subscription は `incomplete_expired` になる** [15]ので、顧客と時間を合わせてから 3 を実行する。
-5. 支払いが済んだことを確かめる（`subscribe.sh status` で `status=active`・`card=保存済み`。通知の名前は `invoice.paid` [16]）。
-6. 開発費があれば、開発費の schedule を作る（`subscribe.sh devfee`。3 章）。
-7. 製品側の準備: XESM は `contract-to-use.md` の手順 3〜7、business-dossier は `docs/deploy/onboarding.md`。
-8. Access の許可メールに、顧客の利用者を足す（**公開スイッチ。寺田のみ**）。初回のログインを見届ける。
+2. Stripe に Customer を作る（`subscribe.sh customer --payment card|transfer`）。
+3. 契約を書く（`subscribe.sh contract --service <サービス> --start <契約日> --devfee-count <回数>`）。書く前に `simulate` で毎月の額を確かめる。
+4. カードの顧客には、カードを保存するページの URL を作り（`subscribe.sh card-setup`）、寺田が送る。Checkout の `mode=setup` で、ページの期限はスクリプトの出力の `期限` の行。
+5. カードが保存されたことを確かめる（`subscribe.sh status` の `CARD pm_…`）。
+6. 製品側の準備: XESM は `contract-to-use.md` の手順 3〜7、business-dossier は `docs/deploy/onboarding.md`。
+7. Access の許可メールに、顧客の利用者を足す（**公開スイッチ。寺田のみ**）。初回のログインを見届ける。
+8. 毎月: 月末の翌日に `invoice --month <先月>`、期限の日（翌月末日）にカードの顧客だけ `charge --month <その月>`（runbook M1〜M3）。今月の分は締めの日（月の末日）からしか作れない。
+9. 振込の顧客: 請求書の `footer` に当社の振込先を載せる（値は環境変数 `COR_BILLING_TRANSFER_FOOTER`。リポジトリに書かない。無ければ `invoice` は止まる）。入金を確かめたら `mark-paid --month <その月> --paid-on <入金日>` で、その請求書を Stripe の外で支払い済みにする（`invoices/pay` の `paid_out_of_band=true`。引き落とさない [33]）。open のままだと、請求書のページから二重に払われうる。
+10. 確定のあと送付で止まった請求書は、やり直しで送り直す（送った記録は Customer の metadata `invoice_sent`。請求書の metadata を確定のあと変えられるかは文書に無いため）。
 
 ## 6. 解約 → 入口を閉じる
 
-1. 解約の申し出を受けたら、寺田が basic の subscription を期間末で止める（`subscribe.sh cancel`。`cancel_at_period_end=true` [20]）。スクリプトは basic 以外（開発費）を止めない。
-2. 期間末に subscription が終わる（通知 `customer.subscription.deleted` [16]）。**先に Access の許可から利用者を外し**、入口を閉じる。
-3. 製品側の利用者を無効にする。XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
-4. 支払いが失敗したとき（通知 `invoice.payment_failed` [16]）: 再請求の設定と、何日で入口を閉じるかは寺田が決める（未決）。
+解約は、当社がお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は末日）に終わる。例: 3 月 5 日に受理したら 4 月 5 日。宣言は `plans.json` の `cancellation`（`notice_months: 1`、`final_period: prorated`、`refund: none`）で、特商法ページの解約条件の行とは `tests/test-tokushoho-link.sh` が結ぶ。詳しい手順は runbook D1〜D5。
+
+1. 解約の申し出を受理したら、寺田が終了日を書く（`subscribe.sh cancel --customer <cus_…> --service <サービス> --accepted <受理日>`）。スクリプトは終了日を `contract_<サービス>_end` に書き、終了の月の明細を出す。Stripe には何も予約しない（subscription が無いので、`cancel_at` も日割りの按分も起きない）。
+   - 受理日は今日以前の実在する日。終了日が契約の開始日より前なら止まる（exit 64）。別の終了日が既にあれば書き換えない（exit 3）。
+   - 終了の月の請求書が既にあれば止まる（exit 3）。書いても、その月の日割りと残りが請求されないため。
+2. 終了の月の末日の締めで、毎月の `invoice`（runbook M1）がその月の請求書に次を入れる。終了日までの日割り（円未満は切り捨て）、開発費の 1 回分（契約した回数の中なら）、終了日が最低利用期間の中なら残りの期間分の利用料と開発費の残り（1C 章の数え方）。支払期限は翌月末日。返金はしない（スクリプトは返金を作らない）。
+3. 終了日を過ぎたら、**先に Access の許可から利用者を外し**、入口を閉じる。
+4. 製品側の利用者を無効にする。XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
+5. 支払いが失敗したとき（`charge` が `STOP: API エラー（HTTP 402、…）` で止まる、またはカードの確認を求められる）: 再請求のやり方と、何日で入口を閉じるかは寺田が決める（未決。12 章の 5）。
 
 ## 7. 自動化の案（来週以降）
 
-- 受け口: Cloudflare Worker で Stripe の通知（`invoice.paid`、`customer.subscription.deleted`、`invoice.payment_failed` [16]）を受け、署名を確かめる。
-- 処理: subscription の `metadata.customer_code` と `metadata.service` から、開けるべき Access のポリシーを決める。利用者のメールは非公開の保管場所（KV か D1）から読む。足す・外す操作は、はじめは寺田の承認 1 回を挟む。
+- 毎月の作業: 月末の翌日の `invoice` と、期限の日の `charge` を、決まった日に動かす仕組み（はじめは寺田が手で実行する。runbook M1〜M2）。
+- 受け口: Cloudflare Worker で Stripe の通知（`invoice.paid`、`invoice.payment_failed` [16]）を受け、署名を確かめる。
+- 処理: 請求書の `metadata.customer_code` と、Customer の契約の metadata（`contract_<サービス>_end`）から、開けるべき・閉じるべき Access のポリシーを決める。利用者のメールは非公開の保管場所（KV か D1）から読む。足す・外す操作は、はじめは寺田の承認 1 回を挟む。
 - 秘密: 通知の署名の鍵と Cloudflare の API token は、`register-secret-verified.sh` に査読済みの recipe が無い。recipe ができるまで手順に書かず、保留にする。
 - 通知の受け口は作ったときの API の版で固定される [12]。作るときに `2026-10-28.endive` を選ぶ。
 
@@ -175,11 +256,11 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 
 | 案 | 中身 | 向くとき |
 |---|---|---|
-| **a（推奨）** | すでに請求書（銀行振込）で請求した月は、その請求書のまま回収する。Stripe の請求は、カードを登録した後の月から始める | 請求書を出し済みの月。2 つの経路で同じ月を請求する事故を避ける |
-| b | Stripe で 1 回だけの請求書を作り、支払いページでカードで払ってもらう | まだどこにも請求していない過去の月を、カードでまとめて払ってもらうとき |
-| c | 分割の回数に足す（schedule の回数を増やす） | 使わない。開始月と回数の対応が崩れ、台帳と合わなくなる |
+| **a（推奨）** | すでに請求書（銀行振込）で請求した月は、その請求書のまま回収する。Stripe の請求は、切り替えの月から始める | 請求書を出し済みの月。2 つの経路で同じ月を請求する事故を避ける |
+| b | Stripe で 1 回だけの請求書を作り、支払いページでカードで払ってもらう | まだどこにも請求していない過去の月を、カードでまとめて払ってもらうとき（`subscribe.sh invoice` は今月と先月しか作らないので、寺田が画面で作る。文言は未確認） |
+| c | 開発費の回数に足す（`--devfee-count` を増やす） | 使わない。開始月と回数の対応が崩れ、台帳と合わなくなる |
 
-二重請求を防ぐ決まり: schedule の回数は「Stripe で請求する月」だけを数える。台帳には月ごとに「請求の方法・請求日・入金日」を書く。
+二重請求を防ぐ決まり: `invoice` は、請求書払いで請求済みの月には実行しない。台帳には月ごとに「請求の方法・請求日・入金日」を書く。`invoice` は同じ月の 2 枚目を作らないが、Stripe の外で出した請求書は見えない。
 
 ## 9. テストモード → 本番
 
@@ -192,15 +273,18 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 
 | 要求 | 設計書 | 宣言ファイル | 手順書 | 未確認の限界 |
 |---|---|---|---|---|
-| 商品 | 1 章 | `products` | T2〜T4・L2〜L3 | 商品名は寺田が確定 |
-| プラン（basic / premium の枠） | 1 章 | `prices[].plan`・`enabled` | T2・C3 | premium の金額は未定 |
-| 開発費の分割 | 3 章 | `prices[].installments` | T5・T6・C6 | 「ちょうど 12 回」は T5 の実測待ち（AI のレーンは偽の応答でしか通していない） |
-| 税 | 2 章 | `tax_rate`・`tax_behavior` | T2・C3 の CHECK | 適格請求書の要件は未確認 |
+| 商品 | 1 章 | `products` | T2〜T4・L2〜L3 | 商品名は寺田が確定。請求書の明細の説明にも商品名を出す |
+| プラン（basic / premium の枠） | 1 章 | `prices[].plan`・`enabled` | T2・C3 | premium の金額は未定。明細は basic の金額だけを読む |
+| 請求の形（月末締め・翌月末払い・初月 1 か月分） | 1C 章 | `billing` ↔ `lib.sh` の `IMPLEMENTED_BILLING_CLOSING` | T8・M1 | 結びは `test-subscribe.sh`。請求書のメールは未実測 |
+| 開発費の分割 | 3 章 | `prices[].installments` | C3・M1 | 13 回目が無いことは偽の応答と `simulate` でだけ確かめた |
+| 最低利用期間と残りの期間分 | 1C 章 | `minimum_term` | D1・M1 | 数え方（12 か月目の末日まで、円未満の切り捨て）は寺田に確かめる（12 章の 9） |
+| 解約の終了日と最後の月の日割り | 1C・6 章 | `cancellation` | D1〜D3 | 終了の月の請求書は、本番では終了の月の翌月 1 日まで作れない |
+| 税 | 2 章 | `tax_rate`・`tax_behavior` | T8 の `INVOICE` の行 | 適格請求書の要件は未確認。日割りと残りの期間分の消費税の端数は未実測 |
 | 顧客の識別 | 1A・4 章 | `services` | C1〜C3 | 実際の行は repo に書かない。台帳の置き場所が未決。Clerk の組織の metadata の文書は未確認 |
 | 身元（Clerk）と入口の段階 | 1A・1B 章 | — | C0（Clerk の組織を作る） | Clerk のアプリの作成は寺田。段階 1・2 は設計だけ |
-| 支払い → 入口を開ける | 5 章 | `services[].entry` | C2〜C7 | 支払いページにカードが出るかは T6 で確かめる |
-| 解約 → 入口を閉じる | 6 章 | — | D1〜D4 | XESM の利用者の無効化手順が無い |
-| 未回収分 | 8 章 | — | C8 | 顧客ごとの数字は非公開の台帳 |
+| カードの保存 → 期限の日に払う | 5 章 | `services[].entry` | T7・T9・C4・M2 | Checkout の setup のあとカードが顧客に付くか、`invoices/pay` が通るかは未実測（T で確かめる） |
+| 解約 → 入口を閉じる | 6 章 | — | D1〜D5 | XESM の利用者の無効化手順が無い |
+| 未回収分 | 8 章 | — | C7 | 顧客ごとの数字は非公開の台帳 |
 | 特商法 | 別 PR | — | — | 文言は寺田が確定 |
 | 手順書 | — | — | runbook.md | Stripe の画面の文言は確かめていない |
 
@@ -225,7 +309,7 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 17. 残高の `livemode`: https://docs.stripe.com/api/balance/balance_object
 18. サンドボックス: https://docs.stripe.com/sandboxes
 19. test clock（作成・進め方・上限）: https://docs.stripe.com/api/test_clocks/advance 、https://docs.stripe.com/billing/testing/test-clocks/api-advanced-usage
-20. subscription の更新（`cancel_at_period_end`）: https://docs.stripe.com/api/subscriptions/update
+20. subscription の更新（`cancel_at_period_end`。2026-11-07 から解約は `cancel_at` を使う [28]）: https://docs.stripe.com/api/subscriptions/update
 21. テスト用のカード（`pm_card_visa`、`4242 4242 4242 4242`）: https://docs.stripe.com/testing
 22. Clerk Billing の概要（USD だけ、税と VAT に未対応、月払いか年払い、3DS に未対応、返金に未対応）: https://clerk.com/docs/billing/overview
 23. Clerk Billing の組織のプラン（`has()`、既存の Stripe の商品と同期しない）: https://clerk.com/docs/nextjs/guides/billing/for-b2b
@@ -233,12 +317,25 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 25. Clerk の metadata（public / private / unsafe、Stripe の顧客 id の例）: https://clerk.com/docs/users/metadata
 26. Clerk を IdP にする（OAuth 2.0 / OIDC、スコープ `user:org:read` と `org_id`）: https://clerk.com/docs/advanced-usage/clerk-idp 、https://clerk.com/docs/guides/configure/auth-strategies/oauth/how-clerk-implements-oauth
 27. Cloudflare Access の generic OIDC と、ポリシーの OIDC claim: https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/generic-oidc/ 、https://developers.cloudflare.com/cloudflare-one/access-controls/policies/
+28. `cancel_at` が次の期間に入るとき、その期間は必ず日割りになる（2026-11-07 に読んだ）: https://docs.stripe.com/api/subscriptions/update 、https://docs.stripe.com/billing/subscriptions/cancel
+29. 日割りの按分は秒単位、マイナスの按分は自動では返金されない（2026-11-07 に読んだ）: https://docs.stripe.com/billing/subscriptions/prorations
+30. 請求の区切り（`billing_cycle_anchor_config`、月末、`proration_behavior=none` の最初の期間、定額は前払い）（2026-11-07 に読んだ）: https://docs.stripe.com/billing/subscriptions/billing-cycle 、https://docs.stripe.com/api/subscriptions/create
+31. 引き落としと請求書払い（`charge_automatically` / `send_invoice`、`days_until_due`）（2026-11-07 に読んだ）: https://docs.stripe.com/billing/collection-method 、https://docs.stripe.com/billing/invoices/subscription
+32. 単発の請求書の `due_date` と、明細の `period`・`tax_rates`（2026-11-07 に読んだ）: https://docs.stripe.com/api/invoices/create 、https://docs.stripe.com/api/invoiceitems/create
+33. 開いている請求書を保存したカードで払う（`payment_method`、`off_session`）（2026-11-07 に読んだ）: https://docs.stripe.com/api/invoices/pay
+34. 作り方 B の実装で使った API（2026-11-07 に統括が公式文書で確かめた事実。実装のレーンは読み直していない）: invoice item の `amount`・`currency`・`invoice`・`description`・`tax_rates[]`・`period[start]`/`period[end]`（両端を含む）・`metadata`、invoice の `collection_method=send_invoice`・`due_date`・`auto_advance`（既定 false）・`pending_invoice_items_behavior`（既定 exclude）・`metadata`、`finalize`・`send`（`auto_advance=false` ではメールが出ない。テストモードでは送られない）・`pay`、invoice の一覧（`customer`・`created`・`status` で絞れ、metadata では絞れない）と検索（`customer:"…" AND metadata["k"]:"v"`、反映に最大 1 分、障害時 1 時間）、Checkout Session の `mode=setup`（`currency` が要る。`payment_method_types` はこの版に無い）→ `setup_intent` → SetupIntent の `payment_method`: https://docs.stripe.com/api/invoiceitems/create 、https://docs.stripe.com/api/invoices/create 、https://docs.stripe.com/api/invoices/search 、https://docs.stripe.com/api/checkout/sessions/create
 
 ## 12. 確かめたい点（寺田）
 
 1. 請求書に出る商品名（1 章の表）。
 2. 適格請求書の要件を Stripe の請求書で満たすか。登録番号を `jp_trn` で載せるか。
-3. 解約の申し出の期限、最低の利用期間、途中解約の日割り。
-4. 開発費の途中解約のとき、残りを一括で請求するか。
+3. 解約の終了日（受理日の 1 か月後の同じ日、最後の月は日割り）と最低利用期間（契約から 1 年、その後は月単位）は決まった（1C 章、2026-11-07）。
+4. 開発費の途中解約は一括で請求すると決まった（1C 章、2026-11-07）。
+8. 「翌月末払い」の作り方は B に決まった（1C 章、2026-11-07 11:4x）。
+9. 「ご契約から 1 年間」を、契約の月を 1 か月目として 12 か月目の末日までと数えてよいか。最後の月の日割りの円未満を切り捨ててよいか（1C 章）。
 5. 支払いが失敗してから入口を閉じるまでの日数。
 6. 開始月から今月までの各月を、どの方法（請求書か Stripe か）で請求するか（8 章。顧客ごとの数字は非公開の台帳）。
+7. （前の形の subscription の問題。作り方 B では起きない）
+10. 入口を開けるのは、契約とカードの保存を確かめた時点でよいか（作り方 B では、最初の支払いは契約の月の翌月末日に来る。5 章）。
+11. 前からの顧客の `contract` は決まった: 元の契約日 + `--billing-from`（1C 章、2026-11-07 12:4x）。
+12. テストモードの `charge` は決まった: `--early-test` でテストモードだけ期限前に払える。本番では受け付けない（exit 64。2026-11-07 12:4x）。

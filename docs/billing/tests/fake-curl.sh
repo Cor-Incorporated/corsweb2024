@@ -24,12 +24,24 @@ stdin_text="$(cat)"
 method="GET"
 url=""
 lookup=""
+amount_arg=""
+invoice_arg=""
+query_arg=""
+posted_meta="{}"
 prev=""
 for a in "$@"; do
   if [ "$prev" = "-X" ]; then method="$a"; fi
   case "$a" in
     https://*) url="$a" ;;
     "lookup_keys[]="*) lookup="${a#lookup_keys[]=}" ;;
+    "amount="*) amount_arg="${a#amount=}" ;;
+    "invoice="*) invoice_arg="${a#invoice=}" ;;
+    "query="*) query_arg="${a#query=}" ;;
+    "metadata["*"]="*)
+      k="${a#"metadata["}"
+      k="${k%%"]="*}"
+      posted_meta="$(jq -c --arg k "$k" --arg v "${a#*"]="}" '. + {($k): $v}' <<<"$posted_meta")"
+      ;;
   esac
   prev="$a"
 done
@@ -78,61 +90,109 @@ prices() {
   esac
 }
 
-# --- subscribe.sh / verify-installments.sh 用（FAKE_SUBS・FAKE_SEARCH などで応答を変える） ---
-readonly PERIOD_END=1767225600
-
-basic_sub_json() {
-  local pm='"pm_fake"'
-  if [ "${FAKE_SUBS:-}" = "basic_nopm" ]; then pm='null'; fi
-  printf '{"id":"sub_basic","status":"active","cancel_at_period_end":false,"default_payment_method":%s,"metadata":{"service":"business-dossier","plan":"basic"},"items":{"data":[{"current_period_end":%s}]}}' "$pm" "$PERIOD_END"
-}
-
-subscriptions_list() {
-  case "${FAKE_SUBS:-none}" in
-    basic_active | basic_nopm) respond 200 "{\"object\":\"list\",\"has_more\":false,\"data\":[$(basic_sub_json)]}" ;;
-    basic_incomplete) respond 200 '{"object":"list","has_more":false,"data":[{"id":"sub_inc","status":"incomplete","cancel_at_period_end":false,"default_payment_method":null,"latest_invoice":{"id":"in_9","status":"open","hosted_invoice_url":"https://invoice.example.test/i/9"},"metadata":{"service":"xesm","plan":"basic"},"items":{"data":[{"current_period_end":1767225600}]}}]}' ;;
-    *) respond 200 '{"object":"list","has_more":false,"data":[]}' ;;
-  esac
-}
-
-subscription_get() {
-  local id="${path#/v1/subscriptions/}"
-  if [ "$id" = "sub_dev" ]; then
-    respond 200 "{\"id\":\"sub_dev\",\"status\":\"${FAKE_DEV_STATUS:-canceled}\",\"metadata\":{\"plan\":\"dev_fee\"}}"
-    return
-  fi
-  local pm='"pm_fake"'
-  if [ "${FAKE_PM:-}" = "none" ]; then pm='null'; fi
-  local inv="{\"id\":\"in_1\",\"status\":\"${FAKE_INV_STATUS:-open}\",\"hosted_invoice_url\":\"https://invoice.example.test/i/1\",\"total\":11000,\"total_taxes\":[{\"amount\":1000}]}"
-  respond 200 "{\"id\":\"$id\",\"status\":\"${FAKE_SUB_STATUS:-active}\",\"cancel_at_period_end\":${FAKE_CANCEL_STATE:-false},\"default_payment_method\":$pm,\"latest_invoice\":$inv,\"metadata\":{\"plan\":\"${FAKE_SUB_PLAN:-basic}\",\"service\":\"business-dossier\"},\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}"
-}
-
-subscription_create() {
-  local total="${FAKE_BASIC_TOTAL:-11000}"
-  respond 200 "{\"id\":\"sub_new\",\"status\":\"incomplete\",\"latest_invoice\":{\"id\":\"in_1\",\"hosted_invoice_url\":\"https://invoice.example.test/i/1\",\"total\":$total,\"total_taxes\":[{\"amount\":1000}]}}"
-}
-
-schedules_list() {
-  case "${FAKE_SCHEDULES:-none}" in
-    devfee_active) respond 200 '{"object":"list","has_more":false,"data":[{"id":"sub_sched_old","status":"active","metadata":{"service":"business-dossier","plan":"dev_fee"}}]}' ;;
-    *) respond 200 '{"object":"list","has_more":false,"data":[]}' ;;
-  esac
-}
-
-invoices_list() {
-  local n="${FAKE_DEV_INVOICES:-12}" open="${FAKE_DEV_OPEN:-0}"
-  jq -nc --argjson n "$n" --argjson o "$open" --argjson t "${FAKE_DEV_TOTAL:-8800}" \
-    '{object: "list", has_more: false, data: (([range($n)] | map({status: "paid", total: $t, total_taxes: [{amount: 800}]})) + ([range($o)] | map({status: "open", total: 8800, total_taxes: [{amount: 800}]})))}' \
-    | { read -r body; respond 200 "$body"; }
-}
+# --- subscribe.sh 用（FAKE_SEARCH・FAKE_CUST_* ・FAKE_INV_* ・FAKE_CS_* などで応答を変える） ---
+readonly MANAGED="corsweb/docs/billing/plans.json"
+# 明細の POST の金額を残すファイル（請求書の小計を、実物と同じく明細の和で返すため）
+ITEMS="$FAKE_LOG.items"
 
 customer_search() {
   case "${FAKE_SEARCH:-none}" in
-    one) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co"}}]}' ;;
-    one_clerk) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","clerk_org_id":"org_other"}}]}' ;;
+    one) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card"}}]}' ;;
+    one_clerk) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card","clerk_org_id":"org_other"}}]}' ;;
+    one_transfer) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"transfer"}}]}' ;;
     two) respond 200 '{"object":"search_result","data":[{"id":"cus_a","metadata":{}},{"id":"cus_b","metadata":{}}]}' ;;
     *) respond 200 '{"object":"search_result","data":[]}' ;;
   esac
+}
+
+# 顧客: metadata は FAKE_CUST_META（JSON）、カードは FAKE_CUST_PM（既定なし）
+customer_json() {
+  local m="${FAKE_CUST_META:-}"
+  [ -n "$m" ] || m='{"customer_code":"sample-co"}'
+  jq -nc --argjson m "$m" --argjson p "$1" --arg pm "${FAKE_CUST_PM:-}" \
+    '{id: "cus_x", object: "customer", name: "テスト", metadata: ($m + $p), invoice_settings: {default_payment_method: (if $pm == "" then null else $pm end)}}'
+}
+
+# 顧客の更新: 送られた metadata を足して返す（FAKE_META_ECHO=wrong なら足さずに返す）
+customer_update() {
+  local p="$posted_meta"
+  if [ "${FAKE_META_ECHO:-}" = "wrong" ]; then p="{}"; fi
+  respond 200 "$(customer_json "$p")"
+}
+
+item_sum() {
+  if [ -f "$ITEMS" ]; then awk '{ s += $1 } END { print s + 0 }' "$ITEMS"; else printf '0'; fi
+}
+item_count() {
+  if [ -f "$ITEMS" ]; then wc -l <"$ITEMS" | tr -d ' '; else printf '0'; fi
+}
+
+# 請求書の JSON。inv_json <id> <status> <month> <小計>（税は小計の 10%）
+inv_json() {
+  jq -nc --arg id "$1" --arg st "$2" --arg m "$3" --argjson sub "$4" --argjson n "${5:-0}" --arg mb "$MANAGED" \
+    --argjson due "${FAKE_INV_DUE:-1798729199}" \
+    '{id: $id, object: "invoice", customer: "cus_x", status: $st, subtotal: $sub, total: ($sub + ($sub / 10 | floor)),
+      amount_paid: (if $st == "paid" then ($sub + ($sub / 10 | floor)) else 0 end),
+      total_taxes: [{amount: ($sub / 10 | floor)}], due_date: $due, hosted_invoice_url: "https://invoice.example.test/i/\($id)",
+      lines: {object: "list", total_count: $n, data: []}, metadata: {billing_month: $m, managed_by: $mb}}'
+}
+
+# 同じ月の請求書: FAKE_INV_STATE（none|draft|open|paid|void|two）を、FAKE_INV_WHERE（both|search|list）に返す。
+# 検索は問い合わせの月で、一覧は FAKE_INV_MONTH の月で返す。下書きの小計と明細の数は FAKE_DRAFT_SUBTOTAL・FAKE_DRAFT_LINES。
+found_invoices() {
+  local m="$1" st="${FAKE_INV_STATE:-none}"
+  case "$st" in
+    none) printf '[]' ;;
+    two) printf '[%s,%s]' "$(inv_json in_a open "$m" 18000)" "$(inv_json in_b open "$m" 18000)" ;;
+    draft) printf '[%s]' "$(inv_json in_draft draft "$m" "${FAKE_DRAFT_SUBTOTAL:-0}" "${FAKE_DRAFT_LINES:-0}")" ;;
+    *) printf '[%s]' "$(inv_json "in_$st" "$st" "$m" 18000 2)" ;;
+  esac
+}
+
+invoice_search() {
+  local m
+  m="$(printf '%s' "$query_arg" | sed -n 's/.*billing_month"\]:"\([0-9-]*\)".*/\1/p')"
+  case "${FAKE_INV_WHERE:-both}" in
+    both | search) respond 200 "{\"object\":\"search_result\",\"data\":$(found_invoices "$m")}" ;;
+    *) respond 200 '{"object":"search_result","data":[]}' ;;
+  esac
+}
+
+# FAKE_OLDER_OPEN=YYYY-MM なら、一覧にその月の open の請求書（in_older）も足す
+invoice_list() {
+  local data
+  data="$(found_invoices "${FAKE_INV_MONTH:-none}")"
+  if [ -n "${FAKE_OLDER_OPEN:-}" ]; then
+    data="$(jq -c --argjson x "$(inv_json in_older open "$FAKE_OLDER_OPEN" 18000 2)" '. + [$x]' <<<"$data")"
+  fi
+  case "${FAKE_INV_WHERE:-both}" in
+    both | list) respond 200 "{\"object\":\"list\",\"has_more\":false,\"data\":$data}" ;;
+    *) respond 200 '{"object":"list","has_more":false,"data":[]}' ;;
+  esac
+}
+
+# 1 件の請求書の読取: 小計は（下書きの小計 + 送られた明細の和 + FAKE_SUBTOTAL_BUMP）。状態は FAKE_INV_GET_STATUS（既定 draft）
+invoice_get() {
+  local id="${path#/v1/invoices/}" sub n
+  sub=$((${FAKE_DRAFT_SUBTOTAL:-0} + $(item_sum) + ${FAKE_SUBTOTAL_BUMP:-0}))
+  n=$((${FAKE_DRAFT_LINES:-0} + $(item_count)))
+  respond 200 "$(inv_json "$id" "${FAKE_INV_GET_STATUS:-draft}" "-" "$sub" "$n")"
+}
+
+invoice_action() {
+  local id="${path#/v1/invoices/}" st="$1"
+  id="${id%/*}"
+  respond 200 "$(inv_json "$id" "$st" "-" "$((${FAKE_DRAFT_SUBTOTAL:-0} + $(item_sum)))" "$(item_count)")"
+}
+
+invoice_item_create() {
+  printf '%s\n' "$amount_arg" >>"$ITEMS"
+  respond 200 "{\"id\":\"ii_$(item_count)\",\"object\":\"invoiceitem\",\"invoice\":\"$invoice_arg\",\"amount\":$amount_arg}"
+}
+
+# card-setup の session: 状態は FAKE_CS_STATUS（既定 complete）。SetupIntent のカードは FAKE_SETI_PM（既定 pm_saved）
+checkout_get() {
+  respond 200 "{\"id\":\"${path##*/}\",\"object\":\"checkout.session\",\"mode\":\"setup\",\"status\":\"${FAKE_CS_STATUS:-complete}\",\"url\":\"https://checkout.example.test/c/old\",\"setup_intent\":\"seti_1\"}"
 }
 
 case "$method:$path" in
@@ -141,22 +201,22 @@ case "$method:$path" in
   GET:/v1/products/*) product ;;
   GET:/v1/prices) prices ;;
   GET:/v1/customers/search) customer_search ;;
-  GET:/v1/customers/*) respond 200 '{"id":"cus_x","name":"テスト","metadata":{"customer_code":"sample-co"}}' ;;
-  GET:/v1/subscriptions) subscriptions_list ;;
-  GET:/v1/subscriptions/*) subscription_get ;;
-  POST:/v1/subscriptions) subscription_create ;;
-  POST:/v1/subscriptions/*) respond 200 "{\"id\":\"${path#/v1/subscriptions/}\",\"cancel_at_period_end\":true,\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}" ;;
-  GET:/v1/subscription_schedules) schedules_list ;;
-  GET:/v1/subscription_schedules/*) respond 200 "{\"id\":\"sub_sched_1\",\"status\":\"${FAKE_SCHED_STATUS:-canceled}\",\"subscription\":\"sub_dev\"}" ;;
-  GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;
-  POST:/v1/subscription_schedules) respond 200 "{\"id\":\"sub_sched_1\",\"status\":\"not_started\",\"subscription\":null,\"phases\":[{\"start_date\":$PERIOD_END,\"end_date\":$((PERIOD_END + 31536000))}]}" ;;
-  GET:/v1/invoices) invoices_list ;;
-  POST:/v1/invoices/*/pay) respond 200 '{"id":"in_1","status":"paid"}' ;;
-  POST:/v1/test_helpers/test_clocks) respond 200 "{\"id\":\"clock_fake\",\"status\":\"ready\",\"deletes_after\":$PERIOD_END}" ;;
-  POST:/v1/test_helpers/test_clocks/*/advance) respond 200 '{"id":"clock_fake","status":"advancing"}' ;;
-  GET:/v1/test_helpers/test_clocks/*) respond 200 "{\"id\":\"clock_fake\",\"status\":\"${FAKE_CLOCK_STATUS:-ready}\"}" ;;
-  POST:/v1/payment_methods/*/attach) respond 200 '{"id":"pm_fake"}' ;;
+  GET:/v1/customers/*) respond 200 "$(customer_json '{}')" ;;
   POST:/v1/customers) respond 200 '{"id":"cus_new"}' ;;
+  POST:/v1/customers/*) customer_update ;;
+  GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;
+  GET:/v1/invoices/search) invoice_search ;;
+  GET:/v1/invoices) invoice_list ;;
+  GET:/v1/invoices/*) invoice_get ;;
+  POST:/v1/invoices) respond 200 "$(inv_json in_new draft "-" 0 0)" ;;
+  POST:/v1/invoices/*/finalize) invoice_action "${FAKE_FINALIZE_STATUS:-open}" ;;
+  POST:/v1/invoices/*/send) invoice_action open ;;
+  POST:/v1/invoices/*/pay) invoice_action "${FAKE_PAY_STATUS:-paid}" ;;
+  POST:/v1/invoiceitems) invoice_item_create ;;
+  GET:/v1/invoiceitems/*) respond 200 "{\"id\":\"${path##*/}\",\"object\":\"invoiceitem\",\"invoice\":\"${FAKE_II_INVOICE:-in_new}\"}" ;;
+  POST:/v1/checkout/sessions) respond 200 '{"id":"cs_new","object":"checkout.session","mode":"setup","status":"open","url":"https://checkout.example.test/c/new","expires_at":1767225600}' ;;
+  GET:/v1/checkout/sessions/*) checkout_get ;;
+  GET:/v1/setup_intents/*) respond 200 "{\"id\":\"${path##*/}\",\"object\":\"setup_intent\",\"status\":\"succeeded\",\"payment_method\":\"${FAKE_SETI_PM:-pm_saved}\"}" ;;
   POST:/v1/*) respond 200 '{"id":"obj_fake_created"}' ;;
   *) respond 500 '{"error":{"type":"api_error","message":"fake-curl: unexpected call"}}' ;;
 esac
