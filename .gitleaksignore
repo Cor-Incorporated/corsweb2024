@@ -1,0 +1,7 @@
+# gitleaks の誤検出を、検出 1 件ごとの fingerprint（commit:path:rule:line）で除く。
+# 規則（.gitleaks.toml の allowlist）は足さない。ここに書いた検出のほかには効かない。
+# 行を足すときは docs/billing/tests/test-gitleaksignore.sh も直す（行の中身を確かめる検査）。
+#
+# 52d05ba の docs/billing/plans.json 12 行目: 税率の識別子（tax_rate の "key"）。秘密ではない。
+# 項目名は id に改めた。この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
+52d05baef4fb354728ca1c12b199a3aecd43df98:docs/billing/plans.json:generic-api-key:12

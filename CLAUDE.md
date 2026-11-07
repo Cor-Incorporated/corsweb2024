@@ -154,11 +154,11 @@ Codex, OpenCode, Pi, dsh and Grok read this section from AGENTS.md, Claude Code 
 1. 書く前に `.claude/skills/cor-voice/SKILL.md` の 1〜6 章（6A を含む）を読みます。推敲の規則と検査は `.claude/skills/yomiyasu/SKILL.md`、公開・送信の前のゲートは `.claude/skills/cor-voice-gate/SKILL.md` です。
 2. cor-voice の 2 章で場面（会社として、代表の名前で、技術の記事、メールと返信）を選び、yomiyasu の文書の種類（記事は article、メールは mail、手順書は manual、LP と告知は promo）を決めます。
 3. 依頼と資料にない事実は足しません。数字、日付、期間、社名と顧客名、価格、実績、人の発言、依頼に無い frontmatter の項目がこれに当たります。足りない値は本文で作らず、本文の外に「確かめたい点」として書きます。
-4. 下書きをファイルに保存し、次の 3 つを通します。候補が出たら直して、もう一度通します。
-   - `python3 -I .claude/skills/cor-voice-gate/scripts/cor_voice_lint.py check --scene <company|founder|tech|mail|founder-x> <下書き>`（founder-x は代表個人の X だけ）
-   - `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py run --material <依頼と資料> --final <下書き> --doc-type <種類> --fact-gaps`（直す前の原文があれば `--source <原文>` も付けます）
-   - `python3 -I .claude/skills/yomiyasu/scripts/yomiyasu_check.py verify --final <下書き>`
-5. 公開、送信、投稿、push はしません。返すのは、仕上げた本文と確かめたい点です。本文はファイルにも残し、最後の返答に本文とそのパスを書きます。作業の報告や検査の記録を本文に混ぜません。
+4. 下書きをファイルに保存し、次の手順で検査します。どのハーネスでも、人が端末で打っても同じ手順です。
+   - `python3 -I .claude/skills/cor-voice-gate/scripts/voice_gate.py init --run-dir .yomiyasu/gate/<名前> --draft <下書き> --scene <company|founder|tech|mail|founder-x> --doc-type <種類> --gate <fast|full> --material <依頼> --material <資料>`（依頼と資料は別のファイルにします。founder-x は代表個人の X だけ。直す前の原文があれば `--source <原文>` も付けます。Fast と Full の分け方は cor-voice-gate の「Fast / Full」にあります）
+   - `.yomiyasu/gate/<名前>/review.md` の表に、項目ごとの判定（pass、fail、n/a）と根拠を書きます。項目の中身は cor-voice-gate の同じ番号の節です。表の上の「読んだ下書きの sha256」は、読んだ版の値（`shasum -a 256 <下書き>`）にします。
+   - `python3 -I .claude/skills/cor-voice-gate/scripts/voice_gate.py check --run-dir .yomiyasu/gate/<名前>` を実行します。中で `cor_voice_lint.py check`、`yomiyasu_check.py run --fact-gaps` と `verify` が動き、結果は同じフォルダの `result.md` と `result.json` に残ります。終了コードが 0 でなければ、`result.md` の理由を直して、もう一度実行します。
+5. 公開、送信、投稿、push はしません。返すのは、仕上げた本文、確かめたい点、記録のフォルダのパスです。本文はファイルにも残し、最後の返答に本文とそのパスを書きます。作業の報告や検査の記録を本文に混ぜません。
 <!-- END cor-voice harness entry -->
 
 ## Internationalization
