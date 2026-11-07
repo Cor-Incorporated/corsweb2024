@@ -24,13 +24,12 @@
   },
   "minimum_term": {
     "months": 12,
-    "early_termination_fee": "remaining_term_total",
+    "on_early_termination": "remaining_term_fees",
     "dev_fee_on_early_termination": "remaining_lump_sum"
   },
   "cancellation": {
     "plan": "basic",
-    "notice_months": 1,
-    "final_period": "prorated",
+    "ends": "end_of_accepted_month",
     "refund": "none"
   },
   "services": [

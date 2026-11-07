@@ -102,17 +102,21 @@ readonly JQ_VALIDATE='
     (if ($t.display_name | type == "string" and length > 0 and length <= 50) | not
       then "tax_rate.display_name は 1〜50 文字（観測: \($t.display_name)）" else empty end),
     (if $c.plan != "basic" then "cancellation.plan は basic（解約するのは basic だけ。観測: \($c.plan)）" else empty end),
-    (if (($c.notice_months | isint) and $c.notice_months >= 1 and $c.notice_months <= 12) | not
-      then "cancellation.notice_months は 1〜12 の整数（観測: \($c.notice_months)）" else empty end),
-    (if $c.final_period != "prorated"
-      then "cancellation.final_period は prorated（subscribe.sh はこの方針だけを実装している。観測: \($c.final_period)）" else empty end),
+    (if ($c.ends | IN("end_of_accepted_month", "accepted_plus_notice")) | not
+      then "cancellation.ends は end_of_accepted_month（2026-11-07 の決定）か accepted_plus_notice（前の形）（観測: \($c.ends)）" else empty end),
+    (if $c.ends == "accepted_plus_notice" and ((($c.notice_months | isint) and $c.notice_months >= 1 and $c.notice_months <= 12) | not)
+      then "cancellation.notice_months は 1〜12 の整数（ends=accepted_plus_notice のとき。観測: \($c.notice_months)）" else empty end),
+    (if $c.ends == "accepted_plus_notice" and $c.final_period != "prorated"
+      then "cancellation.final_period は prorated（ends=accepted_plus_notice のとき。観測: \($c.final_period)）" else empty end),
     (if $c.refund != "none" then "cancellation.refund は none（subscribe.sh は返金を作らない。観測: \($c.refund)）" else empty end),
     (if ([$b.closing, $b.payment_due, $b.first_month] | . != ["month_end", "end_of_next_month", "full_month"] and . != ["same_day_advance", "at_period_start", "full_month"])
       then "billing は month_end / end_of_next_month / full_month（2026-11-07 の決定）か same_day_advance / at_period_start / full_month（前の形）（観測: \([$b.closing, $b.payment_due, $b.first_month] | join(" / "))）" else empty end),
-    (if (($m.months | isint) and $m.months >= 0 and $m.months <= 36) | not
-      then "minimum_term.months は 0〜36 の整数（観測: \($m.months)）" else empty end),
-    (if $m.early_termination_fee != "remaining_term_total"
-      then "minimum_term.early_termination_fee は remaining_term_total（観測: \($m.early_termination_fee)）" else empty end),
+    (if ($b.closing == "month_end" and $c.ends != "end_of_accepted_month") or ($b.closing == "same_day_advance" and $c.ends != "accepted_plus_notice")
+      then "billing.closing と cancellation.ends の組が違う（month_end なら end_of_accepted_month、same_day_advance なら accepted_plus_notice。観測: \($b.closing) と \($c.ends)）" else empty end),
+    (if (($m.months | isint) and $m.months >= 12 and $m.months <= 36 and $m.months % 12 == 0) | not
+      then "minimum_term.months は 12 の倍数で 12〜36（特商法ページは「ご契約から N 年間」で書く。観測: \($m.months)）" else empty end),
+    (if $m.on_early_termination != "remaining_term_fees"
+      then "minimum_term.on_early_termination は remaining_term_fees（残りの期間分の利用料。観測: \($m.on_early_termination)）" else empty end),
     (if $m.dev_fee_on_early_termination != "remaining_lump_sum"
       then "minimum_term.dev_fee_on_early_termination は remaining_lump_sum（観測: \($m.dev_fee_on_early_termination)）" else empty end),
     (($r.products // []) | group_by(.id)[] | select(length > 1) | "products の id が重複: \(.[0].id)"),

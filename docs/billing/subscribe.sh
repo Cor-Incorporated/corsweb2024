@@ -382,9 +382,9 @@ main() {
   parse_args "$@"
   require_tools jq
   bash "$SCRIPT_DIR/apply-plans.sh" --plans "$PLANS" >/dev/null || die 2 "plans.json の検査で不合格（bash docs/billing/apply-plans.sh を実行して NG の行を見る）"
-  validate_inputs
   # 契約・解約を作るサブコマンドは、plans.json の請求の形をこのスクリプトが実装しているときだけ動く（dry-run も止める）
   case "$CMD" in basic | devfee | cancel) require_implemented_billing ;; esac
+  validate_inputs
   if [ -n "$MODE" ]; then printf 'mode: %s --mode %s\n' "$CMD" "$MODE"; else printf 'mode: %s dry-run（通信しない・鍵を読まない）\n' "$CMD"; fi
   print_plan
   case "$CMD" in

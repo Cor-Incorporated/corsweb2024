@@ -244,6 +244,9 @@ require_implemented_billing() {
   closing="$(jq -r '.billing.closing // "-"' "$PLANS")"
   [ "$closing" = "$IMPLEMENTED_BILLING_CLOSING" ] \
     || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトがまだ実装していない（実装は $IMPLEMENTED_BILLING_CLOSING。README 1C 章の問いの答え待ち）。何もしていない"
+  # 前の形の写しを --plans で渡しても、本番では作らない（特商法ページは月末締め・翌月末払いで公開する）
+  [ "$MODE" != "live" ] \
+    || die 3 "前の請求の形（billing.closing=$closing）では、本番に契約・解約を作らない（README 1C 章）。何もしていない"
 }
 
 plans_services() {
