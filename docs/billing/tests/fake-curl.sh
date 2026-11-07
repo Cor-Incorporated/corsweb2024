@@ -158,9 +158,15 @@ invoice_search() {
   esac
 }
 
+# FAKE_OLDER_OPEN=YYYY-MM なら、一覧にその月の open の請求書（in_older）も足す
 invoice_list() {
+  local data
+  data="$(found_invoices "${FAKE_INV_MONTH:-none}")"
+  if [ -n "${FAKE_OLDER_OPEN:-}" ]; then
+    data="$(jq -c --argjson x "$(inv_json in_older open "$FAKE_OLDER_OPEN" 18000 2)" '. + [$x]' <<<"$data")"
+  fi
   case "${FAKE_INV_WHERE:-both}" in
-    both | list) respond 200 "{\"object\":\"list\",\"has_more\":false,\"data\":$(found_invoices "${FAKE_INV_MONTH:-none}")}" ;;
+    both | list) respond 200 "{\"object\":\"list\",\"has_more\":false,\"data\":$data}" ;;
     *) respond 200 '{"object":"list","has_more":false,"data":[]}' ;;
   esac
 }

@@ -485,6 +485,11 @@ FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_PAY_STATUS=open run mark-paid
 expect "支払い済みにならなければ exit 3" 3 1 "支払い済みにならなかった"
 SCN=live FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode live
 expect "本番の mark-paid は live と打たなければ何もしない" 64 0 "本番は端末から実行する"
+# 独立レビューの HIGH: 月を取り違えて新しい月を支払い済みにしない（支払い済みは取り消せない）
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$TWO_AGO" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: $TWO_AGO（in_older）"
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$THIS" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "後の月の open の請求書は止める理由にならない" 0 1 "MARKED_PAID in_open $LAST"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

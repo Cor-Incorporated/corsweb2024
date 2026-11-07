@@ -648,6 +648,15 @@ do_invoice() {
   finish_invoice "$id"
 }
 
+# --month より前の月の当社の請求書が open のまま残っていれば止める（振込はふつう古い月から。
+# 月を取り違えて新しい月を支払い済みにすると、支払い済みは取り消せず、古い月は open のまま残る）。
+refuse_older_open() {
+  local older
+  api_ok "open の請求書の一覧" GET /v1/invoices --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=open" --data-urlencode "limit=100"
+  older="$(jq -r --arg m "$OPT_MONTH" --arg mb "$MANAGED_BY" '[.data[] | select(.metadata.managed_by == $mb and (.metadata.billing_month // "") < $m and (.metadata.billing_month // "") != "") | "\(.metadata.billing_month)（\(.id)）"] | join(" ")' <<<"$RESP_BODY")"
+  [ -z "$older" ] || die 3 "$OPT_CUSTOMER には $OPT_MONTH より前の open の請求書がある: $older。入金がどの月の分かを台帳で確かめ、古い月から --month に入れる。何もしていない"
+}
+
 # 振込を受けたら、その月の請求書を「Stripe の外で支払い済み」にする（引き落とさない）。
 # open のままだと、請求書のページから二重に払われうる。
 do_mark_paid() {
@@ -655,6 +664,7 @@ do_mark_paid() {
   load_customer
   pay="$(cust_meta payment)"
   [ "$pay" = "transfer" ] || die 3 "$OPT_CUSTOMER の支払い方法が transfer でない（観測 payment=${pay:-なし}）。カードの顧客は charge で払う"
+  refuse_older_open
   find_month_invoice "$OPT_MONTH"
   [ -n "$INV_JSON" ] || die 3 "$OPT_MONTH 分の請求書が無い（invoice を先に）"
   id="$(jq -r '.id' <<<"$INV_JSON")"

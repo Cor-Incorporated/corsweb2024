@@ -53,7 +53,7 @@ git -C ~/Developer/corsweb worktree add ~/Developer/corsweb/.worktrees/claude/bi
 cd ~/Developer/corsweb/.worktrees/claude/billing-invoice-20261107
 ```
 
-鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`233 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
+鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`235 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -391,7 +391,7 @@ README の 8 章。請求書（銀行振込）で請求済みの月は、その�
 振込の顧客（台帳の支払い方法が `transfer`）がいる月は、先に同じ端末で振込先を入れる。値は当社の振込先（銀行名・支店・口座の種類・番号・名義）で、請求書の下に載る。リポジトリにもログにも書かない（ログには文字数だけが出る）:
 
 ```bash
-read -r -p '振込先（1 行。例: お振込先: ○○銀行 ○○支店 普通 1234567 カ）コア）: ' COR_BILLING_TRANSFER_FOOTER && export COR_BILLING_TRANSFER_FOOTER
+printf '振込先（1 行。例: お振込先: ○○銀行 ○○支店 普通 1234567 カ）コア）: ' && read -r COR_BILLING_TRANSFER_FOOTER && export COR_BILLING_TRANSFER_FOOTER
 ```
 
 入れ忘れると、振込の顧客の `invoice` は `STOP: … 振込先（環境変数 COR_BILLING_TRANSFER_FOOTER）が無い` で止まる（何も作らない）。カードの顧客の請求書には載らない。
@@ -420,11 +420,13 @@ bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/To
 ### M3. 振込の顧客の入金を確かめる
 
 - 支払い方法が `transfer` の顧客は、請求書の下の振込先へ、期限の日までに振り込んでもらう。`charge` は止まる（`STOP: … の支払い方法が card でない`）。
-- 入金を通帳か銀行の画面で確かめたら、その月の請求書を支払い済みにする（引き落とさない。open のままだと、請求書のページから二重に払われうる）。`<入金日>` は入金を確かめた日（YYYY-MM-DD）:
+- 入金を通帳か銀行の画面で確かめたら、その入金がどの月の分かを台帳で決め、その月の請求書を支払い済みにする（引き落とさない。open のままだと、請求書のページから二重に払われうる）。`<請求の月>` は台帳の請求の月（YYYY-MM。日付から計算しない。期限は翌月末日なので、確かめる日は月をまたぐことが多い）、`<入金日>` は入金を確かめた日（YYYY-MM-DD）:
 
 ```bash
-bash docs/billing/subscribe.sh mark-paid --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --paid-on <入金日> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+bash docs/billing/subscribe.sh mark-paid --customer <cus_…> --month <請求の月> --paid-on <入金日> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
 ```
+
+- `<請求の月>` より前の月の請求書が open のまま残っていれば `STOP: … より前の open の請求書がある: …` で止まる（何もしていない）。古い月から順に実行する。
 
 - `PLAN mark-paid: 請求書 in_…（<先月> 分、税込 … 円）を、入金日 <入金日> の振込で支払い済みにする` を読み、額が入金と同じときだけ `live` と打つ。`MARKED_PAID in_… <先月>: …` が出ること。台帳に入金日を書く。額が違うとき（振込手数料を引かれた、など）は実行せず、寺田が決める。
 
