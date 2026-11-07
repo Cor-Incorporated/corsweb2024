@@ -129,6 +129,11 @@ check_bad currency '(.currency) = "usd"' 'currency が jpy でない'
 # 税率の識別子は tax_rate.id。旧い項目名（gitleaks が generic-api-key と誤検出した名前）に戻すと落ちる
 check_bad taxidmissing 'del(.tax_rate.id)' 'tax_rate.id の形が違う'
 check_bad taxidoldname '.tax_rate |= with_entries(if .key == "id" then .key = "key" else . end)' 'tax_rate.id の形が違う'
+# 解約の方針（特商法ページの「1 か月後の同じ日」「日割り」「返金いたしません」と同じ）。subscribe.sh が実装していない方針は落とす
+check_bad cancelrefund '(.cancellation.refund) = "prorated"' 'cancellation.refund は none'
+check_bad cancelfinal '(.cancellation.final_period) = "full_month"' 'cancellation.final_period は prorated'
+check_bad cancelnotice '(.cancellation.notice_months) = 0' 'cancellation.notice_months は 1〜12'
+check_bad cancelmissing 'del(.cancellation)' 'cancellation.plan は basic'
 
 # 使い方の誤り
 KEY_FOR_RUN="" run empty "$PLANS" --apply

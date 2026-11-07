@@ -10,11 +10,11 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 |---|---|
 | [plans.json](plans.json) | 商品・価格・税率の宣言（機械可読）。金額は税別の円 |
 | [apply-plans.sh](apply-plans.sh) | plans.json を読んで Stripe に冪等に作る。既定は dry-run（通信しない・鍵を読まない） |
-| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約（Customer・basic・開発費の schedule）、状態の読取、basic の期間末の解約。既定は dry-run |
+| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約（Customer・basic・開発費の schedule）、状態の読取、basic の解約（受理日の 1 か月後の同じ日に終わる）。既定は dry-run |
 | [verify-installments.sh](verify-installments.sh) | テストモード専用。test clock で、開発費が N 回で止まることと、basic の最初の支払いでカードが保存されることを実測する |
 | [lib.sh](lib.sh) | 3 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 43 項目、`test-subscribe.sh` 71 項目、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・13 回目の請求を不合格にすること）。`test-apply-plans.sh` 47 項目、`test-subscribe.sh` 99 項目、`test-gitleaksignore.sh` 6 項目、`test-tokushoho-link.sh`（特商法ページの月額と解約条件 ↔ plans.json）（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -157,8 +157,13 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 
 ## 6. 解約 → 入口を閉じる
 
-1. 解約の申し出を受けたら、寺田が basic の subscription を期間末で止める（`subscribe.sh cancel`。`cancel_at_period_end=true` [20]）。スクリプトは basic 以外（開発費）を止めない。
-2. 期間末に subscription が終わる（通知 `customer.subscription.deleted` [16]）。**先に Access の許可から利用者を外し**、入口を閉じる。
+決まっていること（寺田、2026-11-07）: 解約は、当社がお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は月末）に終わる。例: 11 月 5 日に受理したら 12 月 5 日。それまでは日割りで請求し、支払い済みの料金は返金しない。開発費は最初の 1 年（12 回）で回収する。宣言は `plans.json` の `cancellation`（`notice_months: 1`、`final_period: prorated`、`refund: none`）で、特商法ページの解約条件の行とは `tests/test-tokushoho-link.sh` が結ぶ。
+
+1. 解約の申し出を受理したら、寺田が basic の subscription に終了日時を付ける（`subscribe.sh cancel --accepted <受理日>`）。終了日時は「受理日の 1 か月後の同じ日の終わり」（翌日の日本時間 0:00）で、`cancel_at` に入れる [10]。スクリプトは basic 以外（開発費）を止めない。
+   - 終了日時は今の期間の終わり以降に来る（受理日は今の期間の中にあり、期間は 1 か月なので）。`cancel_at` が次の期間に入ると、Stripe はその期間を必ず日割りで請求する（`proration_behavior` では止められない）[28]。按分は秒単位 [29]。
+   - Stripe は解約で自動の返金をしない。終了日時が支払い済みの期間の中だと差額が顧客の残高に戻る [29] ので、スクリプトはその場合に止まる（受理日の記録が遅れたとき）。
+   - 終了日を含む期間の請求額は、まだ実測していない（test clock で測る手順は無い。T7）。
+2. 終了日時に subscription が終わる（通知 `customer.subscription.deleted` [16]）。**先に Access の許可から利用者を外し**、入口を閉じる。
 3. 製品側の利用者を無効にする。XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
 4. 支払いが失敗したとき（通知 `invoice.payment_failed` [16]）: 再請求の設定と、何日で入口を閉じるかは寺田が決める（未決）。
 
@@ -233,12 +238,14 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 25. Clerk の metadata（public / private / unsafe、Stripe の顧客 id の例）: https://clerk.com/docs/users/metadata
 26. Clerk を IdP にする（OAuth 2.0 / OIDC、スコープ `user:org:read` と `org_id`）: https://clerk.com/docs/advanced-usage/clerk-idp 、https://clerk.com/docs/guides/configure/auth-strategies/oauth/how-clerk-implements-oauth
 27. Cloudflare Access の generic OIDC と、ポリシーの OIDC claim: https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/generic-oidc/ 、https://developers.cloudflare.com/cloudflare-one/access-controls/policies/
+28. `cancel_at` が次の期間に入るとき、その期間は必ず日割りになる（2026-11-07 に読んだ）: https://docs.stripe.com/api/subscriptions/update 、https://docs.stripe.com/billing/subscriptions/cancel
+29. 日割りの按分は秒単位、マイナスの按分は自動では返金されない（2026-11-07 に読んだ）: https://docs.stripe.com/billing/subscriptions/prorations
 
 ## 12. 確かめたい点（寺田）
 
 1. 請求書に出る商品名（1 章の表）。
 2. 適格請求書の要件を Stripe の請求書で満たすか。登録番号を `jp_trn` で載せるか。
-3. 解約の申し出の期限、最低の利用期間、途中解約の日割り。
-4. 開発費の途中解約のとき、残りを一括で請求するか。
+3. 解約の期限と日割りは決まった（6 章、2026-11-07）。最低の利用期間は未決。
+4. 開発費の途中解約のとき（最初の 1 年のうちに basic を解約したとき）、残りの回数を続けて請求するか、一括で請求するか。
 5. 支払いが失敗してから入口を閉じるまでの日数。
 6. 開始月から今月までの各月を、どの方法（請求書か Stripe か）で請求するか（8 章。顧客ごとの数字は非公開の台帳）。

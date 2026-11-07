@@ -17,6 +17,12 @@
     "jurisdiction": "JP",
     "tax_type": "jct"
   },
+  "cancellation": {
+    "plan": "basic",
+    "notice_months": 1,
+    "final_period": "prorated",
+    "refund": "none"
+  },
   "services": [
     {
       "service": "business-dossier",

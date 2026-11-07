@@ -84,6 +84,7 @@ readonly JQ_VALIDATE='
 | (reduce ($r.products // [])[] as $p ({}; .[($p.id // "") | tostring] = $p)) as $prod
 | ([($r.services // [])[] | .service]) as $svcs
 | ($r.tax_rate // {}) as $t
+| ($r.cancellation // {}) as $c
 | [
     (if $r.schema != "cor-billing-plans.v1" then "schema が cor-billing-plans.v1 でない（観測: \($r.schema)）" else empty end),
     (if $r.currency != "jpy" then "currency が jpy でない（観測: \($r.currency)）" else empty end),
@@ -98,6 +99,12 @@ readonly JQ_VALIDATE='
     (if $t.country != "JP" then "tax_rate.country は JP（観測: \($t.country)）" else empty end),
     (if ($t.display_name | type == "string" and length > 0 and length <= 50) | not
       then "tax_rate.display_name は 1〜50 文字（観測: \($t.display_name)）" else empty end),
+    (if $c.plan != "basic" then "cancellation.plan は basic（解約するのは basic だけ。観測: \($c.plan)）" else empty end),
+    (if (($c.notice_months | isint) and $c.notice_months >= 1 and $c.notice_months <= 12) | not
+      then "cancellation.notice_months は 1〜12 の整数（観測: \($c.notice_months)）" else empty end),
+    (if $c.final_period != "prorated"
+      then "cancellation.final_period は prorated（subscribe.sh はこの方針だけを実装している。観測: \($c.final_period)）" else empty end),
+    (if $c.refund != "none" then "cancellation.refund は none（subscribe.sh は返金を作らない。観測: \($c.refund)）" else empty end),
     (($r.products // []) | group_by(.id)[] | select(length > 1) | "products の id が重複: \(.[0].id)"),
     (($r.products // [])[]
       | (if (.id | type == "string" and test("^[a-z0-9_]+$")) | not then "products の id の形が違う（観測: \(.id)）" else empty end),

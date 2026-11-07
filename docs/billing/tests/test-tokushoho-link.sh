@@ -32,6 +32,54 @@ check() {
     return 1
   fi
   printf 'ok: 特商法ページの月額 %s 円（税別）は plans.json の basic と一致\n' "$amount"
+  check_locales "$amount" "$page" || return 1
+  check_cancellation "$plans" "$page"
+}
+
+# en / zh / ko / es の同じページ（src/pages/<lang>/legal/tokushoho.astro）の月額と、日本法・日本語版が正本の注記
+check_locales() {
+  local amount="$1" page="$2" dir lang file want
+  dir="$(dirname "$page")"
+  for lang in en zh ko es; do
+    file="$dir/../$lang/legal/tokushoho.astro"
+    case "$lang" in
+      en) want="JPY&nbsp;${amount} per month" ;;
+      zh) want="每月&nbsp;${amount}&nbsp;日元" ;;
+      ko) want="월&nbsp;${amount}&nbsp;엔" ;;
+      es) want="${amount//,/.}&nbsp;JPY al mes" ;;
+    esac
+    [ -f "$file" ] || { printf 'NG: %s が無い\n' "$file"; return 1; }
+    if ! grep -qF "$want" "$file"; then
+      printf 'NG: %s の月額に「%s」が無い（plans.json の basic は %s 円・税別）\n' "$lang" "$want" "$amount"
+      return 1
+    fi
+  done
+  printf 'ok: en / zh / ko / es の月額も plans.json の basic と一致\n'
+}
+
+# 解約の条件: ページの「受理した日の N か月後の同じ日」「日割り」「返金いたしません」と plans.json の cancellation
+check_cancellation() {
+  local plans="$1" page="$2" months final refund row want
+  months="$(jq -r '.cancellation.notice_months' "$plans")"
+  final="$(jq -r '.cancellation.final_period' "$plans")"
+  refund="$(jq -r '.cancellation.refund' "$plans")"
+  row="$(grep -F '定期購入・サブスクリプションの解約条件' "$page" || true)"
+  [ -n "$row" ] || { printf 'NG: 特商法ページに「定期購入・サブスクリプションの解約条件」の行が無い\n'; return 1; }
+  want="受理した日の&nbsp;${months}&nbsp;か月後の同じ日"
+  if ! printf '%s' "$row" | grep -qF "$want"; then
+    printf 'NG: 解約条件の行に「%s」が無い（plans.json の cancellation.notice_months は %s。ページの行: %s）\n' "$want" "$months" \
+      "$(printf '%s' "$row" | grep -oE '受理した日の&nbsp;[0-9]+&nbsp;か月後' | head -1 || printf 'なし')"
+    return 1
+  fi
+  if [ "$final" = "prorated" ] && ! printf '%s' "$row" | grep -qF '日割り'; then
+    printf 'NG: plans.json の cancellation.final_period は prorated だが、解約条件の行に「日割り」が無い\n'
+    return 1
+  fi
+  if [ "$refund" = "none" ] && ! printf '%s' "$row" | grep -qF '返金いたしません'; then
+    printf 'NG: plans.json の cancellation.refund は none だが、解約条件の行に「返金いたしません」が無い\n'
+    return 1
+  fi
+  printf 'ok: 特商法ページの解約条件（%s か月後の同じ日、%s、返金 %s）は plans.json の cancellation と一致\n' "$months" "$final" "$refund"
 }
 
 set +e
@@ -56,3 +104,11 @@ if check "$tmp" "$PAGE" >/dev/null; then
   exit 1
 fi
 printf 'ok: 金額を変えた plans.json では落ちる（反証）\n'
+
+# 反証: 解約の月数を変えた plans.json の写しで落ちること
+jq '.cancellation.notice_months = 2' "$PLANS" >"$tmp"
+if check "$tmp" "$PAGE" >/dev/null; then
+  printf 'FAIL: 解約の月数を変えた plans.json でも通った（検査が効いていない）\n'
+  exit 1
+fi
+printf 'ok: 解約の月数を変えた plans.json では落ちる（反証）\n'

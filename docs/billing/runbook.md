@@ -44,7 +44,7 @@ P3 の場所へ移る（merge 前）:
 cd ~/Developer/corsweb/.worktrees/claude/billing-20261106
 ```
 
-鍵なしで動く検査を先に通す（通信しない。`43 passed, 0 failed`、`71 passed, 0 failed`、`6 passed, 0 failed` が出ること）:
+鍵なしで動く検査を先に通す（通信しない。`47 passed, 0 failed`、`99 passed, 0 failed`、`6 passed, 0 failed` が出ること）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -183,13 +183,13 @@ bash docs/billing/verify-installments.sh --start align 2>&1 | tee ~/billing-veri
    bash docs/billing/subscribe.sh devfee --customer <cus_…> --service xesm --count 2 --start now --apply --mode test
    ```
 
-6. basic を期間末で止める。`<sub_…>` は 4 の `SUB` の行のうち `plan=basic` の id。`CANCEL_AT_PERIOD_END … に終わる` が出ること。
+6. basic に終了日時を付ける。`<sub_…>` は 4 の `SUB` の行のうち `plan=basic` の id。受理日は今日の日付にする（下のコマンドがそのまま入れる）。`CANCEL_AT … に終わる（受理日 <今日> → 終了日 <1 か月後の同じ日> の終わり）` が出ること。
 
    ```bash
-   bash docs/billing/subscribe.sh cancel --subscription <sub_…> --apply --mode test
+   bash docs/billing/subscribe.sh cancel --subscription <sub_…> --accepted "$(TZ=Asia/Tokyo date '+%Y-%m-%d')" --apply --mode test
    ```
 
-7. 4 をもう一度実行し、basic の行が `cancel_at_period_end=true`、開発費の `SCHEDULE` の行が残っていることを確かめる。
+7. 4 をもう一度実行し、basic の行が `cancel_at=<6 の終了日時の epoch 秒>`・`cancel_at_period_end=false`、開発費の `SCHEDULE` の行が残っていることを確かめる。終了日を含む期間の日割りの請求額は、この T では測れない（終了日まで 1 か月かかる）。test clock で測る手順はまだ無い（README 6 章）。
 
 ## L. 本番に切り替える
 
@@ -326,19 +326,21 @@ README の 8 章。請求書（銀行振込）で請求済みの月は、その�
 
 ## D. 解約 → 入口を閉じる（本番）
 
-### D1. basic を期間末で止める
+### D1. basic に終了日時を付ける
 
-`<sub_…>` は C5 の `status` の出力のうち `plan=basic` の `SUB` の id。
+特商法ページの解約条件のとおり、当社が解約のお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は月末）を終了日にする。`<sub_…>` は C5 の `status` の出力のうち `plan=basic` の `SUB` の id。`<受理日>` は、お申し出のメールを受理した日（YYYY-MM-DD。台帳に書いた日）。
 
 ```bash
-bash docs/billing/subscribe.sh cancel --subscription <sub_…> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+bash docs/billing/subscribe.sh cancel --subscription <sub_…> --accepted <受理日> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
 ```
 
-`CANCEL_AT_PERIOD_END <sub_…>: <日時> に終わる。…` が出ること。日時を台帳に書く。開発費の subscription を渡すと `basic でない` で止まる（開発費は止めない）。
+`CANCEL_AT <sub_…>: <終了日の翌日> 00:00 JST に終わる（受理日 <受理日> → 終了日 <終了日> の終わり）。…` が出ること。例: 受理日 `2026-11-05` なら終了日 `2026-12-05`、`2026-12-06 00:00 JST に終わる`。終了日を台帳に書く。開発費の subscription を渡すと `basic でない` で止まる（開発費は止めない）。
 
-### D2. 期間末に入口を閉じる
+決済事業者側の設定: スクリプトはこの終了日時を subscription の `cancel_at` に入れるだけで、`cancel_at_period_end` も `proration_behavior` も送らない。終了日時が次の期間に入るので、Stripe はその期間を必ず日割り（秒単位の按分）で請求し、自動では返金しない（README 6 章、出典 [10] [28] [29]）。終了日時が支払い済みの期間の中に来るとき（受理日を記録したのが遅れたとき）だけ、差額が顧客の残高に戻るので、スクリプトは止まる。
 
-D1 の日時を過ぎたら、状態を読む。
+### D2. 終了日時を過ぎたら入口を閉じる
+
+D1 の終了日時を過ぎたら、状態を読む。
 
 ```bash
 bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
@@ -352,7 +354,7 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 
 ### D4. 台帳に書く
 
-解約日、入口を閉じた日時。開発費の schedule は契約書の定めに従い、止めない。
+受理日、終了日、入口を閉じた日時。開発費の schedule は契約書の定めに従い、止めない。
 
 ## 問題が起きたら
 
@@ -365,7 +367,10 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 | `STOP: 価格 … が無い。先に apply-plans.sh …`（exit 3） | そのモードで T3（または L2）をまだ実行していない | T3（L2）を先に実行する |
 | `STOP: この顧客には … の basic が既にある`（exit 3） | 同じ顧客・同じサービスに basic がある | `status` で状態を読む。`incomplete` のままなら、`status` の `PAY_URL` の行の URL を送り直す。失効（`incomplete_expired`）していれば C3 からやり直す |
 | `NOTE …: 24 時間以内に同じ内容で送った要求の、前回の結果が返った` のあと `STOP: … 今の状態が期待と違う`（exit 3） | 24 時間以内に同じ内容で作り直そうとした（失効した basic の作り直し、取り消した解約のやり直し、消した商品の作り直し） | 何も変わっていない。24 時間以上あけて同じコマンドを実行するか、`status` で今の状態を確かめる |
-| `NOTE …: … 前回の結果が返った` のあと、そのまま `CREATED` や `CANCEL_AT_PERIOD_END` が出る | 前回の作成や解約がまだ生きている（読み直して確かめた） | そのまま進めてよい |
+| `NOTE …: … 前回の結果が返った` のあと、そのまま `CREATED` や `CANCEL_AT` が出る | 前回の作成や解約がまだ生きている（読み直して確かめた） | そのまま進めてよい |
+| `STOP: 終了日時 … が支払い済みの期間（… まで）の中にある`（exit 3） | 受理日を入れたのが遅れ、終了日が今の期間（もう払われた期間）の中に来た | 何も変えていない。そのまま止めると差額が顧客の残高に戻る。どう扱うかは寺田が決める |
+| `STOP: … には既に別の終了日時がある` / `期間末で止まる設定（cancel_at_period_end=true）`（exit 3） | 前に別の受理日で実行した、または Stripe の画面で解約を設定した | 書き換えていない。`status` の `cancel_at=` と台帳の受理日を見比べて、寺田が決める |
+| `STOP: --accepted に未来の日付は使わない` / `終了日 … は既に過ぎている`（exit 64） | 受理日の打ち間違い、または受理から 1 か月以上たってから実行した | 台帳の受理日を確かめる。終了日が過ぎていたら寺田が決める |
 | `STOP: curl が失敗した（POST …）。POST なら書き込みが届いた可能性がある`（exit 4） | 通信が途中で切れた、30 秒で時間切れ | 同じコマンドを続けて実行しない。`status`（顧客の作成なら `find`）で今の状態を確かめてから決める |
 | `STOP: curl 7.84 以上が要る`（exit 64） | 手元の curl が古い | `curl --version` で版を確かめる。2026-11-06 の手元の Mac は 8.7.1 |
 | `STOP: set -x（bash -x）では鍵がトレースに出るので実行しない`（exit 64） | `bash -x` で動かした | `-x` を付けずに実行する |
