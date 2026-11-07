@@ -17,6 +17,16 @@
     "jurisdiction": "JP",
     "tax_type": "jct"
   },
+  "billing": {
+    "closing": "month_end",
+    "payment_due": "end_of_next_month",
+    "first_month": "full_month"
+  },
+  "minimum_term": {
+    "months": 12,
+    "early_termination_fee": "remaining_term_total",
+    "dev_fee_on_early_termination": "remaining_lump_sum"
+  },
   "cancellation": {
     "plan": "basic",
     "notice_months": 1,

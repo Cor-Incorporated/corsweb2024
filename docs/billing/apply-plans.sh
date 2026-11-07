@@ -85,6 +85,8 @@ readonly JQ_VALIDATE='
 | ([($r.services // [])[] | .service]) as $svcs
 | ($r.tax_rate // {}) as $t
 | ($r.cancellation // {}) as $c
+| ($r.billing // {}) as $b
+| ($r.minimum_term // {}) as $m
 | [
     (if $r.schema != "cor-billing-plans.v1" then "schema が cor-billing-plans.v1 でない（観測: \($r.schema)）" else empty end),
     (if $r.currency != "jpy" then "currency が jpy でない（観測: \($r.currency)）" else empty end),
@@ -105,6 +107,14 @@ readonly JQ_VALIDATE='
     (if $c.final_period != "prorated"
       then "cancellation.final_period は prorated（subscribe.sh はこの方針だけを実装している。観測: \($c.final_period)）" else empty end),
     (if $c.refund != "none" then "cancellation.refund は none（subscribe.sh は返金を作らない。観測: \($c.refund)）" else empty end),
+    (if ([$b.closing, $b.payment_due, $b.first_month] | . != ["month_end", "end_of_next_month", "full_month"] and . != ["same_day_advance", "at_period_start", "full_month"])
+      then "billing は month_end / end_of_next_month / full_month（2026-11-07 の決定）か same_day_advance / at_period_start / full_month（前の形）（観測: \([$b.closing, $b.payment_due, $b.first_month] | join(" / "))）" else empty end),
+    (if (($m.months | isint) and $m.months >= 0 and $m.months <= 36) | not
+      then "minimum_term.months は 0〜36 の整数（観測: \($m.months)）" else empty end),
+    (if $m.early_termination_fee != "remaining_term_total"
+      then "minimum_term.early_termination_fee は remaining_term_total（観測: \($m.early_termination_fee)）" else empty end),
+    (if $m.dev_fee_on_early_termination != "remaining_lump_sum"
+      then "minimum_term.dev_fee_on_early_termination は remaining_lump_sum（観測: \($m.dev_fee_on_early_termination)）" else empty end),
     (($r.products // []) | group_by(.id)[] | select(length > 1) | "products の id が重複: \(.[0].id)"),
     (($r.products // [])[]
       | (if (.id | type == "string" and test("^[a-z0-9_]+$")) | not then "products の id の形が違う（観測: \(.id)）" else empty end),

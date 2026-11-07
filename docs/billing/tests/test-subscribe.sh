@@ -12,10 +12,14 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BILLING="$(cd "$HERE/.." && pwd)"
-PLANS="$BILLING/plans.json"
+REAL_PLANS="$BILLING/plans.json"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/billing-sub-test.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/bin"
+# 実装済みの形（same_day_advance）の写しで、既存の動きを確かめる。本物の plans.json（month_end）では、
+# 契約・解約を作るサブコマンドが止まることを、ファイルの末尾で確かめる。
+PLANS="$WORK/plans-same-day.json"
+jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", first_month: "full_month"}' "$REAL_PLANS" >"$PLANS"
 cp "$HERE/fake-curl.sh" "$WORK/bin/curl"
 chmod +x "$WORK/bin/curl"
 DUMMY_KEY="dummy-key-for-leak-check-7f3a9c"
@@ -34,7 +38,7 @@ run() {
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
     COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" VERIFY_POLL_SECONDS=0 VERIFY_MIN_STEP_SECONDS=0 \
-    bash "$BILLING/$script" "$@" </dev/null 2>&1)"
+    bash "$BILLING/$script" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
   RC=$?
   set -e
   LOG="$(cat "$WORK/log")"
@@ -225,6 +229,24 @@ SCN=live run verify-installments.sh
 expect "本番の鍵なら何も作らずに exit 3" 3 0 "観測 livemode=true"
 run verify-installments.sh --mode live
 expect "verify に --mode は無い（exit 64）" 64 0 "テストモード専用"
+
+# 本物の plans.json（billing.closing=month_end、2026-11-07 の決定）では、まだ実装していないので契約・解約を作らない
+TODAY_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+RUN_PLANS="$REAL_PLANS" FAKE_SUBS=basic_active run subscribe.sh basic --customer cus_x --service xesm --tenant 組織 --apply --mode test
+expect "month_end では basic を作らない" 3 0 "まだ実装していない"
+[ -z "$LOG" ] && ok "month_end の basic は curl を呼ばない" || ng "month_end の basic が curl を呼んだ"
+RUN_PLANS="$REAL_PLANS" run subscribe.sh basic --customer cus_x --service xesm --tenant 組織
+expect "month_end では basic の dry-run も止まる" 3 0 "billing.closing=month_end"
+RUN_PLANS="$REAL_PLANS" FAKE_SUBS=basic_active run subscribe.sh devfee --customer cus_x --service business-dossier --count 8 --start align --apply --mode test
+expect "month_end では開発費の schedule を作らない" 3 0 "まだ実装していない"
+RUN_PLANS="$REAL_PLANS" FAKE_SUB_PLAN=basic run subscribe.sh cancel --subscription sub_x --accepted "$TODAY_JST" --apply --mode test
+expect "month_end では解約を作らない" 3 0 "まだ実装していない"
+RUN_PLANS="$REAL_PLANS" run verify-installments.sh
+expect "month_end では verify-installments も何も作らない" 3 0 "まだ実装していない"
+RUN_PLANS="$REAL_PLANS" run subscribe.sh customer --code sample-co --name テスト株式会社 --email billing@example.test
+expect "month_end でも customer の dry-run は動く" 0 0 "DONE dry-run"
+RUN_PLANS="$REAL_PLANS" FAKE_SUBS=basic_active run subscribe.sh status --customer cus_x --mode test
+expect "month_end でも status（読むだけ）は動く" 0 0 "SUB sub_basic"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

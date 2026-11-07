@@ -235,6 +235,17 @@ plans_lookup() {
   printf '%s' "$lk"
 }
 
+# このスクリプト群が実装している請求の形。plans.json の billing.closing と違えば、契約・解約を作らずに止まる。
+# 2026-11-07 に寺田が「月末締め翌月末払い」（closing=month_end）に決めた。その実装は README 1C 章の問いの答え待ち。
+readonly IMPLEMENTED_BILLING_CLOSING="same_day_advance"
+
+require_implemented_billing() {
+  local closing
+  closing="$(jq -r '.billing.closing // "-"' "$PLANS")"
+  [ "$closing" = "$IMPLEMENTED_BILLING_CLOSING" ] \
+    || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトがまだ実装していない（実装は $IMPLEMENTED_BILLING_CLOSING。README 1C 章の問いの答え待ち）。何もしていない"
+}
+
 plans_services() {
   jq -r '.services[].service' "$PLANS"
 }

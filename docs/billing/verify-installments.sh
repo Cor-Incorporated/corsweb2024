@@ -160,6 +160,7 @@ main() {
   require_curl
   bash "$SCRIPT_DIR/apply-plans.sh" --plans "$PLANS" >/dev/null || die 2 "plans.json の検査で不合格"
   validate_inputs
+  require_implemented_billing
   load_api_version
   basic_lk="$(plans_lookup "$SERVICE" basic)"
   dev_lk="$(plans_lookup "$SERVICE" dev_fee)"

@@ -134,6 +134,12 @@ check_bad cancelrefund '(.cancellation.refund) = "prorated"' 'cancellation.refun
 check_bad cancelfinal '(.cancellation.final_period) = "full_month"' 'cancellation.final_period は prorated'
 check_bad cancelnotice '(.cancellation.notice_months) = 0' 'cancellation.notice_months は 1〜12'
 check_bad cancelmissing 'del(.cancellation)' 'cancellation.plan は basic'
+# 請求の形と最低利用期間（特商法ページの「毎月末日で締め、翌月末日」「ご契約から 1 年」「残額」「一括」と同じ）
+check_bad billingmix '(.billing.payment_due) = "at_period_start"' 'billing は month_end'
+check_bad billingmissing 'del(.billing)' 'billing は month_end'
+check_bad termmonths '(.minimum_term.months) = 1.5' 'minimum_term.months は 0〜36'
+check_bad termfee '(.minimum_term.early_termination_fee) = "none"' 'early_termination_fee は remaining_term_total'
+check_bad termdev '(.minimum_term.dev_fee_on_early_termination) = "continue"' 'dev_fee_on_early_termination は remaining_lump_sum'
 
 # 使い方の誤り
 KEY_FOR_RUN="" run empty "$PLANS" --apply

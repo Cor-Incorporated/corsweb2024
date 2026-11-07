@@ -81,6 +81,47 @@ check_cancellation() {
     return 1
   fi
   printf 'ok: 特商法ページの解約条件（%s か月後の同じ日、%s、返金 %s）は plans.json の cancellation と一致\n' "$months" "$final" "$refund"
+  check_terms "$plans" "$page"
+}
+
+# 請求の形（支払時期の行）と最低利用期間（解約条件の行）: plans.json の billing と minimum_term
+check_terms() {
+  local plans="$1" page="$2" closing due first term fee dev years row timing
+  closing="$(jq -r '.billing.closing' "$plans")"
+  due="$(jq -r '.billing.payment_due' "$plans")"
+  first="$(jq -r '.billing.first_month' "$plans")"
+  term="$(jq -r '.minimum_term.months' "$plans")"
+  fee="$(jq -r '.minimum_term.early_termination_fee' "$plans")"
+  dev="$(jq -r '.minimum_term.dev_fee_on_early_termination' "$plans")"
+  timing="$(grep -F '>支払時期<' "$page" || true)"
+  row="$(grep -F '定期購入・サブスクリプションの解約条件' "$page" || true)"
+  if [ "$closing/$due" = "month_end/end_of_next_month" ] && ! printf '%s' "$timing" | grep -qF '毎月末日で締め、翌月末日にお支払いいただきます'; then
+    printf 'NG: plans.json の billing は %s / %s だが、支払時期の行に「毎月末日で締め、翌月末日にお支払いいただきます」が無い\n' "$closing" "$due"
+    return 1
+  fi
+  if [ "$first" = "full_month" ] && [ "$closing" = "month_end" ] && ! printf '%s' "$timing" | grep -qF '1&nbsp;か月分をご請求します'; then
+    printf 'NG: plans.json の billing.first_month は full_month だが、支払時期の行に「1&nbsp;か月分をご請求します」が無い\n'
+    return 1
+  fi
+  if [ $((term % 12)) -ne 0 ] || [ "$term" -eq 0 ]; then
+    printf 'NG: plans.json の minimum_term.months は %s。ページは「ご契約から N 年間」で書くので 12 の倍数にする\n' "$term"
+    return 1
+  fi
+  years=$((term / 12))
+  if ! printf '%s' "$row" | grep -qF "最低利用期間は、ご契約から&nbsp;${years}&nbsp;年間です"; then
+    printf 'NG: 解約条件の行に「最低利用期間は、ご契約から&nbsp;%s&nbsp;年間です」が無い（plans.json の minimum_term.months は %s。ページの行: %s）\n' "$years" "$term" \
+      "$(printf '%s' "$row" | grep -oE '最低利用期間は、ご契約から&nbsp;[0-9]+&nbsp;年間' | head -1 || printf 'なし')"
+    return 1
+  fi
+  if [ "$fee" = "remaining_term_total" ] && ! printf '%s' "$row" | grep -qF "ご契約から&nbsp;${years}&nbsp;年間の利用料の総額のうち、終了日までの利用料を除いた残額"; then
+    printf 'NG: plans.json の early_termination_fee は remaining_term_total だが、解約条件の行に残額の書き方が無い\n'
+    return 1
+  fi
+  if [ "$dev" = "remaining_lump_sum" ] && ! printf '%s' "$row" | grep -qF '設計開発費用の分割払いの残りを一括でご請求します'; then
+    printf 'NG: plans.json の dev_fee_on_early_termination は remaining_lump_sum だが、解約条件の行に「設計開発費用の分割払いの残りを一括でご請求します」が無い\n'
+    return 1
+  fi
+  printf 'ok: 特商法ページの請求の形（%s / %s / %s）と最低利用期間（%s か月、%s、%s）は plans.json と一致\n' "$closing" "$due" "$first" "$term" "$fee" "$dev"
 }
 
 set +e
@@ -113,3 +154,11 @@ if check "$tmp" "$PAGE" >/dev/null; then
   exit 1
 fi
 printf 'ok: 解約の月数を変えた plans.json では落ちる（反証）\n'
+
+# 反証: 最低利用期間を変えた plans.json の写しで落ちること
+jq '.minimum_term.months = 24' "$PLANS" >"$tmp"
+if check "$tmp" "$PAGE" >/dev/null; then
+  printf 'FAIL: 最低利用期間を変えた plans.json でも通った（検査が効いていない）\n'
+  exit 1
+fi
+printf 'ok: 最低利用期間を変えた plans.json では落ちる（反証）\n'
