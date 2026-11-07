@@ -8,20 +8,22 @@
 # サブコマンド:
 #   customer   --code <顧客コード> --name <社名> --email <請求先のメール> --payment card|transfer [--clerk-org <org_…>]
 #   find       --code <顧客コード>
-#   contract   --customer <cus_…> --service <サービス> --start YYYY-MM-DD --devfee-count <0〜12>
+#   contract   --customer <cus_…> --service <サービス> --start YYYY-MM-DD --devfee-count <0〜12> [--billing-from YYYY-MM]
 #   card-setup --customer <cus_…>
 #   cancel     --customer <cus_…> --service <サービス> --accepted <受理日 YYYY-MM-DD>
 #   invoice    --customer <cus_…> --month YYYY-MM
-#   charge     --customer <cus_…> --month YYYY-MM
-#   simulate   --start YYYY-MM-DD --devfee-count <回数> [--end YYYY-MM-DD] --months <月数> [--service <サービス>]
+#   charge     --customer <cus_…> --month YYYY-MM [--early-test]
+#   simulate   --start YYYY-MM-DD --devfee-count <回数> [--end YYYY-MM-DD] [--billing-from YYYY-MM] --months <月数> [--service <サービス>]
 #   status     --customer <cus_…>
 #
 # customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
-# contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く
+# contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く。
+#            前からの顧客は --billing-from で、この仕組みで請求を始める月（_bill_from）も書く（それより前の月は請求しない）
 # card-setup カードを保存する Checkout のページ（mode=setup）の URL を出す（送るのは寺田）
 # cancel     解約の終了日（受理日の 1 か月後の同じ日）を Customer の metadata（contract_<サービス>_end）に書く
 # invoice    その月の請求書を作り、確定して送る（明細は lib.sh の billing_lines。支払期限は翌月末日）
-# charge     その月の open の請求書を、保存したカードで払う（カードの顧客だけ。期限の日から）
+# charge     その月の open の請求書を、保存したカードで払う（カードの顧客だけ。期限の日から。
+#            --early-test はテストモードだけ期限前でも払う。本番では使えない）
 # simulate   通信せずに、月ごとの明細と合計を出す
 # status     契約の metadata、今月と先月の請求書、保存したカード（読むだけ）
 #
@@ -48,6 +50,8 @@ OPT_ACCEPTED=""
 OPT_MONTH=""
 OPT_END=""
 OPT_MONTHS=""
+OPT_BILL_FROM=""
+OPT_EARLY=0
 CANCEL_END_DATE=""
 DUE_DATE=""
 DUE_EPOCH=""
@@ -62,7 +66,7 @@ CS_STATUS=""
 CS_URL=""
 
 usage() {
-  sed -n '8,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
 例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
@@ -88,6 +92,7 @@ set_opt() {
     --month) OPT_MONTH="$2" ;;
     --end) OPT_END="$2" ;;
     --months) OPT_MONTHS="$2" ;;
+    --billing-from) OPT_BILL_FROM="$2" ;;
   esac
 }
 
@@ -103,7 +108,8 @@ parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --apply) DO_APPLY=1 ;;
-      --mode | --plans | --code | --name | --email | --clerk-org | --payment | --customer | --service | --start | --devfee-count | --accepted | --month | --end | --months)
+      --early-test) OPT_EARLY=1 ;;
+      --mode | --plans | --code | --name | --email | --clerk-org | --payment | --customer | --service | --start | --devfee-count | --accepted | --month | --end | --months | --billing-from)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         set_opt "$1" "$2"
         shift
@@ -147,6 +153,13 @@ check_month() {
   DUE_EPOCH="$(jst_day_end_epoch "$DUE_DATE")"
 }
 
+# この仕組みで請求を始める月（前からの顧客）。開始日の月より前にはしない。
+check_bill_from() {
+  [ -n "$OPT_BILL_FROM" ] || return 0
+  [[ "$OPT_BILL_FROM" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]] || die 64 "--billing-from は YYYY-MM（観測: $OPT_BILL_FROM）"
+  [[ ! "$OPT_BILL_FROM" < "${OPT_START:0:7}" ]] || die 64 "--billing-from が開始日の月より前（観測: $OPT_BILL_FROM < ${OPT_START:0:7}）"
+}
+
 # 回数・月数は 0 で始めない整数（bash の算術は 012 を 8 進数と読むため）。
 is_count() {
   [[ "$1" =~ ^(0|[1-9][0-9]*)$ ]]
@@ -178,8 +191,14 @@ check_invoice_month() {
 }
 
 # 保存したカードで払うのは、支払期限の日（翌月末日、日本時間）から。
+# --early-test はテストモードだけ期限前でも払う（runbook の T を今日通すため。寺田 2026-11-07）。本番では受け付けない。
 check_charge_day() {
   local today
+  if [ "$OPT_EARLY" -eq 1 ]; then
+    [ "$MODE" = "test" ] || die 64 "--early-test はテストモードだけ（--mode test と一緒に使う。本番では期限前に払わない。観測 --mode ${MODE:-なし}）"
+    printf 'NOTE --early-test: テストモードなので、支払期限 %s より前でも払う\n' "$DUE_DATE"
+    return 0
+  fi
   today="$(today_jst)"
   [[ ! "$today" < "$DUE_DATE" ]] || die 64 "$OPT_MONTH 分の支払期限は $DUE_DATE。期限の日より前は払わない（今日: $today）"
 }
@@ -194,6 +213,7 @@ check_simulate() {
     check_date --end "$OPT_END"
     [[ ! "$OPT_END" < "$OPT_START" ]] || die 64 "--end が --start より前（観測: $OPT_END < $OPT_START）"
   fi
+  check_bill_from
   is_count "$OPT_MONTHS" && [ "$OPT_MONTHS" -ge 1 ] && [ "$OPT_MONTHS" -le 36 ] || die 64 "--months は 1〜36（観測: $OPT_MONTHS）"
   [ "$DO_APPLY" -eq 0 ] && [ -z "$MODE" ] || die 64 "simulate は通信しない（--apply と --mode は使わない）"
 }
@@ -209,7 +229,7 @@ validate_command() {
     find) need --code "$OPT_CODE" ;;
     contract)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --start "$OPT_START"; need --devfee-count "$OPT_DEVFEE"
-      check_service; check_date --start "$OPT_START"; check_devfee_count ;;
+      check_service; check_date --start "$OPT_START"; check_devfee_count; check_bill_from ;;
     card-setup | status) need --customer "$OPT_CUSTOMER" ;;
     cancel)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
@@ -236,6 +256,8 @@ validate_inputs() {
   scope --month "$OPT_MONTH" "invoice charge"
   scope --end "$OPT_END" "simulate"
   scope --months "$OPT_MONTHS" "simulate"
+  scope --billing-from "$OPT_BILL_FROM" "contract simulate"
+  if [ "$OPT_EARLY" -eq 1 ]; then scope --early-test 1 "charge"; fi
   validate_command
   if [ -n "$OPT_CODE" ]; then
     [[ "$OPT_CODE" =~ ^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$ ]] || die 64 "--code は英小文字・数字・ハイフン（40 文字まで。観測: $OPT_CODE）"
@@ -257,8 +279,8 @@ print_plan() {
     customer) printf 'PLAN customer: GET /v1/customers/search で customer_code=%s を探し、無ければ POST /v1/customers（name=%s、email=%s、metadata[customer_code]=%s、metadata[payment]=%s、metadata[clerk_org_id]=%s）\n' \
       "$OPT_CODE" "$OPT_NAME" "$OPT_EMAIL" "$OPT_CODE" "$OPT_PAYMENT" "${OPT_CLERK:-（なし）}" ;;
     find) printf 'PLAN find: GET /v1/customers/search で customer_code=%s を探す（読むだけ）\n' "$OPT_CODE" ;;
-    contract) printf 'PLAN contract: %s の metadata に contract_%s_start=%s、contract_%s_devfee_count=%s を書く（違う値が既にあれば書き換えない）。開発費は税別 %s 円 × %s 回\n' \
-      "$OPT_CUSTOMER" "$s" "$OPT_START" "$s" "$OPT_DEVFEE" "$AMT_DEVFEE" "$OPT_DEVFEE" ;;
+    contract) printf 'PLAN contract: %s の metadata に contract_%s_start=%s、contract_%s_devfee_count=%s、contract_%s_bill_from=%s を書く（違う値が既にあれば書き換えない）。開発費は税別 %s 円 × %s 回。bill_from より前の月は請求しない\n' \
+      "$OPT_CUSTOMER" "$s" "$OPT_START" "$s" "$OPT_DEVFEE" "$s" "${OPT_BILL_FROM:-（なし）}" "$AMT_DEVFEE" "$OPT_DEVFEE" ;;
     card-setup) printf 'PLAN card-setup: %s のカードを保存する Checkout のページ（mode=setup、currency=jpy、success_url=https://cor-jp.com/）を作り、URL を出す。session の id を metadata[card_setup_session] に書く。カードが保存済みか、開いているページがあれば作らない\n' "$OPT_CUSTOMER" ;;
     cancel) printf 'PLAN cancel: %s の %s の終了日 = 受理日 %s の %s か月後の同じ日 = %s を metadata[contract_%s_end] に書く。%s 分の請求書に、終了日までの日割りと、最低利用期間の中なら残りの期間分の利用料と開発費の残りが入る（返金はしない）\n' \
       "$OPT_CUSTOMER" "$s" "$OPT_ACCEPTED" "$(jq -r '.cancellation.notice_months' "$PLANS")" "$CANCEL_END_DATE" "$s" "${CANCEL_END_DATE:0:7}" ;;
@@ -342,19 +364,28 @@ put_meta() {
 }
 
 do_contract() {
-  local ks="contract_${OPT_SERVICE}_start" kc="contract_${OPT_SERVICE}_devfee_count" cur_s cur_c
-  [ "${#kc}" -le 40 ] || die 64 "metadata の名前 $kc が 40 文字を超える（サービス名を短くする）"
+  local ks="contract_${OPT_SERVICE}_start" kc="contract_${OPT_SERVICE}_devfee_count" kb="contract_${OPT_SERVICE}_bill_from" cur_s cur_c cur_b cond
+  [ "${#kc}" -le 40 ] && [ "${#kb}" -le 40 ] || die 64 "metadata の名前 $kc か $kb が 40 文字を超える（サービス名を短くする）"
   load_customer
   cur_s="$(cust_meta "$ks")"
   cur_c="$(cust_meta "$kc")"
-  if [ "$cur_s" = "$OPT_START" ] && [ "$cur_c" = "$OPT_DEVFEE" ]; then
-    printf 'OK contract %s %s: 既に start=%s devfee_count=%s（書かない）\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$cur_s" "$cur_c"
+  cur_b="$(cust_meta "$kb")"
+  if [ "$cur_s" = "$OPT_START" ] && [ "$cur_c" = "$OPT_DEVFEE" ] && [ "$cur_b" = "$OPT_BILL_FROM" ]; then
+    printf 'OK contract %s %s: 既に start=%s devfee_count=%s bill_from=%s（書かない）\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$cur_s" "$cur_c" "${cur_b:-なし}"
     return 0
   fi
   [ -z "$cur_s" ] || [ "$cur_s" = "$OPT_START" ] || die 3 "$OPT_CUSTOMER の $ks が違う（期待 $OPT_START、観測 $cur_s）。書き換えない（寺田が判断）"
   [ -z "$cur_c" ] || [ "$cur_c" = "$OPT_DEVFEE" ] || die 3 "$OPT_CUSTOMER の $kc が違う（期待 $OPT_DEVFEE、観測 $cur_c）。書き換えない（寺田が判断）"
-  put_meta "契約を書く" ".metadata[\"$ks\"] == \"$OPT_START\" and .metadata[\"$kc\"] == \"$OPT_DEVFEE\"" "$ks=$OPT_START" "$kc=$OPT_DEVFEE"
-  printf 'CONTRACT %s %s: start=%s devfee_count=%s\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE"
+  # 請求を始める月は、一度書いたら変えない。既に契約があって bill_from が無い顧客に、あとから足すこともしない（二重請求の元になる）
+  [ "$cur_b" = "$OPT_BILL_FROM" ] || [ -z "$cur_s" ] || die 3 "$OPT_CUSTOMER の $kb が違う（期待 ${OPT_BILL_FROM:-なし}、観測 ${cur_b:-なし}）。書き換えない（寺田が判断）"
+  cond=".metadata[\"$ks\"] == \"$OPT_START\" and .metadata[\"$kc\"] == \"$OPT_DEVFEE\""
+  local -a kv=("$ks=$OPT_START" "$kc=$OPT_DEVFEE")
+  if [ -n "$OPT_BILL_FROM" ]; then
+    cond="$cond and .metadata[\"$kb\"] == \"$OPT_BILL_FROM\""
+    kv+=("$kb=$OPT_BILL_FROM")
+  fi
+  put_meta "契約を書く" "$cond" "${kv[@]}"
+  printf 'CONTRACT %s %s: start=%s devfee_count=%s bill_from=%s\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "${OPT_BILL_FROM:-なし}"
 }
 
 # 保存したカードを探す（subshell にしないで呼ぶ）。CARD_PM・CARD_SRC と、card-setup の session の CS_STATUS・CS_URL を決める。
@@ -426,7 +457,7 @@ find_month_invoice() {
 
 # 契約のある全サービスの、その月の明細を LINES（サービス 種類 金額 初日 末日 説明）・LINES_TOTAL・LINES_N に入れる。
 invoice_lines() {
-  local ym="$1" s start count end out l contracts=0
+  local ym="$1" s start count end bf out l contracts=0
   LINES=""
   LINES_TOTAL=0
   LINES_N=0
@@ -435,12 +466,18 @@ invoice_lines() {
     [ -n "$start" ] || continue
     count="$(cust_meta "contract_${s}_devfee_count")"
     end="$(cust_meta "contract_${s}_end")"
+    bf="$(cust_meta "contract_${s}_bill_from")"
     contracts=$((contracts + 1))
     load_amounts "$s"
     valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: $start）"
     is_count "$count" && [ "$count" -le "$DEVFEE_MAX" ] || die 3 "contract_${s}_devfee_count が 0〜$DEVFEE_MAX でない（観測: ${count:-なし}）"
     [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: $end）"
-    out="$(billing_lines "$s" "$start" "$count" "$end" "$ym")"
+    if [ -n "$bf" ]; then
+      [[ "$bf" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]] || die 3 "contract_${s}_bill_from が YYYY-MM でない（観測: $bf）"
+      # 前からの顧客: bill_from より前の月は請求書払いで請求済み。二重に請求しないよう、その月の請求書は作らない
+      [[ ! "$ym" < "$bf" ]] || die 3 "$OPT_CUSTOMER の $s は $bf より前を請求しない（contract_${s}_bill_from=$bf、観測 --month $ym）。その月はほかの方法で請求済み。何も作っていない"
+    fi
+    out="$(billing_lines "$s" "$start" "$count" "$end" "$ym" "$bf")"
     while IFS= read -r l; do
       [ -n "$l" ] || continue
       LINES="$LINES$s"$'\t'"$l"$'\n'
@@ -610,8 +647,8 @@ do_status() {
   printf 'CUSTOMER %s customer_code=%s name=%s payment=%s\n' "$OPT_CUSTOMER" "$(cust_meta customer_code)" "$(jq -r '.name // "-"' <<<"$CUST_JSON")" "$(cust_meta payment)"
   while IFS= read -r s; do
     [ -n "$(cust_meta "contract_${s}_start")" ] || continue
-    printf 'CONTRACT %s start=%s devfee_count=%s end=%s\n' "$s" "$(cust_meta "contract_${s}_start")" \
-      "$(cust_meta "contract_${s}_devfee_count")" "$(cust_meta "contract_${s}_end")"
+    printf 'CONTRACT %s start=%s devfee_count=%s end=%s bill_from=%s\n' "$s" "$(cust_meta "contract_${s}_start")" \
+      "$(cust_meta "contract_${s}_devfee_count")" "$(cust_meta "contract_${s}_end")" "$(cust_meta "contract_${s}_bill_from")"
   done < <(plans_services)
   this="$(today_jst)"
   this="${this:0:7}"
@@ -628,11 +665,11 @@ do_status() {
 # 通信しない。開始の月から --months か月分の明細と、月ごとの合計（税別）を出す。
 do_simulate() {
   local i ym out l t sum=0
-  printf 'mode: simulate（通信しない）service=%s start=%s devfee_count=%s end=%s months=%s\n' \
-    "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "${OPT_END:-なし}" "$OPT_MONTHS"
+  printf 'mode: simulate（通信しない）service=%s start=%s devfee_count=%s end=%s billing_from=%s months=%s\n' \
+    "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "${OPT_END:-なし}" "${OPT_BILL_FROM:-なし}" "$OPT_MONTHS"
   for ((i = 0; i < OPT_MONTHS; i++)); do
     ym="$(ym_add "${OPT_START:0:7}" "$i")"
-    out="$(billing_lines "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "$OPT_END" "$ym")"
+    out="$(billing_lines "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "$OPT_END" "$ym" "$OPT_BILL_FROM")"
     t=0
     while IFS= read -r l; do
       [ -n "$l" ] || continue

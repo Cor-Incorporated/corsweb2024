@@ -20,7 +20,7 @@
 | 2 | T1: テストモードの鍵を用意する（画面） | 5 分 | 1 |
 | 3 | T2〜T4: テストモードに商品・価格・税率を作り、冪等を確かめる | 5 分 | 2、この PR の merge（または P3 の worktree） |
 | 4 | T5〜T8: テストモードで顧客 1 社 → 契約 → カードの保存（ブラウザでテスト用カード）→ 請求書 | 20 分 | 3 |
-| 5 | T9: 期限の日（今月の末日）に、テスト用カードで払う | 5 分 | 4。**今月の末日まで待つ**（期限の日より前は止まる） |
+| 5 | T9: テスト用カードで払う（テストモードだけ `--early-test` で期限前に払う） | 5 分 | 4 |
 | 6 | T10: テストモードで解約を書く | 5 分 | 4 |
 | 7 | L1〜L3: 本番の鍵を用意し、本番に商品・価格・税率を作る | 10 分 | 4〜6 が通った |
 | 8 | C0: Clerk に顧客の組織を作る（画面） | 10 分 | 1 |
@@ -53,7 +53,7 @@ git -C ~/Developer/corsweb worktree add ~/Developer/corsweb/.worktrees/claude/bi
 cd ~/Developer/corsweb/.worktrees/claude/billing-invoice-20261107
 ```
 
-鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`186 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
+鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`209 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -176,7 +176,7 @@ bash docs/billing/subscribe.sh simulate --service xesm --start "$(TZ=Asia/Tokyo 
 bash docs/billing/subscribe.sh contract --customer <cus_…> --service xesm --start "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')-15" --devfee-count 12 --apply --mode test
 ```
 
-`CONTRACT <cus_…> xesm: start=<先月>-15 devfee_count=12` が出ること。もう一度実行すると `OK contract … 既に …（書かない）` が出る。
+`CONTRACT <cus_…> xesm: start=<先月>-15 devfee_count=12 bill_from=なし` が出ること。もう一度実行すると `OK contract … 既に …（書かない）` が出る。
 
 ### T7. カードを保存する（ブラウザでテスト用カード）
 
@@ -219,9 +219,9 @@ INVOICE_URL https://…
 - 同じコマンドをもう一度実行し、`OK invoice <cus_…>: <先月> 分の請求書 in_… は既にある（status=open、税込 19800 円）。作らない` が出ること（同じ月の 2 枚目を作らない）。
 - `INVOICE_URL` をブラウザで開くと、顧客が見る請求書のページが出る（中身の文言は未確認）。**テストモードではメールは送られない**。本番の最初の 1 通（M1）を寺田が受け取り側で確かめる。
 
-### T9. 期限の日（今月の末日）にテスト用カードで払う
+### T9. テスト用カードで払う（テストモードだけ期限前に払う）
 
-期限の日より前は止まる。今日実行して、止まることを先に確かめる（通信しない）:
+`--early-test` を付けなければ、期限の日より前は止まる。先に、止まることを確かめる（通信しない）:
 
 ```bash
 bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')"
@@ -229,10 +229,10 @@ bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/To
 
 `STOP: <先月> 分の支払期限は <今月の末日>。期限の日より前は払わない（今日: …）` が出て、終了コードが 64 であること（`echo $?` で `64`）。
 
-**T8 と同じ月の末日に**、次を実行する（下のコマンドが T8 と同じ `<先月>` を入れる）。末日を過ぎて月をまたいだら、`--month` の `"$(…)"` を T8 のログの `INVOICE in_… <先月>` の値に書き換える。
+次に、`--early-test` を付けて、テストモードで今日払う（寺田 2026-11-07 の決定。本番では `--early-test` は exit 64 で止まる）。下のコマンドは T8 と同じ `<先月>` を入れる。月をまたいだら、`--month` の `"$(…)"` を T8 のログの `INVOICE in_… <先月>` の値に書き換える。
 
 ```bash
-bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode test 2>&1 | tee ~/billing-charge-test-$(date +%Y%m%d-%H%M%S).log
+bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --early-test --apply --mode test 2>&1 | tee ~/billing-charge-test-$(date +%Y%m%d-%H%M%S).log
 ```
 
 - `PLAN charge: 請求書 in_…（<先月> 分、税込 19800 円、期限 <今月の末日>）を pm_…（card-setup（…））で払う` のあと、`PAID in_… <先月>: 税込 19800 円を pm_… で払った` が出ること。**`invoices/pay` の成功は未実測**（この手順で確かめる）。
@@ -253,7 +253,7 @@ bash docs/billing/subscribe.sh cancel --customer <cus_…> --service xesm --acce
 
 ## L. 本番に切り替える
 
-T2〜T10 が通ってから行う（T9 は今月の末日に通す）。
+T2〜T10 が通ってから行う。
 
 ### L1. 本番の鍵を用意する（画面の作業）
 
@@ -309,7 +309,8 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode live' "$log"
 | 支払い方法 | `card`（期限の日に当社が保存したカードで払う）か `transfer`（請求書のとおり振り込んでもらう） | C2・M2 |
 | サービス | `business-dossier` か `xesm` | C3 |
 | 製品側の組織 | business-dossier は起動の slug（bd-deploy の報告 6 章の推奨は `c01`）、XESM は組織名（XESM の `contract-to-use.md` 手順 6 の取得コマンドの出力）。Stripe には入れない | C6 |
-| 契約日 | 契約の開始日（YYYY-MM-DD）。開始の月が 1 か月目。前からの顧客は README 1C 章の「確かめたい点」が決まるまで空欄のまま | C3 |
+| 契約日 | 契約の開始日（YYYY-MM-DD）。開始の月が 1 か月目。前からの顧客は元の契約日 | C3 |
+| 請求を始める月 | 前からの顧客だけ。この仕組みで請求を始める月（YYYY-MM、例 2026-11）。それより前の月は請求書払いで請求済み。新しい顧客は空欄 | C3 |
 | 開発費の回数 | 0〜12 | C3 |
 | 月ごとの請求の方法・請求日・入金日 | 二重請求を防ぐため。請求書払いで請求済みの月には M1 を実行しない | M1・C7 |
 | 受理日・終了日・入口を閉じた日時 | 解約のとき | D1〜D5 |
@@ -344,7 +345,15 @@ bash docs/billing/subscribe.sh simulate --service <サービス> --start <契約
 bash docs/billing/subscribe.sh contract --customer <cus_…> --service <サービス> --start <契約日> --devfee-count <開発費の回数> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
 ```
 
-`CONTRACT <cus_…> <サービス>: start=<契約日> devfee_count=<開発費の回数>` が出ること。違う値が既にあれば `STOP: … が違う（期待 …、観測 …）。書き換えない` で止まる（台帳と見比べて寺田が決める）。
+`CONTRACT <cus_…> <サービス>: start=<契約日> devfee_count=<開発費の回数> bill_from=なし` が出ること。違う値が既にあれば `STOP: … が違う（期待 …、観測 …）。書き換えない` で止まる（台帳と見比べて寺田が決める）。
+
+前からの顧客（台帳の「請求を始める月」に値がある顧客）は、上の代わりに次を実行する。`<契約日>` は元の契約日:
+
+```bash
+bash docs/billing/subscribe.sh contract --customer <cus_…> --service <サービス> --start <契約日> --devfee-count <開発費の回数> --billing-from <請求を始める月> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+```
+
+`CONTRACT <cus_…> <サービス>: start=<契約日> devfee_count=<開発費の回数> bill_from=<請求を始める月>` が出ること。このあと `invoice` は、`<請求を始める月>` より前の月を `STOP: … より前を請求しない` で止める（その月は請求書払いで請求済み）。先に `simulate --billing-from <請求を始める月>` で月ごとの明細を確かめてよい。
 
 ### C4. カードを保存してもらう（支払い方法が card の顧客だけ）
 
@@ -483,8 +492,8 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 
 | 手順 | この文書だけで実行できるか | 足りないもの |
 |---|---|---|
-| T2〜T10、L2〜L3 | できる（コマンド、テスト用の値、日付を出すコマンド、出るべき行がある） | 鍵の用意（T1・L1）は画面の作業で、画面の文言は未確認。T9 は今月の末日まで実行できない。Checkout のページの文言は未確認 |
-| C2〜C5、M1〜M3、D1〜D2 | できる（`<…>` は台帳の同じ名前の列、`cus_…` は取得コマンドがある） | 台帳の置き場所（P4）が未決。前からの顧客の契約日と開発費の回数は、README 1C 章の「確かめたい点」が決まるまで決まらない |
+| T2〜T10、L2〜L3 | できる（コマンド、テスト用の値、日付を出すコマンド、出るべき行がある） | 鍵の用意（T1・L1）は画面の作業で、画面の文言は未確認。Checkout のページの文言は未確認 |
+| C2〜C5、M1〜M3、D1〜D2 | できる（`<…>` は台帳の同じ名前の列、`cus_…` は取得コマンドがある） | 台帳の置き場所（P4）が未決 |
 | M3 の「支払い済み」にする操作 | **できない** | Stripe の画面の操作が未確認 |
 | C6、D3 の Access | 製品側の手順書へ渡す | Access の画面の文言は製品側の手順書でも未確認 |
 | C0 | **できない** | Clerk の画面の文言と、組織の private metadata の書き方が未確認 |

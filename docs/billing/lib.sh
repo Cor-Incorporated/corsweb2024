@@ -363,8 +363,11 @@ emit_line() {
 # 開始の月を 1 か月目と数え、TERM_MONTHS か月目の末日までが最低利用期間。それより後の終了日では、
 # 請求済みの利用料が TERM_MONTHS か月分を超えるので、残りの期間分は 0 になる（明細を出さない）。
 billing_lines() {
-  local service="$1" start="$2" count="$3" end="$4" ym="$5" k k_end="" first last usage d dim rem left
+  local service="$1" start="$2" count="$3" end="$4" ym="$5" bill_from="${6:-}" k k_end="" first last usage d dim rem left
   load_amounts "$service"
+  # bill_from（YYYY-MM）より前の月は、ほかの方法（請求書払い）で請求済みなので何も出さない。
+  # 月の数え方（初月・最低利用期間・開発費の回数）は、元の契約の開始日から数える（寺田 2026-11-07）。
+  if [ -n "$bill_from" ] && [[ "$ym" < "$bill_from" ]]; then return 0; fi
   k=$(($(ym_index "$ym") - $(ym_index "${start:0:7}") + 1))
   [ "$k" -ge 1 ] || return 0
   if [ -n "$end" ]; then

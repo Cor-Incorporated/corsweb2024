@@ -386,5 +386,50 @@ expect "前の形の写しでも customer の dry-run は動く" 0 0 "DONE dry-r
 RUN_PLANS="$OLD_PLANS" FAKE_CUST_META="$INV_META" run status --customer cus_x --mode test
 expect "前の形の写しでも status（読むだけ）は動く" 0 0 "CUSTOMER cus_x customer_code=sample-co"
 
+# 13. 寺田の決定（2026-11-07 12:4x）1: --early-test はテストモードだけ、期限前でも払う。本番では受け付けない
+EARLY_META="$(meta card "$LAST-15" 12)"
+FAKE_CUST_META="$EARLY_META" FAKE_CUST_PM=pm_default FAKE_INV_STATE=open FAKE_INV_DUE="$DUE_LAST" run charge --customer cus_x --month "$LAST" --apply --mode test
+expect "--early-test なしでは期限前の charge は止まる" 64 0 "期限の日より前は払わない"
+FAKE_CUST_META="$EARLY_META" FAKE_CUST_PM=pm_default FAKE_INV_STATE=open FAKE_INV_DUE="$DUE_LAST" run charge --customer cus_x --month "$LAST" --early-test --apply --mode test
+expect "テストモードの --early-test は期限前でも払う" 0 1 "NOTE --early-test"
+check_arg "前倒しでも保存したカードで払う" "payment_method=pm_default"
+SCN=live FAKE_CUST_META="$EARLY_META" FAKE_CUST_PM=pm_default FAKE_INV_STATE=open FAKE_INV_DUE="$DUE_LAST" run charge --customer cus_x --month "$LAST" --early-test --apply --mode live
+expect "本番の --early-test は exit 64" 64 0 "--early-test はテストモードだけ"
+[ -z "$LOG" ] && ok "本番の --early-test は curl を呼ばない（鍵も読まない）" || ng "本番の --early-test が curl を呼んだ: $LOG"
+run charge --customer cus_x --month "$LAST" --early-test
+expect "--mode の無い --early-test は exit 64" 64 0 "--early-test はテストモードだけ"
+run invoice --customer cus_x --month "$LAST" --early-test
+expect "--early-test は charge でだけ使う" 64 0 "--early-test は charge でだけ使う"
+
+# 14. 寺田の決定 2: 前からの顧客は、開始日を元の契約日にし、請求を始める月（bill_from）より前は請求しない
+run contract --customer cus_x --service xesm --start 2026-08-10 --devfee-count 12 --billing-from 2026-11
+expect "contract の dry-run は bill_from を出す" 0 0 "contract_xesm_bill_from=2026-11"
+run contract --customer cus_x --service xesm --start 2026-08-10 --devfee-count 12 --billing-from 2026-07
+expect "開始日の月より前の bill_from は exit 64" 64 0 "開始日の月より前"
+run contract --customer cus_x --service xesm --start 2026-08-10 --devfee-count 12 --billing-from 2026-1
+expect "bill_from の形の誤りは exit 64" 64 0 "--billing-from は YYYY-MM"
+FAKE_CUST_META="$(meta transfer)" run contract --customer cus_x --service xesm --start 2026-08-10 --devfee-count 12 --billing-from 2026-11 --apply --mode test
+expect "contract は bill_from も書く" 0 1 "CONTRACT cus_x xesm: start=2026-08-10 devfee_count=12 bill_from=2026-11"
+check_arg "bill_from を metadata に書く" "metadata[contract_xesm_bill_from]=2026-11"
+FAKE_CUST_META="$(meta transfer 2026-08-10 12)" run contract --customer cus_x --service xesm --start 2026-08-10 --devfee-count 12 --billing-from 2026-11 --apply --mode test
+expect "契約があとから bill_from を足すのは止める（二重請求の元）" 3 0 "contract_xesm_bill_from が違う"
+BF_META="$(jq -c --arg b "$THIS" '. + {contract_xesm_bill_from: $b}' <<<"$(meta card "$TWO_AGO-10" 12)")"
+FAKE_CUST_META="$BF_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "bill_from より前の月の invoice は止める（その月は請求書払いで請求済み）" 3 0 "より前を請求しない"
+BF_META2="$(jq -c --arg b "$LAST" '. + {contract_xesm_bill_from: $b}' <<<"$(meta card "$TWO_AGO-10" 12)")"
+FAKE_CUST_META="$BF_META2" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "bill_from の月からは請求する（2 か月目として 1 か月分 + 開発費 2 回目）" 0 5 "CHECK ok: 小計 18000 円"
+printf '%s\n' "$LOG" | grep '^ARGV' | grep -qF '2/12 回目' && ok "bill_from の月は初月の扱いにしない（開発費は元の開始月から数えて 2 回目）" || ng "開発費の明細に 2/12 回目が無い"
+check_no_arg "bill_from の月に初月の明細を作らない" "初月"
+# 元の開始日から数える（独立レビューの例）: 2026-06-10 開始、bill_from 2026-11、2027-03-15 終了。
+# 残りの期間分 = 10,000 × 12 −（6〜2 月の 9 か月 90,000 + 3 月の日割り 10,000 × 15 ÷ 31 = 4,838）= 25,162
+run simulate --start 2026-06-10 --devfee-count 0 --end 2027-03-15 --billing-from 2026-11 --months 10
+expect "simulate は bill_from を受ける" 0 0 "billing_from=2026-11"
+has_line "bill_from より前の月（6 月）は 0" "TOTAL 2026-06 0"
+has_line "bill_from より前の月（10 月）は 0" "TOTAL 2026-10 0"
+has_line "bill_from の月（11 月）は 1 か月分（初月の扱いにしない）" "LINE 2026-11 usage 10000 "
+has_line "最後の月は日割り（15/31 日 = 4,838）" "LINE 2027-03 usage_prorated 4838 "
+has_line "残りの期間分は元の開始日から数える（25,162）" "LINE 2027-03 remaining_usage 25162 "
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
