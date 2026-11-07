@@ -129,6 +129,19 @@ check_bad currency '(.currency) = "usd"' 'currency が jpy でない'
 # 税率の識別子は tax_rate.id。旧い項目名（gitleaks が generic-api-key と誤検出した名前）に戻すと落ちる
 check_bad taxidmissing 'del(.tax_rate.id)' 'tax_rate.id の形が違う'
 check_bad taxidoldname '.tax_rate |= with_entries(if .key == "id" then .key = "key" else . end)' 'tax_rate.id の形が違う'
+# 解約の方針（特商法ページの「1 か月後の同じ日」「日割り」「返金いたしません」と同じ）。subscribe.sh が実装していない方針は落とす
+check_bad cancelrefund '(.cancellation.refund) = "prorated"' 'cancellation.refund は none'
+check_bad cancelends '(.cancellation.ends) = "end_of_accepted_month"' 'cancellation.ends は accepted_plus_notice'
+check_bad cancelnotice '(.cancellation.notice_months) = 0' 'cancellation.notice_months は 1〜12'
+check_bad cancelfinal '(.cancellation.final_period) = "full_month"' 'cancellation.final_period は prorated'
+check_bad cancelmissing 'del(.cancellation)' 'cancellation.plan は basic'
+# 請求の形と最低利用期間（特商法ページの「毎月末日で締め、翌月末日」「ご契約から 1 年」「残額」「一括」と同じ）
+check_bad billingmix '(.billing.payment_due) = "at_period_start"' 'billing は month_end'
+check_bad billingmissing 'del(.billing)' 'billing は month_end'
+check_bad termmonths '(.minimum_term.months) = 1.5' 'minimum_term.months は 12 の倍数'
+check_bad termzero '(.minimum_term.months) = 0' 'minimum_term.months は 12 の倍数'
+check_bad termfee '(.minimum_term.on_early_termination) = "penalty"' 'on_early_termination は remaining_term_fees'
+check_bad termdev '(.minimum_term.dev_fee_on_early_termination) = "continue"' 'dev_fee_on_early_termination は remaining_lump_sum'
 
 # 使い方の誤り
 KEY_FOR_RUN="" run empty "$PLANS" --apply

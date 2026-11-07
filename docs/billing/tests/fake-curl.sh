@@ -24,12 +24,14 @@ stdin_text="$(cat)"
 method="GET"
 url=""
 lookup=""
+cancel_at_arg=""
 prev=""
 for a in "$@"; do
   if [ "$prev" = "-X" ]; then method="$a"; fi
   case "$a" in
     https://*) url="$a" ;;
     "lookup_keys[]="*) lookup="${a#lookup_keys[]=}" ;;
+    "cancel_at="*) cancel_at_arg="${a#cancel_at=}" ;;
   esac
   prev="$a"
 done
@@ -104,7 +106,15 @@ subscription_get() {
   local pm='"pm_fake"'
   if [ "${FAKE_PM:-}" = "none" ]; then pm='null'; fi
   local inv="{\"id\":\"in_1\",\"status\":\"${FAKE_INV_STATUS:-open}\",\"hosted_invoice_url\":\"https://invoice.example.test/i/1\",\"total\":11000,\"total_taxes\":[{\"amount\":1000}]}"
-  respond 200 "{\"id\":\"$id\",\"status\":\"${FAKE_SUB_STATUS:-active}\",\"cancel_at_period_end\":${FAKE_CANCEL_STATE:-false},\"default_payment_method\":$pm,\"latest_invoice\":$inv,\"metadata\":{\"plan\":\"${FAKE_SUB_PLAN:-basic}\",\"service\":\"business-dossier\"},\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}"
+  # FAKE_CANCEL_AT: 今付いている終了日時（既定 null）。FAKE_PERIOD_END: 今の期間の終わり（既定 PERIOD_END）
+  respond 200 "{\"id\":\"$id\",\"status\":\"${FAKE_SUB_STATUS:-active}\",\"cancel_at_period_end\":${FAKE_CANCEL_STATE:-false},\"cancel_at\":${FAKE_CANCEL_AT:-null},\"default_payment_method\":$pm,\"latest_invoice\":$inv,\"metadata\":{\"plan\":\"${FAKE_SUB_PLAN:-basic}\",\"service\":\"business-dossier\"},\"items\":{\"data\":[{\"current_period_end\":${FAKE_PERIOD_END:-$PERIOD_END}}]}}"
+}
+
+# 解約の POST: 送られた cancel_at をそのまま返す（FAKE_CANCEL_ECHO=wrong なら違う値を返す）
+subscription_update() {
+  local at="${cancel_at_arg:-null}"
+  if [ "${FAKE_CANCEL_ECHO:-}" = "wrong" ]; then at=1; fi
+  respond 200 "{\"id\":\"${path#/v1/subscriptions/}\",\"status\":\"active\",\"cancel_at_period_end\":false,\"cancel_at\":$at,\"items\":{\"data\":[{\"current_period_end\":${FAKE_PERIOD_END:-$PERIOD_END}}]}}"
 }
 
 subscription_create() {
@@ -145,7 +155,7 @@ case "$method:$path" in
   GET:/v1/subscriptions) subscriptions_list ;;
   GET:/v1/subscriptions/*) subscription_get ;;
   POST:/v1/subscriptions) subscription_create ;;
-  POST:/v1/subscriptions/*) respond 200 "{\"id\":\"${path#/v1/subscriptions/}\",\"cancel_at_period_end\":true,\"items\":{\"data\":[{\"current_period_end\":$PERIOD_END}]}}" ;;
+  POST:/v1/subscriptions/*) subscription_update ;;
   GET:/v1/subscription_schedules) schedules_list ;;
   GET:/v1/subscription_schedules/*) respond 200 "{\"id\":\"sub_sched_1\",\"status\":\"${FAKE_SCHED_STATUS:-canceled}\",\"subscription\":\"sub_dev\"}" ;;
   GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;

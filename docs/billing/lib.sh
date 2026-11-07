@@ -235,6 +235,20 @@ plans_lookup() {
   printf '%s' "$lk"
 }
 
+# このスクリプト群が実装している請求の形。plans.json の billing.closing と違えば、契約・解約を作らずに止まる。
+# 2026-11-07 に寺田が「月末締め翌月末払い」（closing=month_end）と作り方 B（毎月末の請求書）に決めた。B の実装は別の PR。
+readonly IMPLEMENTED_BILLING_CLOSING="same_day_advance"
+
+require_implemented_billing() {
+  local closing
+  closing="$(jq -r '.billing.closing // "-"' "$PLANS")"
+  [ "$closing" = "$IMPLEMENTED_BILLING_CLOSING" ] \
+    || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトがまだ実装していない（実装は $IMPLEMENTED_BILLING_CLOSING。README 1C 章の B を実装するまで待つ）。何もしていない"
+  # 前の形の写しを --plans で渡しても、本番では作らない（特商法ページは月末締め・翌月末払いで公開する）
+  [ "$MODE" != "live" ] \
+    || die 3 "前の請求の形（billing.closing=$closing）では、本番に契約・解約を作らない（README 1C 章）。何もしていない"
+}
+
 plans_services() {
   jq -r '.services[].service' "$PLANS"
 }
@@ -254,4 +268,54 @@ jst_date_epoch() {
   TZ=Asia/Tokyo date -j -f '%Y-%m-%d %H:%M:%S' "$d 09:00:00" '+%s' 2>/dev/null \
     || TZ=Asia/Tokyo date -d "$d 09:00:00" '+%s' 2>/dev/null \
     || die 64 "日付として読めない（観測: $d）"
+}
+
+# 年と月から、その月の日数（うるう年を含む）。
+days_in_month() {
+  local y="$1" m="$2"
+  case "$m" in
+    1 | 3 | 5 | 7 | 8 | 10 | 12) printf '31' ;;
+    4 | 6 | 9 | 11) printf '30' ;;
+    2) if (((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)); then printf '29'; else printf '28'; fi ;;
+    *) die 64 "月は 1〜12（観測: $m）" ;;
+  esac
+}
+
+# YYYY-MM-DD が実在する日付か（2026-02-30 を通さない。date は日付をずらして受け付けることがあるため自前で見る）。
+valid_date() {
+  [[ "$1" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})$ ]] || return 1
+  local y=$((10#${BASH_REMATCH[1]})) m=$((10#${BASH_REMATCH[2]})) d=$((10#${BASH_REMATCH[3]}))
+  [ "$m" -ge 1 ] && [ "$m" -le 12 ] && [ "$d" -ge 1 ] && [ "$d" -le "$(days_in_month "$y" "$m")" ]
+}
+
+# YYYY-MM-DD の n か月後の同じ日。同じ日が無い月は、その月の末日（1/31 の 1 か月後は 2/28 か 2/29）。
+add_months_clamped() {
+  local date="$1" n="$2"
+  valid_date "$date" || die 64 "実在する日付ではない（観測: $date）"
+  [[ "$n" =~ ^[0-9]+$ ]] || die 64 "月数は整数（観測: $n）"
+  [[ "$date" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})$ ]]
+  local y=$((10#${BASH_REMATCH[1]})) m=$((10#${BASH_REMATCH[2]})) d=$((10#${BASH_REMATCH[3]})) ny nm last
+  nm=$(((m - 1 + n) % 12 + 1))
+  ny=$((y + (m - 1 + n) / 12))
+  last="$(days_in_month "$ny" "$nm")"
+  [ "$d" -le "$last" ] || d="$last"
+  printf '%04d-%02d-%02d' "$ny" "$nm" "$d"
+}
+
+# YYYY-MM-DD の日本時間 0:00 を epoch 秒にする（日本時間に夏時間は無い）。
+jst_midnight_epoch() {
+  local e
+  e="$(jst_date_epoch "$1")"
+  printf '%s' "$((e - 9 * 3600))"
+}
+
+# 解約の終了日と終了日時を決める（subshell にしないで呼ぶ）。
+# CANCEL_END_DATE = 受理日（YYYY-MM-DD）の plans.json の cancellation.notice_months か月後の同じ日、
+# CANCEL_AT = その日の終わり（翌日の日本時間 0:00）の epoch 秒。特商法ページの「1 か月後の同じ日」と同じ数え方。
+set_cancel_at() {
+  local accepted="$1" months midnight
+  months="$(jq -r '.cancellation.notice_months' "$PLANS")"
+  CANCEL_END_DATE="$(add_months_clamped "$accepted" "$months")"
+  midnight="$(jst_midnight_epoch "$CANCEL_END_DATE")"
+  CANCEL_AT=$((midnight + 86400))
 }
