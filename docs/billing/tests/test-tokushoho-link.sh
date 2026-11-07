@@ -80,7 +80,11 @@ check_cancellation() {
     printf 'NG: plans.json の cancellation.refund は none だが、解約条件の行に「返金いたしません」が無い\n'
     return 1
   fi
-  printf 'ok: 特商法ページの解約条件（%s、返金 %s）は plans.json の cancellation と一致\n' "$ends" "$refund"
+  if [ "$(jq -r '.cancellation.final_period // "-"' "$plans")" = "prorated" ] && ! printf '%s' "$row" | grep -qF '終了日までの日割りで計算し'; then
+    printf 'NG: plans.json の cancellation.final_period は prorated だが、解約条件の行に「終了日までの日割りで計算し」が無い\n'
+    return 1
+  fi
+  printf 'ok: 特商法ページの解約条件（%s、%s か月、返金 %s）は plans.json の cancellation と一致\n' "$ends" "$months" "$refund"
   check_terms "$plans" "$page"
 }
 
@@ -118,16 +122,16 @@ check_terms() {
       "$(printf '%s' "$row" | grep -oE '最低利用期間は、ご契約から&nbsp;[0-9]+&nbsp;年間' | head -1 || printf 'なし')"
     return 1
   fi
-  if [ "$fee" = "remaining_term_fees" ] && ! printf '%s' "$row" | grep -qF "残りの期間分の利用料（ご契約から&nbsp;${years}&nbsp;年までの残りの月の利用料）"; then
-    printf 'NG: plans.json の on_early_termination は remaining_term_fees だが、解約条件の行に「残りの期間分の利用料（ご契約から&nbsp;%s&nbsp;年までの残りの月の利用料）」が無い\n' "$years"
+  if [ "$fee" = "remaining_term_fees" ] && ! printf '%s' "$row" | grep -qF "残りの期間分の利用料（ご契約から&nbsp;${years}&nbsp;年までの残りの期間の利用料）"; then
+    printf 'NG: plans.json の on_early_termination は remaining_term_fees だが、解約条件の行に「残りの期間分の利用料（ご契約から&nbsp;%s&nbsp;年までの残りの期間の利用料）」が無い\n' "$years"
     return 1
   fi
   if printf '%s' "$row" | grep -qF '解約手数料'; then
     printf 'NG: 解約条件の行に「解約手数料」がある（顧問弁護士との MTG の見解に合わせて「残りの期間分の利用料」と書く）\n'
     return 1
   fi
-  if [ "$dev" = "remaining_lump_sum" ] && ! printf '%s' "$row" | grep -qF '設計開発費用の分割払いの残りを、終了する月の末日の締めで一括してご請求します'; then
-    printf 'NG: plans.json の dev_fee_on_early_termination は remaining_lump_sum だが、解約条件の行に「設計開発費用の分割払いの残りを、終了する月の末日の締めで一括してご請求します」が無い\n'
+  if [ "$dev" = "remaining_lump_sum" ] && ! printf '%s' "$row" | grep -qF '設計開発費用の分割払いの残りを、終了日を含む月の末日の締めで一括してご請求します'; then
+    printf 'NG: plans.json の dev_fee_on_early_termination は remaining_lump_sum だが、解約条件の行に「設計開発費用の分割払いの残りを、終了日を含む月の末日の締めで一括してご請求します」が無い\n'
     return 1
   fi
   printf 'ok: 特商法ページの請求の形（%s / %s / %s）と最低利用期間（%s か月、%s、%s）は plans.json と一致\n' "$closing" "$due" "$first" "$term" "$fee" "$dev"
@@ -156,8 +160,8 @@ if check "$tmp" "$PAGE" >/dev/null; then
 fi
 printf 'ok: 金額を変えた plans.json では落ちる（反証）\n'
 
-# 反証: 解約の終了日の決め方を前の形に戻した plans.json の写しで落ちること
-jq '.cancellation = {plan: "basic", ends: "accepted_plus_notice", notice_months: 1, final_period: "prorated", refund: "none"}' "$PLANS" >"$tmp"
+# 反証: 解約の月数を変えた plans.json の写しで落ちること
+jq '.cancellation.notice_months = 2' "$PLANS" >"$tmp"
 if check "$tmp" "$PAGE" >/dev/null; then
   printf 'FAIL: 終了日の決め方を変えた plans.json でも通った（検査が効いていない）\n'
   exit 1

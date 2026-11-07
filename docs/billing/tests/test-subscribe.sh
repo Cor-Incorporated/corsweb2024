@@ -19,8 +19,7 @@ mkdir -p "$WORK/bin"
 # 実装済みの形（same_day_advance）の写しで、既存の動きを確かめる。本物の plans.json（month_end）では、
 # 契約・解約を作るサブコマンドが止まることを、ファイルの末尾で確かめる。
 PLANS="$WORK/plans-same-day.json"
-jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", first_month: "full_month"}
-  | .cancellation = {plan: "basic", ends: "accepted_plus_notice", notice_months: 1, final_period: "prorated", refund: "none"}' "$REAL_PLANS" >"$PLANS"
+jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", first_month: "full_month"}' "$REAL_PLANS" >"$PLANS"
 cp "$HERE/fake-curl.sh" "$WORK/bin/curl"
 chmod +x "$WORK/bin/curl"
 DUMMY_KEY="dummy-key-for-leak-check-7f3a9c"
