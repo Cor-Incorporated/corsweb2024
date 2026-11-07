@@ -1,18 +1,31 @@
 #!/usr/bin/env bash
-# docs/billing/subscribe.sh — 顧客 1 社の契約（Customer・basic・開発費の schedule）と解約。寺田が実行する。
+# docs/billing/subscribe.sh — 顧客 1 社の契約と、毎月末の請求書（README 1C 章の作り方 B）。寺田が実行する。
 #
-# 既定は dry-run（通信しない・鍵を読まない）。書くのは --apply --mode test|live のときだけ。
-# 読むだけのサブコマンド（find / status）は --mode test|live で通信する（書かない）。
+# 既定は dry-run（通信しない・鍵を読まない）。書くのは --apply --mode test|live のときだけ。本番は端末で live と打つ確認がある。
+# 読むだけのサブコマンド（find / status）は --mode test|live で通信する（書かない）。simulate は通信しない。
 # 鍵・モードの扱いは lib.sh と同じ（鍵は表示しない・引数に載せない、書く前に livemode を確かめる）。
 #
 # サブコマンド:
-#   customer --code <顧客コード> --name <社名> --email <請求先のメール> [--clerk-org <Clerk の組織の id>]  Customer を作る（あれば作らない）
-#   find     --code <顧客コード>                                          Customer の id を探す（読むだけ）
-#   basic    --customer <cus_…> --service <サービス> --tenant <製品側の組織>  basic の subscription と最初の支払いページ
-#   devfee   --customer <cus_…> --service <サービス> --count <回数> --start align|now|YYYY-MM-DD
-#                                                                         開発費の schedule（count 回で止まる）
-#   status   --customer <cus_…>                                           契約の一覧（読むだけ）
-#   cancel   --subscription <sub_…> --accepted <受理日 YYYY-MM-DD>         basic を受理日の 1 か月後の同じ日の終わりで止める（basic 以外は止めない）
+#   customer   --code <顧客コード> --name <社名> --email <請求先のメール> --payment card|transfer [--clerk-org <org_…>]
+#   find       --code <顧客コード>
+#   contract   --customer <cus_…> --service <サービス> --start YYYY-MM-DD --devfee-count <0〜12> [--billing-from YYYY-MM]
+#   card-setup --customer <cus_…>
+#   cancel     --customer <cus_…> --service <サービス> --accepted <受理日 YYYY-MM-DD>
+#   invoice    --customer <cus_…> --month YYYY-MM
+#   charge     --customer <cus_…> --month YYYY-MM [--early-test]
+#   simulate   --start YYYY-MM-DD --devfee-count <回数> [--end YYYY-MM-DD] [--billing-from YYYY-MM] --months <月数> [--service <サービス>]
+#   status     --customer <cus_…>
+#
+# customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
+# contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く。
+#            前からの顧客は --billing-from で、この仕組みで請求を始める月（_bill_from）も書く（それより前の月は請求しない）
+# card-setup カードを保存する Checkout のページ（mode=setup）の URL を出す（送るのは寺田）
+# cancel     解約の終了日（受理日の 1 か月後の同じ日）を Customer の metadata（contract_<サービス>_end）に書く
+# invoice    その月の請求書を作り、確定して送る（明細は lib.sh の billing_lines。支払期限は翌月末日）
+# charge     その月の open の請求書を、保存したカードで払う（カードの顧客だけ。期限の日から。
+#            --early-test はテストモードだけ期限前でも払う。本番では使えない）
+# simulate   通信せずに、月ごとの明細と合計を出す
+# status     契約の metadata、今月と先月の請求書、保存したカード（読むだけ）
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の不合格 / 3 = 既存と食い違い・前提が足りない・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方・入力の誤り
@@ -27,23 +40,38 @@ CMD=""
 OPT_CODE=""
 OPT_NAME=""
 OPT_EMAIL=""
+OPT_CLERK=""
+OPT_PAYMENT=""
 OPT_CUSTOMER=""
 OPT_SERVICE=""
-OPT_TENANT=""
-OPT_COUNT=""
 OPT_START=""
-OPT_SUB=""
-OPT_CLERK=""
+OPT_DEVFEE=""
 OPT_ACCEPTED=""
+OPT_MONTH=""
+OPT_END=""
+OPT_MONTHS=""
+OPT_BILL_FROM=""
+OPT_EARLY=0
 CANCEL_END_DATE=""
-CANCEL_AT=""
+DUE_DATE=""
+DUE_EPOCH=""
+CUST_JSON=""
+INV_JSON=""
+LINES=""
+LINES_TOTAL=0
+LINES_N=0
+CARD_PM=""
+CARD_SRC=""
+CS_STATUS=""
+CS_URL=""
 
 usage() {
-  sed -n '8,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
-例:   bash docs/billing/subscribe.sh basic --customer cus_XXXX --service xesm --tenant 組織名            （dry-run）
-      bash docs/billing/subscribe.sh basic --customer cus_XXXX --service xesm --tenant 組織名 --apply --mode test
+例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
+      bash docs/billing/subscribe.sh invoice --customer cus_XXXX --month 2026-11                  （dry-run）
+      bash docs/billing/subscribe.sh invoice --customer cus_XXXX --month 2026-11 --apply --mode test
 EOF
 }
 
@@ -54,14 +82,17 @@ set_opt() {
     --code) OPT_CODE="$2" ;;
     --name) OPT_NAME="$2" ;;
     --email) OPT_EMAIL="$2" ;;
+    --clerk-org) OPT_CLERK="$2" ;;
+    --payment) OPT_PAYMENT="$2" ;;
     --customer) OPT_CUSTOMER="$2" ;;
     --service) OPT_SERVICE="$2" ;;
-    --tenant) OPT_TENANT="$2" ;;
-    --count) OPT_COUNT="$2" ;;
     --start) OPT_START="$2" ;;
-    --subscription) OPT_SUB="$2" ;;
-    --clerk-org) OPT_CLERK="$2" ;;
+    --devfee-count) OPT_DEVFEE="$2" ;;
     --accepted) OPT_ACCEPTED="$2" ;;
+    --month) OPT_MONTH="$2" ;;
+    --end) OPT_END="$2" ;;
+    --months) OPT_MONTHS="$2" ;;
+    --billing-from) OPT_BILL_FROM="$2" ;;
   esac
 }
 
@@ -70,14 +101,15 @@ parse_args() {
   CMD="$1"
   shift
   case "$CMD" in
-    customer | find | basic | devfee | status | cancel) ;;
+    customer | find | contract | card-setup | cancel | invoice | charge | simulate | status) ;;
     -h | --help) usage; exit 0 ;;
     *) usage >&2; die 64 "知らないサブコマンド: $CMD" ;;
   esac
   while [ $# -gt 0 ]; do
     case "$1" in
       --apply) DO_APPLY=1 ;;
-      --mode | --plans | --code | --name | --email | --customer | --service | --tenant | --count | --start | --subscription | --clerk-org | --accepted)
+      --early-test) OPT_EARLY=1 ;;
+      --mode | --plans | --code | --name | --email | --clerk-org | --payment | --customer | --service | --start | --devfee-count | --accepted | --month | --end | --months | --billing-from)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         set_opt "$1" "$2"
         shift
@@ -92,6 +124,12 @@ need() {
   [ -n "$2" ] || die 64 "$CMD には $1 が要る"
 }
 
+# 引数は、決まったサブコマンドでだけ使う（打ち間違いで別の意味に取らないため）。
+scope() {
+  [ -n "$2" ] || return 0
+  case " $3 " in *" $CMD "*) ;; *) die 64 "$1 は $3 でだけ使う" ;; esac
+}
+
 one_line() {
   # 1 行・空でない・上限以下
   local label="$1" value="$2" max="$3"
@@ -104,59 +142,123 @@ check_service() {
   plans_services | grep -qxF -- "$OPT_SERVICE" || die 64 "--service は $(plans_services | paste -sd'|' -) のどれか（観測: $OPT_SERVICE）"
 }
 
-check_count() {
-  local max
-  [[ "$OPT_COUNT" =~ ^[0-9]+$ ]] || die 64 "--count は整数（観測: $OPT_COUNT）"
-  max="$(jq -r --arg lk "$(plans_lookup "$OPT_SERVICE" dev_fee)" '.prices[] | select(.lookup_key == $lk) | .installments' "$PLANS")"
-  [ "$OPT_COUNT" -ge 1 ] && [ "$OPT_COUNT" -le "$max" ] || die 64 "--count は 1〜$max（plans.json の installments。観測: $OPT_COUNT）"
+check_date() {
+  [[ "$2" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "$1 は YYYY-MM-DD（観測: $2）"
+  valid_date "$2" || die 64 "$1 が実在する日付ではない（観測: $2）"
 }
 
-check_start() {
-  local today
-  case "$OPT_START" in
-    align | now) return 0 ;;
-  esac
-  [[ "$OPT_START" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "--start は align / now / YYYY-MM-DD（観測: $OPT_START）"
-  jst_date_epoch "$OPT_START" >/dev/null
-  today="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
-  [[ ! "$OPT_START" < "$today" ]] || die 64 "--start に過去の日付は使わない（過去の日付は遡って請求される。観測: $OPT_START、今日: $today）"
+check_month() {
+  [[ "$OPT_MONTH" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]] || die 64 "--month は YYYY-MM（観測: $OPT_MONTH）"
+  DUE_DATE="$(due_date_of_month "$OPT_MONTH")"
+  DUE_EPOCH="$(jst_day_end_epoch "$DUE_DATE")"
 }
 
-# 受理日は今日か過去の実在する日付。終了日（受理日の 1 か月後の同じ日の終わり）は未来であること。
+# この仕組みで請求を始める月（前からの顧客）。開始日の月より前にはしない。
+check_bill_from() {
+  [ -n "$OPT_BILL_FROM" ] || return 0
+  [[ "$OPT_BILL_FROM" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]] || die 64 "--billing-from は YYYY-MM（観測: $OPT_BILL_FROM）"
+  [[ ! "$OPT_BILL_FROM" < "${OPT_START:0:7}" ]] || die 64 "--billing-from が開始日の月より前（観測: $OPT_BILL_FROM < ${OPT_START:0:7}）"
+}
+
+# 回数・月数は 0 で始めない整数（bash の算術は 012 を 8 進数と読むため）。
+is_count() {
+  [[ "$1" =~ ^(0|[1-9][0-9]*)$ ]]
+}
+
+check_devfee_count() {
+  load_amounts "$OPT_SERVICE"
+  is_count "$OPT_DEVFEE" && [ "$OPT_DEVFEE" -le "$DEVFEE_MAX" ] \
+    || die 64 "--devfee-count は 0〜$DEVFEE_MAX（plans.json の installments。観測: $OPT_DEVFEE）"
+}
+
+# 受理日は今日か過去の実在する日付。終了日は受理日の notice_months か月後の同じ日。
 check_accepted() {
-  local today now
-  [[ "$OPT_ACCEPTED" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "--accepted は受理日 YYYY-MM-DD（観測: $OPT_ACCEPTED）"
-  valid_date "$OPT_ACCEPTED" || die 64 "--accepted が実在する日付ではない（観測: $OPT_ACCEPTED）"
-  today="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+  local today
+  check_date --accepted "$OPT_ACCEPTED"
+  today="$(today_jst)"
   [[ ! "$OPT_ACCEPTED" > "$today" ]] || die 64 "--accepted に未来の日付は使わない（受理した日を入れる。観測: $OPT_ACCEPTED、今日: $today）"
-  set_cancel_at "$OPT_ACCEPTED"
-  now="$(date '+%s')"
-  [ "$CANCEL_AT" -gt "$now" ] || die 64 "終了日 $CANCEL_END_DATE は既に過ぎている（受理日 $OPT_ACCEPTED。Stripe は過去の終了日を受け付けない。寺田が判断）"
+  CANCEL_END_DATE="$(cancel_end_date "$OPT_ACCEPTED")"
+}
+
+# 請求書を作れるのは今月か先月の分だけ（日本時間）。
+check_invoice_month() {
+  local this last
+  this="$(today_jst)"
+  this="${this:0:7}"
+  last="$(ym_add "$this" -1)"
+  [[ ! "$OPT_MONTH" > "$this" ]] || die 64 "--month に未来の月は使わない（観測: $OPT_MONTH、今月: $this）"
+  [[ ! "$OPT_MONTH" < "$last" ]] || die 64 "--month は今月か先月（$last）だけ（観測: $OPT_MONTH）。それより前の月は寺田が判断"
+}
+
+# 保存したカードで払うのは、支払期限の日（翌月末日、日本時間）から。
+# --early-test はテストモードだけ期限前でも払う（runbook の T を今日通すため。寺田 2026-11-07）。本番では受け付けない。
+check_charge_day() {
+  local today
+  if [ "$OPT_EARLY" -eq 1 ]; then
+    [ "$MODE" = "test" ] || die 64 "--early-test はテストモードだけ（--mode test と一緒に使う。本番では期限前に払わない。観測 --mode ${MODE:-なし}）"
+    printf 'NOTE --early-test: テストモードなので、支払期限 %s より前でも払う\n' "$DUE_DATE"
+    return 0
+  fi
+  today="$(today_jst)"
+  [[ ! "$today" < "$DUE_DATE" ]] || die 64 "$OPT_MONTH 分の支払期限は $DUE_DATE。期限の日より前は払わない（今日: $today）"
+}
+
+check_simulate() {
+  need --months "$OPT_MONTHS"
+  [ -n "$OPT_SERVICE" ] || OPT_SERVICE="$(plans_services | head -1)"
+  check_service
+  check_date --start "$OPT_START"
+  check_devfee_count
+  if [ -n "$OPT_END" ]; then
+    check_date --end "$OPT_END"
+    [[ ! "$OPT_END" < "$OPT_START" ]] || die 64 "--end が --start より前（観測: $OPT_END < $OPT_START）"
+  fi
+  check_bill_from
+  is_count "$OPT_MONTHS" && [ "$OPT_MONTHS" -ge 1 ] && [ "$OPT_MONTHS" -le 36 ] || die 64 "--months は 1〜36（観測: $OPT_MONTHS）"
+  [ "$DO_APPLY" -eq 0 ] && [ -z "$MODE" ] || die 64 "simulate は通信しない（--apply と --mode は使わない）"
+}
+
+validate_command() {
+  case "$CMD" in
+    customer)
+      need --code "$OPT_CODE"; need --name "$OPT_NAME"; need --email "$OPT_EMAIL"; need --payment "$OPT_PAYMENT"
+      one_line --name "$OPT_NAME" 256
+      [[ "$OPT_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]] && [ "${#OPT_EMAIL}" -le 512 ] \
+        || die 64 "--email の形が違う（観測: $OPT_EMAIL）"
+      case "$OPT_PAYMENT" in card | transfer) ;; *) die 64 "--payment は card か transfer（観測: $OPT_PAYMENT）" ;; esac ;;
+    find) need --code "$OPT_CODE" ;;
+    contract)
+      need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --start "$OPT_START"; need --devfee-count "$OPT_DEVFEE"
+      check_service; check_date --start "$OPT_START"; check_devfee_count; check_bill_from ;;
+    card-setup | status) need --customer "$OPT_CUSTOMER" ;;
+    cancel)
+      need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
+      check_service; check_accepted ;;
+    invoice) need --customer "$OPT_CUSTOMER"; need --month "$OPT_MONTH"; check_month; check_invoice_month ;;
+    charge) need --customer "$OPT_CUSTOMER"; need --month "$OPT_MONTH"; check_month; check_charge_day ;;
+    simulate) need --start "$OPT_START"; need --devfee-count "$OPT_DEVFEE"; check_simulate ;;
+  esac
 }
 
 validate_inputs() {
   case "$MODE" in "" | test | live) ;; *) die 64 "--mode は test か live（観測: $MODE）" ;; esac
   if [ "$DO_APPLY" -eq 1 ] && [ -z "$MODE" ]; then die 64 "--apply には --mode test か --mode live が要る"; fi
-  case "$CMD" in
-    customer)
-      need --code "$OPT_CODE"; need --name "$OPT_NAME"; need --email "$OPT_EMAIL"
-      one_line --name "$OPT_NAME" 256
-      [[ "$OPT_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]] && [ "${#OPT_EMAIL}" -le 512 ] \
-        || die 64 "--email の形が違う（観測: $OPT_EMAIL）" ;;
-    find) need --code "$OPT_CODE" ;;
-    basic)
-      need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --tenant "$OPT_TENANT"
-      check_service; one_line --tenant "$OPT_TENANT" 200 ;;
-    devfee)
-      need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --count "$OPT_COUNT"; need --start "$OPT_START"
-      check_service; check_count; check_start ;;
-    status) need --customer "$OPT_CUSTOMER" ;;
-    cancel)
-      need --subscription "$OPT_SUB"; need --accepted "$OPT_ACCEPTED"
-      [[ "$OPT_SUB" =~ ^sub_[A-Za-z0-9]+$ ]] || die 64 "--subscription は sub_ で始まる id（観測: $OPT_SUB）"
-      check_accepted ;;
-  esac
-  if [ -n "$OPT_ACCEPTED" ] && [ "$CMD" != "cancel" ]; then die 64 "--accepted は cancel でだけ使う"; fi
+  scope --code "$OPT_CODE" "customer find"
+  scope --name "$OPT_NAME" "customer"
+  scope --email "$OPT_EMAIL" "customer"
+  scope --clerk-org "$OPT_CLERK" "customer"
+  scope --payment "$OPT_PAYMENT" "customer"
+  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge status"
+  scope --service "$OPT_SERVICE" "contract cancel simulate"
+  scope --start "$OPT_START" "contract simulate"
+  scope --devfee-count "$OPT_DEVFEE" "contract simulate"
+  scope --accepted "$OPT_ACCEPTED" "cancel"
+  scope --month "$OPT_MONTH" "invoice charge"
+  scope --end "$OPT_END" "simulate"
+  scope --months "$OPT_MONTHS" "simulate"
+  scope --billing-from "$OPT_BILL_FROM" "contract simulate"
+  if [ "$OPT_EARLY" -eq 1 ]; then scope --early-test 1 "charge"; fi
+  validate_command
   if [ -n "$OPT_CODE" ]; then
     [[ "$OPT_CODE" =~ ^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$ ]] || die 64 "--code は英小文字・数字・ハイフン（40 文字まで。観測: $OPT_CODE）"
   fi
@@ -164,7 +266,6 @@ validate_inputs() {
     [[ "$OPT_CUSTOMER" =~ ^cus_[A-Za-z0-9]+$ ]] || die 64 "--customer は cus_ で始まる id（観測: $OPT_CUSTOMER）"
   fi
   if [ -n "$OPT_CLERK" ]; then
-    [ "$CMD" = "customer" ] || die 64 "--clerk-org は customer でだけ使う"
     [[ "$OPT_CLERK" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 64 "--clerk-org は英数字と下線（64 文字まで。観測: $OPT_CLERK）"
   fi
   case "$CMD" in
@@ -172,60 +273,48 @@ validate_inputs() {
   esac
 }
 
-# 価格の要約（税別・参考の税込）。plans.json だけから作る。
-price_summary() {
-  jq -r --arg lk "$1" --argjson n "${2:-1}" '
-    def comma: tostring | if length <= 3 then . else (.[0:length-3] | comma) + "," + .[length-3:] end;
-    .tax_rate.percentage as $pct | .prices[] | select(.lookup_key == $lk)
-    | .unit_amount_jpy_excl_tax as $a | ($a * $pct / 100 | round) as $t
-    | "税別 \($a | comma) 円（参考 税込 \(($a + $t) | comma) 円）" + (if $n > 1 then " × \($n) 回 = 税別 \(($a * $n) | comma) 円" else "" end)' "$PLANS"
-}
-
-# plans.json の価格 1 回分の税込の額（検算用）。
-expected_total() {
-  jq -r --arg lk "$1" '.tax_rate.percentage as $p | .prices[] | select(.lookup_key == $lk)
-    | .unit_amount_jpy_excl_tax + (.unit_amount_jpy_excl_tax * $p / 100 | round)' "$PLANS"
-}
-
 print_plan() {
+  local s="$OPT_SERVICE"
   case "$CMD" in
-    customer) printf 'PLAN customer: GET /v1/customers/search で customer_code=%s を探し、無ければ POST /v1/customers（name=%s、email=%s、metadata[customer_code]=%s、metadata[clerk_org_id]=%s）\n' \
-      "$OPT_CODE" "$OPT_NAME" "$OPT_EMAIL" "$OPT_CODE" "${OPT_CLERK:-（なし）}" ;;
+    customer) printf 'PLAN customer: GET /v1/customers/search で customer_code=%s を探し、無ければ POST /v1/customers（name=%s、email=%s、metadata[customer_code]=%s、metadata[payment]=%s、metadata[clerk_org_id]=%s）\n' \
+      "$OPT_CODE" "$OPT_NAME" "$OPT_EMAIL" "$OPT_CODE" "$OPT_PAYMENT" "${OPT_CLERK:-（なし）}" ;;
     find) printf 'PLAN find: GET /v1/customers/search で customer_code=%s を探す（読むだけ）\n' "$OPT_CODE" ;;
-    basic) printf 'PLAN basic: %s の basic（%s、%s/月）を %s に。default_incomplete・カードは最初の支払いで保存・消費税を付ける・metadata[tenant]=%s。最初の請求書の支払いページの URL を出す（23 時間で失効）\n' \
-      "$OPT_SERVICE" "$(plans_lookup "$OPT_SERVICE" basic)" "$(price_summary "$(plans_lookup "$OPT_SERVICE" basic)")" "$OPT_CUSTOMER" "$OPT_TENANT" ;;
-    devfee) printf 'PLAN devfee: %s の開発費（%s、%s）を %s に schedule で。start=%s、end_behavior=cancel、カードは %s の basic の subscription のもの\n' \
-      "$OPT_SERVICE" "$(plans_lookup "$OPT_SERVICE" dev_fee)" "$(price_summary "$(plans_lookup "$OPT_SERVICE" dev_fee)" "$OPT_COUNT")" "$OPT_CUSTOMER" "$OPT_START" "$OPT_SERVICE" ;;
-    status) printf 'PLAN status: %s の subscription・schedule・開発費の支払い回数を読む（読むだけ）\n' "$OPT_CUSTOMER" ;;
-    cancel) printf 'PLAN cancel: %s を %s の終わり（cancel_at=%s、%s）で止める。受理日 %s の %s か月後の同じ日。終了日を含む期間は日割りで請求され、返金はしない。metadata.plan が basic でなければ止めない。終了日が支払い済みの期間の中なら止めない\n' \
-      "$OPT_SUB" "$CANCEL_END_DATE" "$CANCEL_AT" "$(fmt_jst "$CANCEL_AT")" "$OPT_ACCEPTED" "$(jq -r '.cancellation.notice_months' "$PLANS")" ;;
+    contract) printf 'PLAN contract: %s の metadata に contract_%s_start=%s、contract_%s_devfee_count=%s、contract_%s_bill_from=%s を書く（違う値が既にあれば書き換えない）。開発費は税別 %s 円 × %s 回。bill_from より前の月は請求しない\n' \
+      "$OPT_CUSTOMER" "$s" "$OPT_START" "$s" "$OPT_DEVFEE" "$s" "${OPT_BILL_FROM:-（なし）}" "$AMT_DEVFEE" "$OPT_DEVFEE" ;;
+    card-setup) printf 'PLAN card-setup: %s のカードを保存する Checkout のページ（mode=setup、currency=jpy、success_url=https://cor-jp.com/）を作り、URL を出す。session の id を metadata[card_setup_session] に書く。カードが保存済みか、開いているページがあれば作らない\n' "$OPT_CUSTOMER" ;;
+    cancel) printf 'PLAN cancel: %s の %s の終了日 = 受理日 %s の %s か月後の同じ日 = %s を metadata[contract_%s_end] に書く。%s 分の請求書に、終了日までの日割りと、最低利用期間の中なら残りの期間分の利用料と開発費の残りが入る（返金はしない）\n' \
+      "$OPT_CUSTOMER" "$s" "$OPT_ACCEPTED" "$(jq -r '.cancellation.notice_months' "$PLANS")" "$CANCEL_END_DATE" "$s" "${CANCEL_END_DATE:0:7}" ;;
+    invoice) printf 'PLAN invoice: %s の %s 分の請求書（send_invoice、支払期限 %s 23:59:59 JST = due_date %s）。明細は Customer の metadata の契約から計算する。同じ月の請求書があれば作らない。draft → 明細 → 小計の照合 → finalize → send\n' \
+      "$OPT_CUSTOMER" "$OPT_MONTH" "$DUE_DATE" "$DUE_EPOCH" ;;
+    charge) printf 'PLAN charge: %s の %s 分の open の請求書を、保存したカードで払う（POST /v1/invoices/{id}/pay。支払期限 %s）。カードの顧客（metadata.payment=card）だけ\n' \
+      "$OPT_CUSTOMER" "$OPT_MONTH" "$DUE_DATE" ;;
+    status) printf 'PLAN status: %s の契約の metadata、今月と先月の請求書、保存したカードを読む（読むだけ）\n' "$OPT_CUSTOMER" ;;
   esac
-}
-
-customer_code_of() {
-  local code
-  api_ok "顧客 $1 の読取" GET "/v1/customers/$1"
-  code="$(jq -r '.metadata.customer_code // empty' <<<"$RESP_BODY")"
-  [ -n "$code" ] || die 3 "顧客 $1 に metadata.customer_code が無い（subscribe.sh customer で作った顧客を使う）"
-  printf '%s' "$code"
 }
 
 do_find() {
   api_ok "顧客の検索" GET /v1/customers/search --data-urlencode "query=metadata['customer_code']:'$OPT_CODE'" --data-urlencode "limit=10"
-  jq -r '.data[] | "FOUND \(.id) customer_code=\(.metadata.customer_code) name=\(.name)"' <<<"$RESP_BODY"
+  jq -r '.data[] | "FOUND \(.id) customer_code=\(.metadata.customer_code) name=\(.name) payment=\(.metadata.payment // "-")"' <<<"$RESP_BODY"
   printf 'DONE find: %s 件（作った直後は検索に出るまで最大 1 分ほどかかる）\n' "$(jq '.data | length' <<<"$RESP_BODY")"
 }
 
 existing_customer_ok() {
-  local id clerk
+  local id clerk pay
   id="$(jq -r '.data[0].id' <<<"$RESP_BODY")"
   clerk="$(jq -r '.data[0].metadata.clerk_org_id // empty' <<<"$RESP_BODY")"
+  pay="$(jq -r '.data[0].metadata.payment // empty' <<<"$RESP_BODY")"
   if [ -n "$OPT_CLERK" ] && [ -n "$clerk" ] && [ "$clerk" != "$OPT_CLERK" ]; then
     die 3 "顧客 $id（customer_code=$OPT_CODE）の clerk_org_id が違う（期待 $OPT_CLERK、観測 $clerk）。書き換えない"
+  fi
+  if [ -n "$pay" ] && [ "$pay" != "$OPT_PAYMENT" ]; then
+    die 3 "顧客 $id（customer_code=$OPT_CODE）の payment が違う（期待 $OPT_PAYMENT、観測 $pay）。書き換えない（寺田が判断）"
   fi
   printf 'OK customer %s: customer_code=%s は既にある（作らない）\n' "$id" "$OPT_CODE"
   if [ -n "$OPT_CLERK" ] && [ -z "$clerk" ]; then
     printf 'NOTE 既存の顧客 %s に clerk_org_id が無い。このスクリプトは既存を書き換えない（付けるかは寺田）\n' "$id"
+  fi
+  if [ -z "$pay" ]; then
+    printf 'NOTE 既存の顧客 %s に payment が無い。charge は payment=card の顧客だけを払う。付けるかは寺田（画面。文言は未確認）\n' "$id"
   fi
 }
 
@@ -244,147 +333,363 @@ do_customer() {
     --data-urlencode "name=$OPT_NAME" \
     --data-urlencode "email=$OPT_EMAIL" \
     --data-urlencode "metadata[customer_code]=$OPT_CODE" \
+    --data-urlencode "metadata[payment]=$OPT_PAYMENT" \
     --data-urlencode "metadata[managed_by]=$MANAGED_BY" \
     ${clerk_meta[@]+"${clerk_meta[@]}"}
   check_replay "顧客の作成" "/v1/customers/$(jq -r '.id' <<<"$RESP_BODY")" '(.deleted // false) == false' '{id, deleted}'
-  printf 'CREATED customer %s（customer_code=%s、clerk_org_id=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_CODE" "${OPT_CLERK:-なし}"
+  printf 'CREATED customer %s（customer_code=%s、payment=%s、clerk_org_id=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_CODE" "$OPT_PAYMENT" "${OPT_CLERK:-なし}"
 }
 
-# 最初の請求書の額を plans.json と照らし、支払いページの URL を出す（RESP_BODY は latest_invoice を展開した subscription）。
-report_first_invoice() {
-  local lk="$1" want total taxes url
-  want="$(expected_total "$lk")"
-  total="$(jq -r '.latest_invoice.total // empty' <<<"$RESP_BODY")"
-  taxes="$(jq -r '[.latest_invoice.total_taxes[]?.amount] | add // 0' <<<"$RESP_BODY")"
-  [ "$total" = "$want" ] || die 3 "最初の請求書の税込の額が違う（期待 $want、観測 ${total:-なし}、税 $taxes）。支払いページの URL を送らない（払われなければ 23 時間で失効する）"
-  printf 'CHECK ok: 最初の請求書 税込 %s 円（うち消費税 %s 円）\n' "$total" "$taxes"
-  url="$(jq -r '.latest_invoice.hosted_invoice_url // empty' <<<"$RESP_BODY")"
-  [ -n "$url" ] || die 3 "最初の請求書に支払いページの URL が無い（観測 status=$(jq -r '.latest_invoice.status // "-"' <<<"$RESP_BODY")）。status で確かめる"
-  printf 'PAY_URL %s\n' "$url"
-  printf 'NOTE この URL を顧客へ送る（送信は寺田）。23 時間以内に払われないと subscription は incomplete_expired になり、作り直しになる\n'
+# Customer を読み、CUST_JSON に入れる。subscribe.sh customer で作った顧客（metadata.customer_code がある）だけを使う。
+load_customer() {
+  api_ok "顧客 $OPT_CUSTOMER の読取" GET "/v1/customers/$OPT_CUSTOMER"
+  CUST_JSON="$RESP_BODY"
+  [ "$(jq -r '.deleted // false' <<<"$CUST_JSON")" != "true" ] || die 3 "顧客 $OPT_CUSTOMER は削除されている"
+  [ -n "$(cust_meta customer_code)" ] || die 3 "顧客 $OPT_CUSTOMER に metadata.customer_code が無い（subscribe.sh customer で作った顧客を使う）"
 }
 
-do_basic() {
-  local lk price txr code existing
-  lk="$(plans_lookup "$OPT_SERVICE" basic)"
-  price="$(price_id_by_lookup "$lk")"
-  txr="$(tax_rate_id)"
-  code="$(customer_code_of "$OPT_CUSTOMER")"
-  api_ok "subscription の一覧" GET /v1/subscriptions --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=all" --data-urlencode "limit=100"
-  existing="$(jq -r --arg s "$OPT_SERVICE" '[.data[] | select(.metadata.service == $s and .metadata.plan == "basic"
-    and (.status | IN("active", "trialing", "past_due", "unpaid", "incomplete", "paused"))) | "\(.id)(\(.status))"] | join(" ")' <<<"$RESP_BODY")"
-  [ -z "$existing" ] || die 3 "この顧客には $OPT_SERVICE の basic が既にある: $existing（作らない）"
-  build_basic_args "$OPT_CUSTOMER" "$price" "$txr" "$OPT_SERVICE"
-  api_ok "basic の作成 POST /v1/subscriptions" POST /v1/subscriptions "${BASIC_ARGS[@]}" \
-    --data-urlencode "metadata[customer_code]=$code" \
-    --data-urlencode "metadata[tenant]=$OPT_TENANT"
-  check_replay "basic の作成" "/v1/subscriptions/$(jq -r '.id' <<<"$RESP_BODY")" \
-    '.status == "incomplete" and .latest_invoice.status == "open"' '{id, status, invoice: .latest_invoice.status}' \
-    --data-urlencode "expand[0]=latest_invoice"
-  printf 'CREATED subscription %s（%s basic、status=%s）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_SERVICE" "$(jq -r '.status' <<<"$RESP_BODY")"
-  report_first_invoice "$lk"
+cust_meta() {
+  jq -r --arg k "$1" '.metadata[$k] // empty' <<<"$CUST_JSON"
 }
 
-basic_for_devfee() {
-  api_ok "subscription の一覧" GET /v1/subscriptions --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=active" --data-urlencode "limit=100"
-  jq -c --arg s "$OPT_SERVICE" '[.data[] | select(.metadata.service == $s and .metadata.plan == "basic")][0] // empty' <<<"$RESP_BODY"
+# metadata を書き、書けたことを応答で確かめる。put_meta <説明> <確かめる条件（jq）> <metadata[k]=v ...>
+put_meta() {
+  local what="$1" cond="$2" kv
+  shift 2
+  local -a args=()
+  for kv in "$@"; do args+=(--data-urlencode "metadata[${kv%%=*}]=${kv#*=}"); done
+  api_ok "$what POST /v1/customers/$OPT_CUSTOMER" POST "/v1/customers/$OPT_CUSTOMER" "${args[@]}"
+  check_replay "$what" "/v1/customers/$OPT_CUSTOMER" "$cond" '{id, metadata}'
+  jq -e "$cond" <<<"$RESP_BODY" >/dev/null || die 3 "$what: 応答の metadata が期待と違う（観測: $(jq -c '.metadata' <<<"$RESP_BODY")）"
 }
 
-devfee_start() {
-  local basic_json="$1" ts
-  case "$OPT_START" in
-    now) printf 'now' ;;
-    align)
-      ts="$(jq -r '.items.data[0].current_period_end // empty' <<<"$basic_json")"
-      [[ "$ts" =~ ^[0-9]+$ ]] || die 3 "basic の current_period_end を読めない（観測: ${ts:-なし}）。--start を日付で指定する"
-      printf '%s' "$ts" ;;
-    *) jst_date_epoch "$OPT_START" ;;
+do_contract() {
+  local ks="contract_${OPT_SERVICE}_start" kc="contract_${OPT_SERVICE}_devfee_count" kb="contract_${OPT_SERVICE}_bill_from" cur_s cur_c cur_b cond
+  [ "${#kc}" -le 40 ] && [ "${#kb}" -le 40 ] || die 64 "metadata の名前 $kc か $kb が 40 文字を超える（サービス名を短くする）"
+  load_customer
+  cur_s="$(cust_meta "$ks")"
+  cur_c="$(cust_meta "$kc")"
+  cur_b="$(cust_meta "$kb")"
+  if [ "$cur_s" = "$OPT_START" ] && [ "$cur_c" = "$OPT_DEVFEE" ] && [ "$cur_b" = "$OPT_BILL_FROM" ]; then
+    printf 'OK contract %s %s: 既に start=%s devfee_count=%s bill_from=%s（書かない）\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$cur_s" "$cur_c" "${cur_b:-なし}"
+    return 0
+  fi
+  [ -z "$cur_s" ] || [ "$cur_s" = "$OPT_START" ] || die 3 "$OPT_CUSTOMER の $ks が違う（期待 $OPT_START、観測 $cur_s）。書き換えない（寺田が判断）"
+  [ -z "$cur_c" ] || [ "$cur_c" = "$OPT_DEVFEE" ] || die 3 "$OPT_CUSTOMER の $kc が違う（期待 $OPT_DEVFEE、観測 $cur_c）。書き換えない（寺田が判断）"
+  # 請求を始める月は、一度書いたら変えない。既に契約があって bill_from が無い顧客に、あとから足すこともしない（二重請求の元になる）
+  [ "$cur_b" = "$OPT_BILL_FROM" ] || [ -z "$cur_s" ] || die 3 "$OPT_CUSTOMER の $kb が違う（期待 ${OPT_BILL_FROM:-なし}、観測 ${cur_b:-なし}）。書き換えない（寺田が判断）"
+  cond=".metadata[\"$ks\"] == \"$OPT_START\" and .metadata[\"$kc\"] == \"$OPT_DEVFEE\""
+  local -a kv=("$ks=$OPT_START" "$kc=$OPT_DEVFEE")
+  if [ -n "$OPT_BILL_FROM" ]; then
+    cond="$cond and .metadata[\"$kb\"] == \"$OPT_BILL_FROM\""
+    kv+=("$kb=$OPT_BILL_FROM")
+  fi
+  put_meta "契約を書く" "$cond" "${kv[@]}"
+  printf 'CONTRACT %s %s: start=%s devfee_count=%s bill_from=%s\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "${OPT_BILL_FROM:-なし}"
+}
+
+# 保存したカードを探す（subshell にしないで呼ぶ）。CARD_PM・CARD_SRC と、card-setup の session の CS_STATUS・CS_URL を決める。
+# 順: Customer の invoice_settings.default_payment_method → metadata.card_setup_session の session（complete なら
+# session の setup_intent → SetupIntent の payment_method）。
+find_saved_card() {
+  local cs seti
+  CARD_PM="$(jq -r '.invoice_settings.default_payment_method // empty | if type == "object" then .id else . end' <<<"$CUST_JSON")"
+  CARD_SRC="invoice_settings.default_payment_method"
+  CS_STATUS=""
+  CS_URL=""
+  [ -z "$CARD_PM" ] || return 0
+  CARD_SRC=""
+  cs="$(cust_meta card_setup_session)"
+  [ -n "$cs" ] || return 0
+  [[ "$cs" =~ ^cs_[A-Za-z0-9_]+$ ]] || die 3 "metadata.card_setup_session の形が違う（観測: $cs）"
+  api_ok "カードの保存のページの読取" GET "/v1/checkout/sessions/$cs"
+  CS_STATUS="$(jq -r '.status // "-"' <<<"$RESP_BODY")"
+  CS_URL="$(jq -r '.url // empty' <<<"$RESP_BODY")"
+  [ "$CS_STATUS" = "complete" ] || return 0
+  seti="$(jq -r '.setup_intent // empty | if type == "object" then .id else . end' <<<"$RESP_BODY")"
+  [[ "$seti" =~ ^seti_[A-Za-z0-9_]+$ ]] || die 3 "session $cs の setup_intent を読めない（観測: ${seti:-なし}）"
+  api_ok "SetupIntent の読取" GET "/v1/setup_intents/$seti"
+  CARD_PM="$(jq -r '.payment_method // empty | if type == "object" then .id else . end' <<<"$RESP_BODY")"
+  if [ -n "$CARD_PM" ]; then CARD_SRC="card-setup（$cs → $seti）"; fi
+}
+
+do_card_setup() {
+  local id url
+  load_customer
+  find_saved_card
+  if [ -n "$CARD_PM" ]; then
+    printf 'OK card-setup %s: カードは保存済み（%s、%s）。作らない\n' "$OPT_CUSTOMER" "$CARD_PM" "$CARD_SRC"
+    return 0
+  fi
+  if [ "$CS_STATUS" = "open" ] && [ -n "$CS_URL" ]; then
+    printf 'OK card-setup %s: 開いているページがある（作らない）\nSETUP_URL %s\n' "$OPT_CUSTOMER" "$CS_URL"
+    return 0
+  fi
+  api_ok "カードの保存のページの作成 POST /v1/checkout/sessions" POST /v1/checkout/sessions \
+    --data-urlencode "mode=setup" --data-urlencode "currency=jpy" --data-urlencode "customer=$OPT_CUSTOMER" \
+    --data-urlencode "success_url=https://cor-jp.com/" \
+    --data-urlencode "metadata[customer_code]=$(cust_meta customer_code)" --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+  id="$(jq -r '.id' <<<"$RESP_BODY")"
+  check_replay "カードの保存のページの作成" "/v1/checkout/sessions/$id" '.status | IN("open", "complete")' '{id, status}'
+  url="$(jq -r '.url // empty' <<<"$RESP_BODY")"
+  [ -n "$url" ] || die 3 "session $id に URL が無い（観測 status=$(jq -r '.status // "-"' <<<"$RESP_BODY")）"
+  printf 'CREATED card-setup %s（期限 %s）\n' "$id" "$(fmt_jst "$(jq -r '.expires_at // "-"' <<<"$RESP_BODY")")"
+  put_meta "session の id を書く" ".metadata.card_setup_session == \"$id\"" "card_setup_session=$id"
+  printf 'SETUP_URL %s\n' "$url"
+  printf 'NOTE この URL を顧客へ送る（送信は寺田）。カードを入れ終わると、charge がそのカードで払う\n'
+}
+
+# その月の当社の請求書を探し、INV_JSON に入れる（無ければ空）。2 件以上なら止まる。
+# 検索（metadata）は反映に最大 1 分（障害時 1 時間）かかるので、一覧（customer で絞り、metadata は手元で見る）でも探す。
+find_month_invoice() {
+  local ym="$1" a b n
+  local filter='[.data[] | select(.metadata.billing_month == $m and .metadata.managed_by == $mb)]'
+  api_ok "請求書の検索" GET /v1/invoices/search \
+    --data-urlencode "query=customer:\"$OPT_CUSTOMER\" AND metadata[\"billing_month\"]:\"$ym\"" --data-urlencode "limit=10"
+  a="$(jq -c --arg m "$ym" --arg mb "$MANAGED_BY" "$filter" <<<"$RESP_BODY")"
+  api_ok "請求書の一覧" GET /v1/invoices --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "limit=100"
+  b="$(jq -c --arg m "$ym" --arg mb "$MANAGED_BY" "$filter" <<<"$RESP_BODY")"
+  INV_JSON="$(jq -cn --argjson a "$a" --argjson b "$b" '$a + $b | unique_by(.id)')"
+  n="$(jq 'length' <<<"$INV_JSON")"
+  [ "$n" -le 1 ] || die 3 "$ym 分の請求書が $n 件ある: $(jq -r 'map("\(.id)(\(.status))") | join(" ")' <<<"$INV_JSON")（1 件のはず。寺田が判断）"
+  INV_JSON="$(jq -c '.[0] // empty' <<<"$INV_JSON")"
+}
+
+# 契約のある全サービスの、その月の明細を LINES（サービス 種類 金額 初日 末日 説明）・LINES_TOTAL・LINES_N に入れる。
+invoice_lines() {
+  local ym="$1" s start count end bf out l contracts=0
+  LINES=""
+  LINES_TOTAL=0
+  LINES_N=0
+  while IFS= read -r s; do
+    start="$(cust_meta "contract_${s}_start")"
+    [ -n "$start" ] || continue
+    count="$(cust_meta "contract_${s}_devfee_count")"
+    end="$(cust_meta "contract_${s}_end")"
+    bf="$(cust_meta "contract_${s}_bill_from")"
+    contracts=$((contracts + 1))
+    load_amounts "$s"
+    valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: $start）"
+    is_count "$count" && [ "$count" -le "$DEVFEE_MAX" ] || die 3 "contract_${s}_devfee_count が 0〜$DEVFEE_MAX でない（観測: ${count:-なし}）"
+    [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: $end）"
+    if [ -n "$bf" ]; then
+      [[ "$bf" =~ ^[0-9]{4}-(0[1-9]|1[0-2])$ ]] || die 3 "contract_${s}_bill_from が YYYY-MM でない（観測: $bf）"
+      # 前からの顧客: bill_from より前の月は請求書払いで請求済み。二重に請求しないよう、その月の請求書は作らない
+      [[ ! "$ym" < "$bf" ]] || die 3 "$OPT_CUSTOMER の $s は $bf より前を請求しない（contract_${s}_bill_from=$bf、観測 --month $ym）。その月はほかの方法で請求済み。何も作っていない"
+    fi
+    out="$(billing_lines "$s" "$start" "$count" "$end" "$ym" "$bf")"
+    while IFS= read -r l; do
+      [ -n "$l" ] || continue
+      LINES="$LINES$s"$'\t'"$l"$'\n'
+      LINES_N=$((LINES_N + 1))
+      LINES_TOTAL=$((LINES_TOTAL + $(printf '%s' "$l" | cut -f2)))
+    done <<<"$out"
+  done < <(plans_services)
+  [ "$contracts" -ge 1 ] || die 3 "$OPT_CUSTOMER に契約が無い（metadata に contract_<サービス>_start が無い。contract を先に）"
+}
+
+print_lines() {
+  local s kind amount ps pe desc
+  while IFS=$'\t' read -r s kind amount ps pe desc; do
+    [ -n "$kind" ] || continue
+    printf 'LINE %s %s %s %s %s〜%s %s\n' "$1" "$s" "$kind" "$amount" "$ps" "$pe" "$desc"
+  done <<<"$LINES"
+  printf 'TOTAL %s %s 円（税別、明細 %s 行）\n' "$1" "$LINES_TOTAL" "$LINES_N"
+}
+
+create_draft() {
+  api_ok "請求書の作成 POST /v1/invoices" POST /v1/invoices \
+    --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "currency=$(jq -r '.currency' "$PLANS")" \
+    --data-urlencode "collection_method=send_invoice" --data-urlencode "due_date=$DUE_EPOCH" \
+    --data-urlencode "auto_advance=false" --data-urlencode "pending_invoice_items_behavior=exclude" \
+    --data-urlencode "metadata[billing_month]=$OPT_MONTH" --data-urlencode "metadata[customer_code]=$(cust_meta customer_code)" \
+    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+  check_replay "請求書の作成" "/v1/invoices/$(jq -r '.id' <<<"$RESP_BODY")" '.status == "draft"' '{id, status}'
+  INV_JSON="$RESP_BODY"
+  printf 'CREATED invoice %s（draft、%s 分）\n' "$(jq -r '.id' <<<"$INV_JSON")" "$OPT_MONTH"
+}
+
+add_items() {
+  local inv="$1" txr="$2" s kind amount ps pe desc
+  while IFS=$'\t' read -r s kind amount ps pe desc; do
+    [ -n "$kind" ] || continue
+    api_ok "明細の追加 POST /v1/invoiceitems（$s $kind）" POST /v1/invoiceitems \
+      --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "invoice=$inv" \
+      --data-urlencode "amount=$amount" --data-urlencode "currency=$(jq -r '.currency' "$PLANS")" \
+      --data-urlencode "description=$desc" --data-urlencode "tax_rates[0]=$txr" \
+      --data-urlencode "period[start]=$(jst_midnight_epoch "$ps")" --data-urlencode "period[end]=$(jst_day_end_epoch "$pe")" \
+      --data-urlencode "metadata[service]=$s" --data-urlencode "metadata[kind]=$kind" \
+      --data-urlencode "metadata[billing_month]=$OPT_MONTH" --data-urlencode "metadata[managed_by]=$MANAGED_BY"
+    check_replay "明細の追加" "/v1/invoiceitems/$(jq -r '.id' <<<"$RESP_BODY")" ".invoice == \"$inv\"" '{id, invoice}'
+    printf 'ADDED %s %s %s 円（税別）\n' "$s" "$kind" "$amount"
+  done <<<"$LINES"
+}
+
+# 小計（税別）と明細の数を計算値と照らしてから、確定して送る。違えば確定しない。
+finish_invoice() {
+  local inv="$1" sub n
+  api_ok "請求書の読取" GET "/v1/invoices/$inv"
+  sub="$(jq -r '.subtotal // "-"' <<<"$RESP_BODY")"
+  n="$(jq -r '.lines.total_count // (.lines.data | length)' <<<"$RESP_BODY")"
+  [ "$sub" = "$LINES_TOTAL" ] && [ "$n" = "$LINES_N" ] \
+    || die 3 "請求書 $inv の小計か明細の数が計算と違う（期待 小計 $LINES_TOTAL・$LINES_N 行、観測 小計 $sub・$n 行）。確定しない。Stripe の画面で下書きを確かめ、消してからもう一度実行する（画面の文言は未確認）"
+  printf 'CHECK ok: 小計 %s 円（税別）・明細 %s 行は計算と一致\n' "$sub" "$n"
+  api_ok "請求書の確定 POST /v1/invoices/$inv/finalize" POST "/v1/invoices/$inv/finalize"
+  check_replay "請求書の確定" "/v1/invoices/$inv" '.status | IN("open", "paid")' '{id, status}'
+  [ "$(jq -r '.status' <<<"$RESP_BODY")" = "open" ] || die 3 "確定した請求書 $inv が open でない（観測 status=$(jq -r '.status' <<<"$RESP_BODY")）"
+  api_ok "請求書の送付 POST /v1/invoices/$inv/send" POST "/v1/invoices/$inv/send"
+  check_replay "請求書の送付" "/v1/invoices/$inv" '.status | IN("open", "paid")' '{id, status}'
+  printf 'INVOICE %s %s: status=%s 税込 %s 円（うち消費税 %s 円）支払期限 %s\n' "$inv" "$OPT_MONTH" "$(jq -r '.status' <<<"$RESP_BODY")" \
+    "$(jq -r '.total' <<<"$RESP_BODY")" "$(jq -r '[.total_taxes[]?.amount] | add // 0' <<<"$RESP_BODY")" "$(fmt_jst "$(jq -r '.due_date // "-"' <<<"$RESP_BODY")")"
+  printf 'INVOICE_URL %s\n' "$(jq -r '.hosted_invoice_url // "（無い）"' <<<"$RESP_BODY")"
+}
+
+# 同じ月の請求書があるとき: open / paid は作らない。draft は前回が途中で止まったもの（明細が 0 行なら足し、計算と合えば確定する）。
+resume_invoice() {
+  local id status n
+  id="$(jq -r '.id' <<<"$INV_JSON")"
+  status="$(jq -r '.status' <<<"$INV_JSON")"
+  case "$status" in
+    open | paid)
+      printf 'OK invoice %s: %s 分の請求書 %s は既にある（status=%s、税込 %s 円）。作らない\n' "$OPT_CUSTOMER" "$OPT_MONTH" "$id" "$status" "$(jq -r '.total // "-"' <<<"$INV_JSON")"
+      return 0 ;;
+    draft) ;;
+    *) die 3 "$OPT_MONTH 分の請求書 $id は status=$status。作り直さない（寺田が判断）" ;;
   esac
+  printf 'NOTE %s 分の下書き %s がある（前回が途中で止まった）。続きから行う\n' "$OPT_MONTH" "$id"
+  confirm_live
+  api_ok "下書きの読取" GET "/v1/invoices/$id"
+  n="$(jq -r '.lines.total_count // (.lines.data | length)' <<<"$RESP_BODY")"
+  if [ "$n" = "0" ]; then
+    local txr
+    txr="$(tax_rate_id)"
+    add_items "$id" "$txr"
+  fi
+  finish_invoice "$id"
 }
 
-do_devfee() {
-  local lk price txr code basic_json pm start existing
-  lk="$(plans_lookup "$OPT_SERVICE" dev_fee)"
-  price="$(price_id_by_lookup "$lk")"
+do_invoice() {
+  local id
+  load_customer
+  invoice_lines "$OPT_MONTH"
+  print_lines "$OPT_MONTH"
+  if [ "$LINES_N" -eq 0 ]; then
+    printf 'DONE invoice: %s 分に請求するものが無い（契約の開始の月より前か、終了の月より後）。作らない\n' "$OPT_MONTH"
+    return 0
+  fi
+  find_month_invoice "$OPT_MONTH"
+  if [ -n "$INV_JSON" ]; then
+    resume_invoice
+    return 0
+  fi
+  confirm_live
+  local txr
   txr="$(tax_rate_id)"
-  code="$(customer_code_of "$OPT_CUSTOMER")"
-  basic_json="$(basic_for_devfee)"
-  [ -n "$basic_json" ] || die 3 "$OPT_SERVICE の basic が active でない（最初の支払いがまだ）。basic の支払いが済んでから開発費を作る"
-  pm="$(jq -r '.default_payment_method // empty | if type == "object" then .id else . end' <<<"$basic_json")"
-  [ -n "$pm" ] || die 3 "basic の subscription $(jq -r '.id' <<<"$basic_json") にカードが保存されていない（default_payment_method が空）"
-  start="$(devfee_start "$basic_json")"
-  api_ok "schedule の一覧" GET /v1/subscription_schedules --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "limit=100"
-  existing="$(jq -r --arg s "$OPT_SERVICE" '[.data[] | select(.metadata.service == $s and .metadata.plan == "dev_fee"
-    and (.status | IN("not_started", "active"))) | "\(.id)(\(.status))"] | join(" ")' <<<"$RESP_BODY")"
-  [ -z "$existing" ] || die 3 "この顧客には $OPT_SERVICE の開発費の schedule が既にある: $existing（作らない）"
-  build_devfee_args "$OPT_CUSTOMER" "$start" "$pm" "$price" "$txr" "$OPT_COUNT" "$OPT_SERVICE"
-  api_ok "開発費の schedule の作成 POST /v1/subscription_schedules" POST /v1/subscription_schedules "${DEVFEE_ARGS[@]}" \
-    --data-urlencode "phases[0][metadata][customer_code]=$code" \
-    --data-urlencode "metadata[customer_code]=$code"
-  check_replay "開発費の schedule の作成" "/v1/subscription_schedules/$(jq -r '.id' <<<"$RESP_BODY")" \
-    '.status | IN("not_started", "active")' '{id, status}'
-  printf 'CREATED schedule %s（%s 開発費、status=%s、%s 回）\n' "$(jq -r '.id' <<<"$RESP_BODY")" "$OPT_SERVICE" "$(jq -r '.status' <<<"$RESP_BODY")" "$OPT_COUNT"
-  printf 'CHECK phases[0]: 開始 %s → 終了 %s\n' "$(fmt_jst "$(jq -r '.phases[0].start_date' <<<"$RESP_BODY")")" "$(fmt_jst "$(jq -r '.phases[0].end_date' <<<"$RESP_BODY")")"
+  create_draft
+  id="$(jq -r '.id' <<<"$INV_JSON")"
+  add_items "$id" "$txr"
+  finish_invoice "$id"
+}
+
+do_charge() {
+  local pay id status due total
+  load_customer
+  pay="$(cust_meta payment)"
+  [ "$pay" = "card" ] || die 3 "$OPT_CUSTOMER の支払い方法が card でない（観測 payment=${pay:-なし}）。振込の顧客は請求書のとおり振り込んでもらう（charge しない）"
+  find_month_invoice "$OPT_MONTH"
+  [ -n "$INV_JSON" ] || die 3 "$OPT_MONTH 分の請求書が無い（invoice を先に）"
+  id="$(jq -r '.id' <<<"$INV_JSON")"
+  status="$(jq -r '.status' <<<"$INV_JSON")"
+  case "$status" in
+    paid) printf 'OK charge %s: %s 分の請求書 %s は支払い済み（払わない）\n' "$OPT_CUSTOMER" "$OPT_MONTH" "$id"; return 0 ;;
+    open) ;;
+    *) die 3 "$OPT_MONTH 分の請求書 $id は status=$status（open でない）。払わない" ;;
+  esac
+  due="$(jq -r '.due_date // "-"' <<<"$INV_JSON")"
+  [ "$due" = "$DUE_EPOCH" ] || die 3 "請求書 $id の支払期限が計算と違う（期待 $DUE_EPOCH = $DUE_DATE 23:59:59 JST、観測 $due = $(fmt_jst "$due")）。払わない（寺田が判断）"
+  find_saved_card
+  [ -n "$CARD_PM" ] || die 3 "$OPT_CUSTOMER に保存したカードが無い（card-setup のページ: ${CS_STATUS:-まだ作っていない}）。払わない"
+  total="$(jq -r '.total // "-"' <<<"$INV_JSON")"
+  printf 'PLAN charge: 請求書 %s（%s 分、税込 %s 円、期限 %s）を %s（%s）で払う\n' "$id" "$OPT_MONTH" "$total" "$DUE_DATE" "$CARD_PM" "$CARD_SRC"
+  confirm_live
+  api_ok "支払い POST /v1/invoices/$id/pay" POST "/v1/invoices/$id/pay" --data-urlencode "payment_method=$CARD_PM"
+  check_replay "支払い" "/v1/invoices/$id" '.status == "paid"' '{id, status}'
+  [ "$(jq -r '.status' <<<"$RESP_BODY")" = "paid" ] || die 3 "請求書 $id が支払い済みにならなかった（観測 status=$(jq -r '.status' <<<"$RESP_BODY")）"
+  printf 'PAID %s %s: 税込 %s 円を %s で払った\n' "$id" "$OPT_MONTH" "$(jq -r '.amount_paid // .total' <<<"$RESP_BODY")" "$CARD_PM"
+}
+
+do_cancel() {
+  local ks="contract_${OPT_SERVICE}_start" ke="contract_${OPT_SERVICE}_end" start cur
+  load_customer
+  start="$(cust_meta "$ks")"
+  [ -n "$start" ] || die 3 "$OPT_CUSTOMER に $OPT_SERVICE の契約が無い（metadata に $ks が無い）"
+  [[ ! "$CANCEL_END_DATE" < "$start" ]] || die 64 "終了日 $CANCEL_END_DATE が契約の開始日 $start より前（受理日 $OPT_ACCEPTED を確かめる）"
+  cur="$(cust_meta "$ke")"
+  if [ "$cur" = "$CANCEL_END_DATE" ]; then
+    printf 'OK cancel %s %s: 既に終了日 %s（書かない）\n' "$OPT_CUSTOMER" "$OPT_SERVICE" "$cur"
+    return 0
+  fi
+  [ -z "$cur" ] || die 3 "$OPT_CUSTOMER の $ke に別の終了日がある（期待 $CANCEL_END_DATE、観測 $cur）。書き換えない（寺田が判断）"
+  find_month_invoice "${CANCEL_END_DATE:0:7}"
+  [ -z "$INV_JSON" ] || die 3 "終了日を含む月 ${CANCEL_END_DATE:0:7} の請求書 $(jq -r '.id' <<<"$INV_JSON") が既にある。終了日を書いても、その月の日割りと残りは請求されない。書かない（寺田が判断）"
+  put_meta "終了日を書く" ".metadata[\"$ke\"] == \"$CANCEL_END_DATE\"" "$ke=$CANCEL_END_DATE"
+  printf 'CANCEL %s %s: 受理日 %s → 終了日 %s。%s 分の請求書（%s に invoice）に、次の明細が入る\n' \
+    "$OPT_CUSTOMER" "$OPT_SERVICE" "$OPT_ACCEPTED" "$CANCEL_END_DATE" "${CANCEL_END_DATE:0:7}" "$(next_date "$(month_last_date "${CANCEL_END_DATE:0:7}")")"
+  CUST_JSON="$RESP_BODY"
+  invoice_lines "${CANCEL_END_DATE:0:7}"
+  print_lines "${CANCEL_END_DATE:0:7}"
+  printf 'NOTE 終了日を過ぎたら入口を閉じる（runbook D3）\n'
 }
 
 do_status() {
-  local devs id
-  api_ok "顧客の読取" GET "/v1/customers/$OPT_CUSTOMER"
-  printf 'CUSTOMER %s customer_code=%s name=%s\n' "$OPT_CUSTOMER" "$(jq -r '.metadata.customer_code // "-"' <<<"$RESP_BODY")" "$(jq -r '.name // "-"' <<<"$RESP_BODY")"
-  api_ok "subscription の一覧" GET /v1/subscriptions --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=all" \
-    --data-urlencode "limit=100" --data-urlencode "expand[0]=data.latest_invoice"
-  jq -r '.data[] | "SUB \(.id) service=\(.metadata.service // "-") plan=\(.metadata.plan // "-") status=\(.status) cancel_at_period_end=\(.cancel_at_period_end) cancel_at=\(.cancel_at // "-") period_end=\(.items.data[0].current_period_end // "-") card=\(if .default_payment_method then "保存済み" else "なし" end)"' <<<"$RESP_BODY"
-  jq -r '.data[] | select(.status == "incomplete" and (.latest_invoice | type) == "object" and .latest_invoice.status == "open")
-    | "PAY_URL \(.id) \(.latest_invoice.hosted_invoice_url // "（無い）")"' <<<"$RESP_BODY"
-  devs="$(jq -r '.data[] | select(.metadata.plan == "dev_fee") | .id' <<<"$RESP_BODY")"
-  api_ok "schedule の一覧" GET /v1/subscription_schedules --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "limit=100"
-  jq -r '.data[] | "SCHEDULE \(.id) service=\(.metadata.service // "-") status=\(.status) installments_in_stripe=\(.metadata.installments_in_stripe // "-") subscription=\(.subscription // "-")"' <<<"$RESP_BODY"
-  for id in $devs; do
-    api_ok "開発費の請求書" GET /v1/invoices --data-urlencode "subscription=$id" --data-urlencode "status=paid" --data-urlencode "limit=100"
-    printf 'PAID %s: 支払い済みの請求書 %s 件\n' "$id" "$(jq '.data | length' <<<"$RESP_BODY")"
+  local s ym this
+  load_customer
+  printf 'CUSTOMER %s customer_code=%s name=%s payment=%s\n' "$OPT_CUSTOMER" "$(cust_meta customer_code)" "$(jq -r '.name // "-"' <<<"$CUST_JSON")" "$(cust_meta payment)"
+  while IFS= read -r s; do
+    [ -n "$(cust_meta "contract_${s}_start")" ] || continue
+    printf 'CONTRACT %s start=%s devfee_count=%s end=%s bill_from=%s\n' "$s" "$(cust_meta "contract_${s}_start")" \
+      "$(cust_meta "contract_${s}_devfee_count")" "$(cust_meta "contract_${s}_end")" "$(cust_meta "contract_${s}_bill_from")"
+  done < <(plans_services)
+  this="$(today_jst)"
+  this="${this:0:7}"
+  for ym in "$this" "$(ym_add "$this" -1)"; do
+    find_month_invoice "$ym"
+    if [ -z "$INV_JSON" ]; then printf 'INVOICE %s なし\n' "$ym"; continue; fi
+    jq -r --arg m "$ym" '"INVOICE \($m) \(.id) status=\(.status) total=\(.total) due_date=\(.due_date)"' <<<"$INV_JSON"
   done
+  find_saved_card
+  if [ -n "$CARD_PM" ]; then printf 'CARD %s（%s）\n' "$CARD_PM" "$CARD_SRC"; else printf 'CARD なし（card-setup のページ: %s）\n' "${CS_STATUS:-まだ作っていない}"; fi
+  if [ "$CS_STATUS" = "open" ] && [ -n "$CS_URL" ]; then printf 'SETUP_URL %s\n' "$CS_URL"; fi
 }
 
-# 解約: cancel_at を「受理日の 1 か月後の同じ日の終わり」に置く（特商法ページと plans.json の cancellation）。
-# 終了日が次の期間に入るとき、Stripe はその期間を必ず日割りで請求する（proration_behavior では止められない）。
-# 終了日が支払い済みの期間の中だと、差額が顧客の残高に戻る（返金しない方針と合わない）ので止める。
-do_cancel() {
-  local plan status existing cur_end
-  api_ok "subscription の読取" GET "/v1/subscriptions/$OPT_SUB"
-  plan="$(jq -r '.metadata.plan // "-"' <<<"$RESP_BODY")"
-  status="$(jq -r '.status' <<<"$RESP_BODY")"
-  [ "$plan" = "basic" ] || die 3 "$OPT_SUB は basic でない（観測 plan=$plan）。開発費は止めない（契約書に従う）"
-  case "$status" in
-    active | past_due | trialing) ;;
-    *) die 3 "$OPT_SUB は解約できる状態でない（観測 status=$status）" ;;
-  esac
-  existing="$(jq -r '.cancel_at // empty' <<<"$RESP_BODY")"
-  if [ "$existing" = "$CANCEL_AT" ]; then
-    printf 'OK cancel %s: 既に %s に終わる設定（status=%s）\n' "$OPT_SUB" "$(fmt_jst "$CANCEL_AT")" "$status"
-    return 0
-  fi
-  [ -z "$existing" ] || die 3 "$OPT_SUB には既に別の終了日時がある（期待 $(fmt_jst "$CANCEL_AT")、観測 $(fmt_jst "$existing")）。書き換えない（寺田が判断）"
-  [ "$(jq -r '.cancel_at_period_end' <<<"$RESP_BODY")" != "true" ] \
-    || die 3 "$OPT_SUB は期間末で止まる設定（cancel_at_period_end=true）。受理日から数えた終了日 $CANCEL_END_DATE と違うので書き換えない（寺田が判断）"
-  cur_end="$(jq -r '.items.data[0].current_period_end // empty' <<<"$RESP_BODY")"
-  [[ "$cur_end" =~ ^[0-9]+$ ]] || die 3 "$OPT_SUB の current_period_end を読めない（観測: ${cur_end:-なし}）"
-  [ "$CANCEL_AT" -ge "$cur_end" ] \
-    || die 3 "終了日時 $(fmt_jst "$CANCEL_AT") が支払い済みの期間（$(fmt_jst "$cur_end") まで）の中にある。このまま止めると差額が顧客の残高に戻り、返金しない方針と合わない。止めない（寺田が判断）"
-  api_ok "終了日時を付ける POST /v1/subscriptions/$OPT_SUB" POST "/v1/subscriptions/$OPT_SUB" --data-urlencode "cancel_at=$CANCEL_AT"
-  check_replay "終了日時を付ける" "/v1/subscriptions/$OPT_SUB" ".cancel_at == $CANCEL_AT" '{id, status, cancel_at}'
-  [ "$(jq -r '.cancel_at // empty' <<<"$RESP_BODY")" = "$CANCEL_AT" ] \
-    || die 3 "$OPT_SUB の cancel_at が $CANCEL_AT にならなかった（観測: $(jq -r '.cancel_at // "なし"' <<<"$RESP_BODY")）"
-  printf 'CANCEL_AT %s: %s に終わる（受理日 %s → 終了日 %s の終わり）。終了日を含む期間は日割りで請求される。終わったら Access の許可から外す（runbook D2）\n' \
-    "$OPT_SUB" "$(fmt_jst "$CANCEL_AT")" "$OPT_ACCEPTED" "$CANCEL_END_DATE"
+# 通信しない。開始の月から --months か月分の明細と、月ごとの合計（税別）を出す。
+do_simulate() {
+  local i ym out l t sum=0
+  printf 'mode: simulate（通信しない）service=%s start=%s devfee_count=%s end=%s billing_from=%s months=%s\n' \
+    "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "${OPT_END:-なし}" "${OPT_BILL_FROM:-なし}" "$OPT_MONTHS"
+  for ((i = 0; i < OPT_MONTHS; i++)); do
+    ym="$(ym_add "${OPT_START:0:7}" "$i")"
+    out="$(billing_lines "$OPT_SERVICE" "$OPT_START" "$OPT_DEVFEE" "$OPT_END" "$ym" "$OPT_BILL_FROM")"
+    t=0
+    while IFS= read -r l; do
+      [ -n "$l" ] || continue
+      printf 'LINE %s %s\n' "$ym" "$(printf '%s' "$l" | awk -F'\t' '{ printf "%s %s %s〜%s %s", $1, $2, $3, $4, $5 }')"
+      t=$((t + $(printf '%s' "$l" | cut -f2)))
+    done <<<"$out"
+    printf 'TOTAL %s %s\n' "$ym" "$t"
+    sum=$((sum + t))
+  done
+  printf 'SUM %s 円（税別、%s か月）\n' "$sum" "$OPT_MONTHS"
 }
 
 main() {
   parse_args "$@"
   require_tools jq
   bash "$SCRIPT_DIR/apply-plans.sh" --plans "$PLANS" >/dev/null || die 2 "plans.json の検査で不合格（bash docs/billing/apply-plans.sh を実行して NG の行を見る）"
-  # 契約・解約を作るサブコマンドは、plans.json の請求の形をこのスクリプトが実装しているときだけ動く（dry-run も止める）
-  case "$CMD" in basic | devfee | cancel) require_implemented_billing ;; esac
+  # 契約・解約・請求書のサブコマンドは、plans.json の請求の形をこのスクリプトが実装しているときだけ動く（dry-run も止める）
+  case "$CMD" in customer | find | status) ;; *) require_implemented_billing ;; esac
   validate_inputs
+  if [ "$CMD" = "simulate" ]; then do_simulate; return 0; fi
   if [ -n "$MODE" ]; then printf 'mode: %s --mode %s\n' "$CMD" "$MODE"; else printf 'mode: %s dry-run（通信しない・鍵を読まない）\n' "$CMD"; fi
   print_plan
   case "$CMD" in
@@ -400,11 +705,9 @@ main() {
   load_api_version
   read_key
   check_mode
-  case "$CMD" in
-    find | status) ;;
-    *) confirm_live ;;
-  esac
-  "do_$CMD"
+  # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
+  case "$CMD" in find | status | invoice | charge) ;; *) confirm_live ;; esac
+  "do_${CMD//-/_}"
 }
 
 main "$@"

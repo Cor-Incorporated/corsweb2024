@@ -12,8 +12,8 @@
 # 冪等: 商品は固定 id、価格は lookup_key、税率は metadata.plan_key で既存を探す。
 #       あれば中身を照合し、食い違えば期待値と観測値を出して止まる。
 #       価格の金額は作成後に変えられない（prices/update に unit_amount が無い）ので上書きしない。
-# 分割（開発費の 12 回）: 価格は月額の定期価格として作るだけ。回数は顧客ごとの
-#       subscription schedule の phases[].duration で止める（README.md 3 章）。
+# 分割（開発費の 12 回）: 価格は月額の定期価格として作るだけ。毎月末の請求書（作り方 B）は価格を使わず、
+#       plans.json の金額を明細に入れる。回数は subscribe.sh invoice が Customer の metadata から数える（README.md 3 章）。
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の検査で不合格 / 3 = Stripe 側の既存と食い違い・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方の誤り
@@ -167,7 +167,7 @@ readonly JQ_PLAN='
     | if .enabled then
         .unit_amount_jpy_excl_tax as $a | ($a * $t.percentage / 100 | round) as $tax
         | "PLAN price \(.lookup_key): \($a | comma) 円（税別）/月、参考 税込 \(($a + $tax) | comma) 円/月、tax_behavior=\(.tax_behavior) product=\(.product)"
-          + (if .plan == "dev_fee" then "、× \(.installments) 回（税別の総額 \(($a * .installments) | comma) 円。回数は価格ではなく顧客ごとの subscription schedule で止める）" else "" end)
+          + (if .plan == "dev_fee" then "、× \(.installments) 回（税別の総額 \(($a * .installments) | comma) 円。回数は価格ではなく subscribe.sh invoice が数える）" else "" end)
           + " → GET /v1/prices?lookup_keys[]=\(.lookup_key)、無ければ POST /v1/prices"
       else "SKIP price \(.lookup_key): 枠だけ（enabled=false。金額が決まってから enabled=true にする）"
       end)

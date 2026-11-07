@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# docs/billing/lib.sh — apply-plans.sh / subscribe.sh / verify-installments.sh が共有する部品。
+# docs/billing/lib.sh — apply-plans.sh / subscribe.sh が共有する部品。
 # 単独では実行しない（source して使う）。呼ぶ側が set -euo pipefail と PLANS を決める。
 #
-# 鍵の扱い（3 本とも同じ）:
+# 鍵の扱い（2 本とも同じ）:
 #   - 環境変数 COR_BILLING_API_KEY、無ければ端末から表示しない入力で受ける。
 #   - 読み込んだ時点で環境変数の export を外し、子プロセスへ継承させない。読んだ直後に消す。
 #   - 表示しない・ファイルに書かない・curl の引数に載せない
@@ -16,6 +16,7 @@
 #   check_replay で今の状態を読み直し、期待と違えば止まる（「作った」と誤って出さない）。
 
 readonly API_BASE="https://api.stripe.com"
+# shellcheck disable=SC2034 # apply-plans.sh と subscribe.sh が使う
 readonly MANAGED_BY="corsweb/docs/billing/plans.json"
 MODE=""
 API_KEY=""
@@ -183,47 +184,6 @@ tax_rate_id() {
   jq -r --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)][0].id' <<<"$RESP_BODY"
 }
 
-# basic の subscription を作る要求の本体。subscribe.sh と verify-installments.sh が同じものを使う
-# （T5 の実測が、本番で使う要求そのものを通るように）。結果は BASIC_ARGS に入れる。
-# build_basic_args <customer> <price> <tax_rate> <service>
-build_basic_args() {
-  BASIC_ARGS=(
-    --data-urlencode "customer=$1"
-    --data-urlencode "items[0][price]=$2"
-    --data-urlencode "default_tax_rates[0]=$3"
-    --data-urlencode "collection_method=charge_automatically"
-    --data-urlencode "payment_behavior=default_incomplete"
-    --data-urlencode "payment_settings[save_default_payment_method]=on_subscription"
-    --data-urlencode "metadata[service]=$4"
-    --data-urlencode "metadata[plan]=basic"
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
-    --data-urlencode "expand[0]=latest_invoice"
-  )
-}
-
-# 開発費の schedule を作る要求の本体（count 回の月払いで止まる）。結果は DEVFEE_ARGS に入れる。
-# build_devfee_args <customer> <start: now か epoch 秒> <payment_method> <price> <tax_rate> <count> <service>
-build_devfee_args() {
-  DEVFEE_ARGS=(
-    --data-urlencode "customer=$1"
-    --data-urlencode "start_date=$2"
-    --data-urlencode "end_behavior=cancel"
-    --data-urlencode "default_settings[default_payment_method]=$3"
-    --data-urlencode "default_settings[collection_method]=charge_automatically"
-    --data-urlencode "phases[0][items][0][price]=$4"
-    --data-urlencode "phases[0][items][0][quantity]=1"
-    --data-urlencode "phases[0][duration][interval]=month"
-    --data-urlencode "phases[0][duration][interval_count]=$6"
-    --data-urlencode "phases[0][default_tax_rates][0]=$5"
-    --data-urlencode "phases[0][metadata][service]=$7"
-    --data-urlencode "phases[0][metadata][plan]=dev_fee"
-    --data-urlencode "metadata[service]=$7"
-    --data-urlencode "metadata[plan]=dev_fee"
-    --data-urlencode "metadata[installments_in_stripe]=$6"
-    --data-urlencode "metadata[managed_by]=$MANAGED_BY"
-  )
-}
-
 # plans.json から、サービスの有効な価格の lookup_key を返す（plan = basic か dev_fee）。
 plans_lookup() {
   local service="$1" plan="$2" product_key="product" lk
@@ -235,18 +195,18 @@ plans_lookup() {
   printf '%s' "$lk"
 }
 
-# このスクリプト群が実装している請求の形。plans.json の billing.closing と違えば、契約・解約を作らずに止まる。
-# 2026-11-07 に寺田が「月末締め翌月末払い」（closing=month_end）と作り方 B（毎月末の請求書）に決めた。B の実装は別の PR。
-readonly IMPLEMENTED_BILLING_CLOSING="same_day_advance"
+# このスクリプト群が実装している請求の形。plans.json の billing.closing と違えば、テストモードでも本番でも、
+# dry-run でも、契約・解約・請求書のサブコマンドは何もせずに止まる（exit 3）。
+# 2026-11-07 に寺田が「月末締め翌月末払い」（closing=month_end）と作り方 B（毎月末の請求書。README 1C 章）に決めた。
+# 前の形（same_day_advance。subscription で前払い）の部品は、B の実装で外した。
+# この値と plans.json の billing.closing は tests/test-subscribe.sh が結ぶ（片方だけ変えると落ちる）。
+readonly IMPLEMENTED_BILLING_CLOSING="month_end"
 
 require_implemented_billing() {
   local closing
   closing="$(jq -r '.billing.closing // "-"' "$PLANS")"
   [ "$closing" = "$IMPLEMENTED_BILLING_CLOSING" ] \
-    || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトがまだ実装していない（実装は $IMPLEMENTED_BILLING_CLOSING。README 1C 章の B を実装するまで待つ）。何もしていない"
-  # 前の形の写しを --plans で渡しても、本番では作らない（特商法ページは月末締め・翌月末払いで公開する）
-  [ "$MODE" != "live" ] \
-    || die 3 "前の請求の形（billing.closing=$closing）では、本番に契約・解約を作らない（README 1C 章）。何もしていない"
+    || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトの実装（$IMPLEMENTED_BILLING_CLOSING。README 1C 章の B）と違う。何もしていない"
 }
 
 plans_services() {
@@ -309,13 +269,138 @@ jst_midnight_epoch() {
   printf '%s' "$((e - 9 * 3600))"
 }
 
-# 解約の終了日と終了日時を決める（subshell にしないで呼ぶ）。
-# CANCEL_END_DATE = 受理日（YYYY-MM-DD）の plans.json の cancellation.notice_months か月後の同じ日、
-# CANCEL_AT = その日の終わり（翌日の日本時間 0:00）の epoch 秒。特商法ページの「1 か月後の同じ日」と同じ数え方。
-set_cancel_at() {
-  local accepted="$1" months midnight
+# YYYY-MM-DD の日本時間 23:59:59 の epoch 秒（請求書の明細の期間の終わりと、支払期限に使う）。
+jst_day_end_epoch() {
+  local e
+  e="$(jst_midnight_epoch "$1")"
+  printf '%s' "$((e + 86399))"
+}
+
+# 解約の終了日 = 受理日（YYYY-MM-DD）の plans.json の cancellation.notice_months か月後の同じ日
+# （同じ日が無い月は末日）。特商法ページの「1 か月後の同じ日」と同じ数え方。
+cancel_end_date() {
+  local months
   months="$(jq -r '.cancellation.notice_months' "$PLANS")"
-  CANCEL_END_DATE="$(add_months_clamped "$accepted" "$months")"
-  midnight="$(jst_midnight_epoch "$CANCEL_END_DATE")"
-  CANCEL_AT=$((midnight + 86400))
+  add_months_clamped "$1" "$months"
+}
+
+# --- 月の計算（YYYY-MM）。日付の計算は自前で行い、date の解釈の違い（macOS と GNU）に頼らない ---
+
+# YYYY-MM を「0 年 1 月からの月数」にする。
+ym_index() {
+  [[ "$1" =~ ^([0-9]{4})-(0[1-9]|1[0-2])$ ]] || die 64 "月は YYYY-MM（観測: $1）"
+  printf '%s' "$((10#${BASH_REMATCH[1]} * 12 + 10#${BASH_REMATCH[2]} - 1))"
+}
+
+# YYYY-MM の n か月後（n は負でもよい）。
+ym_add() {
+  local i
+  i=$(($(ym_index "$1") + $2))
+  printf '%04d-%02d' "$((i / 12))" "$((i % 12 + 1))"
+}
+
+# YYYY-MM の末日（YYYY-MM-DD）。
+month_last_date() {
+  ym_index "$1" >/dev/null
+  printf '%s-%02d' "$1" "$(days_in_month "$((10#${1:0:4}))" "$((10#${1:5:2}))")"
+}
+
+# YYYY-MM-DD の翌日。
+next_date() {
+  local ym="${1:0:7}" d=$((10#${1:8:2}))
+  if [ "$d" -lt "$(days_in_month "$((10#${1:0:4}))" "$((10#${1:5:2}))")" ]; then
+    printf '%s-%02d' "$ym" "$((d + 1))"
+  else
+    printf '%s-01' "$(ym_add "$ym" 1)"
+  fi
+}
+
+# YYYY-MM 分の請求書の支払期限の日 = 翌月の末日（plans.json の billing.payment_due = end_of_next_month）。
+due_date_of_month() {
+  month_last_date "$(ym_add "$1" 1)"
+}
+
+today_jst() {
+  TZ=Asia/Tokyo date '+%Y-%m-%d'
+}
+
+# --- 明細の計算（invoice と simulate が同じものを使う） ---
+
+# サービスの金額と名前を plans.json から読む（subshell にしないで呼ぶ）。
+# AMT_BASIC = basic の月額、AMT_DEVFEE = 開発費の 1 回分、DEVFEE_MAX = 開発費の回数の上限、
+# TERM_MONTHS = 最低利用期間の月数、NAME_BASIC / NAME_DEVFEE = 請求書に出す商品名。どれも税別の円。
+load_amounts() {
+  local row
+  row="$(jq -r --arg s "$1" '
+    [.services[] | select(.service == $s)][0] as $v | select($v != null) | . as $r
+    | [([$r.prices[] | select(.product == $v.product and .plan == "basic" and .enabled == true)][0].unit_amount_jpy_excl_tax),
+       ([$r.prices[] | select(.product == $v.dev_fee_product and .plan == "dev_fee" and .enabled == true)][0] | .unit_amount_jpy_excl_tax, .installments),
+       $r.minimum_term.months,
+       ([$r.products[] | select(.id == $v.product)][0].name),
+       ([$r.products[] | select(.id == $v.dev_fee_product)][0].name)]
+    | map(tostring) | join("\t")' "$PLANS")"
+  [ -n "$row" ] || die 64 "plans.json に service=$1 が無い"
+  IFS=$'\t' read -r AMT_BASIC AMT_DEVFEE DEVFEE_MAX TERM_MONTHS NAME_BASIC NAME_DEVFEE <<<"$row"
+  local v
+  for v in "$AMT_BASIC" "$AMT_DEVFEE" "$DEVFEE_MAX" "$TERM_MONTHS"; do
+    [[ "$v" =~ ^[0-9]+$ ]] || die 2 "plans.json の service=$1 の金額・回数・最低利用期間を読めない（観測: $row）"
+  done
+}
+
+emit_line() {
+  printf '%s\t%s\t%s\t%s\t%s\n' "$@"
+}
+
+# 1 サービスの 1 か月分の明細。金額は税別の円で、円未満は切り捨て（README 1C 章の数え方）。
+# billing_lines <service> <開始日> <開発費の回数> <終了日（無ければ空）> <請求する月 YYYY-MM>
+# 出力は 1 行に 1 明細（タブ区切り）: 種類 金額 期間の初日 期間の末日 説明。開始の月より前と、終了の月より後は何も出さない。
+#   usage_first     開始の月の利用料。開始日にかかわらず 1 か月分（billing.first_month = full_month）
+#   usage           1 か月分の利用料
+#   usage_prorated  終了の月の利用料。終了日までの日割り（cancellation.final_period = prorated）
+#   devfee          開発費の 1 回分（開始の月を 1 回目として、契約した回数まで）
+#   remaining_usage 終了の月に足す、最低利用期間の残りの期間分の利用料（12 か月分 − 終了日までに請求した利用料、0 未満は 0）
+#   remaining_devfee 終了の月に足す、開発費の残りの回数分（1 回分 × (契約した回数 − 終了の月までに請求した回数)）
+# 開始の月を 1 か月目と数え、TERM_MONTHS か月目の末日までが最低利用期間。それより後の終了日では、
+# 請求済みの利用料が TERM_MONTHS か月分を超えるので、残りの期間分は 0 になる（明細を出さない）。
+billing_lines() {
+  local service="$1" start="$2" count="$3" end="$4" ym="$5" bill_from="${6:-}" k k_end="" first last usage d dim rem left
+  load_amounts "$service"
+  # bill_from（YYYY-MM）より前の月は、ほかの方法（請求書払い）で請求済みなので何も出さない。
+  # 月の数え方（初月・最低利用期間・開発費の回数）は、元の契約の開始日から数える（寺田 2026-11-07）。
+  if [ -n "$bill_from" ] && [[ "$ym" < "$bill_from" ]]; then return 0; fi
+  k=$(($(ym_index "$ym") - $(ym_index "${start:0:7}") + 1))
+  [ "$k" -ge 1 ] || return 0
+  if [ -n "$end" ]; then
+    k_end=$(($(ym_index "${end:0:7}") - $(ym_index "${start:0:7}") + 1))
+    [ "$k" -le "$k_end" ] || return 0
+  fi
+  first="$ym-01"
+  last="$(month_last_date "$ym")"
+  if [ "$k" -eq 1 ]; then
+    usage="$AMT_BASIC" # 初月は開始日にかかわらず 1 か月分
+    emit_line usage_first "$usage" "$start" "$last" "$NAME_BASIC $ym（初月。1 か月分）"
+  elif [ "$k" = "$k_end" ]; then
+    d=$((10#${end:8:2}))
+    dim="$(days_in_month "$((10#${ym:0:4}))" "$((10#${ym:5:2}))")"
+    usage=$((AMT_BASIC * d / dim))
+    emit_line usage_prorated "$usage" "$first" "$end" "$NAME_BASIC $ym（終了日 $end まで。$d/$dim 日の日割り）"
+  else
+    usage="$AMT_BASIC"
+    emit_line usage "$usage" "$first" "$last" "$NAME_BASIC $ym"
+  fi
+  if [ "$k" -le "$count" ]; then
+    emit_line devfee "$AMT_DEVFEE" "$first" "$last" "$NAME_DEVFEE $k/$count 回目"
+  fi
+  [ "$k" = "$k_end" ] || return 0
+  rem=$((AMT_BASIC * TERM_MONTHS - (AMT_BASIC * (k - 1) + usage)))
+  [ "$rem" -ge 0 ] || rem=0
+  if [ "$rem" -ne 0 ]; then
+    emit_line remaining_usage "$rem" "$(next_date "$end")" "$(month_last_date "$(ym_add "${start:0:7}" $((TERM_MONTHS - 1)))")" \
+      "$NAME_BASIC 残りの期間分（最低利用期間 $TERM_MONTHS か月の残り）"
+  fi
+  left=$((count - (k < count ? k : count)))
+  if [ "$left" -gt 0 ]; then
+    emit_line remaining_devfee "$((AMT_DEVFEE * left))" "$(ym_add "$ym" 1)-01" "$(month_last_date "$(ym_add "${start:0:7}" $((count - 1)))")" \
+      "$NAME_DEVFEE 残り $left 回（$((k + 1))〜$count 回目）"
+  fi
 }
