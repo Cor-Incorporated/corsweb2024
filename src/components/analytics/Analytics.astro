@@ -2,11 +2,14 @@
 // 計測タグ（#51）。env で gate し、トークン / ID が設定されている時のみ読み込む。
 // - Cloudflare Web Analytics: PUBLIC_CF_BEACON_TOKEN（Cloudflare ダッシュボードのビーコントークン）
 // - Microsoft Clarity:        PUBLIC_CLARITY_ID（clarity.microsoft.com のプロジェクトID）
+// - Google Analytics 4:       PUBLIC_GA4_ID（gtag.js。測定 ID「G-」で始まる値）
 //
-// どちらも未設定なら何も出力しない（dev / 未設定環境では計測ゼロ）。
+// どれも未設定なら何も出力しない（dev / 未設定環境では計測ゼロ）。出すかどうかの条件は
+// analytics-tags.ts にまとめてあり、テスト（analytics-tags.test.ts）が固定している。
 // プライバシー: プライバシーポリシー「Cookie等の利用及びアクセス解析ツール」で
 // Microsoft Clarity / Cloudflare Web Analytics を名指しで開示し、Clarity は米国への
 // 越境移転を伴う旨を法第28条の条項に接続して記載している（5言語）。
+// GA4 は同じ項への開示が済むまで本番に ID を設定しない（docs/analytics/README.md）。
 //
 // production 以外では出力しない: preview / develop は社内確認用のため、チーム自身の閲覧が
 // セッション録画・計測されて解析データが汚染されるのを防ぐ。CI でも preview へ env を
@@ -15,7 +18,7 @@
 // /contact/chat/ を同一オリジンで iframe 読み込みするため、埋め込み先ページでも計測すると
 // 同一訪問者に対し Clarity が二重に起動し、幻の /contact/chat/ セッションで解析が汚れる。
 // SSG のためクエリ（embed=1）はビルド時に判定できず、ページ側から明示的に落とす。
-import { isAnalyticsEnabled } from '../../config/site';
+import { resolveAnalyticsTags } from './analytics-tags';
 
 interface Props {
   /** false で計測タグを出力しない（iframe 埋め込み専用ページ等） */
@@ -23,9 +26,11 @@ interface Props {
 }
 const { enabled = true } = Astro.props;
 
-const analyticsEnabled = isAnalyticsEnabled(enabled);
-const cfBeaconToken = analyticsEnabled ? (import.meta.env.PUBLIC_CF_BEACON_TOKEN ?? '') : '';
-const clarityId = analyticsEnabled ? (import.meta.env.PUBLIC_CLARITY_ID ?? '') : '';
+const { cfBeaconToken, clarityId, ga4Id } = resolveAnalyticsTags(enabled, {
+  PUBLIC_CF_BEACON_TOKEN: import.meta.env.PUBLIC_CF_BEACON_TOKEN,
+  PUBLIC_CLARITY_ID: import.meta.env.PUBLIC_CLARITY_ID,
+  PUBLIC_GA4_ID: import.meta.env.PUBLIC_GA4_ID,
+});
 ---
 
 {
@@ -54,6 +59,30 @@ const clarityId = analyticsEnabled ? (import.meta.env.PUBLIC_CLARITY_ID ?? '') :
         var y = l.getElementsByTagName(r)[0];
         y.parentNode.insertBefore(t, y);
       })(window, document, 'clarity', 'script', clarityId);
+    </script>
+  )
+}
+
+{
+  ga4Id && (
+    <script is:inline define:vars={{ ga4Id }}>
+      (function (w, d, id) {
+        // View Transitions でページを移っても、タグの読み込みと config は一度だけ（二重の page_view を防ぐ）
+        if (w.__corGa4Id === id) return;
+        w.__corGa4Id = id;
+        w.dataLayer = w.dataLayer || [];
+        w.gtag =
+          w.gtag ||
+          function () {
+            w.dataLayer.push(arguments);
+          };
+        var s = d.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+        d.head.appendChild(s);
+        w.gtag('js', new Date());
+        w.gtag('config', id);
+      })(window, document, ga4Id);
     </script>
   )
 }

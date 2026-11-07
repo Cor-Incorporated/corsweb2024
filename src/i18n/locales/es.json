@@ -668,7 +668,7 @@
     }
   },
   "contactConsent": {
-    "purpose": "La información que facilites se utilizará únicamente para responder a tu consulta y para ponernos en contacto contigo.",
+    "purpose": "La información que facilites se utilizará dentro de las finalidades del uso establecidas en nuestra Política de Privacidad.",
     "linkBefore": "Para más información sobre el tratamiento de datos personales, consulta nuestra ",
     "linkText": "Política de Privacidad",
     "linkAfter": ".",
@@ -689,7 +689,7 @@
     "chatError": "Algo salió mal. Por favor, intenta enviar tu mensaje de nuevo.",
     "readyNotice": "¡Gracias! Rellena tus datos de contacto a continuación y envía el formulario.",
     "consent": {
-      "purpose": "La información que facilites se utilizará únicamente para responder a tu consulta y para ponernos en contacto contigo.",
+      "purpose": "La información que facilites se utilizará dentro de las finalidades del uso establecidas en nuestra Política de Privacidad.",
       "linkBefore": "Para más información sobre el tratamiento de datos personales, consulta nuestra ",
       "linkText": "Política de Privacidad",
       "linkAfter": ".",
@@ -1019,7 +1019,7 @@
   },
   "privacy": {
     "title": "Política de Protección de Datos Personales (Política de Privacidad)",
-    "lastUpdate": "Fecha de referencia: 17 de julio de 2026 (Versión 0.3, Borrador)",
+    "lastUpdate": "Fecha de referencia: 7 de noviembre de 2026 (Versión 1.0)",
     "note": "La versión en japonés es el texto auténtico. Esta traducción al español se ofrece únicamente a título informativo.",
     "intro": "Cor. Inc. (en adelante, «la Empresa») reconoce la importancia de la información personal que trata y gestiona adecuadamente la información personal de clientes, empleados, candidatos a empleo y demás personas, de conformidad con la Ley de Protección de Información Personal (en adelante, la «Ley de Protección de Información Personal»), demás leyes y reglamentos pertinentes, directrices y el sistema de gestión de la seguridad de la información basado en la norma ISO/IEC 27001:2022 (JIS Q 27001:2023). La Empresa protege la información personal con arreglo a la siguiente política.",
     "businessTitle": "1. Información de la empresa",
@@ -1062,6 +1062,10 @@
           {
             "label": "Finalidad del uso",
             "value": "Atención de consultas y solicitudes / celebración y ejecución de contratos, prestación del desarrollo, operación y mantenimiento de soluciones de IA / facturación, pago y demás procesos contables y financieros / comunicaciones e información relativas a los servicios / gestión de transacciones y contratos y cumplimiento de las obligaciones legales."
+          },
+          {
+            "label": "Uso de la Recepción con IA",
+            "value": "La información recopilada a través de la Recepción con IA (Cloudia) de la página de contacto, su finalidad del uso y la forma de su tratamiento son los que se establecen en el apartado 9."
           }
         ]
       },
@@ -1074,7 +1078,7 @@
           },
           {
             "label": "Finalidad del uso",
-            "value": "Gestión de recursos humanos y relaciones laborales (contratación, asignación, evaluación, salarios, primas, jubilación, etc.) / cálculo de nóminas, retención en origen y demás procesos fiscales, así como los trámites de seguridad social y seguro laboral (incluida la Información Personal Específica; véase el apartado 4) / registro objetivo de la jornada laboral y cumplimiento de los deberes de gestión de la salud y de protección de la seguridad / obtención y supervisión de registros (logs) para la gestión de la seguridad de la información (detección y respuesta ante accesos no autorizados, fugas de información, infecciones por malware, etc.; el alcance de la recopilación se rige por el apartado 9 y por las normas internas) / contactos de emergencia, prestaciones sociales y demás aspectos de gestión derivados del contrato de trabajo."
+            "value": "Gestión de recursos humanos y relaciones laborales (contratación, asignación, evaluación, salarios, primas, jubilación, etc.) / cálculo de nóminas, retención en origen y demás procesos fiscales, así como los trámites de seguridad social y seguro laboral (incluida la Información Personal Específica; véase el apartado 4) / registro objetivo de la jornada laboral y cumplimiento de los deberes de gestión de la salud y de protección de la seguridad / obtención y supervisión de registros (logs) para la gestión de la seguridad de la información (detección y respuesta ante accesos no autorizados, fugas de información, infecciones por malware, etc.; el alcance de la recopilación se rige por las normas internas) / contactos de emergencia, prestaciones sociales y demás aspectos de gestión derivados del contrato de trabajo."
           }
         ]
       },
@@ -1114,9 +1118,23 @@
         "title": "4. Uso de servicios en la nube y cesión a terceros situados en el extranjero (artículo 28 de la Ley de Protección de Información Personal)",
         "body": [
           "La Empresa trata información personal utilizando servicios en la nube como Google Workspace (unidades compartidas), Google Cloud (GCP/Secret Manager), GitHub, Bitwarden, entre otros.",
-          "Con el uso de estos servicios en la nube, los datos personales pueden tratarse en el extranjero (transferencia transfronteriza). Cuando la Empresa ceda datos personales a un tercero situado en el extranjero (incluido el supuesto en que los datos se traten en el extranjero a través de servicios en la nube), los tratará adecuadamente de conformidad con el artículo 28 de la Ley de Protección de Información Personal, ya sea obteniendo previamente el consentimiento del interesado, comprobando que dicho tercero ha implantado un sistema conforme a los criterios establecidos en dicha ley, o por cualquier otro medio previsto por la ley.",
-          "Cuando la Empresa lleve a cabo una transferencia transfronteriza, facilitará al interesado, a petición de este y conforme a lo dispuesto por la ley, el nombre del país en que se encuentra el destinatario de la transferencia, información sobre el régimen de protección de la información personal de dicho país y sobre las medidas adoptadas por el destinatario.",
+          "Con el uso de estos servicios en la nube, los datos personales pueden tratarse en el extranjero (transferencia transfronteriza). Cuando la Empresa ceda datos personales a un tercero situado en el extranjero (incluido el supuesto en que la Empresa utilice servicios en la nube prestados por empresas situadas en el extranjero), los tratará adecuadamente de conformidad con el artículo 28 de la Ley de Protección de Información Personal, ya sea obteniendo previamente el consentimiento del interesado, comprobando que dicho tercero ha implantado un sistema conforme a los criterios establecidos en dicha ley, o por cualquier otro medio previsto por la ley. Cuando los datos se traten en el extranjero en servicios en la nube que la Empresa utiliza en virtud de contratos con empresas situadas en Japón, la Empresa adopta medidas de gestión de la seguridad basadas en el conocimiento del entorno externo descrito en el apartado 6 (Medidas de gestión de la seguridad).",
+          "La información que exige la ley cuando la Empresa cede datos personales a un tercero situado en el extranjero es la siguiente."
+        ],
+        "list": [
+          "Nombre del país en que se encuentra la empresa destinataria: Estados Unidos (las instalaciones en las que se realiza el tratamiento pueden encontrarse en países distintos de Estados Unidos).",
+          "Régimen de protección de la información personal en Estados Unidos: consulte la información sobre Estados Unidos del estudio sobre los regímenes extranjeros de protección de la información personal publicado por la Comisión de Protección de Información Personal de Japón (enlace más abajo).",
+          "Medidas adoptadas por el destinatario para proteger la información personal: las medidas establecidas en las políticas de privacidad y en las condiciones de tratamiento de datos publicadas por cada empresa"
+        ],
+        "bodyAfter": [
+          "Además, cuando la Empresa se base en comprobar que un tercero situado en el extranjero ha implantado un sistema conforme a los criterios establecidos en la Ley de Protección de Información Personal, facilitará al interesado, a petición de este y conforme a lo dispuesto por la ley, información sobre las medidas que adopta la Empresa para garantizar que dicho tercero aplique dichas medidas de forma continuada.",
           "* Respecto de la Información Personal Específica (My Number), no se realizará cesión alguna a terceros situados en el extranjero, de conformidad con la Ley My Number."
+        ],
+        "links": [
+          {
+            "label": "Comisión de Protección de Información Personal de Japón: estudio sobre los regímenes extranjeros (en japonés)",
+            "href": "https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/#gaikoku"
+          }
         ]
       },
       {
@@ -1127,14 +1145,16 @@
         ],
         "list": [
           "Microsoft Clarity (proveedor: Microsoft Corporation / Estados Unidos): registra la visualización de páginas y las interacciones como clics y desplazamientos, y las analiza mediante mapas de calor y repeticiones de sesión. La información obtenida se trata fuera de Japón, incluido Estados Unidos.",
-          "Cloudflare Web Analytics (proveedor: Cloudflare, Inc. / Estados Unidos): obtiene información estadística, como el número de visualizaciones de página. No utiliza cookies que rastreen a personas."
+          "Cloudflare Web Analytics (proveedor: Cloudflare, Inc. / Estados Unidos): obtiene información estadística, como el número de visualizaciones de página. No utiliza cookies que rastreen a personas.",
+          "Google Analytics 4 (proveedor: Google LLC / Estados Unidos): identifica el navegador mediante cookies (como _ga) y agrega las visualizaciones de página, las fuentes de referencia, la información del navegador y del dispositivo y el tiempo de permanencia. La Compañía utiliza los resultados para mejorar el sitio web. La información obtenida se trata fuera de Japón, incluido Estados Unidos."
         ],
         "bodyAfter": [
           "La Compañía no utiliza la información obtenida mediante estas herramientas con el fin de identificar a personas, ni la combina con otra información en su poder para identificarlas. El tratamiento de la información obtenida se rige asimismo por las políticas de privacidad de cada proveedor.",
-          "Dado que el tratamiento de información por parte de Microsoft Clarity implica una transferencia transfronteriza a Estados Unidos, la Compañía la trata de forma adecuada conforme a los métodos establecidos en el apartado 4 (Uso de servicios en la nube y cesión a terceros situados en el extranjero).",
+          "Dado que el tratamiento de información por parte de Microsoft Clarity y Google Analytics implica una transferencia transfronteriza a Estados Unidos, la Compañía la trata de forma adecuada conforme a los métodos establecidos en el apartado 4 (Uso de servicios en la nube y cesión a terceros situados en el extranjero).",
           "En las repeticiones de sesión, el texto introducido en los formularios se enmascara y se configura de modo que la Compañía no pueda visualizarlo. No se utiliza con el fin de registrar información sensible, como el contenido de las consultas.",
           "Si desea detener la recopilación de información, puede utilizar los siguientes métodos: (1) enviar una señal de Global Privacy Control (GPC) mediante su navegador o una extensión (Microsoft Clarity admite GPC); o (2) seleccionar Microsoft en la página de exclusión que proporciona la Digital Advertising Alliance. Tenga en cuenta que Microsoft Clarity no responde a las señales Do Not Track (DNT) del navegador. Además, aunque desactive las cookies, se sigue recopilando información básica, como el número de visualizaciones de página, y las sesiones registradas simplemente se fragmentan. Si desactiva las cookies, es posible que algunas funciones del sitio web no estén disponibles.",
-          "La exclusión mediante el método (2) se almacena en una cookie, por lo que eliminar o desactivar las cookies también borra dicha configuración. Para conservarla, utilice el método (1), Global Privacy Control (GPC), o la extensión del navegador que proporciona la Digital Advertising Alliance que se indica a continuación (disponible únicamente en Estados Unidos, Canadá y Argentina)."
+          "La exclusión mediante el método (2) se almacena en una cookie, por lo que eliminar o desactivar las cookies también borra dicha configuración. Para conservarla, utilice el método (1), Global Privacy Control (GPC), o la extensión del navegador que proporciona la Digital Advertising Alliance que se indica a continuación (disponible únicamente en Estados Unidos, Canadá y Argentina).",
+          "Si desea detener la recopilación de información por parte de Google Analytics, puede añadir a su navegador el complemento de inhabilitación de Google Analytics que proporciona Google (compatible con Chrome, Safari, Firefox y Microsoft Edge). El complemento impide que el JavaScript de Google Analytics (gtag.js) envíe a Google Analytics información sobre su visita. No impide la recopilación que realiza la Compañía con otras herramientas (Microsoft Clarity y Cloudflare Web Analytics)."
         ],
         "links": [
           {
@@ -1152,6 +1172,22 @@
           {
             "label": "Protect My Choices (conserva su exclusión)",
             "href": "https://youradchoices.com/pmc"
+          },
+          {
+            "label": "Política de Privacidad de Google",
+            "href": "https://policies.google.com/privacy"
+          },
+          {
+            "label": "Cómo usa Google la información de sitios o apps que utilizan nuestros servicios",
+            "href": "https://policies.google.com/technologies/partner-sites"
+          },
+          {
+            "label": "Complemento de inhabilitación de Google Analytics para navegadores",
+            "href": "https://tools.google.com/dlpage/gaoptout"
+          },
+          {
+            "label": "Uso de cookies en sitios web (Ayuda de Google Analytics)",
+            "href": "https://support.google.com/analytics/answer/11397207"
           }
         ]
       },
@@ -1165,7 +1201,8 @@
           "Control de acceso: Conforme al enfoque de confianza cero (zero trust), el acceso a los datos personales se controla mediante autenticación multifactor (MFA), verificación del estado de los dispositivos y el principio de mínimo privilegio. Respecto de la Información Personal Específica, los permisos se configuran de modo que únicamente puedan acceder a ella las personas encargadas de su tratamiento.",
           "Cifrado: Los terminales de trabajo tienen habilitado el cifrado de disco (FileVault) y las comunicaciones se cifran mediante TLS u otros medios. Los datos almacenados en la nube tienen habilitado el cifrado en reposo.",
           "Registros (logs) y detección: El acceso a los datos personales es objeto de registros mínimos relacionados con la actividad laboral (que no captan contenido privado), que se conservan y supervisan.",
-          "Eliminación: Los datos personales que dejan de ser necesarios se eliminan mediante un método que impide su recuperación."
+          "Eliminación: Los datos personales que dejan de ser necesarios se eliminan mediante un método que impide su recuperación.",
+          "Conocimiento del entorno externo: La Empresa utiliza servicios en la nube y otros servicios prestados por empresas estadounidenses, por lo que los datos personales pueden tratarse en Estados Unidos. Además, el servicio de IA generativa utilizado en la Recepción con IA (apartado 9 (3)) se utiliza con una configuración que no limita a Japón el lugar del procesamiento, por lo que no es posible identificar el país en que se realiza el procesamiento. La Empresa adopta las medidas de gestión de la seguridad tras conocer el régimen de protección de la información personal de Estados Unidos."
         ]
       },
       {
@@ -1185,10 +1222,24 @@
         ]
       },
       {
-        "title": "9. Tratamiento relativo a la obtención y supervisión de registros (logs) (para empleados)",
+        "title": "9. Tratamiento de la información personal en la Recepción con IA (Cloudia)",
         "body": [
-          "Con el fin de gestionar la seguridad de la información, gestionar las relaciones laborales y registrar objetivamente la jornada laboral, la Empresa obtiene y supervisa, en los terminales y servicios en la nube utilizados para el trabajo, los registros (logs) relacionados con la actividad laboral (autenticación, ejecución de procesos, metadatos de comunicación, accesos a datos internos, configuración de software, asistencia/tiempo de uso). La Empresa no obtiene contenido privado (contenido de navegación personal, contenido de cuentas personales, pulsaciones de teclas).",
-          "La finalidad, el alcance, el responsable, las condiciones de consulta y el periodo de conservación de la obtención y supervisión de registros (logs) se rigen por lo establecido en las normas internas «Reglamento de Obtención de Registros y Monitorización» y «Aviso y Consentimiento sobre la Monitorización de Empleados»."
+          "La Empresa ofrece en su página de contacto un servicio de recepción basado en IA (Cloudia; en adelante, la «Recepción con IA»). La Recepción con IA utiliza IA generativa para ordenar el contenido de su consulta y, a continuación, lo traslada al personal de la Empresa junto con los datos de contacto que usted introduzca en el último paso. El tratamiento de la información personal en la Recepción con IA se rige por lo dispuesto en el presente apartado y por las demás disposiciones de esta Política.",
+          "(1) Información recopilada: (i) el contenido de su consulta en la Recepción con IA (el texto escrito en el chat) y las respuestas de la IA; (ii) el tipo de consulta y la información que indica la procedencia de su visita (la posición en la página de origen, los parámetros UTM, etc.); (iii) el nombre, la dirección de correo electrónico, la razón social y el contenido de la consulta que usted introduzca en el paso de traslado; (iv) el resumen de la consulta, los elementos organizados, como la fase de la consulta, y el resultado de la clasificación del tipo de consulta, generados por la IA; y (v) información como la dirección IP obtenida con ocasión de la comunicación, para prevenir el uso indebido.",
+          "(2) Finalidad del uso: (i) responder a su consulta y ordenar su contenido; (ii) trasladarla al personal de la Empresa, así como responder a su consulta y ponerse en contacto con usted (incluido el envío de un correo de confirmación de recepción); (iii) clasificar el tipo de consulta (incluida la identificación de ofertas comerciales, mensajes molestos y similares); y (iv) prevenir el uso indebido y operar la Recepción con IA de forma segura. Los resúmenes y las clasificaciones de la IA se utilizan como referencia para que el personal estudie cómo responder; la decisión sobre la respuesta la toma el personal de la Empresa. La Empresa no utiliza la información recopilada a través de la Recepción con IA para entrenar modelos de IA generativa.",
+          "(3) Encargados del tratamiento: En la medida necesaria para operar la Recepción con IA, la Empresa encarga la totalidad o una parte del tratamiento de la información personal a las siguientes empresas (véase el apartado 3)."
+        ],
+        "list": [
+          "Servicio de IA generativa: Gemini de Vertex AI de Google Cloud (parte contratante: Google Cloud Japan G.K.). Se envía el contenido de su consulta (tras el enmascaramiento descrito en el punto (4)) para generar las respuestas, los resúmenes y las clasificaciones de la IA. La Empresa utiliza este servicio con una configuración (el endpoint global) que no limita a Japón el lugar del procesamiento, por lo que el procesamiento puede realizarse fuera de Japón.",
+          "Servicio de IA generativa (alternativo): Claude de Anthropic (proveedor: Anthropic, PBC / Estados Unidos). La Empresa puede utilizarlo en lugar del anterior, por ejemplo en caso de avería, en cuyo caso se envía la misma información.",
+          "Servicio de envío de correo electrónico: Resend (proveedor: Plus Five Five, Inc. / Estados Unidos). Se utiliza para enviar los correos de notificación al personal de la Empresa y los correos de confirmación de recepción a usted. El correo de notificación incluye la información de los puntos (1)(ii) a (iv) y el extracto de la conversación descrito en el punto (5); el correo de confirmación incluye su nombre, el resumen y el contenido de su consulta.",
+          "Infraestructura en la nube: Cloudflare (proveedor: Cloudflare, Inc. / Estados Unidos). Se utiliza para el procesamiento en el servidor de la Recepción con IA, la conservación de la información descrita en el punto (5), la gestión del envío de notificaciones y la prevención del uso indebido."
+        ],
+        "bodyAfter": [
+          "(4) Información enviada a la IA generativa y enmascaramiento: Al servicio de IA generativa solo se envían el contenido de la consulta, las respuestas de la IA y la información del punto (1)(ii) (excepto los parámetros UTM); no se envía la información del punto (1)(iii). Antes del envío, el servidor de la Empresa sustituye automáticamente por marcadores enmascarados las cadenas de la consulta y de las respuestas de la IA que parezcan direcciones de correo electrónico, números de teléfono, códigos postales, secuencias largas de dígitos como números de tarjeta, códigos de autenticación o información secreta como claves de API. Este proceso detecta de forma mecánica cadenas con formatos predeterminados y no elimina toda la información personal, como nombres, direcciones postales o razones sociales. Le rogamos que no introduzca en la Recepción con IA información personal suya ni de terceros, ni información de carácter altamente confidencial.",
+          "(5) Conservación y plazos de conservación: La Empresa no conserva la conversación enviada desde su navegador en su forma original, sino como un extracto de la conversación sometido al enmascaramiento del punto (4) y con una longitud limitada tanto por mensaje como en total. Además, la Empresa conserva el resumen generado por la IA, los elementos organizados, como el tipo y la fase de la consulta, y la información del punto (1)(iii); el extracto de la conversación y la información del punto (1)(iii) se conservan cifrados. Esta información se elimina automáticamente una vez transcurridos los siguientes plazos: (i) la información sobre el uso de la Recepción con IA (extracto de la conversación, resumen, elementos organizados, etc.): 30 días desde el último intercambio; (ii) la información enviada en el paso de traslado (la información del punto (1)(iii), junto con el resumen, el extracto de la conversación, la información que indica la procedencia de la visita, etc. que se conservan con ella): 90 días desde su recepción.",
+          "No obstante, los correos de notificación recibidos por el personal de la Empresa y la correspondencia posterior con usted no están sujetos a la eliminación automática anterior; se tratan dentro del alcance de las finalidades del uso del apartado 2 (1) y se eliminan conforme al apartado 6 una vez que dejan de ser necesarios. Asimismo, los encargados del punto (3) también pueden conservar información durante un cierto periodo, según lo que establezca cada uno, para fines como la prestación de sus servicios y la prevención del uso indebido.",
+          "(6) Tratamiento en el extranjero: De las empresas del punto (3), Anthropic, Resend y Cloudflare son empresas estadounidenses (incluidas sus filiales), y la Empresa trata adecuadamente la cesión de datos a ellas conforme a los métodos establecidos en el apartado 4 (Uso de servicios en la nube y cesión a terceros situados en el extranjero). Google Cloud Japan G.K. es una empresa situada en Japón, pero, como se indica en el punto (3), el tratamiento puede realizarse fuera de Japón; por ello, la Empresa adopta medidas de gestión de la seguridad basadas en el conocimiento del entorno externo descrito en el apartado 6 (Medidas de gestión de la seguridad)."
         ]
       }
     ],
@@ -1211,7 +1262,7 @@
     "securityLinkPrefix": "Para conocer nuestro marco de seguridad de la información, consulte también nuestra página de ",
     "securityLinkText": "Seguridad",
     "securityLinkSuffix": ".",
-    "footer": "Versión: 0.3 (Borrador) / Fecha de referencia: 17 de julio de 2026 / Elaborado por: Cor. Inc. / Responsable: Responsable de Protección de Información Personal (Responsable de Gestión del ISMS, Nagisa Terada)",
+    "footer": "Versión: 1.0 / Fecha de referencia: 7 de noviembre de 2026 / Elaborado por: Cor. Inc. / Responsable: Responsable de Protección de Información Personal (Responsable de Gestión del ISMS, Nagisa Terada)",
     "footerNote": "* La presente política es un resumen, con fines de publicación externa, de la norma interna «Reglamento de Tratamiento de Información Personal e Información Personal Específica», correspondiéndose ambos documentos; en caso de discrepancia entre ellos, se interpretará conforme a las leyes y reglamentos y al espíritu de dicha norma."
   },
   "security": {
