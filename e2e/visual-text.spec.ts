@@ -563,6 +563,86 @@ test('production pages do not have hard responsive text failures', async ({ page
           }
         }
 
+        const pathName = location.pathname.replace(/\/$/, '');
+        if (pathName.endsWith('/legal/tokushoho')) {
+          const facts = document.querySelector('table.tokushoho-facts');
+          if (!facts) {
+            failures.push({
+              type: 'tokushoho-facts-missing',
+              text: pathName,
+            });
+          } else {
+            const tableRect = facts.getBoundingClientRect();
+            const labelCells = Array.from(facts.querySelectorAll('th'));
+            const valueCells = Array.from(facts.querySelectorAll('td'));
+
+            for (const cell of labelCells) {
+              const rect = cell.getBoundingClientRect();
+              const text = (cell.textContent || '').replace(/\s+/g, ' ').trim();
+              const compact = text.replace(/\s+/g, '');
+              const lines = measureLines(cell);
+              const lineTexts = lines.map((line) => line.text);
+              const stacked = tableRect.width > 0 && rect.width >= tableRect.width * 0.9;
+
+              if (rect.left < -2 || rect.right > clientWidth + 2) {
+                failures.push({
+                  type: 'tokushoho-label-viewport-escape',
+                  selector: getLabel(cell),
+                  tagName: 'th',
+                  text,
+                  lineTexts,
+                  left: Number(rect.left.toFixed(2)),
+                  right: Number(rect.right.toFixed(2)),
+                  clientWidth,
+                });
+              }
+
+              if (!stacked && rect.width < 120) {
+                failures.push({
+                  type: 'tokushoho-label-column-collapsed',
+                  selector: getLabel(cell),
+                  tagName: 'th',
+                  text,
+                  lineTexts,
+                  lastLineWidth: Number(rect.width.toFixed(2)),
+                  widestLineWidth: Number(tableRect.width.toFixed(2)),
+                });
+              }
+
+              for (const line of lines) {
+                const letters = line.text.match(/[\p{Letter}\p{Number}]/gu) ?? [];
+                if (compact.length >= 3 && letters.length === 1) {
+                  failures.push({
+                    type: 'tokushoho-label-one-char-line',
+                    selector: getLabel(cell),
+                    tagName: 'th',
+                    text,
+                    finalLine: line.text,
+                    lineTexts,
+                  });
+                }
+              }
+            }
+
+            for (const cell of valueCells) {
+              const rect = cell.getBoundingClientRect();
+              const text = (cell.textContent || '').replace(/\s+/g, ' ').trim();
+              if (rect.left < -2 || rect.right > clientWidth + 2 || cell.scrollWidth > cell.clientWidth + 4) {
+                failures.push({
+                  type: 'tokushoho-value-overflow',
+                  selector: getLabel(cell),
+                  tagName: 'td',
+                  text,
+                  left: Number(rect.left.toFixed(2)),
+                  right: Number(rect.right.toFixed(2)),
+                  scrollWidth: cell.scrollWidth,
+                  clientWidth: cell.clientWidth,
+                });
+              }
+            }
+          }
+        }
+
         return {
           title: document.title,
           scrollWidth,

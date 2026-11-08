@@ -1,0 +1,66 @@
+---
+// 特定商取引法の表記ページ（5言語）だけの外枠。
+// 表の自動レイアウトは、日本語の項目名を最小内容幅まで潰す。
+// 狭い画面では項目名と本文を縦に積み、768px 以上では項目名の列に幅を持たせる。
+---
+
+<div class="tokushoho-sheet mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+  <slot />
+</div>
+
+<style is:global>
+  .tokushoho-facts {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    text-align: start;
+  }
+
+  .tokushoho-facts th,
+  .tokushoho-facts td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-align: start;
+  }
+
+  .tokushoho-facts th {
+    word-break: keep-all;
+    line-break: strict;
+    text-wrap: balance;
+  }
+
+  @media (max-width: 767.98px) {
+    .tokushoho-facts,
+    .tokushoho-facts tbody,
+    .tokushoho-facts tr,
+    .tokushoho-facts th,
+    .tokushoho-facts td {
+      display: block;
+      width: 100%;
+    }
+
+    .tokushoho-facts th {
+      padding-right: 0;
+      padding-bottom: 0.25rem;
+      /* 幅が項目名より狭いとき、keep-all のままでは末尾の1文字だけが次の行に落ちる。 */
+      word-break: normal;
+      text-wrap: balance;
+    }
+
+    .tokushoho-facts td {
+      padding-top: 0.25rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .tokushoho-facts {
+      table-layout: fixed;
+    }
+
+    /* th の width は fixed レイアウトでは列幅にならない。col で指定する。 */
+    .tokushoho-facts .tokushoho-label {
+      width: 22rem;
+    }
+  }
+</style>
