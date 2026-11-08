@@ -8,8 +8,8 @@ tags: ["生成AI", "AIエージェント", "文章作成"]
 author: "Terisuke"
 lang: "ko"
 translationSourceHash: "b8eec9bf1af2e3bce83800ef272d7c810cd3c05df79d1952c87182d9851a9550"
-translatedAt: "2026-11-08T16:41:21.458Z"
-translationModel: "gemini-3.8-flash"
+translatedAt: "2026-11-08T16:48:36.601Z"
+translationModel: "adopted-legacy"
 ---
 
 얼마 전, 후쿠오카 시장 선거 후보자 대상 설문조사를 바탕으로 제가 이 도시에 바라는 점을 글(기사)로 작성했습니다.
@@ -158,7 +158,7 @@ FGN에서 행사에 등단했을 때의 일입니다.
 
 그리고 저에게 질문하는 방식도 남깁니다.
 
-예를 들어, 경영자에게 인재 상담을 받았다는 것은 알고 있어도 구체적인 상황을 모른다면,
+예를 들어, 경영자로부터 인재에 관한 상담 요청을 받았다는 것은 알고 있어도 구체적인 상황을 모른다면,
 
 > 그 이야기를 들은 것은 어떤 상황이었나요?
 
@@ -200,7 +200,7 @@ FGN에서 행사에 등단했을 때의 일입니다.
 
 ## 참고 자료
 
-- [지난 후쿠오카 시장 선거에 관한 글](https://note.com/cor_instrument/n/nee5bb807a58a)
+- [앞서 쓴 후쿠오카 시장 선거에 관한 글](https://note.com/cor_instrument/n/nee5bb807a58a)
 - [벼랑 끝 비전공자 엔지니어 경영자가 '매주 LT 등단'을 1년 동안 지속했더니 인생이 급변한 이야기](https://note.com/cor_instrument/n/n7526e163603a)
 - [음악가 출신으로 창업한 내가 왜 음악 관련 사업을 하지 않는가](https://note.com/cor_instrument/n/nbb1893a1d48e)
 - [후쿠오카시의 엔지니어 카페 안내](https://www.city.fukuoka.lg.jp/shicho/koho/fsdweb/reiwa8_dayori/0615/0503.html)

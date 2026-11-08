@@ -8,8 +8,8 @@ tags: ["生成AI", "AIエージェント", "文章作成"]
 author: "Terisuke"
 lang: "en"
 translationSourceHash: "b8eec9bf1af2e3bce83800ef272d7c810cd3c05df79d1952c87182d9851a9550"
-translatedAt: "2026-11-08T16:40:51.464Z"
-translationModel: "gemini-3.8-flash"
+translatedAt: "2026-11-08T16:48:36.595Z"
+translationModel: "adopted-legacy"
 ---
 
 The other day, based on a questionnaire sent to candidates for the Fukuoka mayoral election, I wrote an article about what I hope to see for this city.
@@ -112,7 +112,7 @@ However, I couldn't meet the executive after that, and I failed to pass the mess
 
 That is why I want all the consultation desks and support facilities—including the Chamber of Commerce and Industry—to communicate with each other on a day-to-day basis.
 
-I want there to be a system that can connect inquiries to the people who need them, without relying on whether I happen to run into that person next time.
+I want there to be a system that can route inquiries to the appropriate people, without relying on whether I happen to run into that person next time.
 
 That is the story I wrote.
 
@@ -124,7 +124,7 @@ Because these experiences remained alongside my opinions, I believe it became an
 
 However, getting to the final version required several corrections.
 
-For instance, my mention of Mr. Mori, which I had brought up from the beginning including my expectations regarding expertise, was dropped in the first draft. It had ended up focusing in detail only on Mr. Sasaki, so I had to ask to bring it back.
+For instance, my mention of Mori, which I had brought up from the beginning including my expectations regarding expertise, was dropped in the first draft. It had ended up focusing in detail only on Sasaki, so I had to ask to bring it back.
 
 Regarding the collaboration among support facilities, what I wanted to express was an awareness of the problem that consultation desks and facilities as a whole are operating separately in silos.
 

@@ -1,15 +1,15 @@
 ---
 title: "El artículo que escribí con la IA no estaba mal. Aun así, lo corregí 5 veces."
 description: "El artículo creado mediante preguntas y respuestas con la IA no estaba mal. Aun así, requirió 5 revisiones. Para conservar mis propias palabras y vivencias desde el primer borrador, estoy replanteando la forma de escribir y de hacer las preguntas."
-summary: "Al preservar mis propias palabras, frases cortas y saltos de línea, artículos anteriores y mi propia experiencia, se convirtió en un artículo que pude publicar con total convencimiento. Para sacar a relucir esa calidad desde el primer borrador, estoy organizando cómo redactar y cómo preguntar a la IA, y estableciendo revisiones previas a la generación del texto."
+summary: "Al preservar mis propias palabras, frases cortas y saltos de línea, artículos anteriores y mi propia experiencia, se convirtió en un artículo que pude publicar con total convencimiento. Para sacar a relucir esa calidad desde el primer borrador, estoy organizando cómo la IA redacta y me hace preguntas, y estableciendo revisiones previas a la generación del texto."
 pubDate: "2026-11-09"
 category: "founder"
 tags: ["生成AI", "AIエージェント", "文章作成"]
 author: "Terisuke"
 lang: "es"
 translationSourceHash: "b8eec9bf1af2e3bce83800ef272d7c810cd3c05df79d1952c87182d9851a9550"
-translatedAt: "2026-11-08T16:41:40.713Z"
-translationModel: "gemini-3.8-flash"
+translatedAt: "2026-11-08T16:48:36.602Z"
+translationModel: "adopted-legacy"
 ---
 
 El otro día, a partir de una encuesta a los candidatos a la alcaldía de Fukuoka, escribí un artículo sobre lo que deseo para esta ciudad.
@@ -124,7 +124,7 @@ Creo que precisamente porque estas vivencias permanecieron junto a mis opiniones
 
 Aun así, antes de llegar a la versión final, fue necesario hacer varias correcciones.
 
-Por ejemplo, la mención al Sr. Mori, de quien hablé al principio incluyendo las expectativas hacia su especialización, se había caído en el primer borrador. Como había quedado una versión que trataba en detalle únicamente al Sr. Sasaki, pedí que se reincorporara.
+Por ejemplo, la mención a Mori, de quien hablé al principio incluyendo las expectativas hacia su especialización, se había caído en el primer borrador. Como había quedado una versión que trataba en detalle únicamente a Sasaki, pedí que se reincorporara.
 
 En cuanto a la coordinación entre las instalaciones de apoyo, lo que yo quería plantear era mi preocupación por el hecho de que el conjunto de los mostradores e instalaciones operen de forma descoordinada y por separado.
 

@@ -8,8 +8,8 @@ tags: ["生成AI", "AIエージェント", "文章作成"]
 author: "Terisuke"
 lang: "zh"
 translationSourceHash: "b8eec9bf1af2e3bce83800ef272d7c810cd3c05df79d1952c87182d9851a9550"
-translatedAt: "2026-11-08T16:40:49.215Z"
-translationModel: "gemini-3.8-flash"
+translatedAt: "2026-11-08T16:48:36.599Z"
+translationModel: "adopted-legacy"
 ---
 
 前几天，我以福冈市长选举候选人的问卷调查为基础，写了一篇文章，谈了谈我对这座城市的期望。
@@ -64,7 +64,7 @@ https://note.com/cor_instrument/n/nee5bb807a58a
 
 ### 从完全不同的行业起步，创立了公司
 
-在疫情之前，我是一名与IT毫无关系的单簧管/小号演奏者（小号手）。
+在疫情之前，我是一名与IT毫无关系的小号演奏者。
 
 从那时起，在一个完全陌生的行业里，在没有任何人脉的情况下创立了公司，拼命挣扎努力才走到了今天。
 
@@ -102,7 +102,7 @@ https://note.com/cor_instrument/n/nbb1893a1d48e
 
 那是在FGN登台参加活动时发生的事。
 
-在交流会上，一位初创企业的经营者主动和我搭话。他说正在寻找工程师。
+在交流会上，一位初创企业的经营者主动和我搭话。对方说正在寻找工程师。
 
 后来，有一位符合要求的工程师来到Engineer Cafe咨询福冈有没有合适的工作。
 
@@ -124,7 +124,7 @@ https://note.com/cor_instrument/n/nbb1893a1d48e
 
 不过，在最终完成之前，还是需要做几处修改。
 
-例如，我最初谈到了对森先生专业能力的期待，但在初稿中对森先生的提及却被遗漏了。文章变成了只详细讨论佐佐木先生的形式，所以这部分我让AI补了回来。
+例如，我最初谈到了对森的专业能力的期待，但在初稿中对森的提及却被遗漏了。文章变成了只详细讨论佐佐木的形式，所以这部分我让AI补了回来。
 
 关于支援设施的协作，我真正想表达的，是对窗口和整个设施各自为政、缺乏联动这一现状的危机感。
 
@@ -178,7 +178,7 @@ https://note.com/cor_instrument/n/nbb1893a1d48e
 
 目前，我正在使用问答和文章的范例进行测试，看系统能否拦截含义发生偏差的内容、放行合适的内容。
 
-在这个过程中，有时原回答中包含的信息，会在传递给评估用AI的摘要中脱落。明明只要回到原回答就能确认，但仅仅依靠传递的材料，就会被误判为“缺乏依据”。
+在这个过程中，有时原回答中包含的信息，会在传递给评估用AI的摘要中脱落。明明只要回到原回答就能确认，但仅仅依靠传递的材料，就会被判定为“缺乏依据”。
 
 这说明，在确立写作规则的同时，规范完备地提供素材也同样必不可少。
 
@@ -200,7 +200,7 @@ https://note.com/cor_instrument/n/nbb1893a1d48e
 
 ## 参考资料
 
-- [关于上一届福冈市长选举的文章](https://note.com/cor_instrument/n/nee5bb807a58a)
+- [上一篇关于福冈市长选举的文章](https://note.com/cor_instrument/n/nee5bb807a58a)
 - [被逼到绝境的零基础工程师创业者坚持“每周LT登台演讲”1年后，人生发生天翻地覆变化的故事](https://note.com/cor_instrument/n/n7526e163603a)
 - [为什么从音乐家走上创业道路的我没有做音乐相关业务](https://note.com/cor_instrument/n/nbb1893a1d48e)
 - [福冈市关于Engineer Cafe的官方介绍](https://www.city.fukuoka.lg.jp/shicho/koho/fsdweb/reiwa8_dayori/0615/0503.html)
