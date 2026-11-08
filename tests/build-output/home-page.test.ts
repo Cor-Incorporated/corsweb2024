@@ -64,6 +64,34 @@ describe('トップの見出しの並び (#414)', () => {
     const headings = [...mainOf(readHome(locale)).matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/g)].map((m) => textOf(m[1]));
     expect(headings).toEqual(expected);
   });
+
+  it.each(LOCALE_KEYS)('%s: 業種の入口が最初の h2 より前にあり、既存のラベルとリンクが一致する', (locale) => {
+    const t = LOCALES[locale];
+    const main = mainOf(readHome(locale));
+    const markerAt = main.indexOf('data-home-industry-entry');
+    expect(markerAt, '業種の入口が無い').toBeGreaterThanOrEqual(0);
+    const h2At = main.search(/<h2\b/);
+    expect(h2At, 'h2 が無い').toBeGreaterThanOrEqual(0);
+    expect(markerAt).toBeLessThan(h2At);
+
+    const navStart = main.lastIndexOf('<nav', markerAt);
+    const navEnd = main.indexOf('</nav>', markerAt);
+    expect(navStart).toBeGreaterThanOrEqual(0);
+    expect(navEnd).toBeGreaterThan(navStart);
+    const entry = main.slice(navStart, navEnd);
+    expect(entry).not.toMatch(/<h[12]\b/);
+
+    const text = textOf(entry);
+    expect(text).toContain(t.homeIndustries.eyebrow);
+    expect(text).toContain(t.homeIndustries.title);
+    for (const row of t.homeIndustries.rows) {
+      expect(text).toContain(row.industry);
+      expect(text).toContain(row.theme);
+      const href = (locale === 'ja' ? row.link : `/${locale}${row.link}`).replace(/\/+$/, '');
+      const hrefs = [...entry.matchAll(/\bhref=["']?([^"'\s>]+)/g)].map((m) => decode(m[1]).split(/[?#]/)[0].replace(/\/+$/, ''));
+      expect(hrefs).toContain(href);
+    }
+  });
 });
 
 describe('最初の画面 (#414)', () => {

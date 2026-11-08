@@ -1,0 +1,59 @@
+---
+import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+
+// ヒーローの直後に置く、既存の業種ページへの入口。
+// 文言とリンクは homeIndustries だけを使う。新しい業種名や実績・認証の主張は足さない。
+// h2 は付けない。本文の見出し順は IndustryList 以降のまま（tests/build-output/home-page.test.ts）。
+// リンク文字は業種名だけにする。説明文を a の中に入れると、折り返した末尾が
+// visual-text の孤立断片になる（ChallengeGrid と同じ理由）。
+---
+
+<nav
+  class="home-industry-entry pb-10 sm:pb-16"
+  data-home-industry-entry
+  aria-label={t.homeIndustries.eyebrow}
+>
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-4 sm:gap-5">
+      <div class="flex max-w-3xl flex-col gap-2">
+        <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
+          {t.homeIndustries.eyebrow}
+        </p>
+        <p class="text-pretty text-lg font-medium tracking-tight text-primary-950 dark:text-primary-50 sm:text-xl">
+          {t.homeIndustries.title}
+        </p>
+      </div>
+      <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {
+          t.homeIndustries.rows.map((row) => {
+            const slug = row.link.split('/').pop() ?? row.link;
+            const themeId = `home-industry-theme-${slug}`;
+            return (
+              <li class="group relative flex min-w-0 flex-col rounded-3xl bg-primary-500/10 p-4 shadow-sm transition hover:bg-primary-500/15 dark:bg-primary-400/10 dark:hover:bg-primary-400/15 sm:p-5">
+                <div aria-hidden="true" class="pointer-events-none flex min-h-12 items-center gap-3">
+                  <span class="min-w-0 flex-1 break-words text-base font-medium text-primary-950 group-hover:underline group-hover:underline-offset-4 dark:text-primary-50">
+                    {row.industry}
+                  </span>
+                  <span class="shrink-0 text-[#2d4a6b] dark:text-[#d5e4f2]">→</span>
+                </div>
+                <p id={themeId} class="pointer-events-none mt-1 break-words text-sm leading-relaxed text-primary-800 dark:text-primary-200">
+                  {row.theme}
+                </p>
+                <a
+                  href={getLocalizedUrl(row.link, currentLocale)}
+                  aria-describedby={themeId}
+                  class="absolute inset-0 z-10 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:focus-visible:outline-[#d5e4f2]"
+                >
+                  <span class="sr-only">{row.industry}</span>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </div>
+</nav>
