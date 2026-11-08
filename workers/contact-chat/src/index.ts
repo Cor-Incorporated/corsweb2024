@@ -21,7 +21,6 @@ import {
   containsTranscriptRoleLine,
   maskMessagesForLlm,
   maskSensitiveContent,
-  normalizeSource,
   normalizeStructuredLead,
 } from './validate';
 import {
@@ -34,13 +33,16 @@ import {
 } from './security';
 import { readJsonBody, type JsonBodyFailure } from './body';
 import { logContactFailure, notificationFailureCode } from './log';
+import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
 import { buildSystemPrompt, getProvider } from './llm';
 import { getEmailProvider, sendInquiryEmail, sendReceiptEmail } from './email';
 import {
   claimOutbox,
+  createDocumentRequest,
   createSubmission,
   getSubmissionForNotification,
   markOutboxFailed,
+  markOutboxHeld,
   markOutboxSent,
   newSessionId,
   normalizeIdempotencyKey,
@@ -50,6 +52,20 @@ import {
   queueMessage,
   upsertContactSession,
 } from './storage';
+import { createMockEmailProvider, sendDocumentRequestEmail } from './email';
+import {
+  DOCUMENT_REQUEST_CONSENT_VERSION,
+  DOCUMENT_REQUEST_ID,
+  documentNotifyMode,
+  documentLocaleFrom,
+  documentResultBody,
+  htmlResponse,
+  readDocumentRequestBody,
+  renderDocumentHtml,
+  renderHoneypotHtml,
+  validateDocumentRequest,
+} from './document-request';
+import type { StoredSubmission } from './storage';
 
 const json = (data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response =>
   new Response(JSON.stringify(data), {
@@ -240,17 +256,24 @@ function resultStage(result: ChatResult): string {
   return result.structuredLead && Object.keys(result.structuredLead).length > 0 ? 'qualifying' : 'intent';
 }
 
-function startReply(mode: ChatMode, locale: ChatLocale, intent: ContactIntent | '' = ''): string {
-  if (intent === 'press-speaking-other') {
-    return locale === 'en'
-      ? 'Thanks. This is a press, speaking, or other public-outreach request. What type of opportunity (interview, article, speaking, event participation, or something else) and topic would you like to discuss?'
-      : 'ありがとうございます。取材・登壇・その他の対外相談ですね。まず、ご希望の種類（取材・記事、登壇、イベント参加など）とテーマを教えてください。';
-  }
+function startReply(
+  mode: ChatMode,
+  locale: ChatLocale,
+  intent: ContactIntent | '' = '',
+  traffic: TrafficReading = { kind: 'other', stored: '' },
+): string {
   if (mode === 'ambassador') {
     return locale === 'en'
       ? 'Hello. I am Cloudia from Cor. This is the casual conversation mode. Please ask about our services or technology, and I can guide you to the formal inquiry flow when a concrete project comes up.'
       : 'こんにちは。Cor.株式会社のCloudiaです。こちらは雑談モードです。会社やAI技術についてご質問があればお聞かせください。具体的なご相談になった場合は、受付モードへご案内します。';
   }
+  if (intent === 'press-speaking-other') {
+    const base = locale === 'en'
+      ? 'Thanks. This is a press, speaking, or other public-outreach request. What type of opportunity (interview, article, speaking, event participation, or something else) and topic would you like to discuss?'
+      : 'ありがとうございます。取材・登壇・その他の対外相談ですね。まず、ご希望の種類（取材・記事、登壇、イベント参加など）とテーマを教えてください。';
+    return traffic.kind === 'industry' ? `${base}\n${industryStartReply(traffic.industry, intent, locale)}` : base;
+  }
+  if (traffic.kind === 'industry') return industryStartReply(traffic.industry, intent, locale);
   return locale === 'en'
     ? 'Thank you. I will ask a few quick questions so we can understand your request. What would you like to achieve?'
     : 'ありがとうございます。ご相談内容を正確に把握するため、いくつか質問します。まず、今回実現したいことを教えてください。';
@@ -272,7 +295,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
   // intent/source はサーバ側で正規化して system に注入（messages は改ざんしない）。
   // 未知キーは空に落とす（400 にしない = 後方互換）。
   const initialIntent = normalizeIntent(body.intent);
-  const source = normalizeSource(body.source);
+  const traffic = readTrafficSource(body.source);
+  const source = traffic.stored;
   const mode: ChatMode = body.mode === 'ambassador' ? 'ambassador' : 'intake';
   if (body.mode !== undefined && body.mode !== 'intake' && body.mode !== 'ambassador') {
     return json({ error: 'mode は intake か ambassador のみ許可されます' }, 400);
@@ -287,7 +311,7 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
   // /chat 経路へ入る。外部プロバイダ障害でもヒアリング導線を止めない。
   const isStart = forceStart || body.start === true || body.event === 'intent_selected';
   if (isStart) {
-    const reply = startReply(mode, locale, initialIntent);
+    const reply = startReply(mode, locale, initialIntent, traffic);
     const sessionId = normalizeSessionId(body.sessionId) || newSessionId();
     const result: ChatResult = {
       reply,
@@ -334,7 +358,7 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
     return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください' }, 503);
   }
 
-  const system = buildSystemPrompt({ intent: initialIntent, source, mode, locale });
+  const system = buildSystemPrompt({ intent: initialIntent, traffic, mode, locale });
 
   let raw: string;
   try {
@@ -496,6 +520,112 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   return json({ ok: true });
 }
 
+function documentResponse(form: boolean, status: number, data: unknown, html: string): Response {
+  return form ? htmlResponse(html, status) : json(data, status);
+}
+
+async function handleDocumentRequest(req: Request, env: Env): Promise<Response> {
+  const parsed = await readDocumentRequestBody(req);
+  if (!parsed.ok) {
+    logBodyRejection(parsed.reason);
+    return json({ error: 'invalid' }, 400);
+  }
+  const locale = documentLocaleFrom(parsed.data);
+  const norm = validateDocumentRequest(parsed.data);
+  if (!norm.ok) {
+    if (norm.honeypot) {
+      return documentResponse(parsed.form, 200, { ok: true, delivered: false }, renderHoneypotHtml(locale));
+    }
+    return documentResponse(
+      parsed.form,
+      400,
+      { error: norm.code },
+      renderDocumentHtml({ locale, code: norm.code }),
+    );
+  }
+
+  let created;
+  try {
+    created = await createDocumentRequest(env, {
+      name: norm.value.name,
+      email: norm.value.email,
+      company: norm.value.company,
+      industry: norm.value.industry,
+      documentId: DOCUMENT_REQUEST_ID,
+      consentVersion: DOCUMENT_REQUEST_CONSENT_VERSION,
+    });
+  } catch {
+    logContactFailure('submission_storage_failed');
+    return documentResponse(
+      parsed.form,
+      503,
+      { error: 'storage' },
+      renderDocumentHtml({ locale, code: 'storage' }),
+    );
+  }
+
+  let notification: 'queued' | 'pending' = 'pending';
+  if (!env.CONTACT_NOTIFICATIONS) {
+    logContactFailure('notification_queue_unconfigured');
+  } else {
+    try {
+      await env.CONTACT_NOTIFICATIONS.send(queueMessage(created.submissionId, 'internal'));
+      notification = 'queued';
+    } catch {
+      logContactFailure('notification_enqueue_failed');
+    }
+  }
+  const body = documentResultBody({
+    receiptId: created.receiptId,
+    notification,
+    duplicate: created.duplicate,
+  });
+  return documentResponse(
+    parsed.form,
+    created.duplicate ? 202 : 200,
+    body,
+    renderDocumentHtml({ locale, result: body }),
+  );
+}
+
+async function deliverDocumentNotice(env: Env, stored: StoredSubmission): Promise<void> {
+  const mode = documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE);
+  const notice = {
+    name: stored.inquiry.name,
+    email: stored.inquiry.email,
+    company: stored.inquiry.company,
+    industry: stored.industry,
+    documentId: stored.documentId,
+    consentVersion: stored.consentVersion,
+    receiptId: stored.receiptId,
+  };
+  switch (mode) {
+    case 'hold':
+      await markOutboxHeld(env, stored.submissionId, stored.messageType);
+      return;
+    case 'mock': {
+      const sent = await sendDocumentRequestEmail(env, createMockEmailProvider(), notice);
+      await markOutboxSent(env, stored.submissionId, stored.messageType, sent.messageId, sent.deliveryStatus, {
+        updateSubmission: false,
+      });
+      return;
+    }
+    case 'live': {
+      const provider = getEmailProvider(env);
+      if (!provider.ok) throw new Error('email provider unavailable');
+      const sent = await sendDocumentRequestEmail(env, provider.provider, notice);
+      await markOutboxSent(env, stored.submissionId, stored.messageType, sent.messageId, sent.deliveryStatus, {
+        updateSubmission: false,
+      });
+      return;
+    }
+    default: {
+      const unexpected: never = mode;
+      throw new Error(unexpected);
+    }
+  }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -527,6 +657,19 @@ export default {
         return await handleSubmit(req, env);
       }
 
+      if (req.method === 'POST' && path === '/api/contact/document-request') {
+        const ip = clientIp(req);
+        const documentLimit = consumeRateLimit(`document:${ip}`, SUBMIT_LIMIT);
+        if (documentLimit.limited) {
+          const form = /application\/x-www-form-urlencoded/i.test(req.headers.get('content-type') || '');
+          if (form) {
+            return htmlResponse(renderDocumentHtml({ locale: 'ja', code: 'rate' }), 429);
+          }
+          return tooManyRequests(documentLimit.retryAfterSeconds);
+        }
+        return await handleDocumentRequest(req, env);
+      }
+
       return json({ error: 'Not Found' }, 404);
     } catch {
       // 詳細はサーバー側ログのみ。クライアントには汎用メッセージ（内部情報の漏洩防止）。
@@ -552,6 +695,11 @@ export default {
         }
         const stored = await getSubmissionForNotification(env, submissionId, messageType);
         if (!stored) {
+          message.ack();
+          continue;
+        }
+        if (stored.requestKind === 'document') {
+          await deliverDocumentNotice(env, stored);
           message.ack();
           continue;
         }

@@ -1,0 +1,154 @@
+---
+import { COMPANY_DECK_URL } from '../../config/site';
+import { DOCUMENT_REQUEST_INDUSTRIES, isDocumentRequestIndustry } from '../../config/document-request';
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+
+const locale = getCurrentLocale(Astro.url);
+const copy = getTranslations(locale).documentRequest;
+const privacyHref = getLocalizedUrl('/privacy', locale);
+const labels = new Map(
+  getTranslations(locale).homeIndustries.rows.map((row) => {
+    const slug = row.link.split('/').filter(Boolean).pop() || '';
+    return [slug, row.industry] as const;
+  }),
+);
+const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
+  const label = labels.get(slug);
+  if (!label || !isDocumentRequestIndustry(slug)) return [];
+  return [{ slug, label }];
+});
+---
+
+<section class="py-16 sm:py-20">
+  <div class="mx-auto max-w-xl px-4 sm:px-6">
+    <h1 class="text-3xl font-medium tracking-tight text-primary-950 dark:text-primary-200 sm:text-4xl">{copy.title}</h1>
+    <p class="mt-4 text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80">{copy.lead}</p>
+    <p class="mt-4 text-sm text-primary-950/80 dark:text-primary-200/80">
+      <a class="underline" href={COMPANY_DECK_URL} target="_blank" rel="noopener noreferrer">{copy.deckLink}</a>
+    </p>
+    <p class="mt-1 text-sm text-primary-950/70 dark:text-primary-200/70">{copy.deckNote}</p>
+
+    <form
+      class="mt-8 flex flex-col gap-4"
+      method="post"
+      action="/api/contact/document-request"
+      accept-charset="UTF-8"
+      data-document-request
+      data-clarity-mask="true"
+      data-msg-success={copy.success}
+      data-msg-duplicate={copy.duplicate}
+      data-msg-notify-pending={copy.notifyPending}
+      data-msg-uncertain={copy.uncertain}
+      data-msg-error-name={copy.errorName}
+      data-msg-error-email={copy.errorEmail}
+      data-msg-error-consent={copy.errorConsent}
+      data-msg-error-industry={copy.errorIndustry}
+      data-msg-error-invalid={copy.errorInvalid}
+      data-msg-error-storage={copy.errorStorage}
+      data-msg-error-rate={copy.errorRate}
+    >
+      <p class="text-sm text-primary-950/70 dark:text-primary-200/70">{copy.noscript}</p>
+      <input type="hidden" name="locale" value={locale} />
+      <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+        <label for="document-request-website">Website</label>
+        <input id="document-request-website" name="website" type="text" tabindex="-1" autocomplete="off" value="" />
+      </div>
+      <label class="flex flex-col gap-1 text-sm font-medium text-primary-950 dark:text-primary-200" for="document-request-name">
+        {copy.name}
+        <input id="document-request-name" name="name" type="text" required autocomplete="name" maxlength="100" class="min-h-[48px] rounded border border-primary-950/20 bg-white px-3 text-base text-primary-950 dark:border-primary-200/20 dark:bg-primary-950 dark:text-primary-200" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm font-medium text-primary-950 dark:text-primary-200" for="document-request-email">
+        {copy.email}
+        <input id="document-request-email" name="email" type="email" required autocomplete="email" maxlength="254" class="min-h-[48px] rounded border border-primary-950/20 bg-white px-3 text-base text-primary-950 dark:border-primary-200/20 dark:bg-primary-950 dark:text-primary-200" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm font-medium text-primary-950 dark:text-primary-200" for="document-request-company">
+        {copy.company}
+        <input id="document-request-company" name="company" type="text" autocomplete="organization" maxlength="200" class="min-h-[48px] rounded border border-primary-950/20 bg-white px-3 text-base text-primary-950 dark:border-primary-200/20 dark:bg-primary-950 dark:text-primary-200" />
+      </label>
+      <label class="flex flex-col gap-1 text-sm font-medium text-primary-950 dark:text-primary-200" for="document-request-industry">
+        {copy.industry}
+        <select id="document-request-industry" name="industry" class="min-h-[48px] rounded border border-primary-950/20 bg-white px-3 text-base text-primary-950 dark:border-primary-200/20 dark:bg-primary-950 dark:text-primary-200">
+          <option value="">{copy.industryEmpty}</option>
+          {industries.map((item) => <option value={item.slug}>{item.label}</option>)}
+        </select>
+      </label>
+      <label class="flex min-h-[48px] items-start gap-3 text-sm leading-relaxed text-primary-950 dark:text-primary-200" for="document-request-consent">
+        <input id="document-request-consent" name="consent" type="checkbox" value="yes" required class="mt-1 h-5 w-5" />
+        <span>
+          <a class="underline" href={privacyHref}>{copy.privacyLink}</a>
+          {` ${copy.consent}`}
+        </span>
+      </label>
+      <button type="submit" class="min-h-[48px] rounded bg-primary-950 px-4 text-base font-medium text-white dark:bg-primary-200 dark:text-primary-950">{copy.submit}</button>
+      <div id="document-request-result" role="status" aria-live="polite" tabindex="-1" class="text-base text-primary-950 outline-none dark:text-primary-200"></div>
+    </form>
+  </div>
+</section>
+
+<script is:inline>
+  (function () {
+    var form = document.querySelector('[data-document-request]');
+    if (!form || typeof fetch !== 'function') return;
+    var result = document.getElementById('document-request-result');
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var button = form.querySelector('button[type="submit"]');
+      if (button) button.disabled = true;
+      var payload = new FormData(form);
+      var body = {
+        name: String(payload.get('name') || ''),
+        email: String(payload.get('email') || ''),
+        company: String(payload.get('company') || ''),
+        industry: String(payload.get('industry') || ''),
+        consent: payload.get('consent') === 'yes',
+        website: String(payload.get('website') || ''),
+        locale: String(payload.get('locale') || '')
+      };
+      function show(message, alert) {
+        if (!result) return;
+        result.textContent = message;
+        result.setAttribute('role', alert ? 'alert' : 'status');
+        result.focus();
+      }
+      fetch(form.action, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (response) {
+        return response.json().catch(function () { return null; }).then(function (data) {
+          var code = data && typeof data.error === 'string' ? data.error : '';
+          if ((response.status === 200 || response.status === 202) && data && data.ok === true && data.status === 'stored' && data.delivered === false && typeof data.receiptId === 'string') {
+            var lead = data.duplicate === true ? form.dataset.msgDuplicate : form.dataset.msgSuccess;
+            var pending = data.notification === 'pending' ? ' ' + (form.dataset.msgNotifyPending || '') : '';
+            show((lead || '') + ' ' + data.receiptId + pending, false);
+            return;
+          }
+          if (response.status === 200 && data && data.ok === true && !data.receiptId) return;
+          if (response.status === 400) {
+            var errors = {
+              name: form.dataset.msgErrorName,
+              email: form.dataset.msgErrorEmail,
+              consent: form.dataset.msgErrorConsent,
+              industry: form.dataset.msgErrorIndustry
+            };
+            show(errors[code] || form.dataset.msgErrorInvalid || '', true);
+            return;
+          }
+          if (response.status === 429) {
+            show(form.dataset.msgErrorRate || '', true);
+            return;
+          }
+          if (response.status === 503) {
+            show(form.dataset.msgErrorStorage || '', true);
+            return;
+          }
+          show(form.dataset.msgUncertain || '', true);
+        });
+      }).catch(function () {
+        show(form.dataset.msgUncertain || '', true);
+      }).then(function () {
+        if (button) button.disabled = false;
+      });
+    });
+  })();
+</script>

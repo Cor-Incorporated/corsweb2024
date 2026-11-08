@@ -38,6 +38,10 @@ export interface StoredSubmission {
   receiptId: string;
   outboxId: string;
   messageType: NotificationType;
+  requestKind: 'inquiry' | 'document';
+  documentId: string;
+  industry: string;
+  consentVersion: string;
 }
 
 export interface CreateSubmissionResult {
@@ -296,6 +300,111 @@ export async function createSubmission(
   return { submissionId, receiptId, duplicate: false };
 }
 
+export interface DocumentRequestRecord {
+  name: string;
+  email: string;
+  company: string;
+  industry: string;
+  documentId: string;
+  consentVersion: string;
+}
+
+export function tokyoDayKey(now: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+export async function createDocumentRequest(
+  env: Env,
+  record: DocumentRequestRecord,
+  now: Date = new Date(),
+): Promise<CreateSubmissionResult> {
+  if (!env.DB) throw new Error('D1 is not configured');
+  const day = tokyoDayKey(now);
+  const idempotencyKey = `doc.${await emailHmac(env.PII_HMAC_KEY, `${record.email}|${record.documentId}|${day}`)}`;
+  const existing = await env.DB.prepare(
+    'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
+  ).bind(idempotencyKey).first<{ submission_id: string; receipt_id: string }>();
+  if (existing) return { submissionId: existing.submission_id, receiptId: existing.receipt_id, duplicate: true };
+
+  const submissionId = crypto.randomUUID();
+  const receiptId = newReceiptId();
+  const createdAt = nowSeconds();
+  const summary = '資料請求を記録した。資料は送っていない。';
+  const [name, email, company, message, summaryCipher, excerpt, emailHash] = await Promise.all([
+    encryptText(env.PII_ENCRYPTION_KEY, record.name),
+    encryptText(env.PII_ENCRYPTION_KEY, record.email),
+    encryptText(env.PII_ENCRYPTION_KEY, record.company),
+    encryptText(env.PII_ENCRYPTION_KEY, record.documentId),
+    encryptText(env.PII_ENCRYPTION_KEY, summary),
+    encryptText(env.PII_ENCRYPTION_KEY, ''),
+    emailHmac(env.PII_HMAC_KEY, record.email),
+  ]);
+  const statements = [
+    env.DB.prepare(`
+      INSERT INTO submission_intake
+        (submission_id, idempotency_key, session_id, receipt_id,
+         name_ciphertext, email_ciphertext, company_ciphertext,
+         message_ciphertext, summary_ciphertext, conversation_excerpt_ciphertext,
+         email_hmac, intent, source,
+         structured_lead_json, utm_json, classification, status,
+         created_at, updated_at, expires_at,
+         request_kind, document_id, industry, consent_version)
+      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'document-request', '{}', '{}', '', 'stored', ?, ?, ?, 'document', ?, ?, ?)
+    `).bind(
+      submissionId,
+      idempotencyKey,
+      receiptId,
+      name,
+      email,
+      company,
+      message,
+      summaryCipher,
+      excerpt,
+      emailHash,
+      createdAt,
+      createdAt,
+      createdAt + SUBMISSION_TTL_SECONDS,
+      record.documentId,
+      record.industry,
+      record.consentVersion,
+    ),
+    env.DB.prepare(`
+      INSERT INTO notification_outbox
+        (outbox_id, submission_id, message_type, status, attempts, available_at,
+         delivery_status, created_at, updated_at)
+      VALUES (?, ?, 'internal', 'pending', 0, ?, 'queued', ?, ?)
+    `).bind(crypto.randomUUID(), submissionId, createdAt, createdAt, createdAt),
+    env.DB.prepare(`
+      INSERT INTO audit_events (event_id, event_type, submission_id, session_id, metadata_json, created_at)
+      VALUES (?, 'document_request_stored', ?, NULL, ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      submissionId,
+      JSON.stringify({
+        documentId: record.documentId,
+        industry: record.industry,
+        consentVersion: record.consentVersion,
+      }),
+      createdAt,
+    ),
+  ];
+  try {
+    await env.DB.batch(statements);
+  } catch (error) {
+    const raced = await env.DB.prepare(
+      'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
+    ).bind(idempotencyKey).first<{ submission_id: string; receipt_id: string }>();
+    if (raced) return { submissionId: raced.submission_id, receiptId: raced.receipt_id, duplicate: true };
+    throw error;
+  }
+  return { submissionId, receiptId, duplicate: false };
+}
+
 interface SubmissionRow {
   outbox_id: string;
   submission_id: string;
@@ -312,6 +421,10 @@ interface SubmissionRow {
   structured_lead_json: string;
   utm_json: string;
   classification: Classification | '';
+  request_kind?: string;
+  document_id?: string;
+  industry?: string;
+  consent_version?: string;
 }
 
 export async function getSubmissionForNotification(
@@ -325,7 +438,8 @@ export async function getSubmissionForNotification(
       s.name_ciphertext, s.email_ciphertext,
       s.company_ciphertext, s.message_ciphertext, s.summary_ciphertext,
       s.conversation_excerpt_ciphertext,
-      s.intent, s.source, s.structured_lead_json, s.utm_json, s.classification
+      s.intent, s.source, s.structured_lead_json, s.utm_json, s.classification,
+      s.request_kind, s.document_id, s.industry, s.consent_version
     FROM submission_intake s
     JOIN notification_outbox o ON o.submission_id = s.submission_id
     WHERE s.submission_id = ? AND o.message_type = ? AND o.status IN ('pending', 'processing')
@@ -351,6 +465,10 @@ export async function getSubmissionForNotification(
     receiptId: row.receipt_id,
     outboxId: row.outbox_id,
     messageType: row.message_type,
+    requestKind: row.request_kind === 'document' ? 'document' : 'inquiry',
+    documentId: row.document_id || '',
+    industry: row.industry || '',
+    consentVersion: row.consent_version || '',
     inquiry: {
       name,
       email,
@@ -388,17 +506,27 @@ export async function markOutboxSent(
   messageType: NotificationType = 'internal',
   providerMessageId = '',
   deliveryStatus = 'accepted',
+  options: { updateSubmission?: boolean } = {},
 ): Promise<void> {
   if (!env.DB) return;
   const now = nowSeconds();
+  const updateSubmission = options.updateSubmission !== false && messageType === 'internal';
   await env.DB.batch([
     env.DB.prepare("UPDATE notification_outbox SET status='sent', delivery_status=?, provider_message_id=?, sent_at=?, updated_at=? WHERE submission_id=? AND message_type=?").bind(deliveryStatus, providerMessageId, now, now, submissionId, messageType),
     // 既存のsubmission statusは「社内通知が送れた」ことを意味するため、本人確認メールの
-    // 成否で上書きしない。本人向けOutboxの状態は同じ行に保存する。
-    ...(messageType === 'internal'
+    // 成否で上書きしない。資料請求は status を stored のままにし、送付済みと読ませない。
+    ...(updateSubmission
       ? [env.DB.prepare("UPDATE submission_intake SET status='sent', updated_at=? WHERE submission_id=?").bind(now, submissionId)]
       : []),
   ]);
+}
+
+/** 通知先が未確定の資料請求。行は残し、Resend は呼ばない。 */
+export async function markOutboxHeld(env: Env, submissionId: string, messageType: NotificationType = 'internal'): Promise<void> {
+  if (!env.DB) return;
+  await env.DB.prepare(
+    "UPDATE notification_outbox SET status='pending', delivery_status='held', last_error='notify_not_released', updated_at=? WHERE submission_id=? AND message_type=?",
+  ).bind(nowSeconds(), submissionId, messageType).run();
 }
 
 export function markOutboxFailed(env: Env, submissionId: string, errorMessage: string): Promise<void>;

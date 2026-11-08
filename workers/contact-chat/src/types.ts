@@ -21,6 +21,12 @@ export interface Env {
   CONTACT_NOTIFICATIONS?: Queue<NotificationMessage>;
   PII_ENCRYPTION_KEY?: string;
   PII_HMAC_KEY?: string;
+  /**
+   * 資料請求の社内通知。wrangler には書かない。
+   * 未設定は hold（送らない）。mock は HTTP なし。live は既存の CONTACT_TO_EMAIL へ社内通知。
+   * どれも資料を送ったことにはしない。
+   */
+  DOCUMENT_REQUEST_NOTIFY_MODE?: string;
 }
 
 export interface NotificationMessage {

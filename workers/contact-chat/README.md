@@ -41,6 +41,26 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - **PII（name/email/company/message）はメール本文にのみ載り、LLM には一切渡さない。** 会話抜粋はinternal通知だけに載せ、receiptには載せない。
 - `RESEND_API_KEY` 未設定なら **503（fail closed）**。本物の問い合わせをサイレントに握り潰さない。
 
+### POST /api/contact/document-request
+
+会社紹介資料（`company-deck`。公開 URL はサイトの `COMPANY_DECK_URL`）の請求を、問い合わせと同じ暗号化 D1 に記録する。受付の成功は保存できたときだけ。`delivered` は常に `false`。資料を送ったとは返さない。
+
+- JSON または `application/x-www-form-urlencoded`。項目は氏名、メール、会社名（任意）、業種（5つのいずれかまたは空）、同意、ハニーポット `website`。
+- 同じメールと資料は、東京の暦日で1件。再送は同じ受付番号（202）。
+- Queue へ出すのは `{ submissionId, messageType: "internal" }` だけ。氏名やメールは載せない。登録に失敗しても保存は残し、応答は `status: "stored"` と `notification: "pending"`。
+- `DOCUMENT_REQUEST_NOTIFY_MODE` は wrangler に書かない。未設定は社内メールを送らない（outbox は `held`）。`mock` は HTTP なし。`live` にすると既存の `CONTACT_TO_EMAIL` へ社内通知だけ出す。請求者への受付メールは作らない。
+- LLM と GA4 にはフォームの入力を渡さない。
+
+### 業種の source（暫定文案）
+
+`/api/contact/chat/start` と `/api/contact/chat` は、`source` が次のどれかのときだけ業種として読む。
+
+`industry-medical` / `industry-shigyo` / `industry-construction` / `industry-manufacturing` / `industry-education`
+
+最初の返事は、業種と intent の組み合わせで変わる。患者の記録、依頼者名、図面、生徒の名前は聞かない。診断、法律・税務の結論、効果の保証はしない。文案は `INDUSTRY_COPY_STATUS = provisional-2026-11-08`。最終の文は未着。
+
+`corsweb-contact-primary`、`corsweb-launcher`、`corsweb-launcher-fallback`、`cloudia` は業種ではない既知のタグ。それ以外の source は保存用のタグとしては残し、モデルへの文には入れない。不明、無効、営業の分類でも、その理由だけでは受付を終わらせない。
+
 ## 環境変数・シークレット
 
 ### vars（`wrangler.toml` の `[vars]`・非シークレット）
