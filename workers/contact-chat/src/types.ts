@@ -37,34 +37,77 @@ export interface Env {
   DOCUMENT_REQUEST_CASE_SYNC?: DocumentRequestCaseSyncBinding;
 }
 
+export type DocumentRequestSyncIndustry =
+  | ''
+  | 'medical'
+  | 'shigyo'
+  | 'construction'
+  | 'manufacturing'
+  | 'education';
+
+/** 受信側の source。キーはこの6つ。未選択の業種は空文字。 */
 export interface DocumentRequestSyncSource {
   receiptId: string;
-  documentId: string;
-  /** 未選択は null。フォームの再送値では埋めない。 */
-  industry: string | null;
+  documentId: 'company-deck';
+  industry: DocumentRequestSyncIndustry;
   consentVersion: string;
-  /** 初回保存の時刻。ISO UTC。再送時刻ではない。 */
+  /** 初回保存の UTC ISO。再送時刻ではない。 */
   recordedAt: string;
   intakeStatus: 'stored';
 }
 
+/** 受信側の authority。キーはこの2つ。syncToken は生のトークン。 */
 export interface DocumentRequestSyncAuth {
   principalId: string;
   syncToken: string;
-  digest: string;
 }
 
-export type DocumentRequestSyncDisposition =
-  | 'accepted'
+export type DocumentRequestSyncOutcome =
+  | 'rejected'
+  | 'not_connected'
+  | 'recorded'
   | 'retry_scheduled'
-  | 'ack_unknown'
   | 'quarantined'
   | 'conflict'
   | 'lease_held'
-  | 'auth_rejected';
+  | 'ack_unknown';
 
+export type DocumentRequestSyncCode =
+  | 'unauthenticated'
+  | 'forbidden'
+  | 'unavailable'
+  | 'invalid_envelope'
+  | 'production_recording_not_connected'
+  | 'recorded'
+  | 'duplicate'
+  | 'retry_scheduled'
+  | 'quarantined'
+  | 'conflict'
+  | 'not_held'
+  | 'invalid_source'
+  | 'lease_held'
+  | 'ack_unknown'
+  | 'unconfigured';
+
+export type DocumentRequestSyncWireStatus =
+  | 'rejected'
+  | 'not_connected'
+  | 'recorded'
+  | 'retry_scheduled'
+  | 'quarantined'
+  | 'leased'
+  | 'ack_unknown';
+
+/** 受信側の Result。disposition はない。 */
 export interface DocumentRequestSyncResult {
-  disposition: DocumentRequestSyncDisposition;
+  outcome: DocumentRequestSyncOutcome;
+  code: DocumentRequestSyncCode;
+  declaredIntakeStatus: 'stored' | 'not_accepted';
+  syncStatus: DocumentRequestSyncWireStatus;
+  attemptCount: number;
+  duplicate: boolean;
+  receiptId?: string;
+  caseId?: string;
 }
 
 /** cor-os-workbench の DocumentRequestCaseSync。未接続のまま型だけ置く。 */

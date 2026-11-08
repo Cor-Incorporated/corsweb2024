@@ -409,7 +409,7 @@ export async function createDocumentRequest(
 export interface DocumentRequestSyncProjection {
   receiptId: string;
   documentId: string;
-  industry: string | null;
+  industry: '' | 'medical' | 'shigyo' | 'construction' | 'manufacturing' | 'education';
   consentVersion: string;
   recordedAt: string;
   intakeStatus: 'stored';
@@ -442,12 +442,20 @@ export async function readDocumentRequestSyncSource(
     case_sync_status: string;
   }>();
   if (!row || row.status !== 'stored' || row.request_kind !== 'document') return null;
-  if (!row.receipt_id || !row.document_id || !row.consent_version || !Number.isFinite(row.created_at)) return null;
+  if (!row.receipt_id || row.document_id !== 'company-deck' || !row.consent_version || !Number.isFinite(row.created_at)) return null;
   const industry = row.industry.trim();
+  if (
+    industry !== ''
+    && industry !== 'medical'
+    && industry !== 'shigyo'
+    && industry !== 'construction'
+    && industry !== 'manufacturing'
+    && industry !== 'education'
+  ) return null;
   return {
     receiptId: row.receipt_id,
     documentId: row.document_id,
-    industry: industry ? industry : null,
+    industry,
     consentVersion: row.consent_version,
     recordedAt: new Date(row.created_at * 1000).toISOString(),
     intakeStatus: 'stored',

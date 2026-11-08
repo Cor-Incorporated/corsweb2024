@@ -51,7 +51,7 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - Queue へ出すのは `{ submissionId, messageType: "internal" }` だけ。氏名やメールは載せない。登録に失敗しても保存は残し、応答は `status: "stored"` と `notification: "pending"`。
 - `DOCUMENT_REQUEST_NOTIFY_MODE` は wrangler に書かない。キュー消費は未設定・`mock`・`live` のどれでも Resend を呼ばず `held` に戻す。擬似再処理は `replayHeldDocumentNotice`（HTTP ルートなし、`mock` のときだけ）。`live` では再処理も送らない。請求者への受付メールは作らない。
 - LLM と GA4 にはフォームの入力を渡さない。
-- 保存のあと、受付番号で元の行から `documentId`、初回の業種（空なら null）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
+- 保存のあと、受付番号で元の行から `documentId`、初回の業種（未選択は空文字）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
 
 ### 業種の source（暫定文案）
 

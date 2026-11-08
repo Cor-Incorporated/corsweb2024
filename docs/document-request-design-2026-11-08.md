@@ -54,11 +54,11 @@
 
 `createDocumentRequest` の戻りは `submissionId`、`receiptId`、`duplicate` だけである。同期の中身は、その受付番号で保存済みの行を読み直す。読む列は資料 ID、業種、同意の版、初回の `created_at`、状態である。暗号文の列は SELECT しない。
 
-業種が空の行は `industry: null` として扱う。同じ日の再送で別の業種が来ても、行は更新しないので、読む値は初回のままである。日付をまたぐと別の受付になる。
+業種が空の行は `industry: ''` として扱う。同じ日の再送で別の業種が来ても、行は更新しないので、読む値は初回のままである。日付をまたぐと別の受付になる。準備ができていない同期は、同期用の列を読む前に戻る。
 
 cor-os の D1 への永続化は、相手側がまだ実装中である。こちらは service binding を wrangler に有効な形では書いていない。`mock` 以外では binding があっても呼ばない。専用の principal と token が PII の鍵と同じときは呼ばない。同期が失敗しても、受付の status は `stored` のまま、受付番号も維持する。`retry_scheduled` 以外では `retry` を呼ばない。
 
-接続先の契約文書は、相手が文面を直している。digest を載せる位置と、`recordedAt` を UTC の ISO 文字列にすることは、こちらで仮に決めた。相手の確定と違う場合は、合わせる。
+authority は `{ principalId, syncToken }` だけを送る。syncToken は生のトークンで、digest は送らない。`recordedAt` は保存行の UTC ISO 文字列である。応答は受信側の outcome / code / syncStatus を読む。conflict は syncStatus が recorded でも成功にしない。not_connected は recorded にしない。
 
 ## cor-os の公開入口は作らない
 
