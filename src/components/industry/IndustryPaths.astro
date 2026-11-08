@@ -1,0 +1,76 @@
+---
+import { getCollection } from 'astro:content';
+import { INDUSTRY_NAMED_CASE, industryContactSource, type IndustrySlug } from '../../config/industry-context';
+import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
+import { localizeEntries, toCleanSlug } from '../../utils/content-i18n';
+import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+
+interface Props {
+  industry: IndustrySlug;
+}
+
+const { industry } = Astro.props;
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+const common = t.servicePages.common;
+const source = industryContactSource(industry);
+
+const services = SERVICE_PAGES.map((page) => ({
+  href: getServiceUrl(page, currentLocale),
+  name: t.nav[page.key],
+}));
+
+const namedCaseSlug = INDUSTRY_NAMED_CASE[industry];
+const namedCase = namedCaseSlug
+  ? localizeEntries(
+      await getCollection('cases', ({ data }) => import.meta.env.DEV || !data.isDraft),
+      currentLocale,
+    ).find((entry) => toCleanSlug(entry.slug) === namedCaseSlug)
+  : undefined;
+if (namedCaseSlug && !namedCase) {
+  throw new Error(`業種 ${industry} の関連実績「${namedCaseSlug}」が無い`);
+}
+
+const industryListHref = `${getLocalizedUrl('/', currentLocale)}#home-industry-entry`;
+---
+
+<nav class="pb-4 sm:pb-8" aria-label={t.nav.services} data-industry-paths={source}>
+  <div class="mx-auto flex max-w-2xl flex-col gap-8 px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="flex flex-col gap-4">
+      <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{t.nav.services}</h2>
+      <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {
+          services.map((service) => (
+            <li class="min-w-0 rounded-3xl bg-primary-500/10 dark:bg-primary-400/10">
+              <a
+                href={service.href}
+                class="flex min-h-12 items-center px-4 py-3 text-base font-medium text-primary-950 underline-offset-4 break-words hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-50"
+              >
+                {service.name}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    {
+      namedCase && (
+        <div class="flex flex-col gap-4">
+          <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{common.relatedWorksTitle}</h2>
+          <a
+            href={getLocalizedUrl(`/works/${namedCaseSlug}`, currentLocale)}
+            class="inline-flex min-h-12 max-w-3xl items-center text-base font-medium text-primary-950 underline-offset-4 break-words hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-50"
+          >
+            {namedCase.data.title}
+          </a>
+        </div>
+      )
+    }
+    <a
+      href={industryListHref}
+      class="inline-flex min-h-12 w-fit items-center text-base font-medium text-primary-950 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-50"
+    >
+      {t.nav.industries}
+    </a>
+  </div>
+</nav>

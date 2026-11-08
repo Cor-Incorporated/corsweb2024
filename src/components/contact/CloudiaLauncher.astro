@@ -4,10 +4,12 @@ import {
   CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS,
   CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS,
 } from '../../config/contact';
+import { industryContactSource, industrySlugFromPath } from '../../config/industry-context';
 
 const currentLocale = getCurrentLocale(Astro.url);
+const industrySlug = industrySlugFromPath(Astro.url.pathname);
 const chatUrl = new URL('/contact/chat/', Astro.url);
-chatUrl.searchParams.set('source', 'corsweb-launcher');
+chatUrl.searchParams.set('source', industrySlug ? industryContactSource(industrySlug) : 'corsweb-launcher');
 chatUrl.searchParams.set('locale', currentLocale);
 const incomingIntent = Astro.url.searchParams.get('intent');
 if (incomingIntent) chatUrl.searchParams.set('intent', incomingIntent);
@@ -19,7 +21,8 @@ const fallbackContactUrl = new URL(fallbackContactPath, Astro.url);
 fallbackContactUrl.searchParams.set('locale', currentLocale);
 fallbackContactUrl.searchParams.set(
   'source',
-  Astro.url.searchParams.get('source') || 'corsweb-launcher-fallback'
+  Astro.url.searchParams.get('source') ||
+    (industrySlug ? industryContactSource(industrySlug) : 'corsweb-launcher-fallback')
 );
 if (incomingIntent) fallbackContactUrl.searchParams.set('intent', incomingIntent);
 const fallbackContactHref = `${fallbackContactUrl.pathname}${fallbackContactUrl.search}`;
@@ -94,7 +97,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
 
 <aside
   id="cloudia-launcher"
-  class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 w-[min(24rem,calc(100vw-2rem))] sm:right-5"
+  class="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex w-max max-w-[calc(100vw-2rem)] flex-col items-end sm:right-5"
   data-chat-path={embedChatPath}
   data-grift-handoff-origins={JSON.stringify(CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS)}
   data-grift-handoff-max-ttl-ms={CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS}
@@ -102,7 +105,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
 >
   <div
     id="cloudia-launcher-panel"
-    class="ring-primary-950/15 dark:ring-primary-200/15 mb-3 hidden overflow-hidden rounded-2xl bg-primary-50 shadow-2xl ring-1 dark:bg-primary-950"
+    class="pointer-events-auto ring-primary-950/15 dark:ring-primary-200/15 mb-3 hidden w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-primary-50 shadow-2xl ring-1 dark:bg-primary-950"
     aria-hidden="true"
   >
     <div
@@ -146,7 +149,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
   <button
     type="button"
     id="cloudia-launcher-open"
-    class="min-h-[3rem] ml-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300"
+    class="pointer-events-auto min-h-[3rem] inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300"
     aria-expanded="false"
     aria-controls="cloudia-launcher-panel"
     data-label-open={copy.label}
@@ -155,6 +158,16 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
     {copy.label}
   </button>
 </aside>
+
+<style>
+  /* 浮きボタンの高さ分、末尾とキーボードの移動先を空ける。枠そのものはボタンの幅だけにする。 */
+  :global(html) {
+    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+  :global(body) {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+</style>
 
 <script is:inline>
   // ViewTransitions ではページ遷移で body（＝このランチャー）ごと DOM が差し替わるが、is:inline

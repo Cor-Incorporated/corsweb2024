@@ -1,6 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import { getContactUrl } from '../../config/site';
+import IndustryPaths from './IndustryPaths.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -181,6 +182,8 @@ const secondaryHref = getContactUrl(currentLocale, {
       </div>
     </div>
   </section>
+
+  <IndustryPaths industry="construction" />
 
   <!-- 4. CTA（診断 / ローカルLLM PoC） -->
   <section class="py-24 sm:py-32">
