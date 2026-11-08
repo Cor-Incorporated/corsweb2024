@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import worker from '../index';
+import worker, { replayHeldDocumentNotice } from '../index';
 import { buildDocumentRequestBody } from '../email';
 import {
   DOCUMENT_DECK_URL,
@@ -240,7 +240,7 @@ describe('document request intake', () => {
     expect(outbox.last_error).not.toContain('@');
   });
 
-  it('mock 通知は本文に送付済みを書かず、HTTP をしない', async () => {
+  it('mock でもキュー消費は held のままにし、明示した再処理だけが擬似送信する', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     const db = openDatabase();
@@ -249,14 +249,24 @@ describe('document request intake', () => {
     await worker.queue({
       messages: [{ body: sent[0], ack() {}, retry() { throw new Error('should not retry'); } }],
     } as unknown as MessageBatch<NotificationMessage>, env);
+    const held = db.prepare('SELECT status, delivery_status FROM notification_outbox').get() as {
+      status: string;
+      delivery_status: string;
+    };
+    expect(held.status).toBe('pending');
+    expect(held.delivery_status).toBe('held');
+    const submissionId = (db.prepare('SELECT submission_id FROM submission_intake').get() as { submission_id: string }).submission_id;
+    await expect(replayHeldDocumentNotice(env, submissionId)).resolves.toBe('replayed');
     expect(fetchSpy).not.toHaveBeenCalled();
     const submission = db.prepare('SELECT status FROM submission_intake').get() as { status: string };
-    const outbox = db.prepare('SELECT provider_message_id, status FROM notification_outbox').get() as {
+    const outbox = db.prepare('SELECT provider_message_id, status, delivery_status FROM notification_outbox').get() as {
       provider_message_id: string;
       status: string;
+      delivery_status: string;
     };
     expect(submission.status).toBe('stored');
     expect(outbox.status).toBe('sent');
+    expect(outbox.delivery_status).toBe('accepted');
     expect(outbox.provider_message_id).toBe('mock');
     const text = buildDocumentRequestBody({
       name: '山田太郎',
@@ -272,7 +282,7 @@ describe('document request intake', () => {
     expect(text).not.toContain('お送りしました');
   });
 
-  it('live の送信失敗でも行は残り、受付 status は stored のまま', async () => {
+  it('live でもキューも再処理も送らず、復号に失敗しても行は残る', async () => {
     const fetchSpy = vi.fn(async () => new Response('nope', { status: 502 }));
     vi.stubGlobal('fetch', fetchSpy);
     const db = openDatabase();
@@ -291,14 +301,83 @@ describe('document request intake', () => {
         },
       }],
     } as unknown as MessageBatch<NotificationMessage>, env);
-    expect(retried).toBe(true);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const payload = JSON.parse(String((fetchSpy.mock.calls[0] as unknown as [string, RequestInit])[1].body));
-    expect(payload.text).toContain('資料は送っていません');
-    expect(payload.text).not.toContain('送付しました');
-    expect(payload.to).toBe('info@cor-jp.com');
+    expect(retried).toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const submissionId = (db.prepare('SELECT submission_id FROM submission_intake').get() as { submission_id: string }).submission_id;
+    await expect(replayHeldDocumentNotice(env, submissionId)).resolves.toBe('left-held');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    db.prepare('UPDATE submission_intake SET name_ciphertext = ?').run('broken');
+    const mockEnv = { ...env, DOCUMENT_REQUEST_NOTIFY_MODE: 'mock' } as Env;
+    await expect(replayHeldDocumentNotice(mockEnv, submissionId)).resolves.toBe('left-held');
     const submission = db.prepare('SELECT status FROM submission_intake').get() as { status: string };
+    const outbox = db.prepare('SELECT status, delivery_status FROM notification_outbox').get() as {
+      status: string;
+      delivery_status: string;
+    };
     expect(submission.status).toBe('stored');
+    expect(outbox.status).toBe('pending');
+    expect(outbox.delivery_status).toBe('held');
+    const count = db.prepare('SELECT COUNT(*) AS n FROM submission_intake').get() as { n: number };
+    expect(count.n).toBe(1);
+  });
+
+  it('メールの大文字小文字が違っても同じ受付番号になる', async () => {
+    const db = openDatabase();
+    const { env } = envFor(db);
+    const lower = await worker.fetch(post(valid, { 'cf-connecting-ip': '198.51.100.52' }), env);
+    const upper = await worker.fetch(post(
+      { ...valid, email: 'Taro@Example.COM' },
+      { 'cf-connecting-ip': '198.51.100.52' },
+    ), env);
+    expect(lower.status).toBe(200);
+    expect(upper.status).toBe(202);
+    const first = await lower.json() as { receiptId: string };
+    const second = await upper.json() as { receiptId: string; duplicate: boolean; status: string };
+    expect(second.receiptId).toBe(first.receiptId);
+    expect(second.duplicate).toBe(true);
+    expect(second.status).toBe('stored');
+    const count = db.prepare('SELECT COUNT(*) AS n FROM submission_intake').get() as { n: number };
+    expect(count.n).toBe(1);
+  });
+
+  it('別オリジンのフォーム投稿は保存しない。同じオリジンの非JS送信は残る', async () => {
+    const db = openDatabase();
+    const { env } = envFor(db);
+    const cross = await worker.fetch(new Request('https://cor-jp.com/api/contact/document-request', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        origin: 'https://evil.example',
+        'cf-connecting-ip': '198.51.100.53',
+      },
+      body: new URLSearchParams({
+        name: '山田太郎',
+        email: 'taro@example.com',
+        consent: 'yes',
+        locale: 'ja',
+      }),
+    }), env);
+    expect(cross.status).toBe(403);
+    const none = db.prepare('SELECT COUNT(*) AS n FROM submission_intake').get() as { n: number };
+    expect(none.n).toBe(0);
+    const same = await worker.fetch(new Request('https://cor-jp.com/api/contact/document-request', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        origin: 'https://cor-jp.com',
+        'cf-connecting-ip': '198.51.100.54',
+      },
+      body: new URLSearchParams({
+        name: '山田太郎',
+        email: 'taro@example.com',
+        consent: 'yes',
+        locale: 'ja',
+      }),
+    }), env);
+    expect(same.status).toBe(200);
+    expect(await same.text()).toContain('資料は送っていません');
+    const saved = db.prepare('SELECT COUNT(*) AS n FROM submission_intake').get() as { n: number };
+    expect(saved.n).toBe(1);
   });
 
   it.each([

@@ -22,9 +22,9 @@ export interface Env {
   PII_ENCRYPTION_KEY?: string;
   PII_HMAC_KEY?: string;
   /**
-   * 資料請求の社内通知。wrangler には書かない。
-   * 未設定は hold（送らない）。mock は HTTP なし。live は既存の CONTACT_TO_EMAIL へ社内通知。
-   * どれも資料を送ったことにはしない。
+   * 資料請求の再処理モード。wrangler には書かない。キュー消費はどの値でも送らない。
+   * mock のときだけ、HTTP に出していない replayHeldDocumentNotice が擬似送信する。
+   * live にしても本番送信はしない。
    */
   DOCUMENT_REQUEST_NOTIFY_MODE?: string;
 }

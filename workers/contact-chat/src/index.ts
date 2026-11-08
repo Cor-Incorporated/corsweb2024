@@ -589,40 +589,50 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
 }
 
 async function deliverDocumentNotice(env: Env, stored: StoredSubmission): Promise<void> {
+  // キュー到着では送らない。mock も live も同じ。過去の held を設定変更で流さない。
   const mode = documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE);
-  const notice = {
-    name: stored.inquiry.name,
-    email: stored.inquiry.email,
-    company: stored.inquiry.company,
-    industry: stored.industry,
-    documentId: stored.documentId,
-    consentVersion: stored.consentVersion,
-    receiptId: stored.receiptId,
-  };
   switch (mode) {
     case 'hold':
+    case 'mock':
+    case 'live':
       await markOutboxHeld(env, stored.submissionId, stored.messageType);
       return;
-    case 'mock': {
-      const sent = await sendDocumentRequestEmail(env, createMockEmailProvider(), notice);
-      await markOutboxSent(env, stored.submissionId, stored.messageType, sent.messageId, sent.deliveryStatus, {
-        updateSubmission: false,
-      });
-      return;
-    }
-    case 'live': {
-      const provider = getEmailProvider(env);
-      if (!provider.ok) throw new Error('email provider unavailable');
-      const sent = await sendDocumentRequestEmail(env, provider.provider, notice);
-      await markOutboxSent(env, stored.submissionId, stored.messageType, sent.messageId, sent.deliveryStatus, {
-        updateSubmission: false,
-      });
-      return;
-    }
     default: {
       const unexpected: never = mode;
       throw new Error(unexpected);
     }
+  }
+}
+
+/**
+ * 将来の再処理の入口。HTTP には出さない。
+ * mode が mock のときだけ、held の社内通知を擬似送信する。live では何も送らず行を残す。
+ */
+export async function replayHeldDocumentNotice(env: Env, submissionId: string): Promise<'replayed' | 'left-held'> {
+  if (documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE) !== 'mock') return 'left-held';
+  if (!await claimOutbox(env, submissionId, 'internal')) return 'left-held';
+  try {
+    const stored = await getSubmissionForNotification(env, submissionId, 'internal');
+    if (!stored || stored.requestKind !== 'document') {
+      await markOutboxHeld(env, submissionId, 'internal');
+      return 'left-held';
+    }
+    const sent = await sendDocumentRequestEmail(env, createMockEmailProvider(), {
+      name: stored.inquiry.name,
+      email: stored.inquiry.email,
+      company: stored.inquiry.company,
+      industry: stored.industry,
+      documentId: stored.documentId,
+      consentVersion: stored.consentVersion,
+      receiptId: stored.receiptId,
+    });
+    await markOutboxSent(env, submissionId, 'internal', sent.messageId, sent.deliveryStatus, {
+      updateSubmission: false,
+    });
+    return 'replayed';
+  } catch {
+    await markOutboxHeld(env, submissionId, 'internal');
+    return 'left-held';
   }
 }
 

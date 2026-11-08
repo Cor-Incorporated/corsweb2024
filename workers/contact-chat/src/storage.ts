@@ -325,6 +325,7 @@ export async function createDocumentRequest(
 ): Promise<CreateSubmissionResult> {
   if (!env.DB) throw new Error('D1 is not configured');
   const day = tokyoDayKey(now);
+  // 問い合わせの email_hmac と同じく、文字列全体を小文字にしてから HMAC する。
   const idempotencyKey = `doc.${await emailHmac(env.PII_HMAC_KEY, `${record.email}|${record.documentId}|${day}`)}`;
   const existing = await env.DB.prepare(
     'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',

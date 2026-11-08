@@ -46,9 +46,10 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 会社紹介資料（`company-deck`。公開 URL はサイトの `COMPANY_DECK_URL`）の請求を、問い合わせと同じ暗号化 D1 に記録する。受付の成功は保存できたときだけ。`delivered` は常に `false`。資料を送ったとは返さない。
 
 - JSON または `application/x-www-form-urlencoded`。項目は氏名、メール、会社名（任意）、業種（5つのいずれかまたは空）、同意、ハニーポット `website`。
-- 同じメールと資料は、東京の暦日で1件。再送は同じ受付番号（202）。
+- 同じメールと資料は、東京の暦日で1件。メールは問い合わせの HMAC と同じく小文字にしてから鍵にする。再送は同じ受付番号（202）。
+- この POST は他の `/api/contact/*` と同じく、`Origin` が `cor-jp.com` か `www.cor-jp.com` のときだけ通る。別サイトのブラウザ投稿は 403。Origin が無い POST も 403。クッキーは使わないので CSRF nonce は置かない。Turnstile は非JSの送信を止めるので置かない。
 - Queue へ出すのは `{ submissionId, messageType: "internal" }` だけ。氏名やメールは載せない。登録に失敗しても保存は残し、応答は `status: "stored"` と `notification: "pending"`。
-- `DOCUMENT_REQUEST_NOTIFY_MODE` は wrangler に書かない。未設定は社内メールを送らない（outbox は `held`）。`mock` は HTTP なし。`live` にすると既存の `CONTACT_TO_EMAIL` へ社内通知だけ出す。請求者への受付メールは作らない。
+- `DOCUMENT_REQUEST_NOTIFY_MODE` は wrangler に書かない。キュー消費は未設定・`mock`・`live` のどれでも Resend を呼ばず `held` に戻す。擬似再処理は `replayHeldDocumentNotice`（HTTP ルートなし、`mock` のときだけ）。`live` では再処理も送らない。請求者への受付メールは作らない。
 - LLM と GA4 にはフォームの入力を渡さない。
 
 ### 業種の source（暫定文案）
