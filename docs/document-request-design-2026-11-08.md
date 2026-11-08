@@ -50,17 +50,21 @@
 
 キューへ同じ ID を再投入しても、また `held` に戻るだけである。送る処理は HTTP に出していない。
 
-## cor-os へは押し込まない
+## 案件同期（送信側だけ。未接続）
 
-cor-os は社員向けの Cloudflare Access がある。匿名の公開 write API は作らない。今回の Worker は cor-os を呼ばない。社内通知を人が見て確認する段階であり、連携が完成したとは書かない。
+`createDocumentRequest` の戻りは `submissionId`、`receiptId`、`duplicate` だけである。同期の中身は、その受付番号で保存済みの行を読み直す。読む列は資料 ID、業種、同意の版、初回の `created_at`、状態である。暗号文の列は SELECT しない。
 
-将来、社員向けの reviewed connector で渡すときの最小契約は次のとおり。
+業種が空の行は `industry: null` として扱う。同じ日の再送で別の業種が来ても、行は更新しないので、読む値は初回のままである。日付をまたぐと別の受付になる。
 
-- 認証は Cloudflare Access のサービストークン。公開インターネットからの匿名 POST はしない。
-- `Idempotency-Key` は submission ID。同じ ID の再送は同じ結果にする。
-- 本体は submission ID、受付番号、資料 ID `company-deck`、業種（5つのいずれかまたは空）、同意の版、記録時刻。氏名とメールは、cor-os が持つと決めるまで corsweb の暗号化列に残す。
-- 失敗は指数バックオフで最大5回。それでも失敗した列は失敗キューに残し、受付の行は消さない。
-- 予定化やメール返信は、cor-os にある承認の手順に乗せる。このリポジトリからは起動しない。
+cor-os の D1 への永続化は、相手側がまだ実装中である。こちらは service binding を wrangler に有効な形では書いていない。`mock` 以外では binding があっても呼ばない。専用の principal と token が PII の鍵と同じときは呼ばない。同期が失敗しても、受付の status は `stored` のまま、受付番号も維持する。`retry_scheduled` 以外では `retry` を呼ばない。
+
+接続先の契約文書は、相手が文面を直している。digest を載せる位置と、`recordedAt` を UTC の ISO 文字列にすることは、こちらで仮に決めた。相手の確定と違う場合は、合わせる。
+
+## cor-os の公開入口は作らない
+
+cor-os は社員向けの Cloudflare Access がある。匿名の公開 write API は、こちらには作っていない。上の案件同期は、未接続の service binding である。本番の設定では呼ばない。連携が完成したとは書かない。
+
+氏名、メール、本文は、この Worker の暗号化列に残す。同期先へは出さない。
 
 ## 今回変えていないもの
 

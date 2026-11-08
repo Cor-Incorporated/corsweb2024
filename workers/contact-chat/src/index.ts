@@ -32,6 +32,7 @@ import {
   verifyTurnstile,
 } from './security';
 import { readJsonBody, type JsonBodyFailure } from './body';
+import { syncStoredDocumentRequest } from './case-sync';
 import { logContactFailure, notificationFailureCode } from './log';
 import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
 import { buildSystemPrompt, getProvider } from './llm';
@@ -580,6 +581,7 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
     notification,
     duplicate: created.duplicate,
   });
+  await syncStoredDocumentRequest(env, created.receiptId);
   return documentResponse(
     parsed.form,
     created.duplicate ? 202 : 200,

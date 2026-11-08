@@ -334,7 +334,7 @@ export async function createDocumentRequest(
 
   const submissionId = crypto.randomUUID();
   const receiptId = newReceiptId();
-  const createdAt = nowSeconds();
+  const createdAt = Math.floor(now.getTime() / 1000);
   const summary = '資料請求を記録した。資料は送っていない。';
   const [name, email, company, message, summaryCipher, excerpt, emailHash] = await Promise.all([
     encryptText(env.PII_ENCRYPTION_KEY, record.name),
@@ -404,6 +404,78 @@ export async function createDocumentRequest(
     throw error;
   }
   return { submissionId, receiptId, duplicate: false };
+}
+
+export interface DocumentRequestSyncProjection {
+  receiptId: string;
+  documentId: string;
+  industry: string | null;
+  consentVersion: string;
+  recordedAt: string;
+  intakeStatus: 'stored';
+  caseSyncStatus: string;
+}
+
+/**
+ * 保存済みの資料請求から、同期に使う列だけを読む。
+ * 暗号文の列は SELECT しない。復号しない。
+ * createDocumentRequest の戻り（ID と duplicate）からは組み立てない。
+ */
+export async function readDocumentRequestSyncSource(
+  env: Env,
+  receiptId: string,
+): Promise<DocumentRequestSyncProjection | null> {
+  if (!env.DB) return null;
+  const row = await env.DB.prepare(`
+    SELECT receipt_id, document_id, industry, consent_version, created_at, status, request_kind, case_sync_status
+    FROM submission_intake
+    WHERE receipt_id = ? AND request_kind = 'document'
+    LIMIT 1
+  `).bind(receiptId).first<{
+    receipt_id: string;
+    document_id: string;
+    industry: string;
+    consent_version: string;
+    created_at: number;
+    status: string;
+    request_kind: string;
+    case_sync_status: string;
+  }>();
+  if (!row || row.status !== 'stored' || row.request_kind !== 'document') return null;
+  if (!row.receipt_id || !row.document_id || !row.consent_version || !Number.isFinite(row.created_at)) return null;
+  const industry = row.industry.trim();
+  return {
+    receiptId: row.receipt_id,
+    documentId: row.document_id,
+    industry: industry ? industry : null,
+    consentVersion: row.consent_version,
+    recordedAt: new Date(row.created_at * 1000).toISOString(),
+    intakeStatus: 'stored',
+    caseSyncStatus: row.case_sync_status || '',
+  };
+}
+
+export async function claimDocumentCaseSync(
+  env: Env,
+  receiptId: string,
+  fromStatus: '' | 'retry_scheduled',
+): Promise<boolean> {
+  if (!env.DB) return false;
+  const result = await env.DB.prepare(`
+    UPDATE submission_intake
+    SET case_sync_status = 'sending', updated_at = ?
+    WHERE receipt_id = ? AND request_kind = 'document' AND status = 'stored' AND case_sync_status = ?
+  `).bind(nowSeconds(), receiptId, fromStatus).run();
+  return (result.meta?.changes || 0) > 0;
+}
+
+export async function setDocumentCaseSyncStatus(env: Env, receiptId: string, status: string): Promise<void> {
+  if (!env.DB) return;
+  await env.DB.prepare(`
+    UPDATE submission_intake
+    SET case_sync_status = ?, updated_at = ?
+    WHERE receipt_id = ? AND request_kind = 'document'
+  `).bind(status, nowSeconds(), receiptId).run();
 }
 
 interface SubmissionRow {

@@ -27,6 +27,50 @@ export interface Env {
    * live にしても本番送信はしない。
    */
   DOCUMENT_REQUEST_NOTIFY_MODE?: string;
+  /**
+   * 案件同期。wrangler には書かない。mock 以外は binding があっても呼ばない。
+   * 資格は PII の鍵とは別。未設定なら外部通信しない。
+   */
+  DOCUMENT_REQUEST_CASE_SYNC_MODE?: string;
+  DOCUMENT_REQUEST_SYNC_PRINCIPAL_ID?: string;
+  DOCUMENT_REQUEST_SYNC_TOKEN?: string;
+  DOCUMENT_REQUEST_CASE_SYNC?: DocumentRequestCaseSyncBinding;
+}
+
+export interface DocumentRequestSyncSource {
+  receiptId: string;
+  documentId: string;
+  /** 未選択は null。フォームの再送値では埋めない。 */
+  industry: string | null;
+  consentVersion: string;
+  /** 初回保存の時刻。ISO UTC。再送時刻ではない。 */
+  recordedAt: string;
+  intakeStatus: 'stored';
+}
+
+export interface DocumentRequestSyncAuth {
+  principalId: string;
+  syncToken: string;
+  digest: string;
+}
+
+export type DocumentRequestSyncDisposition =
+  | 'accepted'
+  | 'retry_scheduled'
+  | 'ack_unknown'
+  | 'quarantined'
+  | 'conflict'
+  | 'lease_held'
+  | 'auth_rejected';
+
+export interface DocumentRequestSyncResult {
+  disposition: DocumentRequestSyncDisposition;
+}
+
+/** cor-os-workbench の DocumentRequestCaseSync。未接続のまま型だけ置く。 */
+export interface DocumentRequestCaseSyncBinding {
+  acceptStored(auth: DocumentRequestSyncAuth, source: DocumentRequestSyncSource): Promise<DocumentRequestSyncResult>;
+  retry(auth: DocumentRequestSyncAuth, receiptId: string): Promise<DocumentRequestSyncResult>;
 }
 
 export interface NotificationMessage {
