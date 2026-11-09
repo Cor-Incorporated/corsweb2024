@@ -754,26 +754,37 @@ do_cancel() {
 do_hold() { do_set_hold true; }
 do_unhold() { do_set_hold false; }
 do_set_hold() {
-  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur newv cond what
+  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur newv cond what label
+  local s_hold c_hold need_stripe=0 need_clerk=0
   load_customer
   [ -n "$(cust_meta "$ks")" ] || die 3 "$OPT_CUSTOMER に $OPT_SERVICE の契約が無い（metadata に $ks が無い）。hold を書かない"
   org="$(cust_meta clerk_org_id)"
   [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に写せないので書かない"
   [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。書かない"
   cur="$(cust_meta "$kh")"
+  if [ "$cur" = "true" ]; then s_hold="true"; else s_hold="false"; fi
+  if [ "$on" = "true" ]; then label="hold"; else label="hold なし"; fi
+  # Clerk 側の今の値も読む（Stripe だけ書けて Clerk が失敗した状態を、やり直しで直せるようにする）
+  c_hold="$(clerk_current_hold "$org" "$OPT_SERVICE")"
+  [ "$c_hold" = "true" ] || c_hold="false"
+  if [ "$on" = "$s_hold" ] && [ "$s_hold" = "$c_hold" ]; then
+    printf 'OK %s %s %s: 既に %s（Stripe も Clerk も。書かない）\n' \
+      "$([ "$on" = "true" ] && printf 'hold' || printf 'unhold')" "$OPT_CUSTOMER" "$OPT_SERVICE" "$label"
+    return 0
+  fi
+  if [ "$s_hold" != "$on" ]; then need_stripe=1; fi
+  if [ "$c_hold" != "$on" ]; then need_clerk=1; fi
+  if [ "$need_stripe" -eq 0 ]; then
+    printf 'NOTE %s: Stripe の metadata は既に %s。Clerk だけ直す（片側だけ書けた状態を残さない）\n' "$OPT_CUSTOMER" "$label"
+  fi
+  if [ "$need_clerk" -eq 0 ]; then
+    printf 'NOTE %s: Clerk は既に %s。Stripe だけ書く\n' "$OPT_CUSTOMER" "$label"
+  fi
   if [ "$on" = "true" ]; then
-    if [ "$cur" = "true" ]; then
-      printf 'OK hold %s %s: 既に hold（書かない。Clerk へも写さない。写し直すなら resync）\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
-      return 0
-    fi
     newv="true"
     cond=".metadata[\"$kh\"] == \"true\""
     what="hold を書く"
   else
-    if [ -z "$cur" ] || [ "$cur" = "false" ]; then
-      printf 'OK unhold %s %s: hold は付いていない（書かない。Clerk へも写さない。写し直すなら resync）\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
-      return 0
-    fi
     newv=""
     cond="(.metadata[\"$kh\"] // \"\") == \"\""
     what="hold を外す"
@@ -782,17 +793,32 @@ do_set_hold() {
   # （plans.json に無いサービスの削除も、確認の前に表示する）。
   CUST_JSON="$(jq -c --arg k "$kh" --arg v "$newv" '.metadata = ((.metadata // {}) + {($k): $v})' <<<"$CUST_JSON")"
   check_clerk_rows
-  print_clerk_rows "$(clerk_services_json)"
-  clerk_build_payload "$org"
-  confirm_live
-  put_meta "$what" "$cond" "$kh=$newv"
-  CUST_JSON="$RESP_BODY"
-  if [ "$on" = "true" ]; then
-    printf 'HOLD %s %s: metadata に印を書いた。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
-  else
-    printf 'UNHOLD %s %s: metadata の印を消した。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
+  if [ "$need_clerk" -eq 1 ]; then
+    print_clerk_rows "$(clerk_services_json)"
+    clerk_build_payload "$org"
   fi
-  clerk_send_payload "$org"
+  confirm_live
+  if [ "$need_stripe" -eq 1 ]; then
+    put_meta "$what" "$cond" "$kh=$newv"
+    CUST_JSON="$RESP_BODY"
+    if [ "$on" = "true" ]; then
+      printf 'HOLD %s %s: metadata に印を書いた。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
+    else
+      printf 'UNHOLD %s %s: metadata の印を消した。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
+    fi
+  fi
+  if [ "$need_clerk" -eq 1 ]; then
+    clerk_send_payload "$org"
+  else
+    printf 'NOTE clerk %s: 既に %s（送らない）\n' "$org" "$label"
+  fi
+}
+
+# 組織の services の、そのサービスの hold の今の値（true / false）。Clerk を 1 回読む。
+clerk_current_hold() {
+  clerk_api GET "/organizations/$1"
+  require_ok "Clerk の metadata の読取 GET /organizations/$1"
+  jq -r --arg s "$2" '(.public_metadata.services[$s].hold // false)' <<<"$RESP_BODY"
 }
 
 # --- Clerk の組織の metadata（services の写し。ADR-0028 の 2 節） ---
