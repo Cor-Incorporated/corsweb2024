@@ -20,6 +20,7 @@
 #   hold       --customer <cus_…> --service <サービス>
 #   unhold     --customer <cus_…> --service <サービス>
 #   resync
+#   set-payment --customer <cus_…> --payment card|transfer
 #
 # customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
 # contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く。
@@ -42,6 +43,8 @@
 #            組織の metadata に resync_at（時刻）も書く（Clerk に更新のイベントを起こさせる）。
 #            同じ回で hold を判定する: 請求書の支払いの期限の 14 日後を過ぎても open のものがあれば hold を書き、
 #            無ければ外す（決定 1）。顧客の一覧と請求書の一覧は 100 件ずつページを送る
+# set-payment 支払い方法を card（当社が保存したカードで払う）か transfer（請求書のとおり振り込む）に変える（段階 5）。
+#            card へ変えるときは、保存したカードがあることを確かめてから書く。発行済みの請求書は変えない（次の締めから効く）
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の不合格 / 3 = 既存と食い違い・前提が足りない・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方・入力の誤り
@@ -85,7 +88,7 @@ CS_STATUS=""
 CS_URL=""
 
 usage() {
-  sed -n '8,44p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,47p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
 例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
@@ -121,7 +124,7 @@ parse_args() {
   CMD="$1"
   shift
   case "$CMD" in
-    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync | hold | unhold | resync) ;;
+    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync | hold | unhold | resync | set-payment) ;;
     -h | --help) usage; exit 0 ;;
     *) usage >&2; die 64 "知らないサブコマンド: $CMD" ;;
   esac
@@ -265,6 +268,9 @@ validate_command() {
     card-setup | status | clerk-sync) need --customer "$OPT_CUSTOMER" ;;
     hold | unhold) need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; check_service ;;
     resync) ;;
+    set-payment)
+      need --customer "$OPT_CUSTOMER"; need --payment "$OPT_PAYMENT"
+      case "$OPT_PAYMENT" in card | transfer) ;; *) die 64 "--payment は card か transfer（観測: $OPT_PAYMENT）" ;; esac ;;
     cancel)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
       check_service; check_accepted ;;
@@ -282,8 +288,8 @@ validate_inputs() {
   scope --name "$OPT_NAME" "customer"
   scope --email "$OPT_EMAIL" "customer"
   scope --clerk-org "$OPT_CLERK" "customer"
-  scope --payment "$OPT_PAYMENT" "customer"
-  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold"
+  scope --payment "$OPT_PAYMENT" "customer set-payment"
+  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold set-payment"
   scope --service "$OPT_SERVICE" "contract cancel simulate hold unhold"
   scope --start "$OPT_START" "contract simulate"
   scope --devfee-count "$OPT_DEVFEE" "contract simulate"
@@ -333,6 +339,7 @@ print_plan() {
     hold) printf 'PLAN hold: %s の %s を止める（metadata[contract_%s_hold]=true を書き、Clerk の組織の services の hold も true にする）。書き込みを止め、閲覧は残る（決定 1）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
     unhold) printf 'PLAN unhold: %s の %s の hold を外す（metadata[contract_%s_hold] を消し、Clerk の組織の services の hold を false にする）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
     resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く（plans.json に無いサービスは各組織の metadata から消える。顧客ごとの本文は送る前に出す）。同じ回で、請求書の支払いの期限の 14 日後を過ぎても open のものから hold を決めて書き直す（決定 1）\n' ;;
+    set-payment) printf 'PLAN set-payment: %s の支払い方法を %s にする（metadata[payment]=%s）。card へ変えるときは保存したカードがあることを確かめる。発行済みの請求書は変えない（次の締めから効く）\n' "$OPT_CUSTOMER" "$OPT_PAYMENT" "$OPT_PAYMENT" ;;
   esac
 }
 
@@ -1143,6 +1150,25 @@ do_clerk_sync() {
   clerk_build_payload "$org"
   confirm_live
   clerk_send_payload "$org"
+}
+
+# 支払い方法を変える（段階 5）。発行済みの請求書は変えない（次の締めから効く）。
+# card へ変えるときは、保存したカードがあることを確かめてから書く（無いまま card にすると、期限の日に払えない）。
+do_set_payment() {
+  local cur
+  load_customer
+  cur="$(cust_meta payment)"
+  if [ "$cur" = "$OPT_PAYMENT" ]; then
+    printf 'OK set-payment %s: 既に payment=%s（書かない）\n' "$OPT_CUSTOMER" "$cur"
+    return 0
+  fi
+  if [ "$OPT_PAYMENT" = "card" ]; then
+    find_saved_card
+    [ -n "$CARD_PM" ] || die 3 "$OPT_CUSTOMER に保存したカードが無い（card-setup のページ: ${CS_STATUS:-まだ作っていない}）。card にしない（期限の日に払えない）"
+    printf 'NOTE card に変える: 保存したカード %s（%s）\n' "$CARD_PM" "$CARD_SRC"
+  fi
+  put_meta "支払い方法を書く" ".metadata.payment == \"$OPT_PAYMENT\"" "payment=$OPT_PAYMENT"
+  printf 'SET_PAYMENT %s: %s→%s。発行済みの請求書は変えない（次の締めから効く）\n' "$OPT_CUSTOMER" "${cur:-なし}" "$OPT_PAYMENT"
 }
 
 do_status() {

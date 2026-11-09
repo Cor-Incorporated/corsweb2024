@@ -765,9 +765,41 @@ eq "変わった顧客には Stripe にも Clerk にも書かない" "$(count "$
 printf '%s' "$OUT" | grep -qF 'もう一度 resync を流す' && ok "やり直しを促す NOTE を出す" || ng "NOTE が違う: $OUT"
 printf '%s' "$OUT" | grep -qF 'RESYNC 完了: 顧客 3 件' && ok "変わった顧客を飛ばしても、残りの顧客の処理は続ける" || ng "最後まで進んでいない: $OUT"
 run resync --customer cus_x
-expect "resync に --customer は使わない" 64 0 "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold でだけ使う"
+expect "resync に --customer は使わない" 64 0 "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold set-payment でだけ使う"
 run resync --apply
 expect "resync の --apply には --mode が要る" 64 0 "--apply には --mode"
+
+# 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
+SET_PAY_META="$(meta transfer "$LAST-15" 12)"
+run set-payment --customer cus_x --payment card
+expect "set-payment の dry-run は書く値を出す" 0 0 "metadata[payment]=card"
+[ -z "$LOG" ] && ok "set-payment の dry-run は curl を呼ばない" || ng "set-payment の dry-run が curl を呼んだ"
+FAKE_CUST_META="$SET_PAY_META" FAKE_CUST_PM=pm_default run set-payment --customer cus_x --payment card --apply --mode test
+expect "set-payment は card に変える（保存したカードがある）" 0 1 "SET_PAYMENT cus_x: transfer→card"
+check_arg "set-payment は metadata[payment]=card を送る" "metadata[payment]=card"
+eq "set-payment は請求書を触らない" "$(count "$LOG" '/v1/invoices')" "0"
+printf '%s' "$OUT" | grep -qF '保存したカード pm_default' && ok "card に変えるときは保存したカードを確かめる" || ng "保存したカードの NOTE が無い: $OUT"
+FAKE_CUST_META="$(jq -c '. + {card_setup_session: "cs_old"}' <<<"$SET_PAY_META")" FAKE_CS_STATUS=complete run set-payment --customer cus_x --payment card --apply --mode test
+expect "card-setup で保存したカードでも card に変えられる" 0 1 "SET_PAYMENT cus_x: transfer→card"
+printf '%s' "$OUT" | grep -qF '保存したカード pm_saved' && ok "SetupIntent のカードを使う" || ng "pm_saved の NOTE が無い: $OUT"
+FAKE_CUST_META="$SET_PAY_META" run set-payment --customer cus_x --payment card --apply --mode test
+expect "保存したカードが無ければ card にしない（期限の日に払えない）" 3 0 "保存したカードが無い"
+eq "カードが無ければ何も書かない" "$(posts)" "0"
+FAKE_CUST_META="$(meta card "$LAST-15" 12)" run set-payment --customer cus_x --payment card --apply --mode test
+expect "既に card なら書かない" 0 0 "既に payment=card"
+FAKE_CUST_META="$(meta card "$LAST-15" 12)" run set-payment --customer cus_x --payment transfer --apply --mode test
+expect "card から transfer へも変えられる（カードの確認は要らない）" 0 1 "SET_PAYMENT cus_x: card→transfer"
+check_arg "transfer を送る" "metadata[payment]=transfer"
+run set-payment --customer cus_x --payment cash
+expect "--payment は card か transfer" 64 0 "--payment は card か transfer"
+run set-payment --customer cus_x
+expect "set-payment には --payment が要る" 64 0 "set-payment には --payment が要る"
+run set-payment --payment card
+expect "set-payment には --customer が要る" 64 0 "set-payment には --customer が要る"
+SCN=live FAKE_CUST_META="$SET_PAY_META" FAKE_CUST_PM=pm_default run set-payment --customer cus_x --payment card --apply --mode live
+expect "本番の set-payment は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+run set-payment --customer cus_x --payment card --service xesm
+expect "--service は set-payment で使わない" 64 0 "contract cancel simulate hold unhold でだけ使う"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
