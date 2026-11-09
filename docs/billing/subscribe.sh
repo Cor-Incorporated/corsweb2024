@@ -332,7 +332,7 @@ print_plan() {
     clerk-sync) printf 'PLAN clerk-sync: %s の clerk_org_id の組織に、契約の metadata から作った services を PATCH で送る（deep merge。契約の無いサービスは null で消す）。dry-run は顧客を読むだけで、Clerk の鍵は読まない\n' "$OPT_CUSTOMER" ;;
     hold) printf 'PLAN hold: %s の %s を止める（metadata[contract_%s_hold]=true を書き、Clerk の組織の services の hold も true にする）。書き込みを止め、閲覧は残る（決定 1）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
     unhold) printf 'PLAN unhold: %s の %s の hold を外す（metadata[contract_%s_hold] を消し、Clerk の組織の services の hold を false にする）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
-    resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く。同じ回で、請求書の支払いの期限の 14 日後を過ぎても open のものから hold を決めて書き直す（決定 1）\n' ;;
+    resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く（plans.json に無いサービスは各組織の metadata から消える。顧客ごとの本文は送る前に出す）。同じ回で、請求書の支払いの期限の 14 日後を過ぎても open のものから hold を決めて書き直す（決定 1）\n' ;;
   esac
 }
 
@@ -761,7 +761,7 @@ do_cancel() {
 do_hold() { do_set_hold true; }
 do_unhold() { do_set_hold false; }
 do_set_hold() {
-  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur
+  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur newv cond what
   load_customer
   [ -n "$(cust_meta "$ks")" ] || die 3 "$OPT_CUSTOMER に $OPT_SERVICE の契約が無い（metadata に $ks が無い）。hold を書かない"
   org="$(cust_meta clerk_org_id)"
@@ -773,23 +773,33 @@ do_set_hold() {
       printf 'OK hold %s %s: 既に hold（書かない。Clerk へも写さない。写し直すなら resync）\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
       return 0
     fi
-    put_meta "hold を書く" ".metadata[\"$kh\"] == \"true\"" "$kh=true"
+    newv="true"
+    cond=".metadata[\"$kh\"] == \"true\""
+    what="hold を書く"
   else
     if [ -z "$cur" ] || [ "$cur" = "false" ]; then
       printf 'OK unhold %s %s: hold は付いていない（書かない。Clerk へも写さない。写し直すなら resync）\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
       return 0
     fi
-    put_meta "hold を外す" "(.metadata[\"$kh\"] // \"\") == \"\"" "$kh="
+    newv=""
+    cond="(.metadata[\"$kh\"] // \"\") == \"\""
+    what="hold を外す"
   fi
-  CUST_JSON="$RESP_BODY"
+  # これから書く値を重ねた状態で Clerk に送る本文を作り、本番の確認より前に見せる
+  # （plans.json に無いサービスの削除も、確認の前に表示する）。
+  CUST_JSON="$(jq -c --arg k "$kh" --arg v "$newv" '.metadata = ((.metadata // {}) + {($k): $v})' <<<"$CUST_JSON")"
   check_clerk_rows
   print_clerk_rows "$(clerk_services_json)"
+  clerk_build_payload "$org"
+  confirm_live
+  put_meta "$what" "$cond" "$kh=$newv"
+  CUST_JSON="$RESP_BODY"
   if [ "$on" = "true" ]; then
     printf 'HOLD %s %s: metadata に印を書いた。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
   else
     printf 'UNHOLD %s %s: metadata の印を消した。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
   fi
-  clerk_push_services "$org"
+  clerk_send_payload "$org"
 }
 
 # --- 照合（全件の送り直しと hold の判定。ADR-0028 の 2 節・決定 1） ---
@@ -894,7 +904,9 @@ do_resync() {
     fi
     if [ -n "$(cust_meta clerk_org_id)" ]; then
       check_clerk_rows
-      clerk_push_services "$(cust_meta clerk_org_id)" "$(jq -cn --arg t "$ts" '{resync_at: $t}')"
+      # 読むだけの build（NOTE と本文を出す）→ send。本番の確認（live と打つ）は main で 1 回済ませてある
+      clerk_build_payload "$(cust_meta clerk_org_id)" "$(jq -cn --arg t "$ts" '{resync_at: $t}')"
+      clerk_send_payload "$(cust_meta clerk_org_id)"
       sent=$((sent + 1))
       printf 'RESYNC %s: Clerk の組織 %s に services と resync_at を送った\n' "$cus" "$(cust_meta clerk_org_id)"
     else
@@ -912,10 +924,12 @@ clerk_services_json() {
   local names
   names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
   jq -cn --argjson names "$names" --argjson m "$(jq -c '.metadata // {}' <<<"$CUST_JSON")" '
+    # 空の値は key が無いのと同じに扱う（空の from を送ると、判定する側が止まる）
+    def v($k): $m[$k] | if . == null or . == "" then null else . end;
     reduce $names[] as $s ({};
-      ($m["contract_\($s)_start"] // null) as $start
+      (v("contract_\($s)_start")) as $start
       | if $start == null then . + {($s): null}
-        else . + {($s): {from: $start, until: ($m["contract_\($s)_end"] // null), hold: ($m["contract_\($s)_hold"] == "true")}}
+        else . + {($s): {from: $start, until: (v("contract_\($s)_end")), hold: ($m["contract_\($s)_hold"] == "true")}}
         end)'
 }
 
@@ -926,7 +940,13 @@ check_clerk_rows() {
     start="$(cust_meta "contract_${s}_start")"
     end="$(cust_meta "contract_${s}_end")"
     hold="$(cust_meta "contract_${s}_hold")"
-    [ -n "$start" ] || continue
+    if [ -z "$start" ]; then
+      # key が無ければ契約なし。key があって値が空なら形が違う（黙って契約なしにしない）
+      if jq -e --arg k "contract_${s}_start" '.metadata | has($k)' <<<"$CUST_JSON" >/dev/null; then
+        die 3 "contract_${s}_start が空（形が違う）。Clerk に送らない"
+      fi
+      continue
+    fi
     valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: $start）。Clerk に送らない"
     [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: $end）。Clerk に送らない"
     case "$hold" in "" | true | false) ;; *) die 3 "contract_${s}_hold が true か false でも空でもない（観測: $hold）。Clerk に送らない" ;; esac
@@ -939,27 +959,52 @@ print_clerk_rows() {
 
 # 組織の public_metadata.services を、顧客の契約から作った services で置き換える（deep merge。null のサービスは消える）。
 # 応答の services を送った値と比べ、違えば止まる（書いたあとは戻せないので、観測値を出して寺田に渡す）。
-clerk_push_services() {
-  local org="$1" extra="${2:-}" services body
-  services="$(clerk_services_json)"
-  if [ -n "$extra" ]; then
-    body="$(jq -cn --argjson s "$services" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
-  else
-    body="$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+# 送る本文を作る（読むだけ。GET で今の metadata を読み、plans.json に無いサービスも null で消す）。
+# NOTE と JSON をここで出す（本番の確認より前に、消えるキーまで見せる）。本文は CLERK_BODY_JSON に入れる。
+clerk_build_payload() {
+  local org="$1" extra="${2:-}" names stale
+  clerk_api GET "/organizations/$org"
+  require_ok "Clerk の metadata の読取 GET /organizations/$org"
+  names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
+  stale="$(jq -c --argjson names "$names" '[(.public_metadata.services // {}) | keys[] | select(. as $k | $names | index($k) | not)]' <<<"$RESP_BODY")"
+  CLERK_SERVICES="$(clerk_services_json | jq -c --argjson stale "$stale" '. + ($stale | map({key: ., value: null}) | from_entries)')"
+  if [ "$(jq 'length' <<<"$stale")" -gt 0 ]; then
+    printf 'NOTE plans.json に無いサービスを Clerk から消す: %s\n' "$(jq -r 'join(", ")' <<<"$stale")"
   fi
-  printf 'JSON %s\n' "$body"
-  clerk_api PATCH "/organizations/$org/metadata" "$body"
-  require_ok "Clerk の metadata の更新 PATCH /organizations/$org/metadata"
-  jq -e --argjson want "$services" '
-    def canon:
-      to_entries
-      | map(select(.value != null))
-      | map({key: .key, value: {from: .value.from, until: (.value.until // null), hold: (.value.hold // false)}})
-      | from_entries;
-    ((.public_metadata.services // {}) | canon) == ($want | canon)' <<<"$RESP_BODY" >/dev/null \
-    || die 3 "Clerk の応答の services が送った値と違う（観測: $(jq -c '.public_metadata.services // {}' <<<"$RESP_BODY")）。送ったあとなので戻せない。clerk-sync の dry-run か Clerk の画面で確かめる"
-  printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$services")"
+  if [ -n "$extra" ]; then
+    CLERK_BODY_JSON="$(jq -cn --argjson s "$CLERK_SERVICES" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
+  else
+    CLERK_BODY_JSON="$(jq -cn --argjson s "$CLERK_SERVICES" '{public_metadata: {services: $s}}')"
+  fi
+  printf 'JSON %s\n' "$CLERK_BODY_JSON"
+  if jq -e '[to_entries[] | select(.value != null and (.value.until // null) == null)] | length > 0' <<<"$CLERK_SERVICES" >/dev/null; then
+    printf 'NOTE until の null は Clerk の deep merge でキーを消す（残る形は from と hold。until が無い = 終了日なし）\n'
+  fi
 }
+
+# clerk_build_payload が作った本文を送り、応答を送ったキーだけについて照合する。
+clerk_send_payload() {
+  local org="$1" key
+  clerk_api PATCH "/organizations/$org/metadata" "$CLERK_BODY_JSON"
+  require_ok "Clerk の metadata の更新 PATCH /organizations/$org/metadata"
+  jq -e --argjson want "$CLERK_SERVICES" '
+    def canon: {from: .from, until: (.until // null), hold: (.hold // false)};
+    (.public_metadata.services // {}) as $got
+    | [ $want | to_entries[] as $e
+        | if $e.value == null then ($got[$e.key] == null)
+          elif ($got[$e.key] | type) != "object" then false
+          else (($got[$e.key] | canon) == ($e.value | canon))
+          end ]
+    | all' <<<"$RESP_BODY" >/dev/null \
+    || die 3 "Clerk の応答の services が送った値と違う（観測: $(jq -c '.public_metadata.services // {}' <<<"$RESP_BODY")）。送ったあとなので戻せない。clerk-sync の dry-run か Clerk の画面で確かめる"
+  key="$(jq -r --argjson want "$CLERK_SERVICES" '(.public_metadata.services // {}) as $got | [$want | keys[] | select(($want[.] != null) and ($got[.] == null))] | join(", ")' <<<"$RESP_BODY")"
+  [ -z "$key" ] || die 3 "Clerk の応答に、送ったはずのサービスが無い（観測: $key）。送ったあとなので戻せない"
+  printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$CLERK_SERVICES")"
+}
+
+# 呼ぶ側（hold・unhold・resync）は、clerk_build_payload（読むだけ・NOTE と JSON を出す）→
+# confirm_live（本番の確認）→ clerk_send_payload（送る）の順に書く。build と send をまとめた
+# 便利な関数は置かない（確認より後に消えるキーが出る形を作らないため）。
 
 do_clerk_sync() {
   local org services
@@ -970,15 +1015,17 @@ do_clerk_sync() {
   check_clerk_rows
   services="$(clerk_services_json)"
   print_clerk_rows "$services"
-  printf 'JSON %s\n' "$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
   if [ "$DO_APPLY" -eq 0 ]; then
-    printf 'PLAN clerk-sync: PATCH %s/organizations/%s/metadata に上の JSON を送る（deep merge。null のサービスは消える）\n' "$CLERK_API_BASE" "$org"
+    printf 'JSON %s\n' "$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+    printf 'PLAN clerk-sync: PATCH %s/organizations/%s/metadata に上の JSON を送る（deep merge。null のサービスは消える）。送る前に今の metadata を読み、plans.json に無いサービスも null で消す\n' "$CLERK_API_BASE" "$org"
     printf 'DONE dry-run: 顧客の metadata を読んだだけ。Clerk へは送っていない（Clerk の鍵も読まない）。実行は --apply --mode test|live（寺田）\n'
     return 0
   fi
-  confirm_live
+  # 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る。
   read_clerk_key
-  clerk_push_services "$org"
+  clerk_build_payload "$org"
+  confirm_live
+  clerk_send_payload "$org"
 }
 
 do_status() {
@@ -1049,7 +1096,7 @@ main() {
   # hold と unhold は、Stripe の metadata と Clerk の両方に書く。書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）
   case "$CMD" in hold | unhold | resync) read_clerk_key ;; esac
   # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
-  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync) ;; *) confirm_live ;; esac
+  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync | hold | unhold) ;; *) confirm_live ;; esac
   "do_${CMD//-/_}"
 }
 
