@@ -209,7 +209,16 @@ resync_customer_update() {
 }
 # open の請求書の一覧。FAKE_OPEN_INVOICES（1 ページ目）と FAKE_OPEN_INVOICES_P2（2 ページ目）
 resync_invoices() {
-  local cus="${customer_arg:-}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" data more
+  local cus="${customer_arg:-}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" data more cnt=0
+  # 呼ばれた回数を数える。FAKE_OPEN_INVOICES_AFTER があれば 2 回目からそちらを返す
+  # （下見の後に請求書の状態が変わったことを、1 回の実行の中で作るため）
+  if [ -f "$FAKE_LOG.invcount" ]; then cnt="$(cat "$FAKE_LOG.invcount")"; fi
+  cnt=$((cnt + 1))
+  printf '%s' "$cnt" >"$FAKE_LOG.invcount"
+  if [ -n "${FAKE_OPEN_INVOICES_AFTER:-}" ] && [ "$cnt" -ge 2 ]; then
+    p1="$FAKE_OPEN_INVOICES_AFTER"
+    p2='{}'
+  fi
   [ -n "$p1" ] || p1='{}'
   [ -n "$p2" ] || p2='{}'
   # status が付いていなければ全部を返す（本物の一覧と同じ。付いていればその状態だけ）

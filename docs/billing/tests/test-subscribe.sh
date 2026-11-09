@@ -35,7 +35,7 @@ count() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 # run <args...>（環境変数 FAKE_* と KEY はそのまま渡す）→ RC・OUT・LOG
 run() {
   : >"$WORK/log"
-  rm -f "$WORK/log.items"
+  rm -f "$WORK/log.items" "$WORK/log.invcount"
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
     COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" COR_CLERK_SECRET_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
@@ -755,6 +755,15 @@ FAILINV="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_dat
 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$FAILINV" run resync --apply --mode test
 expect "明細の読取が失敗したら止まる" 4 - "API エラー"
 eq "明細が読めなければ 1 件も書かない" "$(posts)" "0"
+# 下見の後に請求書が払われたら、適用の直前に気づいて書かない（下見と適用の間の変化）
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+OPEN_AFTER="$(jq -c -n '{cus_a: [], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" FAKE_OPEN_INVOICES_AFTER="$OPEN_AFTER" \
+  run resync --apply --mode test
+expect "下見の後に請求書が払われたら、その顧客は書かない" 0 - "下見の後に請求書の状態が変わった"
+eq "変わった顧客には Stripe にも Clerk にも書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')$(count "$LOG" '^CALL PATCH /organizations/org_a')" "00"
+printf '%s' "$OUT" | grep -qF 'もう一度 resync を流す' && ok "やり直しを促す NOTE を出す" || ng "NOTE が違う: $OUT"
+printf '%s' "$OUT" | grep -qF 'RESYNC 完了: 顧客 3 件' && ok "変わった顧客を飛ばしても、残りの顧客の処理は続ける" || ng "最後まで進んでいない: $OUT"
 run resync --customer cus_x
 expect "resync に --customer は使わない" 64 0 "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold でだけ使う"
 run resync --apply
