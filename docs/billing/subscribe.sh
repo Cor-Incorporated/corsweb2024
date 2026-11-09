@@ -784,30 +784,35 @@ print_clerk_rows() {
 
 # 組織の public_metadata.services を、顧客の契約から作った services で置き換える（deep merge。null のサービスは消える）。
 # 応答の services を送った値と比べ、違えば止まる（書いたあとは戻せないので、観測値を出して寺田に渡す）。
-clerk_push_services() {
-  local org="$1" extra="${2:-}" services body names stale key
-  # 送る前に今の metadata を読む。plans.json に無いサービス（昔の名前）も null で消す（ADR-0028 の 2 節）
+# 送る本文を作る（読むだけ。GET で今の metadata を読み、plans.json に無いサービスも null で消す）。
+# NOTE と JSON をここで出す（本番の確認より前に、消えるキーまで見せる）。本文は CLERK_BODY_JSON に入れる。
+clerk_build_payload() {
+  local org="$1" extra="${2:-}" names stale
   clerk_api GET "/organizations/$org"
-  require_ok "Clerk の metadata の読取 GET /organizations/$org/metadata"
+  require_ok "Clerk の metadata の読取 GET /organizations/$org"
   names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
   stale="$(jq -c --argjson names "$names" '[(.public_metadata.services // {}) | keys[] | select(. as $k | $names | index($k) | not)]' <<<"$RESP_BODY")"
-  services="$(clerk_services_json | jq -c --argjson stale "$stale" '. + ($stale | map({key: ., value: null}) | from_entries)')"
+  CLERK_SERVICES="$(clerk_services_json | jq -c --argjson stale "$stale" '. + ($stale | map({key: ., value: null}) | from_entries)')"
   if [ "$(jq 'length' <<<"$stale")" -gt 0 ]; then
     printf 'NOTE plans.json に無いサービスを Clerk から消す: %s\n' "$(jq -r 'join(", ")' <<<"$stale")"
   fi
   if [ -n "$extra" ]; then
-    body="$(jq -cn --argjson s "$services" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
+    CLERK_BODY_JSON="$(jq -cn --argjson s "$CLERK_SERVICES" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
   else
-    body="$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+    CLERK_BODY_JSON="$(jq -cn --argjson s "$CLERK_SERVICES" '{public_metadata: {services: $s}}')"
   fi
-  printf 'JSON %s\n' "$body"
-  if jq -e '[to_entries[] | select(.value != null and (.value.until // null) == null)] | length > 0' <<<"$services" >/dev/null; then
+  printf 'JSON %s\n' "$CLERK_BODY_JSON"
+  if jq -e '[to_entries[] | select(.value != null and (.value.until // null) == null)] | length > 0' <<<"$CLERK_SERVICES" >/dev/null; then
     printf 'NOTE until の null は Clerk の deep merge でキーを消す（残る形は from と hold。until が無い = 終了日なし）\n'
   fi
-  clerk_api PATCH "/organizations/$org/metadata" "$body"
+}
+
+# clerk_build_payload が作った本文を送り、応答を送ったキーだけについて照合する。
+clerk_send_payload() {
+  local org="$1" key
+  clerk_api PATCH "/organizations/$org/metadata" "$CLERK_BODY_JSON"
   require_ok "Clerk の metadata の更新 PATCH /organizations/$org/metadata"
-  # 照合は、送った key だけを見る（Clerk 側に残った、こちらが送っていない key は別の話なので NOTE にする）
-  jq -e --argjson want "$services" '
+  jq -e --argjson want "$CLERK_SERVICES" '
     def canon: {from: .from, until: (.until // null), hold: (.hold // false)};
     (.public_metadata.services // {}) as $got
     | [ $want | to_entries[] as $e
@@ -817,9 +822,15 @@ clerk_push_services() {
           end ]
     | all' <<<"$RESP_BODY" >/dev/null \
     || die 3 "Clerk の応答の services が送った値と違う（観測: $(jq -c '.public_metadata.services // {}' <<<"$RESP_BODY")）。送ったあとなので戻せない。clerk-sync の dry-run か Clerk の画面で確かめる"
-  key="$(jq -r --argjson want "$services" '(.public_metadata.services // {}) as $got | [$want | keys[] | select(($want[.] != null) and ($got[.] == null))] | join(", ")' <<<"$RESP_BODY")"
+  key="$(jq -r --argjson want "$CLERK_SERVICES" '(.public_metadata.services // {}) as $got | [$want | keys[] | select(($want[.] != null) and ($got[.] == null))] | join(", ")' <<<"$RESP_BODY")"
   [ -z "$key" ] || die 3 "Clerk の応答に、送ったはずのサービスが無い（観測: $key）。送ったあとなので戻せない"
-  printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$services")"
+  printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$CLERK_SERVICES")"
+}
+
+# 本文を作って送る（hold・unhold・resync 用。本番の確認は呼ぶ側で済ませてある）。
+clerk_push_services() {
+  clerk_build_payload "$@"
+  clerk_send_payload "$1"
 }
 
 do_clerk_sync() {
@@ -837,9 +848,11 @@ do_clerk_sync() {
     printf 'DONE dry-run: 顧客の metadata を読んだだけ。Clerk へは送っていない（Clerk の鍵も読まない）。実行は --apply --mode test|live（寺田）\n'
     return 0
   fi
-  confirm_live
+  # 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る。
   read_clerk_key
-  clerk_push_services "$org"
+  clerk_build_payload "$org"
+  confirm_live
+  clerk_send_payload "$org"
 }
 
 do_status() {

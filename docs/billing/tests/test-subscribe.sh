@@ -540,6 +540,14 @@ expect "Clerk の鍵が無ければ書かない（端末も無い）" 64 0 "Cler
 eq "Clerk の鍵が無ければ PATCH しない" "$(clerk_patches)" "0"
 SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
 expect "本番の clerk-sync は live と打たなければ送らない" 64 0 "本番は端末から実行する"
+# 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+expect "本番の clerk-sync は live と打つ前に止まる" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'NOTE plans.json に無いサービスを Clerk から消す: stale-svc' && ok "確認より前に、消えるキーを出す" || ng "確認より前に消えるキーが出ない: $OUT"
+printf '%s' "$OUT" | grep -qF '"stale-svc":null' && ok "確認より前に、送る本文（null を含む）を出す" || ng "確認より前に本文が出ない: $OUT"
+eq "確認で止まったので Clerk へは送っていない" "$(clerk_patches)" "0"
 FAKE_CLERK_ECHO=wrong FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
 expect "Clerk の応答が送った値と違えば exit 3（戻せないことを伝える）" 3 0 "Clerk の応答の services が送った値と違う"
 FAKE_CLERK_STATUS=500 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
