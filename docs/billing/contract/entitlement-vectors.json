@@ -358,6 +358,17 @@
       "service": "business-dossier",
       "d": "2027-06-15",
       "expect": "view_only"
+    },
+    {
+      "id": "v31-until-absent",
+      "tags": ["no_until"],
+      "note": "Clerk の metadata では、終了日の無い契約の until はキーごと無い（PATCH の null は deep merge でキーを消す）。無い until は終了日なしとして扱う",
+      "services": {
+        "xesm": { "from": "2026-12-01", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2029-01-01",
+      "expect": "open"
     }
   ]
 }
