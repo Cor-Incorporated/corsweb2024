@@ -32,17 +32,18 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 身元の正本は Clerk（利用者と Organization）、課金の正本は Stripe の Customer。2 つを顧客の会社ごとに結んだものが、Cor. のサービスに共通の契約の基盤になる。**設計の全文は [ADR-0028](../adr/ADR-0028-cor-account-billing-foundation.md)（corsweb2024 #514）に移した。** この章は、実装が使う形だけを書く。
 
 - 顧客（テナント）= Clerk の Organization（`org_…`）。会社 1 社に 1 つ。契約と請求は Stripe の Customer（`cus_…`）が持ち、`metadata.clerk_org_id` で組織に結ぶ
-- 権利（使えるサービス）= 契約から作り、組織の `public_metadata.services` に写す。形は `services.<サービス> = {from, until, hold}`、サービスの名前は `plans.json` と同じ。開けるか閉じるかは日付で決まり、サービスは日本時間の今日の日付で判定する（3 節の判定表、`contract/judge.sh`）
+- 権利（使えるサービス）= 契約から作り、組織の `public_metadata.services` に写す。形は `services.<サービス> = {from, until, hold}`、サービスの名前は `plans.json` と同じ。サービスは日本時間の今日の日付で判定し、結果は 4 つ（**開ける**／**見るだけ**（hold。書き込みだけ止める）／**読む・書き出すだけ**（終了日の翌日から 30 日）／**閉じる**）。判定表は ADR-0028 の 3 節、見本は `contract/judge.sh` と `contract/entitlement-vectors.json`（決定 1）
 - 写すのは `subscribe.sh clerk-sync`（契約・解約のあと）と `hold`・`unhold`（支払いが遅れたとき）。毎月の `resync` が全件を送り直す（2 節）
 - Clerk のアプリケーションは新しく作り、本番のドメインは `cor-jp.com` にする（決定 11）。Clerk Billing は使わない（請求の通貨が USD だけで、消費税に対応していない。ADR-0028 の代替案）
 - サービスの役割と所属は、今までどおり各サービスの DB に持つ（Clerk の独自の役割は使わない。決定 3）
 
 ## 1B. 入口の段階案
 
-入口は Cloudflare Access。段階は ADR-0028 の「移行の順番と Yes の関門」に合わせた。
+入口は Cloudflare Access。段階の番号は ADR-0028 の「移行の順番と Yes の関門」に合わせた。
 
-- **段階 0（今）**: Access の許可メール。寺田が契約とカードの保存（カードの顧客）を確かめてから、手で足す（5 章、runbook C0〜C7）
-- **段階 1・2（Clerk の認証が入った後）**: 製品が Clerk でログインし、組織の metadata の `services` で機能を開け閉めする。Access の IdP は Clerk にしない（決定 5）。段階 1 の OIDC の細部（`user:org:read` のスコープ、`org_id` の claim）は**未確認**で、設計だけ
+- **段階 0**: ADR-0028 を Accepted にする（#514 の merge）
+- **段階 1（いま）**: Clerk のアプリケーションと開発のインスタンスを作り（寺田の画面の作業。P6・E6）、`clerk-sync`・`hold`・`unhold`・`resync` と試験ベクトル・検証の見本を入れ、最後に本番のインスタンスを作る。入口はまだ Access の許可メールで、寺田が契約とカードの保存を確かめてから手で足す（5 章、runbook C0〜C7）
+- **段階 2**: business-dossier を Clerk に載せる（道 A）。**Clerk の認証が入ったら、そのサービスの Access を外す**（決定 5。Access の IdP は Clerk にしない）。製品は組織の metadata の `services` で機能を開け閉めする
 - 個人のアカウントは許さない（組織が必須。決定 2）。メンバーの追加は Clerk の組織への招待にそろえる（決定 10）
 
 ## 1C. 請求の形（寺田、2026-11-07 の決定）
@@ -171,7 +172,7 @@ Stripe の公式文書（2026-11-07 に読んだ）で分かったこと:
 
 | 記録 | 正本 | 入れるもの |
 |---|---|---|
-| 身元（会社と利用者） | Clerk の組織（Organization） | 組織の id（`org_…`）、利用者のメール、`privateMetadata.stripe_customer_id`（1A 章。Clerk の設定は寺田） |
+| 身元（会社と利用者） | Clerk の組織（Organization） | 組織の id（`org_…`）、利用者のメール、`public_metadata.services`（1A 章。契約は Stripe が正本で、`clerk-sync` が写す） |
 | 契約者（会社） | Stripe の Customer | 社名、請求先のメールアドレス、`metadata.customer_code`、`metadata.clerk_org_id`、`metadata.payment` |
 | 使うサービスと契約 | Stripe の Customer の metadata | `contract_<サービス>_start`・`_devfee_count`・`_end`（1C 章の表） |
 | 毎月の請求 | Stripe の請求書（月に 1 枚） | `metadata.billing_month`、`metadata.customer_code`。明細の `metadata.service`・`metadata.kind` |

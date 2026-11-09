@@ -40,7 +40,7 @@
 | P3 | 作業する場所 | 寺田 | PR の merge 前は下のコマンドで PR のブランチを取り出した worktree、merge 後は `~/Developer/corsweb`（develop） |
 | P4 | 非公開の台帳の置き場所 | 寺田 | **未決**。列は C1 の表 |
 | P5 | Clerk のアカウントとアプリケーション（組織の機能を有効にする） | 寺田（画面の作業） | **未確認**。Clerk Billing は使わない（README 1A 章）。Clerk の鍵はこのレーンが触らない |
-| P6 | Clerk のアプリケーション（本番のインスタンス、Organizations、独自 claim `cor_svc`） | 寺田（画面の作業） | **未確認**。ADR-0028 の決定 11（新しく作る。本番のドメインは `cor-jp.com`）。手順と値は非公開の報告（contract-billing レーン）の 2 章。画面の文言は未確認 |
+| P6 | Clerk のアプリケーション（本番のインスタンス、Organizations、独自 claim `cor_svc`、Pro への変更） | 寺田（画面の作業） | **未確認**。ADR-0028 の決定 11（新しく作る。本番のドメインは `cor-jp.com`。Hobby から **Pro** にする。2 要素は Pro の機能で、決定 6 のため）。手順と値は非公開の報告（contract-billing レーン）の 2 章。画面の文言は未確認 |
 
 P3 の場所を作って移る（merge 前。3 行を順に打つ）:
 
@@ -296,8 +296,8 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode live' "$log"
 ### C0. Clerk に顧客の組織を作る（寺田、画面の作業）
 
 - P5 の Clerk のアプリケーションに、顧客の会社の組織を作り、組織の id（`org_…`）を控える。**画面の場所と名前は未確認。**
-- 今週は、入口は Access の許可メールのまま（README 1B 章の段階 0）。Clerk の組織は C2 で Stripe の顧客に紐づけるために作る。
-- Clerk の組織の `privateMetadata.stripe_customer_id` に C2 の `cus_…` を入れる作業は、Clerk の鍵が要るので寺田が行う。やり方（画面か API か）は**未確認**。
+- 今週は、入口は Access の許可メールのまま（README 1B 章の段階 1）。Clerk の組織は C2 で Stripe の顧客に紐づけるために作る。
+- 組織の `public_metadata.services`（権利の写し）は、C3 のあとに `clerk-sync`（E1）が書く。寺田が画面で入れる作業は無い。Clerk の組織の id（`org_…`）だけを控える。
 - Clerk の準備が間に合わないときは、C2 を `--clerk-org` なしで実行してよい。あとから紐づけるときは、Stripe の顧客の metadata に `clerk_org_id` を足す（このスクリプトは既存の顧客を書き換えないので、寺田が画面で足す。画面の文言は未確認）。
 
 ### C1. 契約と台帳（寺田）
@@ -458,7 +458,7 @@ bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
 
 ### D3. 終了日を過ぎたら入口を閉じる
 
-終了日の翌日に、**先に** Access の許可から利用者を外す（XESM は `contract-to-use.md` 手順 8 の逆。business-dossier は `onboarding.md` の Access の節の逆。**寺田のみ**）。台帳に閉じた日時を書く。
+終了日の翌日から 30 日は、権利の判定が「読む・書き出すだけ」になる（決定 1。ADR-0028 の 3 節）。**Access の許可を外すのは、その 30 日が過ぎてから**（XESM は `contract-to-use.md` 手順 8 の逆。business-dossier は `onboarding.md` の Access の節の逆。**寺田のみ**）。早く外すと、30 日の書き出しができなくなる。台帳に閉じた日時を書く。
 
 ### D4. 終了の月の請求書（M1 で作る）
 
@@ -473,6 +473,8 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 [README 1A 章](README.md)の権利（`services`）を Clerk の組織に写す手順と、支払いが遅れたときの止め方（ADR-0028 の 2 節と決定 1）。**本物の Clerk の API ではまだ確かめていない（未確認）。** 下の値は例で、実際の値は台帳から入れる。
 
 Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプトが表示しない入力で聞く（Stripe の鍵と同じ扱い。表示しない・ファイルに書かない・引数に載せない）。既定は dry-run で、書くのは `--apply --mode test|live` のとき。`live` は端末で `live` と打つ確認がある。
+
+**`--mode` は Clerk を守らない。** `--mode` が確かめるのは Stripe の鍵のモード（`livemode`）だけで、Clerk の鍵が test 用か live 用かは API では分からない（未確認。README 12 章の 13）。だから `--mode test` でも、貼った Clerk の鍵の組織にそのまま PATCH する。**試験は開発用のインスタンスの鍵と組織で行い、`--apply` の前に dry-run の `PLAN services.…` と、顧客の `clerk_org_id` が開発用の `org_…` であることを確かめる。** 本番の組織に試験の `services` を書かない。
 
 ### E1. 契約・解約のあとに Clerk へ写す（`clerk-sync`）
 
@@ -546,6 +548,7 @@ bash docs/billing/subscribe.sh set-payment --customer cus_XXXXXXXXXXXX --payment
 | # | 作業 | 状態 |
 |---|---|---|
 | K2・K8 | Clerk のアプリケーションを新しく作る（ADR-0028 の決定 11。本番のドメインは `cor-jp.com`） | 未確認 |
+| K2b | プランを Hobby から **Pro** に上げる（決定 6 の 2 要素を使うため。決定 11） | 未確認 |
 | K3 | Organizations を有効にし、個人のアカウントを許さない（決定 2） | 未確認 |
 | K4 | セッショントークンに独自 claim `cor_svc` = `{{org.public_metadata.services}}` を足す | 未確認 |
 | K4b | U1〜U13 の実測用の OAuth アプリを作る | 未確認 |
@@ -609,5 +612,5 @@ bash docs/billing/subscribe.sh set-payment --customer cus_XXXXXXXXXXXX --payment
 | M3 の「支払い済み」にする操作 | **できない** | Stripe の画面の操作が未確認 |
 | C6、D3 の Access | 製品側の手順書へ渡す | Access の画面の文言は製品側の手順書でも未確認 |
 | E1〜E5 | できる（コマンドと出るべき行がある。値は台帳の列） | Clerk のアプリ（P6）が未確認。本物の Clerk では未実測 |
-| E6・C0 | **できない** | Clerk の画面の文言と、組織の private metadata の書き方が未確認 |
+| E6・C0 | **できない** | Clerk の画面の文言（アプリケーションの作成・Organizations・独自 claim・Pro への変更）が未確認 |
 | D5 | **できない** | XESM のお客様用の無効化の手順が無い（xesm の W6） |
