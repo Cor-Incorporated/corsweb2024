@@ -827,11 +827,9 @@ clerk_send_payload() {
   printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$CLERK_SERVICES")"
 }
 
-# 本文を作って送る（hold・unhold・resync 用。本番の確認は呼ぶ側で済ませてある）。
-clerk_push_services() {
-  clerk_build_payload "$@"
-  clerk_send_payload "$1"
-}
+# 呼ぶ側（hold・unhold・resync）は、clerk_build_payload（読むだけ・NOTE と JSON を出す）→
+# confirm_live（本番の確認）→ clerk_send_payload（送る）の順に書く。build と send をまとめた
+# 便利な関数は置かない（確認より後に消えるキーが出る形を作らないため）。
 
 do_clerk_sync() {
   local org services
