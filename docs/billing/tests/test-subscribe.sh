@@ -583,14 +583,24 @@ expect "hold の dry-run は書く値を出す" 0 0 "contract_xesm_hold]=true"
 rm -f "$WORK/log.clerk"
 FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
 expect "hold は metadata に印を書き、Clerk に写す" 0 1 "HOLD cus_x xesm: metadata に印を書いた"
-eq "hold は Customer の更新 → Clerk の PATCH の順に呼ぶ" "$(post_seq)" "/v1/customers/cus_x"
+eq "hold は Customer の更新 → Clerk の PATCH の順に呼ぶ" "$(printf '%s\n' "$LOG" | grep -E '^CALL (POST /v1/customers|PATCH /organizations)' | paste -sd' ' -)" "CALL POST /v1/customers/cus_x CALL PATCH /organizations/org_x/metadata"
 check_arg "hold は contract_xesm_hold=true を送る" "metadata[contract_xesm_hold]=true"
 eq "hold は Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
 printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":true' && ok "Clerk の services に hold=true を写す" || ng "Clerk の本文に hold=true が無い: $LOG"
 eq "Clerk の state の hold が true" "$(clerk_state | jq -r '.services.xesm.hold')" "true"
-FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
-expect "既に hold なら書かない" 0 0 "既に hold（書かない"
-eq "既に hold なら Customer も Clerk も呼ばない（顧客の読取だけ）" "$(posts)" "0"
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "既に hold なら書かない" 0 0 "既に hold（Stripe も Clerk も。書かない）"
+eq "既に hold なら Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+# 片側だけ書けた状態（Stripe は hold、Clerk は未反映）からのやり直しは、Clerk だけ直す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "Stripe だけ hold のときは Clerk だけ直す" 0 0 "Stripe の metadata は既に hold。Clerk だけ直す"
+eq "片側だけのときは Stripe に書かない" "$(posts)" "0"
+eq "片側だけのときは Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+eq "直したあとの Clerk の hold が true" "$(clerk_state | jq -r '.services.xesm.hold')" "true"
 FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service business-dossier --apply --mode test
 expect "契約の無いサービスは hold にしない" 3 0 "の契約が無い"
 FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
@@ -599,11 +609,13 @@ eq "clerk_org_id が無ければ何も書かない" "$(posts)" "0"
 CKEY="" FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
 expect "Clerk の鍵が無ければ hold にしない（片方だけ書かない）" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ Stripe にも書かない" "$(posts)" "0"
+rm -f "$WORK/log.clerk"
 SCN=live FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode live
 expect "本番の hold は live と打たなければ書かない" 64 0 "本番は端末から実行する"
 printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata":{"services":' && ok "確認より前に、送る本文を出す" || ng "確認より前に本文が出ない: $OUT"
 printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":true}' && ok "確認より前に、hold=true の本文を出す" || ng "本文の hold が違う: $OUT"
 eq "確認で止まったので Stripe にも書いていない" "$(posts)" "0"
+eq "確認で止まったので Clerk にも送っていない" "$(clerk_patches)" "0"
 # hold を外す: 印を消し、Clerk の hold を false にする
 rm -f "$WORK/log.clerk"
 FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
@@ -614,9 +626,18 @@ eq "unhold は Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
 printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":false' && ok "Clerk の services の hold を false にする" || ng "Clerk の本文に hold=false が無い: $LOG"
 eq "Clerk の state の hold が false" "$(clerk_state | jq -r '.services.xesm.hold')" "false"
 printf '%s' "$OUT" | grep -qF 'hold=true' && ng "unhold の出力に hold=true が残った" || ok "unhold の出力に hold=true が残らない"
+rm -f "$WORK/log.clerk"
 FAKE_CUST_META="$HOLD_META" run unhold --customer cus_x --service xesm --apply --mode test
-expect "hold の付いていないサービスは unhold で書かない" 0 0 "hold は付いていない（書かない"
-eq "hold の付いていないサービスの unhold は何も書かない" "$(posts)" "0"
+expect "hold の付いていないサービスは unhold で書かない" 0 0 "既に hold なし（Stripe も Clerk も。書かない）"
+eq "hold の付いていないサービスの unhold は何も書かない" "$(posts)$(clerk_patches)" "00"
+# 逆の片側（Stripe に印が無く、Clerk に hold が残っている）も、Clerk だけ直す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$HOLD_META" run unhold --customer cus_x --service xesm --apply --mode test
+expect "Clerk だけ hold が残っているときは Clerk だけ直す" 0 0 "Stripe の metadata は既に hold なし。Clerk だけ直す"
+eq "逆の片側でも Stripe に書かない" "$(posts)" "0"
+eq "逆の片側では Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+eq "直したあとの Clerk の hold が false" "$(clerk_state | jq -r '.services.xesm.hold')" "false"
 run unhold --customer cus_x --service xesm
 expect "unhold の dry-run は書く値を出す" 0 0 "contract_xesm_hold] を消し"
 [ -z "$LOG" ] && ok "unhold の dry-run は curl を呼ばない" || ng "unhold の dry-run が curl を呼んだ"
