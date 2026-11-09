@@ -39,6 +39,7 @@ run() {
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
     COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" COR_CLERK_SECRET_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
+    FAKE_STRIPE_KEY="$DUMMY_KEY" FAKE_CLERK_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
     bash "$BILLING/subscribe.sh" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
   RC=$?
   set -e
@@ -512,10 +513,16 @@ expect "clerk-sync の dry-run は Clerk の鍵が無くても通る（鍵を読
 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
 expect "clerk-sync の apply は組織の metadata に送る" 0 0 'SENT clerk org_x: services を送った'
 eq "clerk-sync は PATCH を 1 回だけ呼ぶ（先に顧客を読む）" "$(clerk_patches)" "1"
+eq "clerk-sync は送る前に組織の metadata を読む（GET → PATCH）" "$(count "$LOG" '^CALL GET /organizations/org_x$')" "1"
+eq "Clerk の呼出しは全部 Clerk の鍵で認証する" "$(count "$LOG" '^STDIN_KEY clerk')" "$(clerk_calls)"
+eq "Stripe の呼出しは全部 Stripe の鍵で認証する" "$(count "$LOG" '^STDIN_KEY stripe')" "$(($(count "$LOG" '^CALL ') - $(clerk_calls)))"
+printf '%s' "$OUT" | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が出力に出た" || ok "Clerk の鍵は出力に出ない"
 printf '%s\n' "$LOG" | grep -qF 'CLERK_BODY {"public_metadata":{"services":' && ok "送る本文は public_metadata.services の形" || ng "送る本文の形が違う: $LOG"
 printf '%s' "$LOG" | grep '^ARGV' | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が curl の引数に載った（apply）" || ok "apply でも Clerk の鍵は curl の引数に載らない"
 printf '%s' "$LOG" | grep -q '^STDIN_AUTH no' && ng "標準入力に鍵の無い呼出しがある" || ok "鍵は全部の呼出しで標準入力から渡る（Clerk も）"
 eq "Clerk の state に xesm が入った" "$(clerk_state | jq -r '.services.xesm.from')" "$LAST-15"
+printf '%s' "$OUT" | grep -qF 'until の null は Clerk の deep merge でキーを消す' && ok "until の null がキーを消すことを NOTE で出す" || ng "until の NOTE が無い: $OUT"
+eq "until の無い契約では until のキーが残らない（from と hold）" "$(clerk_state | jq -r '.services.xesm | has("until")')" "false"
 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply --clerk-org org_y
 expect "--clerk-org は clerk-sync でだけ使わない（customer 用）" 64 0 "customer でだけ使う"
 FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
@@ -525,6 +532,9 @@ FAKE_CUST_META="$(jq -c '. + {clerk_org_id: "org-bad!"}' <<<"$CLERK_META")" run 
 expect "clerk_org_id の形が違えば止まる" 3 0 "clerk_org_id の形が違う"
 FAKE_CUST_META="$(jq -c '. + {contract_xesm_start: "2026-02-30"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
 expect "実在しない開始日は Clerk に送らない" 3 0 "実在する日付ではない"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_start: ""}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "空の開始日は Clerk に送らない（黙って契約なしにしない）" 3 0 "contract_xesm_start が空"
+eq "空の開始日では Clerk を呼ばない" "$(clerk_calls)" "0"
 CKEY="" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
 expect "Clerk の鍵が無ければ書かない（端末も無い）" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ PATCH しない" "$(clerk_patches)" "0"
@@ -534,6 +544,13 @@ FAKE_CLERK_ECHO=wrong FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus
 expect "Clerk の応答が送った値と違えば exit 3（戻せないことを伝える）" 3 0 "Clerk の応答の services が送った値と違う"
 FAKE_CLERK_STATUS=500 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
 expect "Clerk が 500 を返したら exit 4" 4 0 "API エラー"
+# plans.json に無いサービス（昔の名前）も null で消す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "plans.json に無いサービスは null で消す" 0 0 "plans.json に無いサービスを Clerk から消す: stale-svc"
+eq "消したあとの state に stale-svc が無い" "$(clerk_state | jq -r '.services | has("stale-svc")')" "false"
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"stale-svc":null' && ok "本文で stale-svc を null にする" || ng "stale-svc の null が本文に無い: $LOG"
 # deep merge: 契約の無くなったサービスは null で消える（Clerk の既存の metadata に business-dossier がある状態から始める）
 rm -f "$WORK/log.clerk"
 FAKE_CLERK_META='{"services":{"business-dossier":{"from":"2026-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \

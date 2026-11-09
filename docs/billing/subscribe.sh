@@ -749,10 +749,12 @@ clerk_services_json() {
   local names
   names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
   jq -cn --argjson names "$names" --argjson m "$(jq -c '.metadata // {}' <<<"$CUST_JSON")" '
+    # 空の値は key が無いのと同じに扱う（空の from を送ると、判定する側が止まる）
+    def v($k): $m[$k] | if . == null or . == "" then null else . end;
     reduce $names[] as $s ({};
-      ($m["contract_\($s)_start"] // null) as $start
+      (v("contract_\($s)_start")) as $start
       | if $start == null then . + {($s): null}
-        else . + {($s): {from: $start, until: ($m["contract_\($s)_end"] // null), hold: ($m["contract_\($s)_hold"] == "true")}}
+        else . + {($s): {from: $start, until: (v("contract_\($s)_end")), hold: ($m["contract_\($s)_hold"] == "true")}}
         end)'
 }
 
@@ -763,7 +765,13 @@ check_clerk_rows() {
     start="$(cust_meta "contract_${s}_start")"
     end="$(cust_meta "contract_${s}_end")"
     hold="$(cust_meta "contract_${s}_hold")"
-    [ -n "$start" ] || continue
+    if [ -z "$start" ]; then
+      # key が無ければ契約なし。key があって値が空なら形が違う（黙って契約なしにしない）
+      if jq -e --arg k "contract_${s}_start" '.metadata | has($k)' <<<"$CUST_JSON" >/dev/null; then
+        die 3 "contract_${s}_start が空（形が違う）。Clerk に送らない"
+      fi
+      continue
+    fi
     valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: $start）。Clerk に送らない"
     [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: $end）。Clerk に送らない"
     case "$hold" in "" | true | false) ;; *) die 3 "contract_${s}_hold が true か false でも空でもない（観測: $hold）。Clerk に送らない" ;; esac
@@ -777,20 +785,40 @@ print_clerk_rows() {
 # 組織の public_metadata.services を、顧客の契約から作った services で置き換える（deep merge。null のサービスは消える）。
 # 応答の services を送った値と比べ、違えば止まる（書いたあとは戻せないので、観測値を出して寺田に渡す）。
 clerk_push_services() {
-  local org="$1" services body
-  services="$(clerk_services_json)"
-  body="$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+  local org="$1" extra="${2:-}" services body names stale key
+  # 送る前に今の metadata を読む。plans.json に無いサービス（昔の名前）も null で消す（ADR-0028 の 2 節）
+  clerk_api GET "/organizations/$org"
+  require_ok "Clerk の metadata の読取 GET /organizations/$org/metadata"
+  names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
+  stale="$(jq -c --argjson names "$names" '[(.public_metadata.services // {}) | keys[] | select(. as $k | $names | index($k) | not)]' <<<"$RESP_BODY")"
+  services="$(clerk_services_json | jq -c --argjson stale "$stale" '. + ($stale | map({key: ., value: null}) | from_entries)')"
+  if [ "$(jq 'length' <<<"$stale")" -gt 0 ]; then
+    printf 'NOTE plans.json に無いサービスを Clerk から消す: %s\n' "$(jq -r 'join(", ")' <<<"$stale")"
+  fi
+  if [ -n "$extra" ]; then
+    body="$(jq -cn --argjson s "$services" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
+  else
+    body="$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+  fi
   printf 'JSON %s\n' "$body"
+  if jq -e '[to_entries[] | select(.value != null and (.value.until // null) == null)] | length > 0' <<<"$services" >/dev/null; then
+    printf 'NOTE until の null は Clerk の deep merge でキーを消す（残る形は from と hold。until が無い = 終了日なし）\n'
+  fi
   clerk_api PATCH "/organizations/$org/metadata" "$body"
   require_ok "Clerk の metadata の更新 PATCH /organizations/$org/metadata"
+  # 照合は、送った key だけを見る（Clerk 側に残った、こちらが送っていない key は別の話なので NOTE にする）
   jq -e --argjson want "$services" '
-    def canon:
-      to_entries
-      | map(select(.value != null))
-      | map({key: .key, value: {from: .value.from, until: (.value.until // null), hold: (.value.hold // false)}})
-      | from_entries;
-    ((.public_metadata.services // {}) | canon) == ($want | canon)' <<<"$RESP_BODY" >/dev/null \
+    def canon: {from: .from, until: (.until // null), hold: (.hold // false)};
+    (.public_metadata.services // {}) as $got
+    | [ $want | to_entries[] as $e
+        | if $e.value == null then ($got[$e.key] == null)
+          elif ($got[$e.key] | type) != "object" then false
+          else (($got[$e.key] | canon) == ($e.value | canon))
+          end ]
+    | all' <<<"$RESP_BODY" >/dev/null \
     || die 3 "Clerk の応答の services が送った値と違う（観測: $(jq -c '.public_metadata.services // {}' <<<"$RESP_BODY")）。送ったあとなので戻せない。clerk-sync の dry-run か Clerk の画面で確かめる"
+  key="$(jq -r --argjson want "$services" '(.public_metadata.services // {}) as $got | [$want | keys[] | select(($want[.] != null) and ($got[.] == null))] | join(", ")' <<<"$RESP_BODY")"
+  [ -z "$key" ] || die 3 "Clerk の応答に、送ったはずのサービスが無い（観測: $key）。送ったあとなので戻せない"
   printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$services")"
 }
 
@@ -803,9 +831,9 @@ do_clerk_sync() {
   check_clerk_rows
   services="$(clerk_services_json)"
   print_clerk_rows "$services"
-  printf 'JSON %s\n' "$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
   if [ "$DO_APPLY" -eq 0 ]; then
-    printf 'PLAN clerk-sync: PATCH %s/organizations/%s/metadata に上の JSON を送る（deep merge。null のサービスは消える）\n' "$CLERK_API_BASE" "$org"
+    printf 'JSON %s\n' "$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+    printf 'PLAN clerk-sync: PATCH %s/organizations/%s/metadata に上の JSON を送る（deep merge。null のサービスは消える）。送る前に今の metadata を読み、plans.json に無いサービスも null で消す\n' "$CLERK_API_BASE" "$org"
     printf 'DONE dry-run: 顧客の metadata を読んだだけ。Clerk へは送っていない（Clerk の鍵も読まない）。実行は --apply --mode test|live（寺田）\n'
     return 0
   fi

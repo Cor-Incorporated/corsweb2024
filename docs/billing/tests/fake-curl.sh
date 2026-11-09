@@ -19,6 +19,13 @@ stdin_text="$(cat)"
     *"Authorization: Bearer "*) printf 'STDIN_AUTH yes\n' ;;
     *) printf 'STDIN_AUTH no\n' ;;
   esac
+  key_kind="unknown"
+  if [ -n "${FAKE_CLERK_KEY:-}" ] && printf '%s' "$stdin_text" | grep -qF "Bearer $FAKE_CLERK_KEY"; then
+    key_kind="clerk"
+  elif [ -n "${FAKE_STRIPE_KEY:-}" ] && printf '%s' "$stdin_text" | grep -qF "Bearer $FAKE_STRIPE_KEY"; then
+    key_kind="stripe"
+  fi
+  printf 'STDIN_KEY %s\n' "$key_kind"
 } >>"$FAKE_LOG"
 
 # Clerk（api.clerk.com）の呼出しは、ここで応答して終わる。Stripe の応答の形とは別（本文 + 改行 + HTTP 状態）。
@@ -33,6 +40,8 @@ case " $* " in
       prev="$a"
     done
     printf 'CALL %s %s\n' "$clerk_method" "$clerk_path" >>"$FAKE_LOG"
+    clerk_org="${clerk_path#/organizations/}"
+    clerk_org="${clerk_org%%/*}"
     # 本文（curl の設定の data = "..."）を戻す
     raw="$(printf '%s\n' "$stdin_text" | sed -n 's/^data = "\(.*\)"$/\1/p' | tail -1)"
     raw="$(printf '%s' "$raw" | sed -e 's/\\\\/\\/g' -e 's/\\"/"/g')"
@@ -49,9 +58,14 @@ case " $* " in
       printf '{"error":{"message":"fake-curl: clerk failure"}}\n\n%s' "$FAKE_CLERK_STATUS"
       exit 0
     fi
+    # GET（送る前の読取）は今の状態をそのまま返す
+    if [ "$clerk_method" = "GET" ]; then
+      printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$state"
+      exit 0
+    fi
     if [ "${FAKE_CLERK_ECHO:-}" = "wrong" ]; then
       # 送った値を反映しない（Clerk が別の値を返したときの形）。どの状態から始めても一致しないようにする。
-      printf '{"id":"%s","object":"organization","public_metadata":{"services":{"business-dossier":{"from":"2020-01-01","until":null,"hold":false}}}}\n\n200' "${clerk_path#/organizations/}" | sed 's|/metadata.*||'
+      printf '{"id":"%s","object":"organization","public_metadata":{"services":{"business-dossier":{"from":"2020-01-01","until":null,"hold":false}}}}\n\n200' "$clerk_org"
       exit 0
     fi
     if [ -z "$raw" ]; then
@@ -68,9 +82,7 @@ case " $* " in
         else $b end;
       deepmerge(.; $inc)' <<<"$state")"
     printf '%s' "$merged" >"$state_file"
-    org="${clerk_path#/organizations/}"
-    org="${org%%/*}"
-    printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$org" "$merged"
+    printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$merged"
     exit 0
     ;;
 esac
