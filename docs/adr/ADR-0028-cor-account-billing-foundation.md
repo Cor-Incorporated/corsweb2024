@@ -28,7 +28,7 @@
 | 所属とサービスでの役割 | 各サービスの DB | bd は `memberships`（`admin`・`editor`・`viewer`）、XESM は `Membership` と `ROLE_CAPS`（7 つの役割）。どちらも今の作りのまま |
 | 契約と請求 | Stripe の Customer（当社のアカウント 1 つ）と毎月の請求書 | `contract_<サービス>_*`、`payment`、`clerk_org_id`（README 4 章） |
 | 権利（使えるサービス） | 契約から作り、Clerk の組織の public metadata に写す（2 節） | サービスごとの開始日、終了日、止めているか |
-| 2 要素の水準とセッションの生死 | ログインを受け持つ IdP | bd は Clerk。XESM は案 (a) のあいだ Keycloak（5 節） |
+| 2 要素の水準とセッションの生死 | ログインを受け持つ IdP | bd は Clerk。XESM は (a) なら Keycloak、(b2) なら Clerk（5 節） |
 
 - Clerk のアプリケーションは 1 つにする。本番のインスタンスのドメインは `cor-jp.com` にする。
 - サービスは `cor-jp.com` の下のホストに置く。今の bd と XESM も、どちらも `cor-jp.com` のサブドメインにある。
@@ -45,7 +45,7 @@ Stripe の Customer の metadata（契約の正本）
 Clerk の組織の public_metadata.services（写し）
   ├─ 道 A: セッショントークンの独自 claim `cor_svc`（60 秒ごとに更新）
   │        → Clerk のトークンを直接検証するサービス（bd）が読む。通信しない
-  └─ 道 B: Clerk の webhook（組織の作成と更新）
+  └─ 道 B: 署名つきの通知（Clerk の webhook か、clerk-sync からの push）
            → Keycloak を挟むサービス（XESM の案 (a)）が自分の表に書く
 ```
 
@@ -66,24 +66,33 @@ Clerk の組織の public_metadata.services（写し）
 - 書くのは `subscribe.sh` の `contract`・`cancel` と、新しく作る `hold`・`unhold` の後。
 - Clerk の更新は deep merge で、値を `null` にするとその項目が消える [5]。
 - 道 A: トークンは 60 秒ごとに作り直されるので、反映は最大で 1 分遅れる [2]。独自 claim は 1.2KB まで [2]。`services` には上の 3 つの項目だけを入れる。
-- 道 B: Clerk の webhook は Svix で送られ、少なくとも 1 回届くが、順番は保証されない。同じイベントの再送は同じ `svix-id` を持つ [10]。だから受け手は、届いた `services` の全体で自分の表を上書きし、`svix-id` で重複を捨てる。組織の作成と更新のイベントの名前は、文書の概要のページに無い（未確認）。
-- 道 B を Stripe の webhook にする案もある（xesm-deploy の調査の案）。この ADR は Clerk の webhook を推奨する。権利の形が道 A と同じになり、サービスが Stripe の形を知らずに済むため（「決めること」8）。
+- 道 B の通知の送り手は 3 つの案があり、「決めること」8 で選ぶ。どの案でも、受け手は届いた `services` の全体で自分の表を上書きし、重複を捨てる。
+
+| 案 | 送り手 | 長所 | 短所 |
+|---|---|---|---|
+| B1 Clerk の webhook（この ADR の推奨） | Clerk（組織の作成と更新のイベント） | 届かなければ Svix が送り直す。寺田の手元に鍵が増えない。権利の形が道 A と同じ | 少なくとも 1 回届くが、順番は保証されない（同じイベントは同じ `svix-id`）[10]。受け口の 1 か所だけを Access の外に出す。イベントの名前は文書の概要のページに無い（未確認） |
+| B2 clerk-sync からの push（xesm-deploy の推奨） | `subscribe.sh` の `clerk-sync`（寺田が実行） | 書いた直後に届く。送る順番を寺田の側で決められる | 署名の鍵が寺田の手元と XESM の 2 か所に要る。XESM の内部の受け口に、寺田の手元から Access を越えて届く道が要る。届かなければ寺田が送り直す |
+| B3 Stripe の webhook | Stripe（Customer の更新） | 契約の正本から直接届く | サービスが Stripe の metadata の形を知る必要がある。権利の形が道 A と変わる |
+
+- 道 B のサービスは、権利を自分の DB にも持つので、元が 2 つになる。どの案でも定期の照合を行う（`subscribe.sh` に照合のサブコマンドを足し、Stripe の契約・Clerk の組織・サービスの表の 3 つを比べる。ずれていれば送り直す）。
 
 ### 3. サービス側の実装規約
 
 すべてのサービスが次の R1〜R9 を守る。権利の判定が守れているかは、共通の試験ベクトル（`docs/billing/contract/entitlement-vectors.json`。これから作る）で確かめる。各サービスの試験がこのファイルを読み、全件で同じ結果になること。
 
+R1〜R3 は、Clerk のトークンを直接検証するサービスの約束。Keycloak を挟むサービス（XESM の案 (a)）は、今のログインの検証のまま、表の中の読み替えに従う。だから共通の試験ベクトルは、トークンの検証には当てず、R5 の判定（`services` の値と日付を入れて、開けるか閉じるかを返す）にだけ当てる。
+
 | # | 約束 | 中身 |
 |---|---|---|
 | R1 | ログインを確かめる | Clerk に直接つなぐサービスは、セッショントークンを RS256 で検証する。公開鍵は Dashboard の API keys の画面にある JWKS Public Key を設定に置き、通信しない [4]。`iss` は本番の Frontend API の URL（値は本番のインスタンスを作った後に決まる）。`exp`・`nbf` を確かめ、`azp` を自分のホストの許可リストと照らす [4]。`v` が `2` であること、`sts` が `pending` なら拒否すること。Keycloak を挟むサービスは、今の OIDC の検証を変えない（Keycloak が Clerk にログインを任せる） |
 | R2 | テナントを組織に結ぶ | 自分のテナントに Clerk の組織の id を持つ（bd は起動の設定の `CLERK_ORG_ID` と workspace、XESM は Tenant）。Clerk に直接つなぐサービスは、トークンの `o.id` [1] がそれと違えば拒否する。`o` の無いトークン（組織を選んでいない）も拒否する |
-| R3 | 利用者を結び付ける | (`iss`, `sub`) で自分の利用者に結ぶ。メールアドレスでは結ばない。Keycloak を挟むあいだは、Keycloak の `iss` と `sub` のまま |
+| R3 | 利用者を結び付ける | (`iss`, `sub`) で自分の利用者に結ぶ。メールアドレスでは結ばない。Keycloak を挟むあいだは、Keycloak の `iss` と `sub` のまま。Clerk の利用者の id を Keycloak から運べるかは未確認（xesm-deploy の U11） |
 | R4 | 所属と役割は自分の DB に持つ | 認可は今の作り（bd の `Principal`、XESM の `Membership`・`ROLE_CAPS`）で行う。Clerk の role（`o.rol` [1]）は、最初の管理者を決めるときにだけ使う |
-| R5 | 権利を受け取る | 道 A（独自 claim `cor_svc`）か道 B（署名を確かめた webhook を自分の表に書く。重複を捨て、順番が入れ替わっても最後の状態になる）のどちらか |
+| R5 | 権利を受け取る | 道 A（独自 claim `cor_svc`）か道 B（署名を確かめた通知を自分の表に書く。重複を捨て、順番が入れ替わっても最後の状態になる）のどちらか |
 | R6 | 権利を判定の一点に掛ける | 権限を判定する一点（bd は `current_principal` と `require`、XESM は `caps()` と `require_cap`）に権利を掛ける。止めた組織は、書く能力だけを落とせる形にする。お客様が書き換えられる欄（XESM の `Tenant.active`）を課金に使わない |
 | R7 | テナントを作る受け口を持つ | 契約で組織ができたら、サービスのテナントと最初の管理者を作る。同じ通知が何度届いても 1 つしか作らない。今は bd も XESM も人手のスクリプトだけ |
-| R8 | 記録を残す | 監査の記録に、Clerk の組織の id と利用者を残す |
-| R9 | 鍵を持たない | Clerk の秘密鍵と Stripe の鍵をサービスに置かない。道 B のサービスは webhook の署名を確かめる鍵だけを持つ（確かめるだけで、API は呼べない） |
+| R8 | 記録を残す | 監査の記録に、Clerk の組織の id と利用者を残す。Keycloak を挟むあいだは、Keycloak の利用者とテナントに結んだ組織の id を残す |
+| R9 | 鍵を持たない | Clerk の秘密鍵と Stripe の鍵をサービスに置かない。道 B のサービスは通知の署名を確かめる鍵だけを持つ（確かめるだけで、API は呼べない）。XESM が Clerk の Backend API を直接引く案は、秘密鍵が要るので採らない |
 
 判定表は次のとおり。d は日本時間の今日の日付。
 
@@ -105,19 +114,22 @@ Clerk の組織の public_metadata.services（写し）
 ### 5. bd と XESM の載せ方
 
 - bd（Python の API と web）は Clerk に直接つなぐ（道 A）。`DOSSIER_AUTH_MODE=local|clerk` で切り替え、`Principal` の形は変えない。作業は bd-deploy のレーンの一覧（B1〜T1、9〜12 日の見込み）。
-- XESM は、案 (a) を第一の候補にする。Keycloak を残し、Clerk を Keycloak の上流の IdP にする（道 B）。
-  - XESM のアプリのコードは変えずに足せる。戻すときは Keycloak で Clerk の IdP を無効にするだけ。
-  - 代わりに 2 要素の確認が 2 か所になる。XESM の承認・共有・納品・組織管理は `acr=mfa` を要り、Keycloak の TOTP で満たす。Clerk で済ませた 2 要素は Keycloak に伝わらない見込み。
-  - Keycloak の運用も残る。
+- XESM は、次の 2 つの候補のどちらかにする。決めるのは、寺田が Clerk の画面でアプリケーションを作った直後（K2〜K4）に行う実測 U1〜U11（xesm-deploy の表）の後（「決めること」9）。
+  - (b2) Clerk の SDK とセッショントークンに作り替える。R1〜R6 をそのまま満たし、道 A を使える。Keycloak の運用も無くなる。認証の層を書き直すので作業は大きい。ただし承認者の段階認証を Clerk の `fva` で満たせるなら、全体は (a) より小さい（xesm-deploy の見立て）。
+  - (a)+道 B: Keycloak を残し、Clerk を Keycloak の上流の IdP にする。権利は道 B で受け取る。ログインのコードは変えずに足せて、戻すときは Keycloak で Clerk の IdP を無効にするだけ。権利の受け口と判定の一点のために、XESM のコードは変わる。
+- (a)+道 B では 2 要素の確認が 2 か所になる。承認・共有・納品・組織管理の `acr=mfa` は Keycloak の TOTP で満たし、Clerk で済ませた 2 要素は Keycloak に伝わらない見込み。Keycloak の運用も残る。
+- 実測の前に決めなければならないときは (a)+道 B にする。戻しが軽く、実測の結果に左右されないため。
+- 実測で特に効くのは次の 4 つ。
+  - `fva` で承認者の段階認証を満たせるか（(b2) の条件。測り方は xesm-deploy の表に足してもらう）
+  - U1: Clerk の ID トークンに `acr`・`amr` を載せられるか
+  - U3: サインアウトや利用者の停止が伝わるか
+  - U10: 共有の Cookie と `cor_svc` が XESM のホストに届くか
 - Clerk を OIDC の IdP として XESM に直接つなぐ案（b1）は採らない。理由は Clerk の文書に次の記載が無いこと [8]。
   - ID トークンの `acr`・`amr`
   - ログアウト（end_session）
   - `/.well-known/openid-configuration`
 - さらに、XESM が今求めるスコープには `offline_access` が無い。このまま直結すると、2 要素で守る操作が通らず、60 秒ごとの確認でセッションが切れる（xesm-deploy の調査）。
-- Clerk の SDK に作り替える案（b2）は最終の形の候補だが、作業は一番大きい。
-- (a) から (b2) へ移るかは、Clerk の実際のインスタンスでの実測 U1〜U7 で決める（「決めること」9）。U1〜U7 は、寺田が Clerk の画面でアプリケーションを作った直後に行う。特に効くのは次の 2 つ。
-  - U1: `acr`・`amr` を載せられるか
-  - U3: サインアウトや利用者の停止が伝わるか
+- Keycloak の mapper で権利を XESM まで運ぶ案も採らない。Clerk の ID トークンに組織の metadata は載らないので、利用者の metadata への写し直しが要り、書き込みが二重になる。反映も再ログインまで（最長 10 時間）遅れる（xesm-deploy の調査）。
 - XESM の権利は、`caps()` と `require_cap` に組織の権利を掛ける形にする（R6）。テナントを作る受け口（R7）は新しく要る。今の XESM の Tenant は、人手のスクリプトでしか作れない。
 
 ### 6. 入口と画面
@@ -131,9 +143,10 @@ Clerk の組織の public_metadata.services（写し）
 | 段階 | 中身 | 誰が | Yes の関門 |
 |---|---|---|---|
 | 0 | この ADR の「決めること」に答え、Accepted にする | 寺田 | この ADR の PR の merge |
-| 1 | 基盤: Clerk のアプリケーションと開発のインスタンス（寺田の画面の作業）。その直後に U1〜U7 の実測。`subscribe.sh` から Clerk への書き込み（`clerk-sync`・`hold`）、試験ベクトル、検証の見本。最後に本番のインスタンス | 寺田（画面と鍵）、xesm-deploy（U1〜U7）、contract-billing | PR ごとの merge、画面の作業ごとの確認 |
+| 1 | 基盤: Clerk のアプリケーションと開発のインスタンス（寺田の画面の作業）。その直後に U1〜U11 の実測と、XESM の載せ方の決定。`subscribe.sh` から Clerk への書き込み（`clerk-sync`・`hold`）と照合、試験ベクトル、検証の見本。最後に本番のインスタンス | 寺田（画面と鍵）、xesm-deploy（U1〜U11）、contract-billing | PR ごとの merge、画面の作業ごとの確認、XESM の載せ方の決定（寺田） |
 | 2 | bd を Clerk に載せ（道 A）、release して c01 に配置する。bd の 8 章（はじめの設定）は行わず、Clerk の組織への招待に置き換える。c01 にローカルのデータは無い（2026-11-09 に消去済み） | bd-deploy | PR ごとの merge、配置、Access の変更（寺田） |
-| 3 | XESM を案 (a) で Clerk に載せる（道 B）。Keycloak の IdP の設定、権利の表と webhook の受け口、テナントを作る受け口 | xesm-deploy | 同上 |
+| 3（(b2) のとき） | XESM の認証を Clerk の SDK とセッショントークンに作り替える（道 A）。`OidcIdentity` を先に 1 対多にし、利用者の (`iss`, `sub`) を付け替える。承認者の段階認証は `fva` で満たす。テナントを作る受け口、判定の一点への権利の掛け方、試験と CI の作り替え | xesm-deploy | 同上 |
+| 3（(a)+道 B のとき） | Keycloak に Clerk を上流の IdP として足す。権利の表（例: `TenantEntitlement`）と道 B の受け口、テナントを作る受け口、判定の一点への権利の掛け方。2 要素の確認は Keycloak の TOTP のまま | xesm-deploy（道 B の送り手が B2 なら contract-billing も） | 同上 |
 | 4 | 結合の試験（下の完了の条件） | contract-billing | — |
 | 5 | 請求書で課金中の既存の顧客 1 社を、カードの引き落としに移す。組織を作り、カードを保存してもらい、支払い方法を `card` に変える。発行済みの請求書は振込のまま | 寺田（顧客への案内も寺田） | 顧客の同意と寺田の Yes |
 
@@ -141,8 +154,9 @@ Clerk の組織の public_metadata.services（写し）
 
 ## 完了の条件（反証できる形）
 
-- 同じ組織の id と同じ `services` の値を、bd には道 A（試験用の鍵で署名したトークン）で、XESM には道 B（試験用の鍵で署名した webhook）で渡す。両方の試験が、共通の試験ベクトルの全件で同じ結果（開ける・閉じる・止める）を出す。どちらか一方の判定だけを変えると落ちる。
-- 結合の試験では、試験用の組織の `services` を 1 回書き換え、bd のトークンと XESM の webhook の両方に流す。開ける・閉じるが 2 つで一致する。
+- 共通の試験ベクトルは、R5 の判定への入力（`services` の値と日付）と、期待する結果（開ける・閉じる・止める）の組の一覧。bd と XESM の両方の試験が、全件で期待どおりの結果を出す。どちらか一方の判定だけを変えると落ちる。
+- 結合の試験では、試験用の組織の `services` を 1 回書き換え、各サービスがそれぞれの道で受け取る。bd は試験用の鍵で署名したトークンで受け取る。XESM は (b2) なら同じトークン、(a)+道 B なら試験用の鍵で署名した通知で受け取る。R5 の判定への入力が同じになり、開ける・閉じるが 2 つで一致すること。
+- (a)+道 B では、同じトークンを 2 つのサービスに送る形の試験は成り立たない。XESM は Keycloak のトークンを検証するため。だから完了の条件を「R5 の判定への入力が同じ」で書いている（xesm-deploy の指摘）。
 
 ## 決めること（寺田）
 
@@ -153,8 +167,8 @@ Clerk の組織の public_metadata.services（写し）
 5. サービスが Clerk で認証するようになった後、Cloudflare Access を外すか、Access の IdP を Clerk にするか
 6. Clerk の 2 要素認証（Pro、月 $25）を使うか。XESM の案 (a) で 2 要素の確認が 2 か所になることを受け入れるか
 7. bd の要件 SEC-01 の書き換え（ローカル認証は開発用に残す）
-8. 道 B の通知の元を Clerk の webhook にするか（推奨）、Stripe の webhook にするか
-9. XESM を案 (a) のままにするか、U1〜U7 の結果を見て b2 へ移るか。移る時期も決める
+8. 道 B の通知の送り手を、B1 Clerk の webhook（この ADR の推奨）、B2 clerk-sync からの push（xesm-deploy の推奨）、B3 Stripe の webhook のどれにするか（2 節の表）
+9. XESM を (b2) にするか、(a)+道 B にするか。U1〜U11 の実測の後に決める。それまでの既定は (a)+道 B
 10. 組織のメンバーの追加を、どこで行うか（Clerk の組織への招待にそろえるか、各サービスの画面に残すか）
 
 ## 代替案
