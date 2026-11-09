@@ -21,6 +21,60 @@ stdin_text="$(cat)"
   esac
 } >>"$FAKE_LOG"
 
+# Clerk（api.clerk.com）の呼出しは、ここで応答して終わる。Stripe の応答の形とは別（本文 + 改行 + HTTP 状態）。
+case " $* " in
+  *" https://api.clerk.com/v1/"*)
+    clerk_path=""
+    clerk_method="GET"
+    prev=""
+    for a in "$@"; do
+      if [ "$prev" = "-X" ]; then clerk_method="$a"; fi
+      case "$a" in https://api.clerk.com/v1/*) clerk_path="${a#https://api.clerk.com/v1}" ;; esac
+      prev="$a"
+    done
+    printf 'CALL %s %s\n' "$clerk_method" "$clerk_path" >>"$FAKE_LOG"
+    # 本文（curl の設定の data = "..."）を戻す
+    raw="$(printf '%s\n' "$stdin_text" | sed -n 's/^data = "\(.*\)"$/\1/p' | tail -1)"
+    raw="$(printf '%s' "$raw" | sed -e 's/\\\\/\\/g' -e 's/\\"/"/g')"
+    [ -z "$raw" ] || printf 'CLERK_BODY %s\n' "$raw" >>"$FAKE_LOG"
+    state_file="$FAKE_LOG.clerk"
+    if [ -f "$state_file" ]; then
+      state="$(cat "$state_file")"
+    elif [ -n "${FAKE_CLERK_META:-}" ]; then
+      state="$FAKE_CLERK_META"
+    else
+      state='{}'
+    fi
+    if [ "${FAKE_CLERK_STATUS:-200}" != "200" ]; then
+      printf '{"error":{"message":"fake-curl: clerk failure"}}\n\n%s' "$FAKE_CLERK_STATUS"
+      exit 0
+    fi
+    if [ "${FAKE_CLERK_ECHO:-}" = "wrong" ]; then
+      # 送った値を反映しない（Clerk が別の値を返したときの形）。どの状態から始めても一致しないようにする。
+      printf '{"id":"%s","object":"organization","public_metadata":{"services":{"business-dossier":{"from":"2020-01-01","until":null,"hold":false}}}}\n\n200' "${clerk_path#/organizations/}" | sed 's|/metadata.*||'
+      exit 0
+    fi
+    if [ -z "$raw" ]; then
+      incoming='{}'
+    else
+      incoming="$(jq -c '.public_metadata // {}' <<<"$raw")"
+    fi
+    merged="$(jq -c --argjson inc "$incoming" '
+      def deepmerge($a; $b):
+        if ($b | type) == "object" then
+          (if ($a | type) == "object" then $a else {} end) as $base
+          | reduce ($b | keys_unsorted[]) as $k ($base;
+              if $b[$k] == null then del(.[$k]) else .[$k] = deepmerge(.[$k]; $b[$k]) end)
+        else $b end;
+      deepmerge(.; $inc)' <<<"$state")"
+    printf '%s' "$merged" >"$state_file"
+    org="${clerk_path#/organizations/}"
+    org="${org%%/*}"
+    printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$org" "$merged"
+    exit 0
+    ;;
+esac
+
 method="GET"
 url=""
 lookup=""
