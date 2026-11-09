@@ -21,6 +21,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
+# shellcheck disable=SC1091 # lib.sh は同じディレクトリにあり、-x 無しで走らせても中身は要らない（source= の指示だけでは SC1091 は消えない）
 . "$SCRIPT_DIR/lib.sh"
 PLANS="$SCRIPT_DIR/plans.json"
 DO_APPLY=0
@@ -78,6 +79,7 @@ def isint: type == "number" and . == floor;
 '
 
 # plans.json の検査。誤りを 1 行ずつ出す（観測値つき）。
+# shellcheck disable=SC2016 # jq のプログラム。$ は jq の変数で、シェルが展開しないのが正しい
 readonly JQ_VALIDATE='
 . as $r
 | ($r.limits // {}) as $l
@@ -159,6 +161,7 @@ readonly JQ_SUMMARY='
 "CHECK ok: plans.json の検査（products \(.products | length)、prices \(.prices | length)（有効 \([.prices[] | select(.enabled)] | length)、枠 \([.prices[] | select(.enabled | not)] | length)）、tax_rate 1）"
 '
 
+# shellcheck disable=SC2016 # jq のプログラム。$ は jq の変数で、シェルが展開しないのが正しい
 readonly JQ_PLAN='
 . as $r | $r.tax_rate as $t
 | "PLAN tax_rate \($t.id): 「\($t.display_name)」\($t.percentage)% 税別（inclusive=false）country=\($t.country) jurisdiction=\($t.jurisdiction) tax_type=\($t.tax_type) → GET /v1/tax_rates で metadata.plan_key を探し、無ければ POST /v1/tax_rates",
@@ -202,7 +205,7 @@ ensure_tax_rate() {
       (if $o.country != $w.country then "country 期待 \($w.country) 観測 \($o.country)" else empty end),
       (if $o.tax_type != $w.tax_type then "tax_type 期待 \($w.tax_type) 観測 \($o.tax_type)" else empty end)
       ] | join("; ")' <<<"$matches")"
-    [ -z "$diff" ] || die 3 "既存の税率 $(jq -r '.[0].id' <<<"$matches") が plans.json と違う: $diff（率と国は作成後に変えられない。作り直すかは寺田判断）"
+    [ -z "$diff" ] || die 3 "既存の税率 $(jq -r '.[0].id' <<<"$matches") が plans.json と違う: ${diff}（率と国は作成後に変えられない。作り直すかは寺田判断）"
     printf 'OK tax_rate %s: 既存 %s と一致\n' "$key" "$(jq -r '.[0].id' <<<"$matches")"
     return 0
   fi
@@ -243,7 +246,7 @@ ensure_product() {
     (if .metadata.service != $w.service then "metadata.service 期待 \($w.service) 観測 \(.metadata.service)" else empty end),
     (if .metadata.kind != $w.kind then "metadata.kind 期待 \($w.kind) 観測 \(.metadata.kind)" else empty end)
     ] | join("; ")' <<<"$RESP_BODY")"
-  [ -z "$diff" ] || die 3 "既存の商品 $id が plans.json と違う: $diff（上書きしない。直すかは寺田判断）"
+  [ -z "$diff" ] || die 3 "既存の商品 $id が plans.json と違う: ${diff}（上書きしない。直すかは寺田判断）"
   printf 'OK product %s: 既存と一致\n' "$id"
 }
 
@@ -262,7 +265,7 @@ ensure_price() {
       (if $o.tax_behavior != $w.tax_behavior then "tax_behavior 期待 \($w.tax_behavior) 観測 \($o.tax_behavior)" else empty end),
       (if (($o.product | if type == "object" then .id else . end)) != $w.product then "product 期待 \($w.product) 観測 \($o.product)" else empty end)
       ] | join("; ")' <<<"$RESP_BODY")"
-    [ -z "$diff" ] || die 3 "既存の価格 $lk（$(jq -r '.data[0].id' <<<"$RESP_BODY")）が plans.json と違う: $diff（金額は作成後に変えられないので上書きしない。新しい lookup_key で作るかは寺田判断）"
+    [ -z "$diff" ] || die 3 "既存の価格 ${lk}（$(jq -r '.data[0].id' <<<"$RESP_BODY")）が plans.json と違う: ${diff}（金額は作成後に変えられないので上書きしない。新しい lookup_key で作るかは寺田判断）"
     printf 'OK price %s: 既存 %s と一致\n' "$lk" "$(jq -r '.data[0].id' <<<"$RESP_BODY")"
     return 0
   fi
