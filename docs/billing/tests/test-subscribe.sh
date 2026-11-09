@@ -583,14 +583,24 @@ expect "hold の dry-run は書く値を出す" 0 0 "contract_xesm_hold]=true"
 rm -f "$WORK/log.clerk"
 FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
 expect "hold は metadata に印を書き、Clerk に写す" 0 1 "HOLD cus_x xesm: metadata に印を書いた"
-eq "hold は Customer の更新 → Clerk の PATCH の順に呼ぶ" "$(post_seq)" "/v1/customers/cus_x"
+eq "hold は Customer の更新 → Clerk の PATCH の順に呼ぶ" "$(printf '%s\n' "$LOG" | grep -E '^CALL (POST /v1/customers|PATCH /organizations)' | paste -sd' ' -)" "CALL POST /v1/customers/cus_x CALL PATCH /organizations/org_x/metadata"
 check_arg "hold は contract_xesm_hold=true を送る" "metadata[contract_xesm_hold]=true"
 eq "hold は Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
 printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":true' && ok "Clerk の services に hold=true を写す" || ng "Clerk の本文に hold=true が無い: $LOG"
 eq "Clerk の state の hold が true" "$(clerk_state | jq -r '.services.xesm.hold')" "true"
-FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
-expect "既に hold なら書かない" 0 0 "既に hold（書かない"
-eq "既に hold なら Customer も Clerk も呼ばない（顧客の読取だけ）" "$(posts)" "0"
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "既に hold なら書かない" 0 0 "既に hold（Stripe も Clerk も。書かない）"
+eq "既に hold なら Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+# 片側だけ書けた状態（Stripe は hold、Clerk は未反映）からのやり直しは、Clerk だけ直す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "Stripe だけ hold のときは Clerk だけ直す" 0 0 "Stripe の metadata は既に hold。Clerk だけ直す"
+eq "片側だけのときは Stripe に書かない" "$(posts)" "0"
+eq "片側だけのときは Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+eq "直したあとの Clerk の hold が true" "$(clerk_state | jq -r '.services.xesm.hold')" "true"
 FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service business-dossier --apply --mode test
 expect "契約の無いサービスは hold にしない" 3 0 "の契約が無い"
 FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
@@ -599,11 +609,13 @@ eq "clerk_org_id が無ければ何も書かない" "$(posts)" "0"
 CKEY="" FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
 expect "Clerk の鍵が無ければ hold にしない（片方だけ書かない）" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ Stripe にも書かない" "$(posts)" "0"
+rm -f "$WORK/log.clerk"
 SCN=live FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode live
 expect "本番の hold は live と打たなければ書かない" 64 0 "本番は端末から実行する"
 printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata":{"services":' && ok "確認より前に、送る本文を出す" || ng "確認より前に本文が出ない: $OUT"
 printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":true}' && ok "確認より前に、hold=true の本文を出す" || ng "本文の hold が違う: $OUT"
 eq "確認で止まったので Stripe にも書いていない" "$(posts)" "0"
+eq "確認で止まったので Clerk にも送っていない" "$(clerk_patches)" "0"
 # hold を外す: 印を消し、Clerk の hold を false にする
 rm -f "$WORK/log.clerk"
 FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
@@ -614,9 +626,18 @@ eq "unhold は Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
 printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":false' && ok "Clerk の services の hold を false にする" || ng "Clerk の本文に hold=false が無い: $LOG"
 eq "Clerk の state の hold が false" "$(clerk_state | jq -r '.services.xesm.hold')" "false"
 printf '%s' "$OUT" | grep -qF 'hold=true' && ng "unhold の出力に hold=true が残った" || ok "unhold の出力に hold=true が残らない"
+rm -f "$WORK/log.clerk"
 FAKE_CUST_META="$HOLD_META" run unhold --customer cus_x --service xesm --apply --mode test
-expect "hold の付いていないサービスは unhold で書かない" 0 0 "hold は付いていない（書かない"
-eq "hold の付いていないサービスの unhold は何も書かない" "$(posts)" "0"
+expect "hold の付いていないサービスは unhold で書かない" 0 0 "既に hold なし（Stripe も Clerk も。書かない）"
+eq "hold の付いていないサービスの unhold は何も書かない" "$(posts)$(clerk_patches)" "00"
+# 逆の片側（Stripe に印が無く、Clerk に hold が残っている）も、Clerk だけ直す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$HOLD_META" run unhold --customer cus_x --service xesm --apply --mode test
+expect "Clerk だけ hold が残っているときは Clerk だけ直す" 0 0 "Stripe の metadata は既に hold なし。Clerk だけ直す"
+eq "逆の片側でも Stripe に書かない" "$(posts)" "0"
+eq "逆の片側では Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+eq "直したあとの Clerk の hold が false" "$(clerk_state | jq -r '.services.xesm.hold')" "false"
 run unhold --customer cus_x --service xesm
 expect "unhold の dry-run は書く値を出す" 0 0 "contract_xesm_hold] を消し"
 [ -z "$LOG" ] && ok "unhold の dry-run は curl を呼ばない" || ng "unhold の dry-run が curl を呼んだ"
@@ -682,8 +703,45 @@ eq "clerk_org_id を持つ顧客にだけ送る" "$(clerk_patches)" "1"
 CKEY="" FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode test
 expect "Clerk の鍵が無ければ resync は書かない" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ 1 件も書かない" "$(posts)" "0"
-SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode live
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
 expect "本番の resync は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata"' && ok "確認より前に、送る本文を出す（下見）" || ng "確認より前に本文が出ない: $OUT"
+printf '%s' "$OUT" | grep -qF 'RESYNC これから' && ok "確認より前に、何件に書くかを出す" || ng "件数の行が無い: $OUT"
+eq "確認で止まったので Stripe にも Clerk にも書いていない" "$(posts)$(clerk_patches)" "00"
+run resync --customer cus_x
+# 判定できない open の請求書があるときは、その顧客の hold を変えない（外さない）
+rm -f "$WORK/log.customers"
+UNJUDGE="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, no_service: true}, {id: "in_a2", due_date: $d20, service: "xesm"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNJUDGE" run resync --apply --mode test
+expect "明細にサービスが無い請求書があれば、その顧客の hold を変えない" 0 - "この顧客の hold は変えない"
+eq "判定できない顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+# 期限の無い open の請求書も判定できない（hold を外さない）
+rm -f "$WORK/log.customers"
+NODUE="$(jq -c -n '{cus_a: [{id: "in_a1", due_date: 0, service: "xesm"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$NODUE" run resync --apply --mode test
+expect "期限の無い open の請求書があれば、その顧客の hold を変えない" 0 - "この顧客の hold は変えない"
+eq "期限の無い請求書の顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+# paid の請求書は open の一覧に来ない（期限を過ぎていても hold にしない）
+rm -f "$WORK/log.customers"
+PAID="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, service: "xesm", status: "paid"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$PAID" run resync --apply --mode test
+expect "支払い済みの請求書は hold に使わない" 0 - "RESYNC 完了"
+eq "支払い済みの顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+check_arg "請求書の一覧は status=open で取る" "status=open"
+# 明細が 100 件を超える請求書は、明細もページを送る
+rm -f "$WORK/log.customers"
+MANY="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, lines_count: 150}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$MANY" run resync --apply --mode test
+expect "明細が 100 件を超えても判定できる" 0 - "RESYNC 完了"
+eq "明細は 2 ページ読む" "$(count "$LOG" '^CALL GET /v1/invoices/in_a1/lines')" "2"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "101 件目以降の明細からも hold を決める" || ng "明細の 2 ページ目を見ていない: $LOG"
+# 明細の読取が失敗したら止まる（黙って hold を外さない）
+rm -f "$WORK/log.customers"
+FAILINV="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, lines_status: 500}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$FAILINV" run resync --apply --mode test
+expect "明細の読取が失敗したら止まる" 4 - "API エラー"
+eq "明細が読めなければ 1 件も書かない" "$(posts)" "0"
 run resync --customer cus_x
 expect "resync に --customer は使わない" 64 0 "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold set-payment でだけ使う"
 run resync --apply
