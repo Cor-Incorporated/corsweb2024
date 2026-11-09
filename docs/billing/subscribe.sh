@@ -16,6 +16,7 @@
 #   mark-paid  --customer <cus_…> --month YYYY-MM --paid-on <入金日 YYYY-MM-DD>
 #   simulate   --start YYYY-MM-DD --devfee-count <回数> [--end YYYY-MM-DD] [--billing-from YYYY-MM] --months <月数> [--service <サービス>]
 #   status     --customer <cus_…>
+#   clerk-sync --customer <cus_…>
 #
 # customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
 # contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く。
@@ -28,6 +29,9 @@
 # mark-paid  振込の顧客の、その月の open の請求書を「Stripe の外で支払い済み」にする（paid_out_of_band。引き落とさない）
 # simulate   通信せずに、月ごとの明細と合計を出す
 # status     契約の metadata、今月と先月の請求書、保存したカード（読むだけ）
+# clerk-sync 契約の metadata から services を作り、Clerk の組織（clerk_org_id）の public_metadata.services に送る。
+#            Clerk の更新は deep merge なので、契約の無くなったサービスは null にして消す（ADR-0028 の 2 節）。
+#            既定は dry-run（顧客を読んで、送る JSON を出すだけ。Clerk の鍵は読まない）。書くのは --apply のとき
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の不合格 / 3 = 既存と食い違い・前提が足りない・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方・入力の誤り
@@ -71,7 +75,7 @@ CS_STATUS=""
 CS_URL=""
 
 usage() {
-  sed -n '8,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
 例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
@@ -107,7 +111,7 @@ parse_args() {
   CMD="$1"
   shift
   case "$CMD" in
-    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status) ;;
+    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync) ;;
     -h | --help) usage; exit 0 ;;
     *) usage >&2; die 64 "知らないサブコマンド: $CMD" ;;
   esac
@@ -248,7 +252,7 @@ validate_command() {
     contract)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --start "$OPT_START"; need --devfee-count "$OPT_DEVFEE"
       check_service; check_date --start "$OPT_START"; check_devfee_count; check_bill_from ;;
-    card-setup | status) need --customer "$OPT_CUSTOMER" ;;
+    card-setup | status | clerk-sync) need --customer "$OPT_CUSTOMER" ;;
     cancel)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
       check_service; check_accepted ;;
@@ -267,7 +271,7 @@ validate_inputs() {
   scope --email "$OPT_EMAIL" "customer"
   scope --clerk-org "$OPT_CLERK" "customer"
   scope --payment "$OPT_PAYMENT" "customer"
-  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status"
+  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status clerk-sync"
   scope --service "$OPT_SERVICE" "contract cancel simulate"
   scope --start "$OPT_START" "contract simulate"
   scope --devfee-count "$OPT_DEVFEE" "contract simulate"
@@ -290,6 +294,7 @@ validate_inputs() {
   fi
   case "$CMD" in
     find | status) [ -n "$MODE" ] || die 64 "$CMD は読むだけ。--mode test か --mode live が要る（--apply は要らない）" ;;
+    clerk-sync) [ -n "$MODE" ] || die 64 "clerk-sync は送る JSON を作るために顧客を読む。--mode test か --mode live が要る（書くのは --apply のとき）" ;;
   esac
 }
 
@@ -312,6 +317,7 @@ print_plan() {
     charge) printf 'PLAN charge: %s の %s 分の open の請求書を、保存したカードで払う（POST /v1/invoices/{id}/pay。支払期限 %s）。カードの顧客（metadata.payment=card）だけ\n' \
       "$OPT_CUSTOMER" "$OPT_MONTH" "$DUE_DATE" ;;
     status) printf 'PLAN status: %s の契約の metadata、今月と先月の請求書、保存したカードを読む（読むだけ）\n' "$OPT_CUSTOMER" ;;
+    clerk-sync) printf 'PLAN clerk-sync: %s の clerk_org_id の組織に、契約の metadata から作った services を PATCH で送る（deep merge。契約の無いサービスは null で消す）。dry-run は顧客を読むだけで、Clerk の鍵は読まない\n' "$OPT_CUSTOMER" ;;
   esac
 }
 
@@ -735,6 +741,118 @@ do_cancel() {
   printf 'NOTE 終了日を過ぎたら入口を閉じる（runbook D3）\n'
 }
 
+# --- Clerk の組織の metadata（services の写し。ADR-0028 の 2 節） ---
+
+# Customer の metadata から、Clerk の組織の public_metadata.services に送る JSON を作る。
+# 契約の無いサービスは null（Clerk の更新は deep merge なので、null でその項目が消える）。
+clerk_services_json() {
+  local names
+  names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
+  jq -cn --argjson names "$names" --argjson m "$(jq -c '.metadata // {}' <<<"$CUST_JSON")" '
+    # 空の値は key が無いのと同じに扱う（空の from を送ると、判定する側が止まる）
+    def v($k): $m[$k] | if . == null or . == "" then null else . end;
+    reduce $names[] as $s ({};
+      (v("contract_\($s)_start")) as $start
+      | if $start == null then . + {($s): null}
+        else . + {($s): {from: $start, until: (v("contract_\($s)_end")), hold: ($m["contract_\($s)_hold"] == "true")}}
+        end)'
+}
+
+# Clerk に送る前に、契約の metadata の形を確かめる（形の違う値を送ると、サービスがトークンを拒否する）。
+check_clerk_rows() {
+  local s start end hold
+  while IFS= read -r s; do
+    start="$(cust_meta "contract_${s}_start")"
+    end="$(cust_meta "contract_${s}_end")"
+    hold="$(cust_meta "contract_${s}_hold")"
+    if [ -z "$start" ]; then
+      # key が無ければ契約なし。key があって値が空なら形が違う（黙って契約なしにしない）
+      if jq -e --arg k "contract_${s}_start" '.metadata | has($k)' <<<"$CUST_JSON" >/dev/null; then
+        die 3 "contract_${s}_start が空（形が違う）。Clerk に送らない"
+      fi
+      continue
+    fi
+    valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: $start）。Clerk に送らない"
+    [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: $end）。Clerk に送らない"
+    case "$hold" in "" | true | false) ;; *) die 3 "contract_${s}_hold が true か false でも空でもない（観測: $hold）。Clerk に送らない" ;; esac
+  done < <(plans_services)
+}
+
+print_clerk_rows() {
+  jq -r 'to_entries[] | if .value == null then "PLAN services.\(.key) = null（契約が無い。Clerk から消す）" else "PLAN services.\(.key) from=\(.value.from) until=\(.value.until // "null") hold=\(.value.hold)" end' <<<"$1"
+}
+
+# 組織の public_metadata.services を、顧客の契約から作った services で置き換える（deep merge。null のサービスは消える）。
+# 応答の services を送った値と比べ、違えば止まる（書いたあとは戻せないので、観測値を出して寺田に渡す）。
+# 送る本文を作る（読むだけ。GET で今の metadata を読み、plans.json に無いサービスも null で消す）。
+# NOTE と JSON をここで出す（本番の確認より前に、消えるキーまで見せる）。本文は CLERK_BODY_JSON に入れる。
+clerk_build_payload() {
+  local org="$1" extra="${2:-}" names stale
+  clerk_api GET "/organizations/$org"
+  require_ok "Clerk の metadata の読取 GET /organizations/$org"
+  names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
+  stale="$(jq -c --argjson names "$names" '[(.public_metadata.services // {}) | keys[] | select(. as $k | $names | index($k) | not)]' <<<"$RESP_BODY")"
+  CLERK_SERVICES="$(clerk_services_json | jq -c --argjson stale "$stale" '. + ($stale | map({key: ., value: null}) | from_entries)')"
+  if [ "$(jq 'length' <<<"$stale")" -gt 0 ]; then
+    printf 'NOTE plans.json に無いサービスを Clerk から消す: %s\n' "$(jq -r 'join(", ")' <<<"$stale")"
+  fi
+  if [ -n "$extra" ]; then
+    CLERK_BODY_JSON="$(jq -cn --argjson s "$CLERK_SERVICES" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
+  else
+    CLERK_BODY_JSON="$(jq -cn --argjson s "$CLERK_SERVICES" '{public_metadata: {services: $s}}')"
+  fi
+  printf 'JSON %s\n' "$CLERK_BODY_JSON"
+  if jq -e '[to_entries[] | select(.value != null and (.value.until // null) == null)] | length > 0' <<<"$CLERK_SERVICES" >/dev/null; then
+    printf 'NOTE until の null は Clerk の deep merge でキーを消す（残る形は from と hold。until が無い = 終了日なし）\n'
+  fi
+}
+
+# clerk_build_payload が作った本文を送り、応答を送ったキーだけについて照合する。
+clerk_send_payload() {
+  local org="$1" key
+  clerk_api PATCH "/organizations/$org/metadata" "$CLERK_BODY_JSON"
+  require_ok "Clerk の metadata の更新 PATCH /organizations/$org/metadata"
+  jq -e --argjson want "$CLERK_SERVICES" '
+    def canon: {from: .from, until: (.until // null), hold: (.hold // false)};
+    (.public_metadata.services // {}) as $got
+    | [ $want | to_entries[] as $e
+        | if $e.value == null then ($got[$e.key] == null)
+          elif ($got[$e.key] | type) != "object" then false
+          else (($got[$e.key] | canon) == ($e.value | canon))
+          end ]
+    | all' <<<"$RESP_BODY" >/dev/null \
+    || die 3 "Clerk の応答の services が送った値と違う（観測: $(jq -c '.public_metadata.services // {}' <<<"$RESP_BODY")）。送ったあとなので戻せない。clerk-sync の dry-run か Clerk の画面で確かめる"
+  key="$(jq -r --argjson want "$CLERK_SERVICES" '(.public_metadata.services // {}) as $got | [$want | keys[] | select(($want[.] != null) and ($got[.] == null))] | join(", ")' <<<"$RESP_BODY")"
+  [ -z "$key" ] || die 3 "Clerk の応答に、送ったはずのサービスが無い（観測: $key）。送ったあとなので戻せない"
+  printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$CLERK_SERVICES")"
+}
+
+# 呼ぶ側（hold・unhold・resync）は、clerk_build_payload（読むだけ・NOTE と JSON を出す）→
+# confirm_live（本番の確認）→ clerk_send_payload（送る）の順に書く。build と send をまとめた
+# 便利な関数は置かない（確認より後に消えるキーが出る形を作らないため）。
+
+do_clerk_sync() {
+  local org services
+  load_customer
+  org="$(cust_meta clerk_org_id)"
+  [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に送らない"
+  [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。Clerk に送らない"
+  check_clerk_rows
+  services="$(clerk_services_json)"
+  print_clerk_rows "$services"
+  if [ "$DO_APPLY" -eq 0 ]; then
+    printf 'JSON %s\n' "$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+    printf 'PLAN clerk-sync: PATCH %s/organizations/%s/metadata に上の JSON を送る（deep merge。null のサービスは消える）。送る前に今の metadata を読み、plans.json に無いサービスも null で消す\n' "$CLERK_API_BASE" "$org"
+    printf 'DONE dry-run: 顧客の metadata を読んだだけ。Clerk へは送っていない（Clerk の鍵も読まない）。実行は --apply --mode test|live（寺田）\n'
+    return 0
+  fi
+  # 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る。
+  read_clerk_key
+  clerk_build_payload "$org"
+  confirm_live
+  clerk_send_payload "$org"
+}
+
 do_status() {
   local s ym this
   load_customer
@@ -788,6 +906,7 @@ main() {
   print_plan
   case "$CMD" in
     find | status) ;;
+    clerk-sync) ;; # dry-run でも顧客を読む（読むだけ）。Clerk へ送るのは --apply のとき
     *)
       if [ "$DO_APPLY" -eq 0 ]; then
         printf 'DONE dry-run: 何もしていない。実行は --apply --mode test|live（寺田）\n'
@@ -800,7 +919,7 @@ main() {
   read_key
   check_mode
   # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
-  case "$CMD" in find | status | invoice | charge | mark-paid) ;; *) confirm_live ;; esac
+  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync) ;; *) confirm_live ;; esac
   "do_${CMD//-/_}"
 }
 

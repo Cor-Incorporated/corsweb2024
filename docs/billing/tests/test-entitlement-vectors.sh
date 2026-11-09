@@ -87,6 +87,11 @@ while IFS= read -r tag; do
 done <<<"$(jq -r '.vectors[].tags[]' "$VECTORS" | sort -u)"
 [ -z "$unused_tags" ] && ok "ベクトルのタグは required_tags にある（宣言に無いタグを作らない）" || ng "required_tags に無いタグがある: $unused_tags"
 
+# Clerk の metadata に残る形（until のキーが無い）を 1 件は覆っている
+eq "until のキーが無い行のベクトルがある（Clerk の deep merge で null がキーを消すため）" \
+  "$(jq -r '[.vectors[] | select(.services[.service] != null) | select(.services[.service] | has("until") | not)] | length' "$VECTORS")" \
+  "1"
+
 # 4 つの結果が全部出る（closed だけ、などの偏りを落とす）
 for v in open view_only read_export_only closed; do
   n="$(jq -r --arg v "$v" '[.vectors[] | select(.expect == $v)] | length' "$VECTORS")"

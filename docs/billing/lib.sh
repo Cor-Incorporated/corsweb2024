@@ -14,17 +14,23 @@
 #   鍵の接頭辞では見分けない（形式を決め打ちしない）。
 # 冪等: POST は Idempotency-Key 付き。Stripe が前回の結果を返したとき（Idempotent-Replayed: true）は、
 #   check_replay で今の状態を読み直し、期待と違えば止まる（「作った」と誤って出さない）。
+#
+# Clerk の鍵（COR_CLERK_SECRET_KEY）も同じ扱い（表示しない・ファイルに書かない・curl の引数に載せない）。
+#   送る本文も curl の設定（標準入力）に載せるので、プロセス一覧に顧客の契約の値が出ない。
 
 readonly API_BASE="https://api.stripe.com"
+readonly CLERK_API_BASE="https://api.clerk.com/v1"
 # shellcheck disable=SC2034 # apply-plans.sh と subscribe.sh が使う
 readonly MANAGED_BY="corsweb/docs/billing/plans.json"
 MODE=""
 API_KEY=""
 API_VERSION=""
+CLERK_KEY=""
 RESP_BODY=""
 RESP_CODE=""
 RESP_REPLAYED=""
 export -n COR_BILLING_API_KEY
+export -n COR_CLERK_SECRET_KEY
 
 die() {
   local code="$1"
@@ -145,6 +151,40 @@ read_key() {
   fi
   unset COR_BILLING_API_KEY
   [ -n "$API_KEY" ] || die 64 "鍵が空"
+}
+
+# Clerk の鍵を読む（表示しない・ファイルに書かない・子プロセスへ継承させない）
+read_clerk_key() {
+  if [ -n "${COR_CLERK_SECRET_KEY:-}" ]; then
+    CLERK_KEY="$COR_CLERK_SECRET_KEY"
+  else
+    [ -t 0 ] || die 64 "Clerk の鍵が無い: COR_CLERK_SECRET_KEY を設定するか、端末から実行する（表示しない入力で受ける）"
+    printf '%s モードの Clerk の鍵を貼り付けて Enter（画面には出ない）: ' "$MODE" >/dev/tty
+    IFS= read -rs CLERK_KEY
+    printf '\n' >/dev/tty
+  fi
+  unset COR_CLERK_SECRET_KEY
+  [ -n "$CLERK_KEY" ] || die 64 "Clerk の鍵が空"
+}
+
+# Clerk の Backend API を呼ぶ。鍵と本文は curl の設定（標準入力）で渡すので、引数にもプロセス一覧にも出ない。
+# clerk_api METHOD PATH [JSON の本文] → RESP_CODE・RESP_BODY に入れる。
+clerk_api() {
+  local method="$1" path="$2" body="${3:-}" escaped cfg payload out
+  escaped="${CLERK_KEY//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  cfg="$(printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"' "$escaped")"
+  if [ -n "$body" ]; then
+    payload="$(printf '%s' "$body" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+    # 行を分ける（$( ) は末尾の改行を落とすので、$'\n' で足す）
+    cfg="$cfg"$'\n'"$(printf 'data = "%s"' "$payload")"
+  fi
+  out="$(printf '%s' "$cfg" | curl -q -sS -X "$method" --max-time 30 -K - --write-out '\n%{http_code}' "$CLERK_API_BASE$path")" \
+    || die 4 "Clerk の API に届かなかった（$method $path）。PATCH なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、clerk-sync の dry-run か Clerk の画面で今の metadata を確かめる"
+  RESP_CODE="${out##*$'\n'}"
+  RESP_BODY="${out%$'\n'*}"
+  RESP_BODY="${RESP_BODY%$'\r'}"
+  RESP_REPLAYED=""
 }
 
 check_mode() {

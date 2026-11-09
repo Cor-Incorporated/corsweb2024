@@ -24,6 +24,7 @@ jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", fir
 cp "$HERE/fake-curl.sh" "$WORK/bin/curl"
 chmod +x "$WORK/bin/curl"
 DUMMY_KEY="dummy-key-for-leak-check-7f3a9c"
+CLERK_KEY_DUMMY="sk_test_dummy_for_leak_check_9c2f"
 PASS=0
 FAIL=0
 
@@ -37,7 +38,9 @@ run() {
   rm -f "$WORK/log.items"
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
-    COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" bash "$BILLING/subscribe.sh" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
+    COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" COR_CLERK_SECRET_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
+    FAKE_STRIPE_KEY="$DUMMY_KEY" FAKE_CLERK_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
+    bash "$BILLING/subscribe.sh" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
   RC=$?
   set -e
   LOG="$(cat "$WORK/log")"
@@ -491,6 +494,86 @@ FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$TWO_AGO" run mar
 expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: ${TWO_AGO}（in_older）"
 FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$THIS" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
 expect "後の月の open の請求書は止める理由にならない" 0 1 "MARKED_PAID in_open $LAST"
+
+# 18. clerk-sync: 契約の metadata から services を作り、Clerk の組織の public_metadata.services に送る
+CLERK_META="$(jq -c '. + {clerk_org_id: "org_x"}' <<<"$(meta card "$LAST-15" 12)")"
+clerk_calls() { count "$LOG" '^CALL .*/organizations/'; }
+clerk_patches() { count "$LOG" '^CALL PATCH /organizations/'; }
+clerk_state() { if [ -f "$WORK/log.clerk" ]; then cat "$WORK/log.clerk"; else printf '{}'; fi; }
+
+FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
+expect "clerk-sync の dry-run は送る services を出す" 0 0 'PLAN services.xesm from='
+eq "clerk-sync の dry-run は Clerk を呼ばない（顧客を読むだけ）" "$(clerk_calls)" "0"
+printf '%s' "$OUT" | grep -qF '"business-dossier":null' && ok "契約の無いサービスは null（Clerk から消す）" || ng "null のサービスが無い: $OUT"
+printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":false}' && ok "契約のサービスは from・until・hold の 3 つを出す" || ng "xesm の形が違う: $OUT"
+printf '%s' "$OUT" | grep -qF 'DONE dry-run' && ok "clerk-sync の dry-run は書かないと出す" || ng "DONE dry-run が無い"
+printf '%s' "$LOG" | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が curl の引数に載った" || ok "Clerk の鍵は curl の引数に載らない"
+CKEY="" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
+expect "clerk-sync の dry-run は Clerk の鍵が無くても通る（鍵を読まない）" 0 0 'DONE dry-run'
+FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "clerk-sync の apply は組織の metadata に送る" 0 0 'SENT clerk org_x: services を送った'
+eq "clerk-sync は PATCH を 1 回だけ呼ぶ（先に顧客を読む）" "$(clerk_patches)" "1"
+eq "clerk-sync は送る前に組織の metadata を読む（GET → PATCH）" "$(count "$LOG" '^CALL GET /organizations/org_x$')" "1"
+eq "Clerk の呼出しは全部 Clerk の鍵で認証する" "$(count "$LOG" '^STDIN_KEY clerk')" "$(clerk_calls)"
+eq "Stripe の呼出しは全部 Stripe の鍵で認証する" "$(count "$LOG" '^STDIN_KEY stripe')" "$(($(count "$LOG" '^CALL ') - $(clerk_calls)))"
+printf '%s' "$OUT" | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が出力に出た" || ok "Clerk の鍵は出力に出ない"
+printf '%s\n' "$LOG" | grep -qF 'CLERK_BODY {"public_metadata":{"services":' && ok "送る本文は public_metadata.services の形" || ng "送る本文の形が違う: $LOG"
+printf '%s' "$LOG" | grep '^ARGV' | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が curl の引数に載った（apply）" || ok "apply でも Clerk の鍵は curl の引数に載らない"
+printf '%s' "$LOG" | grep -q '^STDIN_AUTH no' && ng "標準入力に鍵の無い呼出しがある" || ok "鍵は全部の呼出しで標準入力から渡る（Clerk も）"
+eq "Clerk の state に xesm が入った" "$(clerk_state | jq -r '.services.xesm.from')" "$LAST-15"
+printf '%s' "$OUT" | grep -qF 'until の null は Clerk の deep merge でキーを消す' && ok "until の null がキーを消すことを NOTE で出す" || ng "until の NOTE が無い: $OUT"
+eq "until の無い契約では until のキーが残らない（from と hold）" "$(clerk_state | jq -r '.services.xesm | has("until")')" "false"
+FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply --clerk-org org_y
+expect "--clerk-org は clerk-sync でだけ使わない（customer 用）" 64 0 "customer でだけ使う"
+FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "clerk_org_id の無い顧客は止まる" 3 0 "clerk_org_id が無い"
+eq "clerk_org_id が無ければ Clerk を呼ばない" "$(clerk_calls)" "0"
+FAKE_CUST_META="$(jq -c '. + {clerk_org_id: "org-bad!"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "clerk_org_id の形が違えば止まる" 3 0 "clerk_org_id の形が違う"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_start: "2026-02-30"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "実在しない開始日は Clerk に送らない" 3 0 "実在する日付ではない"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_start: ""}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "空の開始日は Clerk に送らない（黙って契約なしにしない）" 3 0 "contract_xesm_start が空"
+eq "空の開始日では Clerk を呼ばない" "$(clerk_calls)" "0"
+CKEY="" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "Clerk の鍵が無ければ書かない（端末も無い）" 64 0 "Clerk の鍵が無い"
+eq "Clerk の鍵が無ければ PATCH しない" "$(clerk_patches)" "0"
+SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+expect "本番の clerk-sync は live と打たなければ送らない" 64 0 "本番は端末から実行する"
+# 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+expect "本番の clerk-sync は live と打つ前に止まる" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'NOTE plans.json に無いサービスを Clerk から消す: stale-svc' && ok "確認より前に、消えるキーを出す" || ng "確認より前に消えるキーが出ない: $OUT"
+printf '%s' "$OUT" | grep -qF '"stale-svc":null' && ok "確認より前に、送る本文（null を含む）を出す" || ng "確認より前に本文が出ない: $OUT"
+eq "確認で止まったので Clerk へは送っていない" "$(clerk_patches)" "0"
+FAKE_CLERK_ECHO=wrong FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "Clerk の応答が送った値と違えば exit 3（戻せないことを伝える）" 3 0 "Clerk の応答の services が送った値と違う"
+FAKE_CLERK_STATUS=500 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "Clerk が 500 を返したら exit 4" 4 0 "API エラー"
+# plans.json に無いサービス（昔の名前）も null で消す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "plans.json に無いサービスは null で消す" 0 0 "plans.json に無いサービスを Clerk から消す: stale-svc"
+eq "消したあとの state に stale-svc が無い" "$(clerk_state | jq -r '.services | has("stale-svc")')" "false"
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"stale-svc":null' && ok "本文で stale-svc を null にする" || ng "stale-svc の null が本文に無い: $LOG"
+# deep merge: 契約の無くなったサービスは null で消える（Clerk の既存の metadata に business-dossier がある状態から始める）
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"business-dossier":{"from":"2026-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "既存の services に契約の無いサービスがあれば消す" 0 0 "business-dossier=null"
+eq "消したあとの state に business-dossier が無い" "$(clerk_state | jq -r '"\(has("services")):\(.services | has("business-dossier"))"')" "true:false"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "hold の印を Clerk に写す" 0 0 'hold=true'
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":true' && ok "hold=true を本文で送る" || ng "hold=true が本文に無い: $LOG"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "yes"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "hold の印が true でも false でも空でもなければ送らない" 3 0 "hold が true か false でも空でもない"
+run clerk-sync --customer cus_x
+expect "clerk-sync に --mode が無いと exit 64（顧客を読むため）" 64 0 "--mode test か --mode live が要る"
+run clerk-sync --customer cus_x --service xesm --mode test
+expect "--service は clerk-sync でだけ使わない" 64 0 "contract cancel simulate でだけ使う"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
