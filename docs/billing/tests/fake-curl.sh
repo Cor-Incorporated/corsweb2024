@@ -49,7 +49,7 @@ case " $* " in
     [ -z "$raw" ] || printf 'CLERK_BODY %s\n' "$raw" >>"$FAKE_LOG"
     state_file="$FAKE_LOG.clerk"
     if [ -f "$state_file" ]; then
-      state="$(cat "$state_file")"
+      state="$(jq -c --arg o "$clerk_org" '.[$o] // {}' "$state_file" 2>/dev/null || printf '{}')"
     elif [ -n "${FAKE_CLERK_META:-}" ]; then
       state="$FAKE_CLERK_META"
     else
@@ -82,7 +82,12 @@ case " $* " in
               if $b[$k] == null then del(.[$k]) else .[$k] = deepmerge(.[$k]; $b[$k]) end)
         else $b end;
       deepmerge(.; $inc)' <<<"$state")"
-    printf '%s' "$merged" >"$state_file"
+    if [ -f "$state_file" ]; then
+      jq -c --arg o "$clerk_org" --argjson m "$merged" '. + {($o): $m}' "$state_file" >"$state_file.new" 2>/dev/null || printf '{"%s":%s}' "$clerk_org" "$merged" >"$state_file.new"
+    else
+      printf '{"%s":%s}' "$clerk_org" "$merged" >"$state_file.new"
+    fi
+    mv "$state_file.new" "$state_file"
     printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$merged"
     exit 0
     ;;

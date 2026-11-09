@@ -919,7 +919,7 @@ overdue_services() {
 do_resync() {
   local today ts all n i cus overdue svc cur want cond kvs extra org body svcs skip_hold kv
   local customers=0 holds=0 sent=0
-  local -a p_cus=() p_kvs=() p_cond=() p_org=() p_body=() p_svcs=()
+  local -a p_cus=() p_kvs=() p_cond=() p_org=() p_body=() p_svcs=() p_over=()
   today="$(today_jst)"
   ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   printf 'NOTE resync: 全件の送り直し（今日 %s JST、resync_at %s）。hold は請求書の支払いの期限の 14 日後を過ぎても open のものから決める\n' "$today" "$ts"
@@ -976,6 +976,8 @@ do_resync() {
     if [ -n "$org" ]; then
       [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org、顧客 $cus）。送らない"
       check_clerk_rows
+      printf 'RESYNC %s → Clerk の組織 %s: 送る本文は次のとおり（確認の前に出す）\n' "$cus" "$org"
+      print_clerk_rows "$(clerk_services_json)"
       clerk_build_payload "$org" "$(jq -cn --arg t "$ts" '{resync_at: $t}')"
       body="$CLERK_BODY_JSON"
       svcs="$CLERK_SERVICES"
@@ -984,6 +986,7 @@ do_resync() {
     fi
     p_cus+=("$cus")
     p_kvs+=("$kvs")
+    p_over+=("$overdue")
     p_cond+=("$cond")
     p_org+=("$org")
     p_body+=("$body")
@@ -1003,6 +1006,13 @@ do_resync() {
     cus="${p_cus[$i]}"
     OPT_CUSTOMER="$cus"
     if [ -n "${p_kvs[$i]}" ]; then
+      # 下見の後に請求書の状態が変わっていないかを、書く直前に確かめる
+      overdue_services "$cus" "$today"
+      if [ "$OVERDUE_SERVICES" != "${p_over[$i]}" ]; then
+        printf 'NOTE %s: 下見の後に請求書の状態が変わった（hold の判定をやり直す）。この顧客は書かない。もう一度 resync を流す\n' "$cus"
+        i=$((i + 1))
+        continue
+      fi
       api_ok "顧客 $cus の読取" GET "/v1/customers/$cus"
       CUST_JSON="$RESP_BODY"
       local -a kv_list=()

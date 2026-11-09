@@ -499,7 +499,7 @@ expect "後の月の open の請求書は止める理由にならない" 0 1 "MA
 CLERK_META="$(jq -c '. + {clerk_org_id: "org_x"}' <<<"$(meta card "$LAST-15" 12)")"
 clerk_calls() { count "$LOG" '^CALL .*/organizations/'; }
 clerk_patches() { count "$LOG" '^CALL PATCH /organizations/'; }
-clerk_state() { if [ -f "$WORK/log.clerk" ]; then cat "$WORK/log.clerk"; else printf '{}'; fi; }
+clerk_state() { if [ -f "$WORK/log.clerk" ]; then jq -c --arg o "${1:-org_x}" '.[$o] // {}' "$WORK/log.clerk"; else printf '{}'; fi; }
 
 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
 expect "clerk-sync の dry-run は送る services を出す" 0 0 'PLAN services.xesm from='
@@ -716,9 +716,22 @@ UNJUDGE="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_dat
 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNJUDGE" run resync --apply --mode test
 expect "明細にサービスが無い請求書があれば、その顧客の hold を変えない" 0 - "この顧客の hold は変えない"
 eq "判定できない顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+# hold 中の顧客で判定できない請求書があるときは、その hold を外さない（fail-open を固定する）
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+HOLDING_P1="$(jq -c '.[0].metadata |= (. + {contract_xesm_hold: "true"})' <<<"$RESYNC_P1")"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+  FAKE_RESYNC=1 FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNJUDGE" run resync --apply --mode test
+expect "hold 中の顧客で判定できない請求書があれば、hold を外さない" 0 - "この顧客の hold は変えない"
+eq "hold 中の顧客には unhold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+eq "Clerk の hold も true のまま" "$(clerk_state org_a | jq -r '.services.xesm.hold')" "true"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+NODUE="$(jq -c -n '{cus_a: [{id: "in_a1", due_date: 0, service: "xesm"}], cus_b: [], cus_c: []}')"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+  FAKE_RESYNC=1 FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$NODUE" run resync --apply --mode test
+expect "hold 中で期限の無い請求書があれば、hold を外さない" 0 - "この顧客の hold は変えない"
+eq "期限が無いときも unhold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
 # 期限の無い open の請求書も判定できない（hold を外さない）
 rm -f "$WORK/log.customers"
-NODUE="$(jq -c -n '{cus_a: [{id: "in_a1", due_date: 0, service: "xesm"}], cus_b: [], cus_c: []}')"
 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$NODUE" run resync --apply --mode test
 expect "期限の無い open の請求書があれば、その顧客の hold を変えない" 0 - "この顧客の hold は変えない"
 eq "期限の無い請求書の顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
@@ -734,7 +747,7 @@ rm -f "$WORK/log.customers"
 MANY="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, lines_count: 150}], cus_b: [], cus_c: []}')"
 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$MANY" run resync --apply --mode test
 expect "明細が 100 件を超えても判定できる" 0 - "RESYNC 完了"
-eq "明細は 2 ページ読む" "$(count "$LOG" '^CALL GET /v1/invoices/in_a1/lines')" "2"
+[ "$(count "$LOG" '^CALL GET /v1/invoices/in_a1/lines')" -ge 2 ] && ok "明細は 2 ページ読む（100 件ずつ）" || ng "明細のページ送りをしていない: $(count "$LOG" '^CALL GET /v1/invoices/in_a1/lines') 回"
 printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "101 件目以降の明細からも hold を決める" || ng "明細の 2 ページ目を見ていない: $LOG"
 # 明細の読取が失敗したら止まる（黙って hold を外さない）
 rm -f "$WORK/log.customers"
