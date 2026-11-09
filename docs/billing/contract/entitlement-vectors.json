@@ -1,0 +1,363 @@
+{
+  "schema": "cor-entitlement-vectors.v1",
+  "note": "ADR-0028 の 3 節の判定表（権利 = services.<サービス> = {from, until, hold}）の試験ベクトル。1 件 = 入力（services の行と日本時間の日付 d）と期待（4 つの結果のどれか）。bd と XESM の試験もこのファイルを読む（M2）。サービス名は plans.json の services[].service と同じ。値は架空で、顧客の情報は書かない。",
+  "adr": "docs/adr/ADR-0028-cor-account-billing-foundation.md",
+  "judge": "docs/billing/contract/judge.sh",
+  "date_zone": "Asia/Tokyo",
+  "result_values": ["open", "view_only", "read_export_only", "closed"],
+  "precedence": [
+    "row_missing",
+    "before_from",
+    "until_plus_1_to_30",
+    "after_until_plus_30",
+    "hold",
+    "otherwise"
+  ],
+  "precedence_note": "判定表の行の順に上から当てる。当てはまった行で決まる。だから hold が true でも、終了日の翌日から 30 日の中なら read_export_only、31 日目から後なら closed、開始日より前なら closed になる（hold の行は、それより前の行に当てはまらないときだけ効く）。",
+  "required_tags": [
+    "row_missing",
+    "other_service",
+    "from_before",
+    "from_day",
+    "no_until",
+    "until_day",
+    "read_window_first",
+    "read_window_last",
+    "read_window_after",
+    "hold",
+    "hold_outside_until",
+    "month_end",
+    "leap"
+  ],
+  "vectors": [
+    {
+      "id": "v01-row-missing",
+      "tags": ["row_missing"],
+      "note": "自分のサービスの行が無い（services が空）",
+      "services": {},
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v02-other-service-row-only",
+      "tags": ["row_missing", "other_service"],
+      "note": "別のサービスの行だけがある（xesm の行は無い）",
+      "services": {
+        "business-dossier": { "from": "2026-12-01", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v03-before-from",
+      "tags": ["from_before"],
+      "note": "d が from の前日",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-11-30",
+      "expect": "closed"
+    },
+    {
+      "id": "v04-from-day",
+      "tags": ["from_day"],
+      "note": "d が from の当日（開ける）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "open"
+    },
+    {
+      "id": "v05-no-until",
+      "tags": ["no_until"],
+      "note": "until が null（解約していない）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2030-06-15",
+      "expect": "open"
+    },
+    {
+      "id": "v06-until-day",
+      "tags": ["until_day"],
+      "note": "d が until の当日（終了日の当日までは開ける）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-11-30",
+      "expect": "open"
+    },
+    {
+      "id": "v07-until-plus-1",
+      "tags": ["read_window_first"],
+      "note": "d が until の翌日（読む・書き出すだけの初日）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-12-01",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v08-until-plus-30",
+      "tags": ["read_window_last"],
+      "note": "d が until の翌日から 30 日目（読む・書き出すだけの末日）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-12-30",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v09-until-plus-31",
+      "tags": ["read_window_after"],
+      "note": "d が until の翌日から 31 日目（閉じる）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-12-31",
+      "expect": "closed"
+    },
+    {
+      "id": "v10-hold-inside-until",
+      "tags": ["hold"],
+      "note": "hold が true、d が until の内（見るだけ）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": true }
+      },
+      "service": "xesm",
+      "d": "2027-06-15",
+      "expect": "view_only"
+    },
+    {
+      "id": "v11-hold-on-from-day",
+      "tags": ["hold", "from_day"],
+      "note": "hold が true、d が from の当日（見るだけ）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": true }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "view_only"
+    },
+    {
+      "id": "v12-hold-on-until-day",
+      "tags": ["hold", "until_day"],
+      "note": "hold が true、d が until の当日（見るだけ）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": true }
+      },
+      "service": "xesm",
+      "d": "2027-11-30",
+      "expect": "view_only"
+    },
+    {
+      "id": "v13-hold-in-read-window",
+      "tags": ["hold", "hold_outside_until", "read_window_first"],
+      "note": "hold が true、d が until の翌日（判定表の順で、読む・書き出すだけが先に当たる）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": true }
+      },
+      "service": "xesm",
+      "d": "2027-12-01",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v14-hold-after-window",
+      "tags": ["hold", "hold_outside_until", "read_window_after"],
+      "note": "hold が true、d が until の翌日から 31 日目（判定表の順で閉じる）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": true }
+      },
+      "service": "xesm",
+      "d": "2027-12-31",
+      "expect": "closed"
+    },
+    {
+      "id": "v15-hold-before-from",
+      "tags": ["hold", "from_before"],
+      "note": "hold が true でも、d が from より前なら閉じる",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": true }
+      },
+      "service": "xesm",
+      "d": "2026-11-30",
+      "expect": "closed"
+    },
+    {
+      "id": "v16-hold-until-null",
+      "tags": ["hold", "no_until"],
+      "note": "hold が true、until が null（見るだけ）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": true }
+      },
+      "service": "xesm",
+      "d": "2029-01-01",
+      "expect": "view_only"
+    },
+    {
+      "id": "v17-month-end-until-day",
+      "tags": ["month_end", "until_day"],
+      "note": "月末（12/31）が until の当日",
+      "services": {
+        "xesm": { "from": "2025-12-31", "until": "2026-12-31", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-31",
+      "expect": "open"
+    },
+    {
+      "id": "v18-month-end-read-window-last",
+      "tags": ["month_end", "read_window_last"],
+      "note": "月末（12/31）の 30 日後は 1/30（月をまたぐ）",
+      "services": {
+        "xesm": { "from": "2025-12-31", "until": "2026-12-31", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-01-30",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v19-month-end-read-window-after",
+      "tags": ["month_end", "read_window_after"],
+      "note": "月末（12/31）の 31 日後は 1/31（閉じる）",
+      "services": {
+        "xesm": { "from": "2025-12-31", "until": "2026-12-31", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-01-31",
+      "expect": "closed"
+    },
+    {
+      "id": "v20-short-month-end-until",
+      "tags": ["month_end", "until_day", "read_window_first"],
+      "note": "2 月末（平年 2/28）が until。翌日 3/1 から読む・書き出すだけ",
+      "services": {
+        "xesm": { "from": "2026-03-01", "until": "2027-02-28", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-02-28",
+      "expect": "open"
+    },
+    {
+      "id": "v21-short-month-end-read-window-last",
+      "tags": ["month_end", "read_window_last"],
+      "note": "平年の 2/28 の 30 日後は 3/30",
+      "services": {
+        "xesm": { "from": "2026-03-01", "until": "2027-02-28", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2027-03-30",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v22-leap-until-day",
+      "tags": ["leap", "until_day"],
+      "note": "うるう年の 2/29（2028-02-29）が until の当日",
+      "services": {
+        "xesm": { "from": "2027-03-01", "until": "2028-02-29", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2028-02-29",
+      "expect": "open"
+    },
+    {
+      "id": "v23-leap-read-window-first",
+      "tags": ["leap", "read_window_first"],
+      "note": "うるう年の 2/29 の翌日（2028-03-01）",
+      "services": {
+        "xesm": { "from": "2027-03-01", "until": "2028-02-29", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2028-03-01",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v24-leap-read-window-last",
+      "tags": ["leap", "read_window_last"],
+      "note": "うるう年の 2/29 の 30 日後は 2028-03-30",
+      "services": {
+        "xesm": { "from": "2027-03-01", "until": "2028-02-29", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2028-03-30",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v25-leap-read-window-after",
+      "tags": ["leap", "read_window_after"],
+      "note": "うるう年の 2/29 の 31 日後は 2028-03-31（閉じる）",
+      "services": {
+        "xesm": { "from": "2027-03-01", "until": "2028-02-29", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2028-03-31",
+      "expect": "closed"
+    },
+    {
+      "id": "v26-leap-from-before",
+      "tags": ["leap", "from_before"],
+      "note": "うるう年の 2/29 が from。前日（2028-02-28）は閉じる",
+      "services": {
+        "xesm": { "from": "2028-02-29", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2028-02-28",
+      "expect": "closed"
+    },
+    {
+      "id": "v27-leap-from-day",
+      "tags": ["leap", "from_day"],
+      "note": "うるう年の 2/29 が from の当日（開ける）",
+      "services": {
+        "xesm": { "from": "2028-02-29", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2028-02-29",
+      "expect": "open"
+    },
+    {
+      "id": "v28-until-equals-from",
+      "tags": ["until_day"],
+      "note": "until が from と同じ日（当日は開ける）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2026-12-01", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "open"
+    },
+    {
+      "id": "v29-until-equals-from-next-day",
+      "tags": ["read_window_first"],
+      "note": "until が from と同じ日で、d がその翌日（読む・書き出すだけ）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2026-12-01", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-02",
+      "expect": "read_export_only"
+    },
+    {
+      "id": "v30-business-dossier-row",
+      "tags": ["other_service"],
+      "note": "判定するサービスだけの行がある（別のサービスの行は結果に混ざらない）",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2027-11-30", "hold": false },
+        "business-dossier": { "from": "2027-01-01", "until": null, "hold": true }
+      },
+      "service": "business-dossier",
+      "d": "2027-06-15",
+      "expect": "view_only"
+    }
+  ]
+}

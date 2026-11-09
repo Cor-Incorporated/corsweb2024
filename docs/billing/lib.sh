@@ -52,15 +52,15 @@ require_curl() {
   major="${v%%.*}"
   minor="${v#*.}"
   minor="${minor%%.*}"
-  [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || die 64 "curl の版を読めない（観測: $v）"
+  [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || die 64 "curl の版を読めない（観測: ${v}）"
   if [ "$major" -lt 7 ] || { [ "$major" -eq 7 ] && [ "$minor" -lt 84 ]; }; then
-    die 64 "curl 7.84 以上が要る（観測: $v）"
+    die 64 "curl 7.84 以上が要る（観測: ${v}）"
   fi
 }
 
 load_api_version() {
   API_VERSION="$(jq -r '.stripe_api_version' "$PLANS")"
-  [[ "$API_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\.[a-z]+$ ]] || die 2 "plans.json の stripe_api_version の形が違う（観測: $API_VERSION）"
+  [[ "$API_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\.[a-z]+$ ]] || die 2 "plans.json の stripe_api_version の形が違う（観測: ${API_VERSION}）"
 }
 
 sha256_hex() {
@@ -93,7 +93,7 @@ api() {
   escaped="${API_KEY//\\/\\\\}"
   escaped="${escaped//\"/\\\"}"
   out="$(printf 'header = "Authorization: Bearer %s"\n' "$escaped" | curl "${args[@]}" "$@" "$API_BASE$path")" \
-    || die 4 "curl が失敗した（$method $path）。POST なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、status か Stripe の画面で今の状態を確かめる"
+    || die 4 "curl が失敗した（$method ${path}）。POST なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、status か Stripe の画面で今の状態を確かめる"
   RESP_CODE="${out##*$'\n'}"
   rest="${out%$'\n'*}"
   RESP_REPLAYED="${rest##*$'\n'}"
@@ -122,7 +122,7 @@ api_error_text() {
 require_ok() {
   case "$RESP_CODE" in
     2??) ;;
-    *) die 4 "API エラー（HTTP $RESP_CODE、$1）: $(api_error_text)" ;;
+    *) die 4 "API エラー（HTTP ${RESP_CODE}、$1）: $(api_error_text)" ;;
   esac
 }
 
@@ -152,7 +152,7 @@ check_mode() {
   api_ok "モードの確認 GET /v1/balance" GET /v1/balance
   live="$(jq -r '.livemode' <<<"$RESP_BODY")"
   if [ "$MODE" = "live" ]; then want="true"; fi
-  [ "$live" = "$want" ] || die 3 "鍵のモードが --mode と違う（--mode $MODE、観測 livemode=$live）。何も書いていない"
+  [ "$live" = "$want" ] || die 3 "鍵のモードが --mode と違う（--mode ${MODE}、観測 livemode=${live}）。何も書いていない"
   printf 'CHECK ok: 鍵のモード = %s（観測 livemode=%s）\n' "$MODE" "$live"
 }
 
@@ -206,7 +206,7 @@ require_implemented_billing() {
   local closing
   closing="$(jq -r '.billing.closing // "-"' "$PLANS")"
   [ "$closing" = "$IMPLEMENTED_BILLING_CLOSING" ] \
-    || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトの実装（$IMPLEMENTED_BILLING_CLOSING。README 1C 章の B）と違う。何もしていない"
+    || die 3 "plans.json の請求の形（billing.closing=${closing}）は、このスクリプトの実装（${IMPLEMENTED_BILLING_CLOSING}。README 1C 章の B）と違う。何もしていない"
 }
 
 plans_services() {
@@ -224,10 +224,10 @@ fmt_jst() {
 # YYYY-MM-DD の日本時間 09:00 を epoch 秒にする（macOS と GNU の date の両方）。
 jst_date_epoch() {
   local d="$1"
-  [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "日付は YYYY-MM-DD（観測: $d）"
+  [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "日付は YYYY-MM-DD（観測: ${d}）"
   TZ=Asia/Tokyo date -j -f '%Y-%m-%d %H:%M:%S' "$d 09:00:00" '+%s' 2>/dev/null \
     || TZ=Asia/Tokyo date -d "$d 09:00:00" '+%s' 2>/dev/null \
-    || die 64 "日付として読めない（観測: $d）"
+    || die 64 "日付として読めない（観測: ${d}）"
 }
 
 # 年と月から、その月の日数（うるう年を含む）。
@@ -237,7 +237,7 @@ days_in_month() {
     1 | 3 | 5 | 7 | 8 | 10 | 12) printf '31' ;;
     4 | 6 | 9 | 11) printf '30' ;;
     2) if (((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)); then printf '29'; else printf '28'; fi ;;
-    *) die 64 "月は 1〜12（観測: $m）" ;;
+    *) die 64 "月は 1〜12（観測: ${m}）" ;;
   esac
 }
 
@@ -251,8 +251,8 @@ valid_date() {
 # YYYY-MM-DD の n か月後の同じ日。同じ日が無い月は、その月の末日（1/31 の 1 か月後は 2/28 か 2/29）。
 add_months_clamped() {
   local date="$1" n="$2"
-  valid_date "$date" || die 64 "実在する日付ではない（観測: $date）"
-  [[ "$n" =~ ^[0-9]+$ ]] || die 64 "月数は整数（観測: $n）"
+  valid_date "$date" || die 64 "実在する日付ではない（観測: ${date}）"
+  [[ "$n" =~ ^[0-9]+$ ]] || die 64 "月数は整数（観測: ${n}）"
   [[ "$date" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})$ ]]
   local y=$((10#${BASH_REMATCH[1]})) m=$((10#${BASH_REMATCH[2]})) d=$((10#${BASH_REMATCH[3]})) ny nm last
   nm=$(((m - 1 + n) % 12 + 1))
@@ -343,7 +343,7 @@ load_amounts() {
   IFS=$'\t' read -r AMT_BASIC AMT_DEVFEE DEVFEE_MAX TERM_MONTHS NAME_BASIC NAME_DEVFEE <<<"$row"
   local v
   for v in "$AMT_BASIC" "$AMT_DEVFEE" "$DEVFEE_MAX" "$TERM_MONTHS"; do
-    [[ "$v" =~ ^[0-9]+$ ]] || die 2 "plans.json の service=$1 の金額・回数・最低利用期間を読めない（観測: $row）"
+    [[ "$v" =~ ^[0-9]+$ ]] || die 2 "plans.json の service=$1 の金額・回数・最低利用期間を読めない（観測: ${row}）"
   done
 }
 
@@ -378,12 +378,12 @@ billing_lines() {
   last="$(month_last_date "$ym")"
   if [ "$k" -eq 1 ]; then
     usage="$AMT_BASIC" # 初月は開始日にかかわらず 1 か月分
-    emit_line usage_first "$usage" "$start" "$last" "$NAME_BASIC $ym（初月。1 か月分）"
+    emit_line usage_first "$usage" "$start" "$last" "$NAME_BASIC ${ym}（初月。1 か月分）"
   elif [ "$k" = "$k_end" ]; then
     d=$((10#${end:8:2}))
     dim="$(days_in_month "$((10#${ym:0:4}))" "$((10#${ym:5:2}))")"
     usage=$((AMT_BASIC * d / dim))
-    emit_line usage_prorated "$usage" "$first" "$end" "$NAME_BASIC $ym（終了日 $end まで。$d/$dim 日の日割り）"
+    emit_line usage_prorated "$usage" "$first" "$end" "$NAME_BASIC ${ym}（終了日 $end まで。$d/$dim 日の日割り）"
   else
     usage="$AMT_BASIC"
     emit_line usage "$usage" "$first" "$last" "$NAME_BASIC $ym"

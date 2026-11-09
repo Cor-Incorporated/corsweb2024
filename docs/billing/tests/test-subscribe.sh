@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015,SC2086 # 「A が成り立てば ok、そうでなければ ng」の形（ok は必ず 0 を返す）と、「set -- ${c}」の語の分割は意図どおり（値は試験が書いた数字と日付だけ）
 # docs/billing/subscribe.sh の検査（作り方 B: 毎月末の請求書）。通信しない（PATH の先頭に偽の curl を置く）。
 # 実行: bash docs/billing/tests/test-subscribe.sh
 # 確かめること:
@@ -51,7 +52,7 @@ expect() {
   local what="$1" rc="$2" npost="$3" text="$4"
   if [ "$RC" -ne "$rc" ]; then ng "$what: rc 期待 $rc 観測 $RC: $OUT"; return; fi
   if [ "$npost" != "-" ] && [ "$(posts)" -ne "$npost" ]; then ng "$what: POST 期待 $npost 観測 $(posts): $(post_seq)"; return; fi
-  if [ "$text" != "-" ] && ! printf '%s' "$OUT" | grep -qF -- "$text"; then ng "$what: 出力に「$text」が無い: $OUT"; return; fi
+  if [ "$text" != "-" ] && ! printf '%s' "$OUT" | grep -qF -- "$text"; then ng "$what: 出力に「${text}」が無い: $OUT"; return; fi
   ok "$what"
 }
 check_arg() { if argv_has "$2"; then ok "$1"; else ng "$1: curl の引数に [$2] が無い"; fi; }
@@ -84,9 +85,9 @@ meta() { jq -nc --arg s "${2:-}" --arg c "${3:-}" --arg e "${4:-}" --arg p "$1" 
 impl="$(sed -n 's/^readonly IMPLEMENTED_BILLING_CLOSING="\(.*\)"$/\1/p' "$BILLING/lib.sh")"
 decl="$(jq -r '.billing.closing' "$PLANS")"
 if [ -n "$impl" ] && [ "$impl" = "$decl" ]; then
-  ok "lib.sh の IMPLEMENTED_BILLING_CLOSING と plans.json の billing.closing が一致（$impl）"
+  ok "lib.sh の IMPLEMENTED_BILLING_CLOSING と plans.json の billing.closing が一致（${impl}）"
 else
-  ng "lib.sh の IMPLEMENTED_BILLING_CLOSING=${impl:-（読めない）}、plans.json の billing.closing=$decl（一致しない）"
+  ng "lib.sh の IMPLEMENTED_BILLING_CLOSING=${impl:-（読めない）}、plans.json の billing.closing=${decl}（一致しない）"
 fi
 
 # 1. dry-run と入力
@@ -224,7 +225,7 @@ printf '%s' "$OUT" | grep -q "^LINE ${WANT_END:0:7} xesm usage_prorated " && ok 
 FAKE_CUST_META="$(meta card 2099-01-01 12)" run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
 expect "終了日が契約の開始日より前なら exit 64" 64 0 "契約の開始日 2099-01-01 より前"
 FAKE_CUST_META="$(meta card "$LAST-15" 12 2099-12-31)" run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
-expect "別の終了日があれば書き換えずに exit 3" 3 0 "別の終了日がある（期待 $WANT_END、観測 2099-12-31）"
+expect "別の終了日があれば書き換えずに exit 3" 3 0 "別の終了日がある（期待 ${WANT_END}、観測 2099-12-31）"
 FAKE_CUST_META="$(meta card "$LAST-15" 12 "$WANT_END")" run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
 expect "同じ終了日なら書かない" 0 0 "OK cancel cus_x xesm: 既に終了日"
 FAKE_CUST_META="$(meta card "$LAST-15" 12)" FAKE_INV_STATE=open run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
@@ -286,7 +287,7 @@ expect "invoice は請求書を作り、確定して送る" 0 6 "CHECK ok: 小�
 eq "POST の順は draft → 明細 → finalize → send → 送った記録" "$(post_seq)" "/v1/invoices /v1/invoiceitems /v1/invoiceitems /v1/invoices/in_new/finalize /v1/invoices/in_new/send /v1/customers/cus_x"
 check_arg "送ったことを Customer の metadata に書く" "metadata[invoice_sent]=$LAST:in_new"
 check_arg "請求書は send_invoice" "collection_method=send_invoice"
-check_arg "支払期限は翌月末日 23:59:59 JST（$DUE_LAST）" "due_date=$DUE_LAST"
+check_arg "支払期限は翌月末日 23:59:59 JST（${DUE_LAST}）" "due_date=$DUE_LAST"
 check_arg "auto_advance=false" "auto_advance=false"
 check_arg "保留の明細を取り込まない" "pending_invoice_items_behavior=exclude"
 check_arg "請求書に月を書く" "metadata[billing_month]=$LAST"
@@ -446,7 +447,7 @@ run invoice --customer cus_x --month "$THIS"
 if [ "$TODAY" = "$END_THIS" ]; then
   expect "今月の末日（締めの日）は今月の分を作れる" 0 0 "PLAN invoice"
 else
-  expect "今月の分は締めの日（$END_THIS）より前は exit 64" 64 0 "締めの日（$END_THIS）から作る"
+  expect "今月の分は締めの日（${END_THIS}）より前は exit 64" 64 0 "締めの日（${END_THIS}）から作る"
 fi
 run invoice --customer cus_x --month "$LAST"
 expect "先月の分はいつでも作れる" 0 0 "PLAN invoice"
@@ -487,7 +488,7 @@ SCN=live FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open run mark-paid --customer 
 expect "本番の mark-paid は live と打たなければ何もしない" 64 0 "本番は端末から実行する"
 # 独立レビューの HIGH: 月を取り違えて新しい月を支払い済みにしない（支払い済みは取り消せない）
 FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$TWO_AGO" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
-expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: $TWO_AGO（in_older）"
+expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: ${TWO_AGO}（in_older）"
 FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$THIS" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
 expect "後の月の open の請求書は止める理由にならない" 0 1 "MARKED_PAID in_open $LAST"
 
