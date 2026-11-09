@@ -10,10 +10,11 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 |---|---|
 | [plans.json](plans.json) | 商品・価格・税率の宣言（機械可読）。金額は税別の円 |
 | [apply-plans.sh](apply-plans.sh) | plans.json を読んで Stripe に冪等に作る。既定は dry-run（通信しない・鍵を読まない） |
-| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約と毎月末の請求書（1C 章の作り方 B）。`customer`・`find`・`contract`・`card-setup`・`cancel`・`invoice`・`charge`・`simulate`・`status`。既定は dry-run |
+| [subscribe.sh](subscribe.sh) | 顧客 1 社の契約と毎月末の請求書（1C 章の作り方 B）。`customer`・`find`・`contract`・`card-setup`・`cancel`・`invoice`・`charge`・`mark-paid`・`simulate`・`status`・`clerk-sync`・`hold`・`unhold`・`resync`・`set-payment`。既定は dry-run |
 | [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 235 項目、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
+| [contract/](contract/) | 権利（`services`）の判定の見本と試験ベクトル。`judge.sh`（jq。`--services-json`・`--service`・`--date` で 4 つの結果を 1 行）・`entitlement-vectors.json`（判定表の境界 31 件。bd と XESM の試験もこれを読む）・`verify-sample.mjs`（Clerk のトークンの検証の見本。R1・R2） |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 339 項目、`test-entitlement-vectors.sh` 68 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -28,58 +29,21 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 
 ## 1A. 身元は Clerk、課金は Stripe
 
-身元の正本は Clerk（利用者と組織）、課金の正本は Stripe にする。2 つを顧客の組織ごとに紐づけたものが、Cor. のサービスに共通の契約の基盤になる。business-dossier と XESM は、その上に載る最初の 2 つのサービス。
+身元の正本は Clerk（利用者と Organization）、課金の正本は Stripe の Customer。2 つを顧客の会社ごとに結んだものが、Cor. のサービスに共通の契約の基盤になる。**設計の全文は [ADR-0028](../adr/ADR-0028-cor-account-billing-foundation.md)（corsweb2024 #514）に移した。** この章は、実装が使う形だけを書く。
 
-```text
-Clerk（身元の正本）
-  組織 org_…（顧客の会社）── privateMetadata に stripe_customer_id ──▶ Stripe（課金の正本）
-    └ 利用者（メールアドレス）                                          Customer cus_…（metadata.clerk_org_id）
-        │                                                                 ├ 契約の metadata（サービスごとの開始日・開発費の回数・終了日）
-        │                                                                 └ 毎月末の請求書（その月の利用料・開発費の 1 回分）
-        ▼                                                                       │
-Cloudflare Access（入口）                                              契約 → 開ける / 解約 → 閉じる
-  今週: 許可メールに利用者を足す（寺田の手）                          （今週は寺田の手。来週以降は通知で）
-  来週以降: Clerk を OIDC の IdP にして、Clerk のログインで通す
-        │
-        ▼
-製品側: business-dossier（お客様ごとの起動 bd-<slug>）／ XESM（組織 Tenant）
-```
-
-### Clerk Billing を使うか
-
-Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Billing）がある。今回の要件と照らすと、次の理由で**使わない**。表の Clerk Billing の列は、2026-11-06 に [22]〜[24] の公式文書を読んで確かめた（Clerk Billing は機能の追加が続いているので、使うかを見直すときは読み直す）。
-
-| 要件 | Clerk Billing | Clerk + 自前の Stripe（推奨） |
-|---|---|---|
-| 円で請求 | 不可。請求の通貨は USD だけ [22] | 可。JPY はゼロ小数 [4] |
-| 消費税（税別 10%） | 不可。税と VAT に未対応 [22] | 可。手動の税率（`tax_type=jct`）[5] |
-| 12 回で止まる開発費 | 文書に記載なし（未確認）。期間は月払いか年払い [22] | 可。毎月の請求書の明細で、契約した回数まで数える（`subscribe.sh invoice`。3 章） |
-| 組織（B2B）のプラン | 可。組織が持つプラン [23] | 可。Stripe の Customer を組織ごとに作り、Clerk の組織と紐づける |
-| プランで使える機能を切る | 可。`has({ plan })`・`has({ feature })` [23] | 自前で持つ（Clerk の組織の metadata に契約中のサービスを書き、製品側で読む。来週以降） |
-| 既存の Stripe の商品と価格 | 使えない。Clerk のプランは Stripe の商品と同期しない [23] | plans.json の商品と価格をそのまま使う |
-| 手数料 | Stripe の手数料に加えて 0.7% [24] | Stripe の手数料だけ |
-| 3D セキュア | 未対応。3DS の確認が要る支払いは失敗する [22] | カードの保存は Checkout のページ（`mode=setup`）で行う。期限の日に当社が保存したカードで払うとき、日本のカードで追加の確認を求められるかは**未実測**（T で確かめる） |
-
-紐づけ方:
-
-- Stripe の Customer の `metadata.clerk_org_id` に Clerk の組織の id を入れる（`subscribe.sh customer --clerk-org`）。
-- Clerk の側には `privateMetadata.stripe_customer_id` を入れる。private metadata はバックエンドと webhook だけが読み書きでき、Clerk の文書も Stripe の顧客 id を例に挙げている [25]。**これは利用者（user）の metadata の文書で、組織（organization）の metadata の文書はまだ読んでいない（未確認）。**
-- Clerk の組織は無料の範囲で使える（1 アプリあたり 100 組織まで、1 組織 20 人まで）[24]。
+- 顧客（テナント）= Clerk の Organization（`org_…`）。会社 1 社に 1 つ。契約と請求は Stripe の Customer（`cus_…`）が持ち、`metadata.clerk_org_id` で組織に結ぶ
+- 権利（使えるサービス）= 契約から作り、組織の `public_metadata.services` に写す。形は `services.<サービス> = {from, until, hold}`、サービスの名前は `plans.json` と同じ。開けるか閉じるかは日付で決まり、サービスは日本時間の今日の日付で判定する（3 節の判定表、`contract/judge.sh`）
+- 写すのは `subscribe.sh clerk-sync`（契約・解約のあと）と `hold`・`unhold`（支払いが遅れたとき）。毎月の `resync` が全件を送り直す（2 節）
+- Clerk のアプリケーションは新しく作り、本番のドメインは `cor-jp.com` にする（決定 11）。Clerk Billing は使わない（請求の通貨が USD だけで、消費税に対応していない。ADR-0028 の代替案）
+- サービスの役割と所属は、今までどおり各サービスの DB に持つ（Clerk の独自の役割は使わない。決定 3）
 
 ## 1B. 入口の段階案
 
-| 段階 | 時期 | 入口 | 支払いとの結びつけ |
-|---|---|---|---|
-| 0 | 今週 | Cloudflare Access の許可メール（XESM の `contract-to-use.md` 手順 8、business-dossier の `onboarding.md`） | 寺田が契約とカードの保存を確かめてから、手でメールを足す（5 章） |
-| 1 | 来週以降 | Clerk を OIDC の IdP にして Access に登録する。Clerk は OAuth 2.0 / OIDC の提供者になれる [26]。Access の generic OIDC は Client ID・Client secret・Auth URL・Token URL・Certificate URL（JWKS）を要る [27] | Access のポリシーはメール（Emails）か OIDC の claim で絞れる [27]。組織の id（`org_id`）を claim に入れる `user:org:read` のスコープを Access が要求できるかは**未確認** [26][27] |
-| 2 | その後 | 製品が Clerk で直接ログインする（XESM は Keycloak に Clerk を外部の IdP としてつなぐ、business-dossier はローカル認証を Clerk に置き換える） | 製品が Clerk の組織の metadata（契約中のサービス）を読んで機能を切る |
+入口は Cloudflare Access。段階は ADR-0028 の「移行の順番と Yes の関門」に合わせた。
 
-段階 1 と 2 は設計だけで、試していない。段階 1 の Client secret は、`register-secret-verified.sh` に査読済みの recipe が無いため手順に書かず保留にする（7 章と同じ）。
-
-段階 1 の前提条件（どちらも未確認。今週の段階 0 には影響しない）:
-
-1. Clerk の組織（organization）の private metadata に、バックエンドから `stripe_customer_id` を書けること。読んだのは利用者（user）の metadata の文書だけ [25]。
-2. Cloudflare Access が、Clerk に `user:org:read` のスコープを要求し、`org_id` の claim でポリシーを絞れること。Access の文書の「OIDC のスコープに対応しない」という一文の読み方が定まらない [27]。満たせないときは、段階 1 のポリシーをメール（Emails）で絞る。
+- **段階 0（今）**: Access の許可メール。寺田が契約とカードの保存（カードの顧客）を確かめてから、手で足す（5 章、runbook C0〜C7）
+- **段階 1・2（Clerk の認証が入った後）**: 製品が Clerk でログインし、組織の metadata の `services` で機能を開け閉めする。Access の IdP は Clerk にしない（決定 5）。段階 1 の OIDC の細部（`user:org:read` のスコープ、`org_id` の claim）は**未確認**で、設計だけ
+- 個人のアカウントは許さない（組織が必須。決定 2）。メンバーの追加は Clerk の組織への招待にそろえる（決定 10）
 
 ## 1C. 請求の形（寺田、2026-11-07 の決定）
 
@@ -106,6 +70,7 @@ Clerk には、Stripe で決済するプランと機能の仕組み（Clerk Bill
 | `contract_<サービス>_start` | `contract --start` | 契約の開始日。開始の月を 1 か月目と数える |
 | `contract_<サービス>_devfee_count` | `contract --devfee-count` | 開発費の回数（0〜12）。開始の月から 1 回ずつ |
 | `contract_<サービス>_end` | `cancel --accepted` | 終了日（受理日の 1 か月後の同じ日） |
+| `contract_<サービス>_hold` | `hold`・`unhold` | 支払いが遅れて止めているか（`true` のときだけ書く。外すときは空の値にして key を消す） |
 | `card_setup_session` | `card-setup` | カードを保存する Checkout のページの id（`charge` がここからカードをたどる） |
 
 毎月の流れ:
@@ -230,6 +195,19 @@ Stripe の公式文書（2026-11-07 に読んだ）で分かったこと:
 9. 振込の顧客: 請求書の `footer` に当社の振込先を載せる（値は環境変数 `COR_BILLING_TRANSFER_FOOTER`。リポジトリに書かない。無ければ `invoice` は止まる）。入金を確かめたら `mark-paid --month <その月> --paid-on <入金日>` で、その請求書を Stripe の外で支払い済みにする（`invoices/pay` の `paid_out_of_band=true`。引き落とさない [33]）。open のままだと、請求書のページから二重に払われうる。
 10. 確定のあと送付で止まった請求書は、やり直しで送り直す（送った記録は Customer の metadata `invoice_sent`。請求書の metadata を確定のあと変えられるかは文書に無いため）。
 
+### 権利（services）を Clerk に写す・hold・照合・支払い方法
+
+ADR-0028 で足した 4 つの操作。手順の全文は runbook E1〜E6。
+
+| サブコマンド | いつ使うか | 何をするか |
+|---|---|---|
+| `clerk-sync --customer <cus_…>` | 契約・解約を書いたあと | 契約の metadata から `services` を作り、Clerk の組織の `public_metadata.services` に送る。契約の無いサービスは `null` で消す（ADR 2 節） |
+| `hold` / `unhold --customer <cus_…> --service <サービス>` | 支払いが遅れたとき・払われたとき | `contract_<サービス>_hold=true` を書き、Clerk にも写す。`hold` は書き込みだけを止め、閲覧は残す（決定 1） |
+| `resync` | 毎月の照合 | `clerk_org_id` を持つ全部の顧客の `services` を送り直し、`resync_at` を書く。同じ回で、請求書の支払いの期限の 14 日後を過ぎても open のものから `hold` を決めて書き直す（決定 1） |
+| `set-payment --customer <cus_…> --payment card|transfer` | 段階 5（請求書払いからカードへ移す） | `metadata.payment` を変える。発行済みの請求書は変えない（次の締めから効く）。`card` へ変えるときは保存したカードがあることを確かめる |
+
+`clerk-sync` は契約・解約・`hold` のあとに自動では走らない（片方だけ失敗して状態がずれるのを避けるため）。変えたら 1 回だけ実行する。写し忘れは `resync` が直す。
+
 ## 6. 解約 → 入口を閉じる
 
 解約は、当社がお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は末日）に終わる。例: 3 月 5 日に受理したら 4 月 5 日。宣言は `plans.json` の `cancellation`（`notice_months: 1`、`final_period: prorated`、`refund: none`）で、特商法ページの解約条件の行とは `tests/test-tokushoho-link.sh` が結ぶ。詳しい手順は runbook D1〜D5。
@@ -286,6 +264,8 @@ Stripe の公式文書（2026-11-07 に読んだ）で分かったこと:
 | 解約 → 入口を閉じる | 6 章 | — | D1〜D5 | XESM の利用者の無効化手順が無い |
 | 未回収分 | 8 章 | — | C7 | 顧客ごとの数字は非公開の台帳 |
 | 特商法 | 別 PR | — | — | 文言は寺田が確定 |
+| 権利の写し（`services`）と hold | 1A・5 章 | `services` ↔ `contract/entitlement-vectors.json` ↔ `contract/judge.sh` | C7・E1〜E4 | Clerk の API のモード（test/live）は判別できない（未確認）。本物の Clerk では未実測 |
+| 支払い方法の変更（段階 5） | 5 章 | `payment` | E5 | 本物のカードでは未実測。発行済みの請求書が変わらないことは偽の応答でだけ確かめた |
 | 手順書 | — | — | runbook.md | Stripe の画面の文言は確かめていない |
 
 ## 11. 出典（2026-11-06 に読んだ）
@@ -339,3 +319,5 @@ Stripe の公式文書（2026-11-07 に読んだ）で分かったこと:
 10. 入口を開けるのは、契約とカードの保存を確かめた時点でよいか（作り方 B では、最初の支払いは契約の月の翌月末日に来る。5 章）。
 11. 前からの顧客の `contract` は決まった: 元の契約日 + `--billing-from`（1C 章、2026-11-07 12:4x）。
 12. テストモードの `charge` は決まった: `--early-test` でテストモードだけ期限前に払える。本番では受け付けない（exit 64。2026-11-07 12:4x）。
+13. Clerk の鍵が test 用か live 用かを、`clerk-sync` は API で確かめられない（**未確認**）。`--mode` は意図の宣言で、`live` のときは端末で `live` と打つ確認だけがある。確かめる道があれば教えてほしい。
+14. `clerk-sync`・`hold`・`resync` は、契約の無くなったサービスを `null` にして Clerk から消す。`until` の無い契約では `until` のキーが残らない（PATCH の `null` がキーを消すため）。読み手は「`until` が無い = 終了日なし」として扱う（`contract/judge.sh` と試験ベクトル v31）。

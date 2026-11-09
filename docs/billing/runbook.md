@@ -28,6 +28,8 @@
 | 10 | C2〜C5: Customer と契約を書き、カードの顧客はカードを保存してもらう | 10 分 + 顧客の入力次第 | 7・8・9 |
 | 11 | C6: 製品側の準備と Access の許可 | 製品側の手順書の所要（business-dossier は約 20 分、未計測） | 10 |
 | 12 | M1〜M3: 毎月の請求（月末の翌日に invoice、期限の日に charge） | 1 社 5 分（見込み） | 10 |
+| 13 | E1〜E4: 契約・解約のあとの `clerk-sync`、`hold` / `unhold`、毎月の `resync` | 1 社 5 分（見込み） | 10・12、Clerk のアプリ（P6） |
+| 14 | E5: 支払い方法の変更（段階 5） | 1 社 10 分（見込み） | 13、顧客の同意 |
 
 ## 0. 前提
 
@@ -38,6 +40,7 @@
 | P3 | 作業する場所 | 寺田 | PR の merge 前は下のコマンドで PR のブランチを取り出した worktree、merge 後は `~/Developer/corsweb`（develop） |
 | P4 | 非公開の台帳の置き場所 | 寺田 | **未決**。列は C1 の表 |
 | P5 | Clerk のアカウントとアプリケーション（組織の機能を有効にする） | 寺田（画面の作業） | **未確認**。Clerk Billing は使わない（README 1A 章）。Clerk の鍵はこのレーンが触らない |
+| P6 | Clerk のアプリケーション（本番のインスタンス、Organizations、独自 claim `cor_svc`） | 寺田（画面の作業） | **未確認**。ADR-0028 の決定 11（新しく作る。本番のドメインは `cor-jp.com`）。手順と値は非公開の報告（contract-billing レーン）の 2 章。画面の文言は未確認 |
 
 P3 の場所を作って移る（merge 前。3 行を順に打つ）:
 
@@ -465,6 +468,92 @@ bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
 
 XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）。データの書き出しと消去は契約書に従う。
 
+## E. 権利を Clerk に写す・hold・照合・支払い方法（テストモード → 本番）
+
+[README 1A 章](README.md)の権利（`services`）を Clerk の組織に写す手順と、支払いが遅れたときの止め方（ADR-0028 の 2 節と決定 1）。**本物の Clerk の API ではまだ確かめていない（未確認）。** 下の値は例で、実際の値は台帳から入れる。
+
+Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプトが表示しない入力で聞く（Stripe の鍵と同じ扱い。表示しない・ファイルに書かない・引数に載せない）。既定は dry-run で、書くのは `--apply --mode test|live` のとき。`live` は端末で `live` と打つ確認がある。
+
+### E1. 契約・解約のあとに Clerk へ写す（`clerk-sync`）
+
+1. dry-run。顧客を読むだけで、Clerk には送らない（Clerk の鍵も読まない）。
+
+   ```bash
+   bash docs/billing/subscribe.sh clerk-sync --customer cus_XXXXXXXXXXXX --mode test
+   ```
+
+   サービスごとに `PLAN services.<サービス> from=2026-12-01 until=null hold=false`、最後に `JSON {"public_metadata":{"services":{…}}}` が出る。`null` のサービスは Clerk から消える。
+2. 送る。
+
+   ```bash
+   bash docs/billing/subscribe.sh clerk-sync --customer cus_XXXXXXXXXXXX --mode test --apply
+   ```
+
+   `SENT clerk org_XXXXXXXXXX: services を送った（…）` が出れば写った。本番は `--mode live --apply`。
+3. `STOP:` が出たら、その文を台帳に残す。送る前の検査で止まったとき（実在しない日付、空の開始日、`clerk_org_id` が無い）は何も変わらない。応答が送った値と違うときは、送ったあとで戻せない。`clerk-sync` の dry-run か Clerk の画面で今の metadata を確かめる。
+4. 契約・解約・`hold` のあとに**自動では走らない**。変えたら 1 回だけ実行する。写し忘れは E4 の `resync` が直す。
+
+### E2. 支払いが遅れたら止める（`hold`）
+
+期限の 14 日後を過ぎても払われていないサービスを止める（決定 1）。書き込みだけが止まり、閲覧は残る。
+
+```bash
+bash docs/billing/subscribe.sh hold --customer cus_XXXXXXXXXXXX --service xesm --apply --mode live
+```
+
+`HOLD cus_XXXXXXXXXXXX xesm: metadata に印を書いた。Clerk の組織に写す` が出る。Stripe の metadata と Clerk の両方に書くので、書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）。`clerk_org_id` の無い顧客と、契約の無いサービスは書かない。
+
+### E3. 払われたら外す（`unhold`）
+
+```bash
+bash docs/billing/subscribe.sh unhold --customer cus_XXXXXXXXXXXX --service xesm --apply --mode live
+```
+
+`UNHOLD cus_XXXXXXXXXXXX xesm: metadata の印を消した。Clerk の組織に写す` が出る。metadata の key を消し（空の値にする）、Clerk の `services` の `hold` を `false` にする。
+
+### E4. 毎月の照合（`resync`）
+
+毎月、M1（請求書）のあとに 1 回。全件を送り直し、同じ回で hold を判定する（ADR-0028 の 2 節・決定 1）。
+
+```bash
+bash docs/billing/subscribe.sh resync --mode live --apply
+```
+
+`RESYNC 顧客 N 件を見る` のあと、顧客ごとに `RESYNC cus_…: Clerk の組織 org_… に services と resync_at を送った`、最後に `RESYNC 完了: 顧客 N 件、hold を書き直した顧客 M 件、Clerk へ送った顧客 K 件（resync_at …）` が出る。
+
+- hold の判定: 請求書の支払いの期限の 14 日後を過ぎても open のものがあれば、そのサービスに hold を書く。無ければ外す。**期限の 14 日後ちょうどの日は、まだ過ぎていない**（その日の翌日から hold）。
+- 顧客の一覧と請求書の一覧は 100 件ずつページを送る（`starting_after`）。
+- `clerk_org_id` の無い顧客は Clerk へ送らない（`NOTE … clerk_org_id が無い（Clerk へは送らない）`）。
+
+### E5. 支払い方法を変える（`set-payment`。段階 5）
+
+請求書払い（振込）の顧客を、保存したカードでの引き落としに移す。
+
+```bash
+bash docs/billing/subscribe.sh set-payment --customer cus_XXXXXXXXXXXX --payment card --apply --mode live
+```
+
+`SET_PAYMENT cus_XXXXXXXXXXXX: transfer→card。発行済みの請求書は変えない（次の締めから効く）` が出る。
+
+- `card` に変えるには、保存したカードが要る（`status` の `CARD pm_…`）。無ければ exit 3 で止まり、何も書かない。先に C4 でカードを保存してもらう。
+- 発行済みの請求書は変えない。振込のまま払ってもらう（ADR-0028 の段階 5）。
+- `transfer` へ戻すのは 1 行（カードの確認は要らない）。
+
+### E6. Clerk の画面の作業（人間ゲート。**未確認**）
+
+どれも寺田の手で、画面の文言は確かめていない。
+
+| # | 作業 | 状態 |
+|---|---|---|
+| K2・K8 | Clerk のアプリケーションを新しく作る（ADR-0028 の決定 11。本番のドメインは `cor-jp.com`） | 未確認 |
+| K3 | Organizations を有効にし、個人のアカウントを許さない（決定 2） | 未確認 |
+| K4 | セッショントークンに独自 claim `cor_svc` = `{{org.public_metadata.services}}` を足す | 未確認 |
+| K4b | U1〜U13 の実測用の OAuth アプリを作る | 未確認 |
+| K4c | U12（承認者の段階認証）の準備 | 未確認 |
+| K5〜K7 | 本番のインスタンスとドメイン、公開の値（Frontend API の URL・JWKS Public Key） | 未確認 |
+
+手順と値は非公開の報告（contract-billing レーン、2 章）に置く。画面の文言を確かめたら、この表に書き足す。
+
 ## 問題が起きたら
 
 | 出たもの | 原因 | 対処 |
@@ -504,6 +593,12 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 | `STOP: API エラー（HTTP 403、…）`（exit 4） | 制限付きの鍵に権限が足りない | T1 の権限を足す（権限の画面の名前は未確認） |
 | `STOP: 本番は端末から実行する`（exit 64） | 本番をパイプや自動実行で動かした | 端末から直接実行する（`live` と打つ確認が要る） |
 | `STOP: 鍵が無い`（exit 64） | 端末でない場所から、鍵の環境変数なしで実行した | 端末から実行する |
+| `STOP: … に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に送らない`（exit 3） | Clerk の組織と結んでいない顧客 | C0・C2 で `--clerk-org org_…` を付けて顧客を作る。既存の顧客に足すかは寺田（画面） |
+| `STOP: clerk_org_id の形が違う`（exit 3） | 組織の id の打ち間違い | 台帳の `org_…` を確かめる。何も送っていない |
+| `STOP: contract_<サービス>_start が空（形が違う）。Clerk に送らない` / `… が実在する日付ではない`（exit 3） | Customer の metadata の契約の日付が壊れている | 送っていない。`status` で metadata を確かめ、寺田が直す方法を決める |
+| `STOP: … に保存したカードが無い（…）。card にしない（期限の日に払えない）`（exit 3、set-payment） | カードを保存していない | C4 でカードを保存してもらってから、もう一度 |
+| `STOP: Clerk の応答の services が送った値と違う（観測: …）。送ったあとなので戻せない`（exit 3） | Clerk が送った値と違うものを返した | 送ったあとは戻せない。`clerk-sync` の dry-run か Clerk の画面で今の metadata を確かめ、ログを統括へ渡す |
+| `STOP: Clerk の鍵が無い: COR_CLERK_SECRET_KEY …`（exit 64） | 端末でない場所から、Clerk の鍵の環境変数なしで実行した | 端末から実行する（表示しない入力で受ける） |
 
 ## 実行者テスト（この文書だけで実行できるか）
 
@@ -513,5 +608,6 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 | C2〜C5、M1〜M3、D1〜D2 | できる（`<…>` は台帳の同じ名前の列、`cus_…` は取得コマンドがある） | 台帳の置き場所（P4）が未決 |
 | M3 の「支払い済み」にする操作 | **できない** | Stripe の画面の操作が未確認 |
 | C6、D3 の Access | 製品側の手順書へ渡す | Access の画面の文言は製品側の手順書でも未確認 |
-| C0 | **できない** | Clerk の画面の文言と、組織の private metadata の書き方が未確認 |
+| E1〜E5 | できる（コマンドと出るべき行がある。値は台帳の列） | Clerk のアプリ（P6）が未確認。本物の Clerk では未実測 |
+| E6・C0 | **できない** | Clerk の画面の文言と、組織の private metadata の書き方が未確認 |
 | D5 | **できない** | XESM のお客様用の無効化の手順が無い（xesm の W6） |
