@@ -601,6 +601,9 @@ expect "Clerk の鍵が無ければ hold にしない（片方だけ書かない
 eq "Clerk の鍵が無ければ Stripe にも書かない" "$(posts)" "0"
 SCN=live FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode live
 expect "本番の hold は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata":{"services":' && ok "確認より前に、送る本文を出す" || ng "確認より前に本文が出ない: $OUT"
+printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":true}' && ok "確認より前に、hold=true の本文を出す" || ng "本文の hold が違う: $OUT"
+eq "確認で止まったので Stripe にも書いていない" "$(posts)" "0"
 # hold を外す: 印を消し、Clerk の hold を false にする
 rm -f "$WORK/log.clerk"
 FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \

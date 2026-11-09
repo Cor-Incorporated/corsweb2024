@@ -754,7 +754,7 @@ do_cancel() {
 do_hold() { do_set_hold true; }
 do_unhold() { do_set_hold false; }
 do_set_hold() {
-  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur
+  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur newv cond what
   load_customer
   [ -n "$(cust_meta "$ks")" ] || die 3 "$OPT_CUSTOMER に $OPT_SERVICE の契約が無い（metadata に $ks が無い）。hold を書かない"
   org="$(cust_meta clerk_org_id)"
@@ -766,23 +766,33 @@ do_set_hold() {
       printf 'OK hold %s %s: 既に hold（書かない。Clerk へも写さない。写し直すなら resync）\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
       return 0
     fi
-    put_meta "hold を書く" ".metadata[\"$kh\"] == \"true\"" "$kh=true"
+    newv="true"
+    cond=".metadata[\"$kh\"] == \"true\""
+    what="hold を書く"
   else
     if [ -z "$cur" ] || [ "$cur" = "false" ]; then
       printf 'OK unhold %s %s: hold は付いていない（書かない。Clerk へも写さない。写し直すなら resync）\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
       return 0
     fi
-    put_meta "hold を外す" "(.metadata[\"$kh\"] // \"\") == \"\"" "$kh="
+    newv=""
+    cond="(.metadata[\"$kh\"] // \"\") == \"\""
+    what="hold を外す"
   fi
-  CUST_JSON="$RESP_BODY"
+  # これから書く値を重ねた状態で Clerk に送る本文を作り、本番の確認より前に見せる
+  # （plans.json に無いサービスの削除も、確認の前に表示する）。
+  CUST_JSON="$(jq -c --arg k "$kh" --arg v "$newv" '.metadata = ((.metadata // {}) + {($k): $v})' <<<"$CUST_JSON")"
   check_clerk_rows
   print_clerk_rows "$(clerk_services_json)"
+  clerk_build_payload "$org"
+  confirm_live
+  put_meta "$what" "$cond" "$kh=$newv"
+  CUST_JSON="$RESP_BODY"
   if [ "$on" = "true" ]; then
     printf 'HOLD %s %s: metadata に印を書いた。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
   else
     printf 'UNHOLD %s %s: metadata の印を消した。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
   fi
-  clerk_push_services "$org"
+  clerk_send_payload "$org"
 }
 
 # --- Clerk の組織の metadata（services の写し。ADR-0028 の 2 節） ---
@@ -965,7 +975,7 @@ main() {
   # hold と unhold は、Stripe の metadata と Clerk の両方に書く。書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）
   case "$CMD" in hold | unhold) read_clerk_key ;; esac
   # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
-  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync) ;; *) confirm_live ;; esac
+  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync | hold | unhold) ;; *) confirm_live ;; esac
   "do_${CMD//-/_}"
 }
 
