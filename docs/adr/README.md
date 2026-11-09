@@ -35,7 +35,7 @@
 | [ADR-0025](./ADR-0025-contact-channels-beyond-chat.md) | チャット以外の連絡の手段: Cloudia に「AI と話さずに伝言だけ残す」入口を足し、日程調整は測ってから足す（調査: `docs/contact-channels-research-2026-10.md`） | Proposed (2026-10-26) |
 | [ADR-0026](./ADR-0026-voice-skills-upkeep-and-cms.md) | 文体の仕組み（yomiyasu・cor-voice）を定期的に更新し、どのエージェントでも使え、CMS で書いた記事にも検査がかかるようにする（Epic #452） | Proposed (2026-10-28) / 改訂 2026-10-28（指示は公開の Issue、反響と文体は Grok、実装は Claude Code 以外のエージェント）/ 追記 2026-10-30（日本語の対外文の入口を 1 つの元ファイルから生成する。#477） |
 | [ADR-0027](./ADR-0027-article-polish-gate.md) | 記事とニュースの推敲を、ツールに依存しないゲートにする | Proposed (2026-10-28) |
-| [ADR-0028](./ADR-0028-cor-account-billing-foundation.md) | Cor. のサービスに共通のアカウントと課金の基盤: 顧客は Clerk の組織、契約は自前の Stripe、サービスは契約から作った権利（トークンの claim か webhook）で開閉する（横断。bd・XESM が従う） | Proposed (2026-11-09)（骨子） |
+| [ADR-0028](./ADR-0028-cor-account-billing-foundation.md) | Cor. のサービスに共通のアカウントと課金の基盤: 顧客は Clerk の組織、契約は自前の Stripe、サービスは契約から作った権利（トークンの claim か webhook）で開閉する（横断。bd・XESM が従う） | Proposed (2026-11-09)（決めること 1〜10 は回答済み） |
 
 ## フェーズ対応
 
