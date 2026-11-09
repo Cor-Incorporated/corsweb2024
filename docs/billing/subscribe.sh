@@ -17,6 +17,8 @@
 #   simulate   --start YYYY-MM-DD --devfee-count <回数> [--end YYYY-MM-DD] [--billing-from YYYY-MM] --months <月数> [--service <サービス>]
 #   status     --customer <cus_…>
 #   clerk-sync --customer <cus_…>
+#   hold       --customer <cus_…> --service <サービス>
+#   unhold     --customer <cus_…> --service <サービス>
 #
 # customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
 # contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く。
@@ -32,6 +34,9 @@
 # clerk-sync 契約の metadata から services を作り、Clerk の組織（clerk_org_id）の public_metadata.services に送る。
 #            Clerk の更新は deep merge なので、契約の無くなったサービスは null にして消す（ADR-0028 の 2 節）。
 #            既定は dry-run（顧客を読んで、送る JSON を出すだけ。Clerk の鍵は読まない）。書くのは --apply のとき
+# hold       支払いが遅れているサービスを止める（Customer の metadata に contract_<サービス>_hold=true を書き、
+#            clerk-sync と同じ形で Clerk の組織の services にも写す。ADR-0028 の決定 1）
+# unhold     hold を外す（contract_<サービス>_hold を消し、Clerk の services の hold を false にする）
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の不合格 / 3 = 既存と食い違い・前提が足りない・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方・入力の誤り
@@ -75,7 +80,7 @@ CS_STATUS=""
 CS_URL=""
 
 usage() {
-  sed -n '8,34p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
 例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
@@ -111,7 +116,7 @@ parse_args() {
   CMD="$1"
   shift
   case "$CMD" in
-    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync) ;;
+    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync | hold | unhold) ;;
     -h | --help) usage; exit 0 ;;
     *) usage >&2; die 64 "知らないサブコマンド: $CMD" ;;
   esac
@@ -253,6 +258,7 @@ validate_command() {
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --start "$OPT_START"; need --devfee-count "$OPT_DEVFEE"
       check_service; check_date --start "$OPT_START"; check_devfee_count; check_bill_from ;;
     card-setup | status | clerk-sync) need --customer "$OPT_CUSTOMER" ;;
+    hold | unhold) need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; check_service ;;
     cancel)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
       check_service; check_accepted ;;
@@ -271,8 +277,8 @@ validate_inputs() {
   scope --email "$OPT_EMAIL" "customer"
   scope --clerk-org "$OPT_CLERK" "customer"
   scope --payment "$OPT_PAYMENT" "customer"
-  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status clerk-sync"
-  scope --service "$OPT_SERVICE" "contract cancel simulate"
+  scope --customer "$OPT_CUSTOMER" "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold"
+  scope --service "$OPT_SERVICE" "contract cancel simulate hold unhold"
   scope --start "$OPT_START" "contract simulate"
   scope --devfee-count "$OPT_DEVFEE" "contract simulate"
   scope --accepted "$OPT_ACCEPTED" "cancel"
@@ -318,6 +324,8 @@ print_plan() {
       "$OPT_CUSTOMER" "$OPT_MONTH" "$DUE_DATE" ;;
     status) printf 'PLAN status: %s の契約の metadata、今月と先月の請求書、保存したカードを読む（読むだけ）\n' "$OPT_CUSTOMER" ;;
     clerk-sync) printf 'PLAN clerk-sync: %s の clerk_org_id の組織に、契約の metadata から作った services を PATCH で送る（deep merge。契約の無いサービスは null で消す）。dry-run は顧客を読むだけで、Clerk の鍵は読まない\n' "$OPT_CUSTOMER" ;;
+    hold) printf 'PLAN hold: %s の %s を止める（metadata[contract_%s_hold]=true を書き、Clerk の組織の services の hold も true にする）。書き込みを止め、閲覧は残る（決定 1）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
+    unhold) printf 'PLAN unhold: %s の %s の hold を外す（metadata[contract_%s_hold] を消し、Clerk の組織の services の hold を false にする）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
   esac
 }
 
@@ -741,6 +749,78 @@ do_cancel() {
   printf 'NOTE 終了日を過ぎたら入口を閉じる（runbook D3）\n'
 }
 
+# hold / unhold: Customer の metadata の印を書き、clerk-sync と同じ形で Clerk へ写す。
+# 印は contract_<サービス>_hold=true。外すときは空の値にして key を消す（Stripe は空の値で metadata の key を消す）。
+do_hold() { do_set_hold true; }
+do_unhold() { do_set_hold false; }
+do_set_hold() {
+  local on="$1" ks="contract_${OPT_SERVICE}_start" kh="contract_${OPT_SERVICE}_hold" org cur newv cond what label
+  local s_hold c_hold need_stripe=0 need_clerk=0
+  load_customer
+  [ -n "$(cust_meta "$ks")" ] || die 3 "$OPT_CUSTOMER に $OPT_SERVICE の契約が無い（metadata に $ks が無い）。hold を書かない"
+  org="$(cust_meta clerk_org_id)"
+  [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に写せないので書かない"
+  [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。書かない"
+  cur="$(cust_meta "$kh")"
+  if [ "$cur" = "true" ]; then s_hold="true"; else s_hold="false"; fi
+  if [ "$on" = "true" ]; then label="hold"; else label="hold なし"; fi
+  # Clerk 側の今の値も読む（Stripe だけ書けて Clerk が失敗した状態を、やり直しで直せるようにする）
+  c_hold="$(clerk_current_hold "$org" "$OPT_SERVICE")"
+  [ "$c_hold" = "true" ] || c_hold="false"
+  if [ "$on" = "$s_hold" ] && [ "$s_hold" = "$c_hold" ]; then
+    printf 'OK %s %s %s: 既に %s（Stripe も Clerk も。書かない）\n' \
+      "$([ "$on" = "true" ] && printf 'hold' || printf 'unhold')" "$OPT_CUSTOMER" "$OPT_SERVICE" "$label"
+    return 0
+  fi
+  if [ "$s_hold" != "$on" ]; then need_stripe=1; fi
+  if [ "$c_hold" != "$on" ]; then need_clerk=1; fi
+  if [ "$need_stripe" -eq 0 ]; then
+    printf 'NOTE %s: Stripe の metadata は既に %s。Clerk だけ直す（片側だけ書けた状態を残さない）\n' "$OPT_CUSTOMER" "$label"
+  fi
+  if [ "$need_clerk" -eq 0 ]; then
+    printf 'NOTE %s: Clerk は既に %s。Stripe だけ書く\n' "$OPT_CUSTOMER" "$label"
+  fi
+  if [ "$on" = "true" ]; then
+    newv="true"
+    cond=".metadata[\"$kh\"] == \"true\""
+    what="hold を書く"
+  else
+    newv=""
+    cond="(.metadata[\"$kh\"] // \"\") == \"\""
+    what="hold を外す"
+  fi
+  # これから書く値を重ねた状態で Clerk に送る本文を作り、本番の確認より前に見せる
+  # （plans.json に無いサービスの削除も、確認の前に表示する）。
+  CUST_JSON="$(jq -c --arg k "$kh" --arg v "$newv" '.metadata = ((.metadata // {}) + {($k): $v})' <<<"$CUST_JSON")"
+  check_clerk_rows
+  if [ "$need_clerk" -eq 1 ]; then
+    print_clerk_rows "$(clerk_services_json)"
+    clerk_build_payload "$org"
+  fi
+  confirm_live
+  if [ "$need_stripe" -eq 1 ]; then
+    put_meta "$what" "$cond" "$kh=$newv"
+    CUST_JSON="$RESP_BODY"
+    if [ "$on" = "true" ]; then
+      printf 'HOLD %s %s: metadata に印を書いた。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
+    else
+      printf 'UNHOLD %s %s: metadata の印を消した。Clerk の組織に写す\n' "$OPT_CUSTOMER" "$OPT_SERVICE"
+    fi
+  fi
+  if [ "$need_clerk" -eq 1 ]; then
+    clerk_send_payload "$org"
+  else
+    printf 'NOTE clerk %s: 既に %s（送らない）\n' "$org" "$label"
+  fi
+}
+
+# 組織の services の、そのサービスの hold の今の値（true / false）。Clerk を 1 回読む。
+clerk_current_hold() {
+  clerk_api GET "/organizations/$1"
+  require_ok "Clerk の metadata の読取 GET /organizations/$1"
+  jq -r --arg s "$2" '(.public_metadata.services[$s].hold // false)' <<<"$RESP_BODY"
+}
+
 # --- Clerk の組織の metadata（services の写し。ADR-0028 の 2 節） ---
 
 # Customer の metadata から、Clerk の組織の public_metadata.services に送る JSON を作る。
@@ -918,8 +998,10 @@ main() {
   load_api_version
   read_key
   check_mode
+  # hold と unhold は、Stripe の metadata と Clerk の両方に書く。書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）
+  case "$CMD" in hold | unhold) read_clerk_key ;; esac
   # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
-  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync) ;; *) confirm_live ;; esac
+  case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync | hold | unhold) ;; *) confirm_live ;; esac
   "do_${CMD//-/_}"
 }
 
