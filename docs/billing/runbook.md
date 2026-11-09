@@ -460,8 +460,8 @@ bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
 
 終了日の翌日から 30 日は、権利の判定が「読む・書き出すだけ」になる（決定 1。ADR-0028 の 3 節）。
 
-- **製品が `services` を判定している段階（bd は段階 2、XESM は段階 3）**: Access の許可を外すのは、その 30 日が過ぎてから（XESM は `contract-to-use.md` 手順 8 の逆。business-dossier は `onboarding.md` の Access の節の逆。**寺田のみ**）。早く外すと、30 日の書き出しができなくなる
-- **いまの段階 1（製品はまだ Clerk を見ていない。入口は Access だけ）**: 30 日を残す手段が無い（Access を残すと、書き込みもそのまま通る）。だから**終了日の翌日に Access から外す**。段階 2・3 に移ったら、上の 30 日を残す扱いに切り替える
+- **製品が `services` を判定している段階（bd は段階 2、XESM は段階 3）**: 30 日は製品の判定（読む・書き出すだけ）が残す。**Access は Clerk の認証が入った時点で既に外れている**（README 1B の段階 2。決定 5）ので、ここで Access の作業はしない。Access をこの時点まで残していたなら、Clerk の認証を入れたときに外す
+- **いまの段階 1（製品はまだ Clerk を見ていない。入口は Access だけ）**: 30 日を残す手段が無い（Access を残すと、書き込みもそのまま通る）。だから**終了日の翌日に Access から外す**（XESM は `contract-to-use.md` 手順 8 の逆。business-dossier は `onboarding.md` の Access の節の逆。**寺田のみ**）。段階 2・3 に移ったら、上の扱いに切り替える
 
 台帳に閉じた日時と、どちらの扱いで閉じたかを書く。
 
