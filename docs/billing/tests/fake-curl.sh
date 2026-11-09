@@ -78,6 +78,8 @@ esac
 method="GET"
 url=""
 lookup=""
+start_arg=""
+customer_arg=""
 amount_arg=""
 invoice_arg=""
 query_arg=""
@@ -91,6 +93,8 @@ for a in "$@"; do
     "amount="*) amount_arg="${a#amount=}" ;;
     "invoice="*) invoice_arg="${a#invoice=}" ;;
     "query="*) query_arg="${a#query=}" ;;
+    "starting_after="*) start_arg="${a#starting_after=}" ;;
+    "customer="*) customer_arg="${a#customer=}" ;;
     "metadata["*"]="*)
       k="${a#"metadata["}"
       k="${k%%"]="*}"
@@ -142,6 +146,66 @@ prices() {
       respond 200 "$(jq -c --arg k "$lookup" --argjson bump "$bump" '{object: "list", has_more: false, data: [.prices[] | select(.lookup_key == $k) | {id: "price_fake", unit_amount: (.unit_amount_jpy_excl_tax + $bump), currency: "jpy", type: "recurring", recurring: {interval}, tax_behavior, product}]}' "$FAKE_PLANS")"
       ;;
   esac
+}
+
+# --- resync 用: 顧客の状態（id → 顧客）と、open の請求書の一覧。状態は $FAKE_LOG.customers に持つ ---
+RESYNC_CUSTOMERS="$FAKE_LOG.customers"
+resync_store() {
+  if [ -f "$RESYNC_CUSTOMERS" ]; then
+    cat "$RESYNC_CUSTOMERS"
+  else
+    jq -c -n --argjson a "${FAKE_CUST_PAGE1:-[]}" --argjson b "${FAKE_CUST_PAGE2:-[]}" '($a + $b) | map({key: .id, value: .}) | from_entries'
+  fi
+}
+# 顧客の一覧。100 件ずつ、starting_after でページを送る（FAKE_CUST_PAGE1 と FAKE_CUST_PAGE2）
+resync_customers_list() {
+  local data more
+  if [ -n "${start_arg:-}" ]; then
+    data="${FAKE_CUST_PAGE2:-[]}"
+    more=false
+  else
+    data="${FAKE_CUST_PAGE1:-[]}"
+    if [ -n "${FAKE_CUST_PAGE2:-}" ]; then more=true; else more=false; fi
+  fi
+  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: $d}')"
+}
+resync_customer_get() {
+  local id="${path#/v1/customers/}" rec
+  rec="$(jq -c --arg i "$id" '.[$i] // empty' <<<"$(resync_store)")"
+  if [ -z "$rec" ]; then
+    respond 404 '{"error":{"type":"invalid_request_error","code":"resource_missing","message":"No such customer"}}'
+    return 0
+  fi
+  respond 200 "$rec"
+}
+resync_customer_update() {
+  local id="${path#/v1/customers/}" cur merged
+  cur="$(resync_store)"
+  merged="$(jq -c --arg i "$id" --argjson p "$posted_meta" '.[$i].metadata = ((.[$i].metadata // {}) + $p)' <<<"$cur")"
+  printf '%s' "$merged" >"$RESYNC_CUSTOMERS"
+  respond 200 "$(jq -c --arg i "$id" '.[$i]' <<<"$merged")"
+}
+# open の請求書の一覧。FAKE_OPEN_INVOICES（1 ページ目）と FAKE_OPEN_INVOICES_P2（2 ページ目）
+resync_invoices() {
+  local cus="${customer_arg:-}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" data more
+  [ -n "$p1" ] || p1='{}'
+  [ -n "$p2" ] || p2='{}'
+  if [ -n "${start_arg:-}" ]; then
+    data="$(jq -c --arg c "$cus" '.[$c] // []' <<<"$p2")"
+    more=false
+  else
+    data="$(jq -c --arg c "$cus" '.[$c] // []' <<<"$p1")"
+    if [ "$(jq -c --arg c "$cus" '.[$c] // [] | length' <<<"$p2")" -gt 0 ]; then more=true; else more=false; fi
+  fi
+  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: ($d | map(. + {object: "invoice", status: "open"}))}')"
+}
+# 請求書の明細。metadata.service を 1 つだけ返す（hold を決めるのに使う）
+resync_invoice_get() {
+  local id="${path#/v1/invoices/}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" rec
+  [ -n "$p1" ] || p1='{}'
+  [ -n "$p2" ] || p2='{}'
+  rec="$(jq -c -n --argjson a "$p1" --argjson b "$p2" --arg i "$id" '[([$a, $b][] | .[][] | select(.id == $i))][0] // {}')"
+  respond 200 "$(jq -c '{id, object: "invoice", status: "open", customer, due_date, lines: {object: "list", data: (if .service then [{id: ("il_" + .id), object: "invoiceitem", metadata: {service: .service}}] else [] end)}}' <<<"$rec")"
 }
 
 # --- subscribe.sh 用（FAKE_SEARCH・FAKE_CUST_* ・FAKE_INV_* ・FAKE_CS_* などで応答を変える） ---
@@ -255,13 +319,14 @@ case "$method:$path" in
   GET:/v1/products/*) product ;;
   GET:/v1/prices) prices ;;
   GET:/v1/customers/search) customer_search ;;
-  GET:/v1/customers/*) respond 200 "$(customer_json '{}')" ;;
+  GET:/v1/customers) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customers_list; else respond 200 '{"object":"list","has_more":false,"data":[]}'; fi ;;
+  GET:/v1/customers/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_get; else respond 200 "$(customer_json '{}')"; fi ;;
   POST:/v1/customers) respond 200 '{"id":"cus_new"}' ;;
-  POST:/v1/customers/*) customer_update ;;
+  POST:/v1/customers/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_update; else customer_update; fi ;;
   GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;
   GET:/v1/invoices/search) invoice_search ;;
-  GET:/v1/invoices) invoice_list ;;
-  GET:/v1/invoices/*) invoice_get ;;
+  GET:/v1/invoices) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_invoices; else invoice_list; fi ;;
+  GET:/v1/invoices/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_invoice_get; else invoice_get; fi ;;
   POST:/v1/invoices) respond 200 "$(inv_json in_new draft "-" 0 0)" ;;
   POST:/v1/invoices/*/finalize) invoice_action "${FAKE_FINALIZE_STATUS:-open}" ;;
   POST:/v1/invoices/*/send) invoice_action open ;;

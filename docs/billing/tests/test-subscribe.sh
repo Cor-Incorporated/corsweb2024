@@ -599,5 +599,67 @@ expect "hold には --service が要る" 64 0 "hold には --service が要る"
 run unhold --customer cus_x --month "$LAST"
 expect "--month は hold と unhold で使わない" 64 0 "invoice charge mark-paid でだけ使う"
 
+# 20. resync: 全件の送り直し（resync_at）と hold の判定（期限の 14 日後）。顧客と請求書の一覧はページを送る
+day_ago() {
+  local n="$1"
+  TZ=Asia/Tokyo date -r "$(($(date '+%s') - n * 86400))" '+%Y-%m-%d' 2>/dev/null \
+    || TZ=Asia/Tokyo date -d "@$(($(date '+%s') - n * 86400))" '+%Y-%m-%d'
+}
+due_of() { jst_epoch "$(day_ago "$1") 23:59:59"; }
+RESYNC_P1='[{"id":"cus_a","object":"customer","name":"A","metadata":{"customer_code":"a-co","clerk_org_id":"org_a","contract_xesm_start":"2026-10-01","contract_xesm_devfee_count":"12"}},{"id":"cus_b","object":"customer","name":"B","metadata":{"customer_code":"b-co","clerk_org_id":"org_b","contract_xesm_start":"2026-10-01","contract_xesm_devfee_count":"12"}}]'
+RESYNC_P2='[{"id":"cus_c","object":"customer","name":"C","metadata":{"customer_code":"c-co","clerk_org_id":"org_c","contract_business-dossier_start":"2026-10-01","contract_business-dossier_devfee_count":"12"}}]'
+OPEN_INV="$(jq -c -n --argjson d20 "$(due_of 20)" --argjson d14 "$(due_of 14)" \
+  '{cus_a: [{id: "in_a1", due_date: $d20, service: "xesm"}], cus_b: [{id: "in_b1", due_date: $d14, service: "xesm"}], cus_c: [{id: "in_c1", due_date: $d20, service: "business-dossier"}]}')"
+resync() { FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="${OPEN_INVOICES-$OPEN_INV}" run "$@"; }
+
+run resync
+expect "resync の dry-run は何もしないと出す" 0 "-" "DONE dry-run"
+[ -z "$LOG" ] && ok "resync の dry-run は curl を呼ばない" || ng "resync の dry-run が curl を呼んだ"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+resync resync --apply --mode test
+expect "resync は 3 人の顧客を見る（2 ページ目も見る）" 0 - "RESYNC 顧客 3 件を見る"
+eq "顧客の一覧は 2 ページ読む（100 件目より後を見落とさない）" "$(count "$LOG" '^CALL GET /v1/customers$')" "2"
+check_arg "顧客の一覧の続きは starting_after で取る" "starting_after=cus_b"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "期限の 14 日後を過ぎた open の請求書があるサービスを hold にする" || ng "hold を書いていない: $LOG"
+eq "cus_b は期限の 14 日後ちょうどなので hold にしない（過ぎていない）" "$(count "$LOG" '^CALL POST /v1/customers/cus_b')" "0"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_business-dossier_hold]=true' && ok "2 ページ目の顧客（cus_c）も hold を書く" || ng "cus_c の hold が無い: $LOG"
+eq "Clerk へは clerk_org_id を持つ 3 人に送る" "$(clerk_patches)" "3"
+[ "$(count "$LOG" '^CLERK_BODY')" -eq 3 ] && ok "Clerk への本文は 3 通" || ng "Clerk の本文の数: $(count "$LOG" '^CLERK_BODY')"
+printf '%s\n' "$LOG" | grep '^CLERK_BODY' | grep -qF '"resync_at":"20' && ok "組織の metadata に resync_at を書く" || ng "resync_at が本文に無い: $LOG"
+printf '%s\n' "$LOG" | grep -q '^CLERK_BODY.*"xesm":{"from":"2026-10-01","until":null,"hold":true}' && ok "Clerk の services に hold=true を写す" || ng "Clerk の services の hold が違う: $LOG"
+printf '%s' "$OUT" | grep -qF 'RESYNC 完了: 顧客 3 件、hold を書き直した顧客 2 件、Clerk へ送った顧客 3 件' && ok "resync のまとめを出す" || ng "まとめが違う: $OUT"
+printf '%s' "$OUT" | grep -qF 'RESYNC cus_c: Clerk の組織 org_c' && ok "2 ページ目の顧客にも Clerk へ送ったと出す" || ng "cus_c の Clerk の行が無い: $OUT"
+# 2 回目は hold が既に true なので metadata を書かない（冪等）
+resync resync --apply --mode test
+eq "2 回目は hold を書き直さない（冪等）" "$(count "$LOG" '^CALL POST ')" "0"
+# 払われた（open の請求書が無くなった）ら hold を外す
+OPEN_INVOICES="" resync resync --apply --mode test
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=' && ok "請求書が払われたら hold を外す" || ng "hold を外していない: $LOG"
+printf '%s\n' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":false' && ok "Clerk の services の hold を false にする" || ng "Clerk の hold=false が無い: $LOG"
+# 請求書の一覧も 2 ページ目を見る
+rm -f "$WORK/log.customers"
+OPEN_INVOICES="$(jq -c -n --argjson d0 "$(due_of 0)" '{cus_a: [{id: "in_a0", due_date: $d0, service: "xesm"}], cus_b: []}')"
+OPEN_INVOICES_P2="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a9", due_date: $d20, service: "xesm"}]}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INVOICES" FAKE_OPEN_INVOICES_P2="$OPEN_INVOICES_P2" \
+  run resync --apply --mode test
+expect "請求書の一覧の 2 ページ目も見る" 0 - "RESYNC 完了"
+check_arg "請求書の一覧の続きは starting_after で取る" "starting_after=in_a0"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "2 ページ目の請求書からも hold を決める" || ng "2 ページ目の請求書を見ていない: $LOG"
+# clerk_org_id の無い顧客は Clerk へ送らない
+rm -f "$WORK/log.customers"
+NOORG_P1="$(jq -c '.[0].metadata |= del(.clerk_org_id)' <<<"$RESYNC_P1")"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$NOORG_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode test
+expect "clerk_org_id の無い顧客には Clerk へ送らないと出す" 0 0 "clerk_org_id が無い（Clerk へは送らない）"
+eq "clerk_org_id を持つ顧客にだけ送る" "$(clerk_patches)" "1"
+CKEY="" FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode test
+expect "Clerk の鍵が無ければ resync は書かない" 64 0 "Clerk の鍵が無い"
+eq "Clerk の鍵が無ければ 1 件も書かない" "$(posts)" "0"
+SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode live
+expect "本番の resync は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+run resync --customer cus_x
+expect "resync に --customer は使わない" 64 0 "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold でだけ使う"
+run resync --apply
+expect "resync の --apply には --mode が要る" 64 0 "--apply には --mode"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -19,6 +19,7 @@
 #   clerk-sync --customer <cus_…>
 #   hold       --customer <cus_…> --service <サービス>
 #   unhold     --customer <cus_…> --service <サービス>
+#   resync
 #
 # customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
 # contract   契約の開始日と開発費の回数を Customer の metadata（contract_<サービス>_start / _devfee_count）に書く。
@@ -37,6 +38,10 @@
 # hold       支払いが遅れているサービスを止める（Customer の metadata に contract_<サービス>_hold=true を書き、
 #            clerk-sync と同じ形で Clerk の組織の services にも写す。ADR-0028 の決定 1）
 # unhold     hold を外す（contract_<サービス>_hold を消し、Clerk の services の hold を false にする）
+# resync     全件の送り直し（ADR-0028 の 2 節）。clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、
+#            組織の metadata に resync_at（時刻）も書く（Clerk に更新のイベントを起こさせる）。
+#            同じ回で hold を判定する: 請求書の支払いの期限の 14 日後を過ぎても open のものがあれば hold を書き、
+#            無ければ外す（決定 1）。顧客の一覧と請求書の一覧は 100 件ずつページを送る
 #
 # 終了コード: 0 = 成功 / 2 = plans.json の不合格 / 3 = 既存と食い違い・前提が足りない・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方・入力の誤り
@@ -80,7 +85,7 @@ CS_STATUS=""
 CS_URL=""
 
 usage() {
-  sed -n '8,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '8,44p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   cat <<'EOF'
 共通: [--plans <path>] [--mode test|live] [--apply]
 例:   bash docs/billing/subscribe.sh simulate --start 2026-11-15 --devfee-count 12 --end 2027-04-05 --months 6
@@ -116,7 +121,7 @@ parse_args() {
   CMD="$1"
   shift
   case "$CMD" in
-    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync | hold | unhold) ;;
+    customer | find | contract | card-setup | cancel | invoice | charge | mark-paid | simulate | status | clerk-sync | hold | unhold | resync) ;;
     -h | --help) usage; exit 0 ;;
     *) usage >&2; die 64 "知らないサブコマンド: $CMD" ;;
   esac
@@ -259,6 +264,7 @@ validate_command() {
       check_service; check_date --start "$OPT_START"; check_devfee_count; check_bill_from ;;
     card-setup | status | clerk-sync) need --customer "$OPT_CUSTOMER" ;;
     hold | unhold) need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; check_service ;;
+    resync) ;;
     cancel)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
       check_service; check_accepted ;;
@@ -326,6 +332,7 @@ print_plan() {
     clerk-sync) printf 'PLAN clerk-sync: %s の clerk_org_id の組織に、契約の metadata から作った services を PATCH で送る（deep merge。契約の無いサービスは null で消す）。dry-run は顧客を読むだけで、Clerk の鍵は読まない\n' "$OPT_CUSTOMER" ;;
     hold) printf 'PLAN hold: %s の %s を止める（metadata[contract_%s_hold]=true を書き、Clerk の組織の services の hold も true にする）。書き込みを止め、閲覧は残る（決定 1）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
     unhold) printf 'PLAN unhold: %s の %s の hold を外す（metadata[contract_%s_hold] を消し、Clerk の組織の services の hold を false にする）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
+    resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く。同じ回で、請求書の支払いの期限の 14 日後を過ぎても open のものから hold を決めて書き直す（決定 1）\n' ;;
   esac
 }
 
@@ -785,6 +792,118 @@ do_set_hold() {
   clerk_push_services "$org"
 }
 
+# --- 照合（全件の送り直しと hold の判定。ADR-0028 の 2 節・決定 1） ---
+
+# 顧客の一覧。100 件ずつ、starting_after でページを送る（#506 の既知の LOW: 100 件で切れる）。
+list_all_customers() {
+  local after="" all="[]" page more n=0
+  while :; do
+    n=$((n + 1))
+    [ "$n" -le 1000 ] || die 3 "顧客の一覧のページが 1000 を超えた。全件を見ていない"
+    if [ -z "$after" ]; then
+      api_ok "顧客の一覧" GET /v1/customers --data-urlencode "limit=100"
+    else
+      api_ok "顧客の一覧（続き）" GET /v1/customers --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
+    fi
+    page="$RESP_BODY"
+    all="$(jq -c -n --argjson a "$all" --argjson b "$(jq -c '.data // []' <<<"$page")" '$a + $b')"
+    more="$(jq -r '.has_more // false' <<<"$page")"
+    [ "$more" = "true" ] || break
+    after="$(jq -r '.data[-1].id // empty' <<<"$page")"
+    [ -n "$after" ] || die 3 "顧客の一覧の続きの位置（starting_after）を読めない。全件を見ていない"
+  done
+  printf '%s' "$all"
+}
+
+# その顧客の、支払いの期限の 14 日後を過ぎても open の請求書が含むサービス（決定 1）。
+# 期限の日（日本時間）の 14 日後を過ぎたものだけ。1 件でもあれば、そのサービスは hold。
+# 請求書の一覧も 100 件ずつページを送る。
+overdue_services() {
+  local cus="$1" today="$2" after="" page more ids id svcs out="" n=0
+  while :; do
+    n=$((n + 1))
+    [ "$n" -le 1000 ] || die 3 "請求書の一覧のページが 1000 を超えた（顧客 $cus）。全件を見ていない"
+    if [ -z "$after" ]; then
+      api_ok "open の請求書の一覧" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=open" --data-urlencode "limit=100"
+    else
+      api_ok "open の請求書の一覧（続き）" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=open" --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
+    fi
+    page="$RESP_BODY"
+    ids="$(jq -r --arg t "$today" '.data[]? | select((.due_date // 0) > 0) | select((((.due_date + 1209600) | todate)[0:10]) < $t) | .id' <<<"$page")"
+    while IFS= read -r id; do
+      [ -n "$id" ] || continue
+      api_ok "請求書 $id の明細" GET "/v1/invoices/$id"
+      svcs="$(jq -r '[.lines.data[]? | .metadata.service // empty] | unique | .[]' <<<"$RESP_BODY")"
+      [ -z "$svcs" ] || out="$out$svcs"$'\n'
+    done <<<"$ids"
+    more="$(jq -r '.has_more // false' <<<"$page")"
+    [ "$more" = "true" ] || break
+    after="$(jq -r '.data[-1].id // empty' <<<"$page")"
+    [ -n "$after" ] || die 3 "請求書の一覧の続きの位置（starting_after）を読めない。全件を見ていない"
+  done
+  printf '%s' "$out" | sed '/^$/d' | sort -u
+}
+
+# 全件の送り直しと hold の判定。顧客ごとに、契約しているサービスの hold を「期限の 14 日後を過ぎても open の
+# 請求書があるか」で決め直し、変わったところだけ metadata に書く。clerk_org_id があれば services と resync_at を送る。
+do_resync() {
+  local today ts all n i cus overdue svc cur want cond
+  local -a kvs=()
+  local customers=0 holds=0 sent=0
+  today="$(today_jst)"
+  ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  printf 'NOTE resync: 全件の送り直し（今日 %s JST、resync_at %s）。hold は請求書の支払いの期限の 14 日後を過ぎても open のものから決める\n' "$today" "$ts"
+  all="$(list_all_customers)"
+  n="$(jq 'length' <<<"$all")"
+  printf 'RESYNC 顧客 %s 件を見る\n' "$n"
+  i=0
+  while [ "$i" -lt "$n" ]; do
+    cus="$(jq -r --argjson i "$i" '.[$i].id' <<<"$all")"
+    i=$((i + 1))
+    OPT_CUSTOMER="$cus"
+    api_ok "顧客 $cus の読取" GET "/v1/customers/$cus"
+    CUST_JSON="$RESP_BODY"
+    if [ "$(jq -r '.deleted // false' <<<"$CUST_JSON")" = "true" ]; then
+      printf 'NOTE %s は削除されている（飛ばす）\n' "$cus"
+      continue
+    fi
+    customers=$((customers + 1))
+    overdue="$(overdue_services "$cus" "$today")"
+    kvs=()
+    cond="true"
+    while IFS= read -r svc; do
+      [ -n "$(cust_meta "contract_${svc}_start")" ] || continue
+      cur="$(cust_meta "contract_${svc}_hold")"
+      [ "$cur" = "true" ] && cur="true" || cur="false"
+      if printf '%s\n' "$overdue" | grep -qxF -- "$svc"; then want="true"; else want="false"; fi
+      [ "$cur" = "$want" ] && continue
+      if [ "$want" = "true" ]; then
+        kvs+=("contract_${svc}_hold=true")
+        cond="$cond and (.metadata[\"contract_${svc}_hold\"] == \"true\")"
+        printf 'PLAN hold %s %s: 支払いの期限の 14 日後を過ぎても open の請求書がある\n' "$cus" "$svc"
+      else
+        kvs+=("contract_${svc}_hold=")
+        cond="$cond and ((.metadata[\"contract_${svc}_hold\"] // \"\") == \"\")"
+        printf 'PLAN unhold %s %s: 期限を過ぎた open の請求書が無い（払われたか、まだ期限の 14 日後を過ぎていない）\n' "$cus" "$svc"
+      fi
+    done < <(plans_services)
+    if [ "${#kvs[@]}" -gt 0 ]; then
+      put_meta "hold を書く（resync）" "$cond" "${kvs[@]}"
+      CUST_JSON="$RESP_BODY"
+      holds=$((holds + 1))
+    fi
+    if [ -n "$(cust_meta clerk_org_id)" ]; then
+      check_clerk_rows
+      clerk_push_services "$(cust_meta clerk_org_id)" "$(jq -cn --arg t "$ts" '{resync_at: $t}')"
+      sent=$((sent + 1))
+      printf 'RESYNC %s: Clerk の組織 %s に services と resync_at を送った\n' "$cus" "$(cust_meta clerk_org_id)"
+    else
+      printf 'NOTE %s に clerk_org_id が無い（Clerk へは送らない）\n' "$cus"
+    fi
+  done
+  printf 'RESYNC 完了: 顧客 %s 件、hold を書き直した顧客 %s 件、Clerk へ送った顧客 %s 件（resync_at %s）\n' "$customers" "$holds" "$sent" "$ts"
+}
+
 # --- Clerk の組織の metadata（services の写し。ADR-0028 の 2 節） ---
 
 # Customer の metadata から、Clerk の組織の public_metadata.services に送る JSON を作る。
@@ -821,9 +940,13 @@ print_clerk_rows() {
 # 組織の public_metadata.services を、顧客の契約から作った services で置き換える（deep merge。null のサービスは消える）。
 # 応答の services を送った値と比べ、違えば止まる（書いたあとは戻せないので、観測値を出して寺田に渡す）。
 clerk_push_services() {
-  local org="$1" services body
+  local org="$1" extra="${2:-}" services body
   services="$(clerk_services_json)"
-  body="$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+  if [ -n "$extra" ]; then
+    body="$(jq -cn --argjson s "$services" --argjson e "$extra" '{public_metadata: ({services: $s} + $e)}')"
+  else
+    body="$(jq -cn --argjson s "$services" '{public_metadata: {services: $s}}')"
+  fi
   printf 'JSON %s\n' "$body"
   clerk_api PATCH "/organizations/$org/metadata" "$body"
   require_ok "Clerk の metadata の更新 PATCH /organizations/$org/metadata"
@@ -924,7 +1047,7 @@ main() {
   read_key
   check_mode
   # hold と unhold は、Stripe の metadata と Clerk の両方に書く。書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）
-  case "$CMD" in hold | unhold) read_clerk_key ;; esac
+  case "$CMD" in hold | unhold | resync) read_clerk_key ;; esac
   # invoice と charge は、明細と額を読んで出してから、本番の確認をする（do_invoice / do_charge の中）
   case "$CMD" in find | status | invoice | charge | mark-paid | clerk-sync) ;; *) confirm_live ;; esac
   "do_${CMD//-/_}"
