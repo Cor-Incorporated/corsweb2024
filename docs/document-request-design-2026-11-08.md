@@ -18,13 +18,13 @@
 
 ## 設定差分（既存の値は変えていない）
 
-`workers/contact-chat/wrangler.toml` の `CONTACT_TO_EMAIL`、`CONTACT_CC_EMAILS`、`CONTACT_FROM_EMAIL` は変えていない。新しい変数は toml に書いていない。本番で `live` にする手順は `workers/contact-chat/RUNBOOK-document-request-notice.md`（人間ゲート）。
+`workers/contact-chat/wrangler.toml` の `CONTACT_TO_EMAIL`、`CONTACT_CC_EMAILS`、`CONTACT_FROM_EMAIL` は変えていない。新しい変数は toml に書いていない。本番で `live` にする手順は `workers/contact-chat/RUNBOOK-document-request-notice.md`（人間ゲート）。2 つの値は、専用の PR で `wrangler.toml` の本番側の `[vars]` に対で書く。この PR（#530）には足していない。
 
 | 名前 | いま | 意味 |
 |---|---|---|
 | `DOCUMENT_REQUEST_NOTIFY_MODE` 未設定 | コードの既定 | Resend を呼ばない。outbox は `held` / `notify_not_released`。行は残る |
 | `mock` | テストだけ | キュー消費は送らず `held`。明示の再処理だけが擬似送信する。受付 status は `stored` のまま |
-| `live` + `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` | 未設定 | 解放時刻（10 桁の unix 秒）以降に作られた行の社内通知を、既存の問い合わせと同じ送信器・同じ宛先で送る。解放時刻が無い・不正なら送らない |
+| `live` + `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` | 未設定 | 解放時刻（10 桁の unix 秒）以降に作られた行の社内通知を、既存の問い合わせと同じ送信器・同じ宛先で送る。解放時刻が無い・不正なら送らない。mode は小文字の `live` だけ（`LIVE` や空白つきは hold）。解放時刻は配備が終わる予定より後にし、止めて再び live にするときは必ず新しくする（この境界は手順で閉じていて、コードでは閉じていない） |
 
 ## 社内通知の流れ
 
@@ -34,9 +34,9 @@
 
 Queue へ入れられなかった受付は、応答を `stored` + `notification: 'pending'` のまま返し、行に `notify_not_enqueued` を残す。cron（15 分ごと）が、作成から 15 分たった `pending` / `queued` または `failed`（上限の手前）の行を Queue へ入れ直す。`held` は入れ直さない。
 
-解放時刻より前に作られた行（hold の時期の受付）は、重複の再申込みで Queue に入り直しても送らない。送るのは明示の再処理（`replayHeldDocumentNotice`、HTTP にも CLI にも出していない）だけで、`live` のときは実送信になる。
+解放時刻より前に作られた行（hold の時期の受付）は、重複の再申込みで Queue に入り直しても送らない。送る入口は、この波には無い。`replayHeldDocumentNotice` は関数としてあるが、HTTP にも CLI にも出していない（試験からだけ呼ぶ）。DLQ の行、`held`、`sending` のまま残った行は、手順書の照会（寺田さんが毎営業日）で見つけて手動で対応する。
 
-担当が未通知の受付は、手順書の照会 SQL（読み取りだけ、PII の列は選ばない）で見つける。
+担当が未通知の受付は、手順書の照会 SQL（読み取りだけ、PII の列は選ばない）で、寺田さんが毎営業日に見つける。
 
 ## 受付言語
 
@@ -54,7 +54,7 @@ Queue へ入れられなかった受付は、応答を `stored` + `notification:
 
 請求フォームへは、`/contact` の「会社紹介資料の請求」から `/contact/materials/` へ進む。業種ページの相談ボタンは `/contact` へ行き、そのページに同じリンクがある。請求の結果ページにも、公開スライドへのリンクが残る。これは送付済みの表示ではない。
 
-保持期間の最終判断は未確定。いまの行は、問い合わせと同じ `SUBMISSION_TTL_SECONDS`（90日）で消える。これは新しい期間の決定ではなく、既存の削除に乗せた結果である。変えるなら、この列の期限と purge を一緒に変える。
+保持期間は 90 日（問い合わせと同じ `SUBMISSION_TTL_SECONDS`）。寺田さん本人が 2026-11-12T09:21:21.565Z に、Codex のチャットで「この案を採用。未達確認は寺田が毎営業日（推奨）」と答えた（問いに「受付記録は90日保持」。記録は `統括/codex_fable_followup_20261112/evidence/user-decisions.json`）。変えるなら、この列の期限と purge を一緒に変える。
 
 請求者への自動返信は作っていない。送付済みと読まれるため。配布の方法（公開 URL の案内だけにするか、人がメールで送るか）は未確定。
 
