@@ -286,7 +286,7 @@ class NegativeCaseTest(unittest.TestCase):
 
 class ReviewCounterexampleTest(unittest.TestCase):
     """PR #532 の独立査読（review-s1）の反例のうち、閉じたもの。ID は査読の番号（F-5 取得の言い換え・全角、F-7 日付、F-8 認証名の表記ゆれ、F-2 限定句）。
-    閉じていないものは ADR-0029 の「限界」に列挙する（他言語、見出しと別の段落、次の文への拡大、和暦・英語の日付、別形式の番号）。"""
+    閉じていないものは ADR-0029 の「限界」に列挙する（他言語、見出しと別の段落、別の段落への拡大、和暦・英語の日付、別形式の番号）。"""
 
     SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
     CLOSED = {
@@ -348,6 +348,39 @@ class ReviewCounterexampleTest(unittest.TestCase):
         rec["acquisition"] = [p for p in rec["acquisition"] if p != "認証を得(?:ました|ています|た)"]
         self.assertEqual(errors("ISMS 認証を得ました。\n", record=rec), [])
         self.assertIn("isms_scope_missing", errors("ISMS 認証を得ました。\n"))
+
+
+class ParagraphOverreachTest(unittest.TestCase):
+    """F-6（PR #532 の査読）: 範囲を広げる文が、ISMS の文とは別の文にあっても、同じ段落なら止める。
+    単位は通常の段落。別の段落、箇条書き・表・引用の別の行は束ねない（参考資料の一覧で別の項目の語を結びつけない）。"""
+
+    SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
+
+    def over(self, text: str) -> list[int]:
+        return [h.line for h in hits(text.replace("%s", self.SC)) if h.rule_id == "isms_scope_overreach"]
+
+    def test_extension_in_another_sentence_of_the_same_paragraph_is_stopped(self):
+        # 査読の A14 の形: 拡大が取得の文の次の文にある
+        self.assertEqual(self.over("ISMS 認証を取得しています。%s だから当社の AI は誤回答しません。\n"), [1])
+        self.assertEqual(self.over("ISMS 認証を取得しています。\n%s\nだから当社は情報漏洩ゼロです。\n"), [3])
+
+    def test_the_other_sentence_alone_without_isms_in_the_paragraph_passes(self):
+        self.assertEqual(self.over("だから当社の AI は誤回答しません。\n"), [])
+
+    def test_a_different_paragraph_is_not_joined(self):
+        self.assertEqual(self.over("ISMS 認証を取得しています。%s\n\nだから当社の AI は誤回答しません。\n"), [])
+
+    def test_list_items_table_rows_and_quotes_are_not_joined(self):
+        for other in ("- だから当社の AI は誤回答しません。", "| だから当社の AI は誤回答しません。 |", "> だから当社の AI は誤回答しません。", "2. だから当社の AI は誤回答しません。"):
+            with self.subTest(other=other):
+                self.assertEqual(self.over(f"- ISMS 認証を取得しています。%s\n{other}\n"), [])
+
+    def test_a_limiter_in_the_same_clause_still_clears_it(self):
+        self.assertEqual(self.over("ISMS 認証を取得しています。%s 認証は AI の回答精度を保証するものではありません。\n"), [])
+
+    def test_approved_bodies_still_pass(self):
+        self.assertEqual(errors(APPROVED_BLOCK), [])
+        self.assertEqual(errors("\n".join(APPROVED_REFERENCES)), [])
 
 
 class RecordToTextLinkTest(unittest.TestCase):
