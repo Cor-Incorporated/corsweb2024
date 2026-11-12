@@ -16,7 +16,8 @@ permissions:
 jobs:
   visual_text:
     name: Chromium visual text audit
-    runs-on: ubuntu-latest
+    # Playwright 1.53.1 は ubuntu 26.04 に未対応のため 24.04 に固定。対応版へ上げたら ubuntu-latest に戻す。
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:

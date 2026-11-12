@@ -18,7 +18,7 @@
 | [ADR-0008](./ADR-0008-yomimono-ai-workflow.md) | 読みもの AI 支援ワークフロー | **Deprecated** (2026-09-27)（yomimono 退役。後継候補 ADR-0018） |
 | [ADR-0009](./ADR-0009-news-cases-cms-expansion.md) | news/cases CMS 拡張 + プレスリリース運用 + OGP PNG | Accepted (2026-07-14) / **一部 Deprecated** (2026-09-27)（yomimono 部分） |
 | [ADR-0010](./ADR-0010-cross-site-cta-env-and-intent.md) | Cor↔Grift CTA 環境変数・intent・Preview noindex | Accepted (2026-07-10) / 注記 2026-10-27（intent は ADR-0014、Grift の扱いは ADR-0022） |
-| [ADR-0011](./ADR-0011-paid-entry-and-nav-ia.md) | 有料入口 CTA・Header IA・050 表示方針 | Accepted (2026-07-10) / rev 2026-10-24（Header IA）/ rev 2026-10-25（About 代表）/ rev 2026-10-26（トップ）/ サービスの行き先は ADR-0024 で置き換え（2026-10-26） |
+| [ADR-0011](./ADR-0011-paid-entry-and-nav-ia.md) | 有料入口 CTA・Header IA・050 表示方針 | Accepted (2026-07-10) / rev 2026-10-24（Header IA）/ rev 2026-10-25（About 代表）/ rev 2026-10-26（トップ）/ サービスの行き先は ADR-0024 で置き換え（2026-10-26）/ rev 2026-11-13（050 の公開番号への切替えを先行） |
 | [ADR-0012](./ADR-0012-cloudia-integration-and-org-transfer.md) | Cloudia を Contact フォーム代用として統合（org 移管・CF） | Accepted (2026-07-10) / **一部撤回 2026-09-13**（フォーム fallback） |
 | [ADR-0013](./ADR-0013-contact-consolidation-cloudia.md) | 問い合わせ一極集中（Cloudia UI + contact-chat） | Accepted (2026-07-11) / **一部撤回 2026-09-13**（fallback フォーム恒久維持） |
 | [ADR-0014](./ADR-0014-intent-7keys-and-routing.md) | intent 正本の 7 キー化と intent ルーティング | Accepted (2026-07-11) / rev 2026-10-27（キーの意味と処理を今に合わせた。`contract-dev` の自動ハンドオフは取り下げ） |
@@ -35,6 +35,7 @@
 | [ADR-0025](./ADR-0025-contact-channels-beyond-chat.md) | チャット以外の連絡の手段: Cloudia に「AI と話さずに伝言だけ残す」入口を足し、日程調整は測ってから足す（調査: `docs/contact-channels-research-2026-10.md`） | Proposed (2026-10-26) |
 | [ADR-0026](./ADR-0026-voice-skills-upkeep-and-cms.md) | 文体の仕組み（yomiyasu・cor-voice）を定期的に更新し、どのエージェントでも使え、CMS で書いた記事にも検査がかかるようにする（Epic #452） | Proposed (2026-10-28) / 改訂 2026-10-28（指示は公開の Issue、反響と文体は Grok、実装は Claude Code 以外のエージェント）/ 追記 2026-10-30（日本語の対外文の入口を 1 つの元ファイルから生成する。#477） |
 | [ADR-0027](./ADR-0027-article-polish-gate.md) | 記事とニュースの推敲を、ツールに依存しないゲートにする | Proposed (2026-10-28) |
+| [ADR-0028](./ADR-0028-cor-account-billing-foundation.md) | Cor. のサービスに共通のアカウントと課金の基盤: 顧客は Clerk の組織、契約は自前の Stripe、サービスは契約から作った権利（トークンの claim か webhook）で開閉する（横断。bd・XESM が従う） | Proposed (2026-11-09)（決めること 1〜11 は回答済み） |
 
 ## フェーズ対応
 
