@@ -49,7 +49,10 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - 同じメールと資料は、東京の暦日で1件。メールは問い合わせの HMAC と同じく小文字にしてから鍵にする。再送は同じ受付番号（202）。
 - この POST は他の `/api/contact/*` と同じく、`Origin` が `cor-jp.com` か `www.cor-jp.com` のときだけ通る。別サイトのブラウザ投稿は 403。Origin が無い POST も 403。クッキーは使わないので CSRF nonce は置かない。Turnstile は非JSの送信を止めるので置かない。
 - Queue へ出すのは `{ submissionId, messageType: "internal" }` だけ。氏名やメールは載せない。登録に失敗しても保存は残し、応答は `status: "stored"` と `notification: "pending"`。
-- `DOCUMENT_REQUEST_NOTIFY_MODE` は wrangler に書かない。キュー消費は未設定・`mock`・`live` のどれでも Resend を呼ばず `held` に戻す。擬似再処理は `replayHeldDocumentNotice`（HTTP ルートなし、`mock` のときだけ）。`live` では再処理も送らない。請求者への受付メールは作らない。
+- 社内通知は `DOCUMENT_REQUEST_NOTIFY_MODE` と `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` で決まる。どちらも wrangler に書かない（未設定 = hold = 送らない）。`live` で、行が解放時刻（10 桁の unix 秒）以降に作られているときだけ、キュー消費が既存の問い合わせと同じ送信器・宛先（`CONTACT_TO_EMAIL` / `CONTACT_CC_EMAILS`）へ送る。解放時刻より前の行（hold の時期の受付）は、重複の再申込みでも cron でも送らず `held` のまま。送れても `accepted` は送信器の受付で、担当が読んだことではない。請求者への受付メールは作らない。
+- 送信器の失敗と `RESEND_API_KEY` の欠落は `failed` にして Queue が最大 6 回まで再試行する。Queue へ入れられなかった受付は `notify_not_enqueued` を残し、cron（15 分ごと）が入れ直す。未通知の受付を見つける照会 SQL と、本番へ出す手順（人間ゲート）は `RUNBOOK-document-request-notice.md`。
+- 受付言語は `submission_intake.locale`（migration 0007）に保存し、通知に「ページの言語」「返信の言語」（ja は日本語、それ以外は英語）を書く。0007 が未適用でも受付は止まらない。
+- 擬似再処理は `replayHeldDocumentNotice`（HTTP ルートなし）。`mock` は擬似送信、`live` は実送信（人が呼ぶ操作。解放時刻は見ない）、`hold` は何もしない。
 - LLM と GA4 にはフォームの入力を渡さない。
 - 保存のあと、受付番号で元の行から `documentId`、初回の業種（未選択は空文字）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
 
