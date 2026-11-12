@@ -1,0 +1,91 @@
+{
+  "format": "cor-voice-facts",
+  "format_version": 1,
+  "note": "Cor. の対外文が「いまの事実」として書いてよい範囲の記録。cor_voice_lint.py と scripts/blog-guardrails.mjs が読む。公開されている事実だけを置く（登録証の画像・所在地・審査報告の中身は入れない）。値を変えるときは ADR-0029 に従い、寺田さんの確認を残す。",
+  "facts": [
+    {
+      "id": "isms",
+      "subject": "Cor.株式会社",
+      "status": "registered",
+      "standard": "ISO/IEC 27001:2022",
+      "registration_number": "JP26/00000364",
+      "scope": "ソフトウエアの受託開発および運用",
+      "issuer": "SGSジャパン株式会社",
+      "valid_from": "2026-11-07",
+      "valid_to": "2029-11-07",
+      "validity_condition": "有効期間中の維持審査にて登録の継続が認められる限り有効",
+      "confirmed_on": "2026-11-11",
+      "evidence": [
+        {
+          "name": "SGSジャパン株式会社 発行の審査登録証 第1版（1 ページ）",
+          "location": "代表が受領した登録証。原本・画像・所在地は repo に置かない。公開してよい値は corsweb2024 の #523 と同じ"
+        }
+      ],
+      "allowed_claims": [
+        "認証取得",
+        "規格",
+        "登録番号",
+        "初回登録日",
+        "登録範囲",
+        "発行者",
+        "有効期間（有効の条件つき）"
+      ],
+      "forbidden_extensions": [
+        {"label": "個別製品", "terms": ["Grift", "grift-cli", "スマートグラス", "製品"]},
+        {"label": "AI の回答精度", "terms": ["誤回答", "正答", "回答精度", "ハルシネーション"]},
+        {"label": "医療機器", "terms": ["医療機器"]},
+        {"label": "機能安全", "terms": ["機能安全"]},
+        {"label": "全事業・全社", "terms": ["全事業", "全社", "すべての事業", "全ての事業"]},
+        {"label": "漏えいゼロ・万全・完全・安全の保証", "terms": ["漏えいゼロ", "漏洩ゼロ", "漏えいしない", "万全", "完全", "100%安全", "100％安全", "安全です", "安全だ", "安全性"]}
+      ],
+      "scope_limiting_phrases": [
+        "ものではありません",
+        "ものではない",
+        "わけではありません",
+        "保証ではない",
+        "保証ではありません",
+        "にはなりません",
+        "拡張しない",
+        "拡張しません",
+        "範囲外",
+        "対象外",
+        "含まれません",
+        "含みません",
+        "保証しません",
+        "保証しない",
+        "意味しません",
+        "意味しない"
+      ],
+      "stale_state_phrases_any_context": [
+        "取得に向けて整備中"
+      ],
+      "stale_state_phrases": [
+        "登録を見込",
+        "取得予定",
+        "登録予定",
+        "取得に向け",
+        "整備中",
+        "正式登録前",
+        "12月ごろ"
+      ],
+      "stale_state_phrases_unless_completed": [
+        "第2段階審査を終え",
+        "第2段階審査を完了",
+        "第二段階審査を終え"
+      ],
+      "recheck": "維持審査の結果が出たら、寺田が この記録を更新する。それまでは valid_to（2029-11-07）まで有効として扱う。別の期限の日付は置かない（2026-11-12 の寺田さんの回答）",
+      "history": [
+        {
+          "status": "registration_expected",
+          "until": "2026-11-07",
+          "expression": "ISO/IEC 27001 の第2段階審査を終え、認証登録を見込んでいる段階（ADR-0022 の表現）",
+          "superseded_by": "ADR-0029"
+        }
+      ]
+    }
+  ],
+  "unrecorded_certifications": {
+    "note": "この記録に事実のない認証。取得済みと書く文は cert_unverified で止める。記録を足すときは、一次資料の確認と ADR を先に済ませる",
+    "names": ["プライバシーマーク", "Pマーク", "SOC 2", "SOC2", "SCS", "ISMAP", "PCI DSS", "ISO 9001", "ISO9001", "ISO 14001", "ISO/IEC 27017", "ISO/IEC 27701", "ISO/IEC 27018"]
+  }
+}
