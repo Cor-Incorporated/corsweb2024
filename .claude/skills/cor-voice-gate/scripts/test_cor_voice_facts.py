@@ -60,20 +60,18 @@ class ApprovedBodiesPassTest(unittest.TestCase):
     def test_approved_paragraphs_have_no_errors(self):
         self.assertEqual(errors(APPROVED_PARAGRAPHS), [])
 
-    def test_heading_only_line_stops_because_scope_is_in_the_next_paragraph(self):
-        # 承認 5 本文の実測（2026-11-12、5 本とも同じ）: 見出し「**ISMS認証取得済み**」だけの行が isms_scope_missing で止まる。
-        # 範囲は次の段落にあり、同じ段落ではない。見出しを特別扱いする規則は足していない（扱いは寺田さんに確認する）
-        found = [(h.rule_id, h.line) for h in hits(APPROVED_BLOCK) if h.level == "error"]
-        self.assertEqual(found, [("isms_scope_missing", 1)])
+    def test_approved_block_with_its_heading_has_no_errors(self):
+        # 承認 5 本文の形（太字だけの見出し行 + 次の段落に範囲）。寺田さんの回答（2026-11-12 19:55 JST 頃）で、見出しだけの行は
+        # 直後の段落と 1 つに数える。5 本文そのものは PM の確認で exit 0（reports/s1-voice-evidence）
+        self.assertEqual(errors(APPROVED_BLOCK), [])
 
     def test_approved_reference_lines_have_no_errors(self):
         for line in APPROVED_REFERENCES:
             with self.subTest(line=line[:40]):
                 self.assertEqual(errors(line + "\n"), [])
 
-    def test_scope_in_the_next_paragraph_is_not_enough(self):
-        # 範囲は同じ段落だけ。直後の段落は数えない（本人回答 2026-11-12 ①）
-        self.assertEqual(errors("**ISMS認証取得済み**\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n"), ["isms_scope_missing"])
+    def test_scope_in_the_next_paragraph_is_not_enough_for_a_normal_paragraph(self):
+        # 範囲は同じ段落だけ。通常の段落どうしでは、直後の段落は数えない（本人回答 2026-11-12 09:23:37Z ①）
         self.assertEqual(errors("ISMS 認証を取得しました。\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n"), ["isms_scope_missing"])
 
     def test_scope_in_the_same_paragraph_is_enough(self):
@@ -101,6 +99,85 @@ class ApprovedBodiesPassTest(unittest.TestCase):
             for word in ("北極星", "脳に汗", "通訳"):
                 self.assertNotIn(word, rule.pattern.pattern)
         self.assertEqual(errors(APPROVED_PARAGRAPHS), [])
+
+
+class HeadingGroupingTest(unittest.TestCase):
+    """見出しだけの行の束ね方。寺田さんの回答（2026-11-12 19:55 JST 頃「見出しの扱い（S1）は推奨で承認します。」）を、
+    PM が次の定義に落とした（定義は寺田さんの言葉ではない）: Markdown の見出し行か太字だけの 1 行にある取得の表明は、
+    空行を 1 つまで挟んだ直後の段落と 1 つに数える。2 つ先、通常の段落どうし、箇条書き・表、見出しの下に段落が無い形は広げない。"""
+
+    SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
+
+    def ids(self, text: str) -> list[str]:
+        return errors(text)
+
+    def test_heading_line_and_bold_only_line_join_the_next_paragraph(self):
+        for head in ("## ISMS 認証取得済み", "# ISMS認証取得済み", "###### ISMS認証取得済み", "**ISMS認証取得済み**", "  **ISMS認証取得済み**  "):
+            with self.subTest(head=head):
+                self.assertEqual(self.ids(f"{head}\n\n{self.SC}\n"), [])
+                self.assertEqual(self.ids(f"{head}\n{self.SC}\n"), [])  # 空行なし（同じ段落）
+
+    def test_crlf_text_is_the_same(self):
+        self.assertEqual(self.ids(f"**ISMS認証取得済み**\r\n\r\n{self.SC}\r\n"), [])
+
+    # ---- 陰性: 広げない形 ----
+    def test_N1_scope_two_paragraphs_below_the_heading(self):
+        self.assertEqual(self.ids(f"## ISMS認証取得済み\n\n別の話です。\n\n{self.SC}\n"), ["isms_scope_missing"])
+
+    def test_N2_no_paragraph_below_the_heading(self):
+        self.assertEqual(self.ids(f"## ISMS認証取得済み\n\n## 次の見出し\n\n{self.SC}\n"), ["isms_scope_missing"])
+        self.assertEqual(self.ids("## ISMS認証取得済み\n"), ["isms_scope_missing"])
+        self.assertEqual(self.ids(f"**ISMS認証取得済み**\n\n**次の太字**\n\n{self.SC}\n"), ["isms_scope_missing"])
+        self.assertEqual(self.ids("**ISMS認証取得済み**"), ["isms_scope_missing"])
+
+    def test_N3_bold_only_part_of_the_line_is_a_normal_paragraph(self):
+        self.assertEqual(self.ids(f"**ISMS認証取得済み**です。\n\n{self.SC}\n"), ["isms_scope_missing"])
+        self.assertEqual(self.ids(f"当社は**ISMS認証取得済み**です。\n\n{self.SC}\n"), ["isms_scope_missing"])
+
+    def test_N4_scope_is_below_the_heading_but_so_is_an_extension(self):
+        text = f"**ISMS認証取得済み**\n\n{self.SC}ISMSにより全社の安全性を保証します。\n"
+        self.assertEqual(self.ids(text), ["isms_scope_overreach"])
+
+    def test_N5_two_blank_lines_are_not_adjacent(self):
+        self.assertEqual(self.ids(f"**ISMS認証取得済み**\n\n\n{self.SC}\n"), ["isms_scope_missing"])
+
+    def test_N6_list_table_and_quote_below_the_heading_are_not_a_paragraph(self):
+        for block in (f"- {self.SC}", f"| 範囲 | ソフトウエアの受託開発および運用 |", f"> {self.SC}", f"1. {self.SC}"):
+            with self.subTest(block=block[:12]):
+                self.assertEqual(self.ids(f"## ISMS認証取得済み\n\n{block}\n"), ["isms_scope_missing"])
+
+    def test_N7_a_post_without_a_heading_keeps_the_same_paragraph_rule(self):
+        # SNS の投稿文のように見出しを持たない文
+        self.assertEqual(self.ids(f"ISMS 認証を取得しました。\n\n{self.SC}\n"), ["isms_scope_missing"])
+        self.assertEqual(self.ids(f"ISMS 認証を取得しました。{self.SC}\n"), [])
+
+    def test_N8_a_claim_in_a_normal_paragraph_below_a_heading_is_not_joined_upwards(self):
+        # 範囲が見出しにあって、取得の文が下の段落にある形は、同じ段落ではない
+        self.assertEqual(self.ids(f"## {self.SC}\n\nISMS 認証を取得しました。\n"), ["isms_scope_missing"])
+
+    def test_N9_a_heading_does_not_pull_in_the_paragraph_after_a_claim_in_a_list(self):
+        self.assertEqual(self.ids(f"- ISMS 認証取得済み\n- {self.SC}\n"), [])  # 同じ段落（連続する行）は今のまま
+        self.assertEqual(self.ids(f"- ISMS 認証取得済み\n\n- {self.SC}\n"), ["isms_scope_missing"])
+
+
+class FrontmatterAndValidityTest(unittest.TestCase):
+    """frontmatter の扱い（現状の記録。この回では変えていない）と、有効期間の文の日付。"""
+
+    SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
+
+    def test_lint_reads_frontmatter_lines_as_ordinary_lines(self):
+        # frontmatter は特別扱いされない。YAML の行は続く 1 つの段落として数えるので、title の取得と description の範囲は同じ段落になる
+        both = f'---\ntitle: "ISMS 認証を取得しました"\ndescription: "{self.SC}"\n---\n\n本文です。\n'
+        title_only = '---\ntitle: "ISMS 認証を取得しました"\ndescription: "お知らせです。"\n---\n\n本文です。\n'
+        self.assertEqual(errors(both), [])
+        self.assertEqual(errors(title_only), ["isms_scope_missing"])
+
+    def test_validity_period_sentence_is_not_a_date_mismatch(self):
+        # #527 のニュース本文の文（有効期間は A から B です）。「有効」より後ろの日付は有効期間として数える
+        self.assertEqual(errors("認証機関はSGSジャパン、登録番号はJP26/00000364、有効期間は2026年11月7日から2029年11月7日です。\n"), [])
+        self.assertEqual(errors(f"2026年11月7日に ISMS 認証を取得し、有効期間は2026年11月7日から2029年11月7日までです。{self.SC}\n"), [])
+        self.assertIn("isms_date_mismatch", errors("有効期間は2026年11月8日から2029年11月7日です。\n"))
+        self.assertIn("isms_date_mismatch", errors(f"2026年11月8日に ISMS 認証を取得し、有効期間は2026年11月7日から2029年11月7日までです。{self.SC}\n"))
 
 
 class NegativeCaseTest(unittest.TestCase):
@@ -330,12 +407,28 @@ class SkillTextLinkTest(unittest.TestCase):
         for point in ("同じ段落に「ソフトウエアの受託開発および運用」という登録範囲を併記する", "期限まで無条件に有効とは扱わない", "AIの推奨を本人回答に置き換えない"):
             self.assertIn(point, rec["question"])
 
-    def test_adr_cites_the_decision_with_quote_date_and_route(self):
+    def test_heading_decision_record_is_the_original_answer(self):
+        # 見出しの扱い（2026-11-12 19:55 JST 頃）。問い・選択肢・回答の原文を引き、規則の定義は PM のものと分かるように書く
+        rec = facts()["isms"]["decision_records"][1]
+        self.assertEqual((rec["quote"], rec["decided_at"], rec["decided_by"]), ("見出しの扱い（S1）は推奨で承認します。", "2026-11-12 19:55 JST 頃", "寺田康佑"))
+        self.assertEqual(rec["question"], "S1: 見出しだけの行は、直後の段落と 1 つに数えますか？")
+        self.assertEqual([o["label"] for o in rec["options"]], ["推奨", "もう一方"])
+        self.assertIn("PM の定義で、寺田さんの言葉ではない", rec["rule_definition_by"])
+
+    def test_adr_and_skill_cite_every_decision_verbatim(self):
         adr = (SKILLS.parents[1] / "docs/adr/ADR-0029-company-facts-record.md").read_text(encoding="utf-8")
-        rec = facts()["isms"]["decision_records"][0]
-        for key in ("quote", "decided_at"):
-            self.assertIn(rec[key], adr, f"ADR-0029 に facts.json の decision_records の {key}（{rec[key]}）がありません")
+        skill = (SKILLS / "cor-voice/SKILL.md").read_text(encoding="utf-8")
+        records = facts()["isms"]["decision_records"]
+        for rec in records:
+            for key in ("quote", "decided_at", "question"):
+                self.assertIn(rec[key], adr, f"ADR-0029 に facts.json の decision_records[{rec['id']}] の {key}（{rec[key][:30]}）がありません")
         self.assertIn("Codex のチャット", adr)
+        heading = records[1]
+        for text in (heading["quote"], heading["question"], *[o["text"] for o in heading["options"]]):
+            self.assertIn(text, adr, f"ADR-0029 に見出しの回答の原文がありません: {text[:30]}")
+            self.assertIn(text, skill, f"cor-voice の SKILL に見出しの回答の原文がありません: {text[:30]}")
+        self.assertIn("PM の定義で、寺田さんの言葉ではない", adr)
+        self.assertIn("PM の定義で、寺田さんの言葉ではない", skill)
 
     def test_record_is_the_published_fact(self):
         isms = facts()["isms"]

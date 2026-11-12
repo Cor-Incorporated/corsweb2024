@@ -307,13 +307,33 @@ def _status_hits(claims: list[tuple[int, str]], rec: dict, as_of: date) -> list[
     return [_fact_hit("isms_status_mismatch", no, sent, f"ISMS の認証取得を現在の事実として書いていますが、{reason}") for no, sent in claims] if reason else []
 
 
+# 「見出しだけの行」: Markdown の見出し行（# で始まる）か、太字だけで出来た 1 行（**…** だけ）。
+# 定義は PM のもの（寺田さんの回答 2026-11-12 19:55 JST 頃「見出しの扱い（S1）は推奨で承認します。」を規則に落とした）。ADR-0029 の根拠を見る
+HEADING_ONLY = re.compile(r"^\s*(?:#{1,6}\s|\*\*[^*\n]+\*\*\s*$)")
+# 見出しの直後の段落として数えない block（見出し、箇条書き、表、引用）
+NOT_A_PARAGRAPH = re.compile(r"^\s*(?:#{1,6}\s|\*\*[^*\n]+\*\*\s*$|[-*+]\s|\d+[.)]\s|\||>)")
+
+
+def _scope_group(idx: int, lines: list[str], ids: list[int]) -> list[int]:
+    """取得の文がある行の idx と「1 つのまとまり」に数える行。通常は同じ段落（直後の段落は数えない。本人回答①、SNS を含む）。
+    見出しだけの行は、空行を 1 つまで挟んだ直後の段落と 1 つに数える。2 つ先の段落、見出しの下に段落が無い形、
+    箇条書き・表・引用は数えない。"""
+    group = [i for i, pid in enumerate(ids) if pid == ids[idx] and lines[i].strip()]
+    if group != [idx] or not HEADING_ONLY.match(lines[idx]):
+        return group
+    nxt = idx + 1
+    if nxt < len(lines) and not lines[nxt].strip():
+        nxt += 1  # 空行は 1 つまで
+    if nxt >= len(lines) or not lines[nxt].strip() or NOT_A_PARAGRAPH.match(lines[nxt]):
+        return group
+    return group + [i for i, pid in enumerate(ids) if pid == ids[nxt] and lines[i].strip()]
+
+
 def _scope_missing_hits(claims: list[tuple[int, str]], lines: list[str], vocab: Vocab) -> list[Hit]:
-    # 範囲は同じ段落に書く（直後の段落は数えない）。2026-11-12 の本人回答①（SNS を含む）。見出しだけの行も同じ扱い
     ids, hits = _paragraph_ids(lines), []
     for no, sent in claims:
-        same = [i for i, pid in enumerate(ids) if pid == ids[no - 1] and lines[i].strip()]
-        if not any(vocab.scope in lines[i] for i in same):
-            hits.append(_fact_hit("isms_scope_missing", no, sent, f"ISMS の取得を書く文と同じ段落に、登録範囲「{vocab.scope}」が要ります（記録の scope）"))
+        if not any(vocab.scope in lines[i] for i in _scope_group(no - 1, lines, ids)):
+            hits.append(_fact_hit("isms_scope_missing", no, sent, f"ISMS の取得を書く文と同じ段落に、登録範囲「{vocab.scope}」が要ります（記録の scope。見出しだけの行は、空行 1 つまで挟んだ直後の段落と 1 つに数える）"))
     return hits
 
 
@@ -349,7 +369,13 @@ def _number_hits(lines: list[str], vocab: Vocab) -> list[Hit]:
 
 
 def _in_validity_context(sent: str, m: re.Match) -> bool:
-    return bool(re.search(r"まで|[〜~]", sent[m.end():m.end() + 4]) or re.search(r"有効|[〜~]\s*$", sent[max(0, m.start() - 12):m.start()]))
+    """有効期間の日付。「有効期間は A から B です」のように、「有効」より後ろの日付はすべて有効期間として数える。"""
+    valid_at = sent.find("有効")
+    return bool(
+        (0 <= valid_at < m.start())
+        or re.search(r"まで|[〜~]", sent[m.end():m.end() + 4])
+        or re.search(r"[〜~]\s*$", sent[max(0, m.start() - 12):m.start()])
+    )
 
 
 def _is_other_event(sent: str, m: re.Match, vocab: Vocab) -> bool:

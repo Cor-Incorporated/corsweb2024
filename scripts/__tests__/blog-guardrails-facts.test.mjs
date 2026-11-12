@@ -66,6 +66,9 @@ describe('blog-guardrails.mjs は事実の照合を lint に任せる', () => {
       `ISMS 認証を取得しました。${SCOPE}`,
       'プライバシーマークを取得しています',
       '「ISMS 認証取得済み」と書く会社が増えています。',
+      `**ISMS認証取得済み**\n\n${SCOPE}\n`,
+      `## ISMS認証取得済み\n\n別の話です。\n\n${SCOPE}\n`,
+      `**ISMS認証取得済み**\n\n## 次の見出し\n\n${SCOPE}\n`,
     ];
     for (const text of samples) {
       const mapped = lintRuleIds(text).map(ruleName).sort();
