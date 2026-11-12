@@ -1,35 +1,21 @@
 // ブログ記事（自動生成・手動とも）のガードレール検査。
 // 正本ルール違反（旧事業名・未取得認証の「取得済み」主張・漏洩URL/メモ）を機械検出する。
-// 認証の「いまの事実」（ISMS の状態、記録に無い認証の名前）は、固定の語ではなく
-// .claude/skills/cor-voice/references/facts.json の記録を読んで判定する（ADR-0029）。
-// 範囲・番号・日付の照合は cor_voice_lint.py が持つ（ここは状態と古い表現だけ。結線の試験: scripts/__tests__/blog-guardrails-facts.test.mjs）。
+// 認証の「いまの事実」（ISMS の状態・範囲・番号・日付・古い表現、記録に無い認証）は、ここに写しを持たず、
+// cor_voice_lint.py の事実の照合（check --only-facts）をそのまま呼ぶ。lint は .claude/skills/cor-voice/references/facts.json を
+// 読む（ADR-0029）。動詞の一覧・範囲・番号を JS 側に持たないので、lint と食い違わない。
 // 使い方: import { scanForViolations } from './blog-guardrails.mjs'
 //        const violations = scanForViolations(markdownText)  // [] なら合格
 
-import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const FACTS_URL = new URL('../.claude/skills/cor-voice/references/facts.json', import.meta.url);
-// 記録が読めないときの、記録に無い認証の名前（facts.json の unrecorded_certifications.names の部分集合。試験が結ぶ）
+const LINT_PATH = fileURLToPath(new URL('../.claude/skills/cor-voice-gate/scripts/cor_voice_lint.py', import.meta.url));
+// lint が使えない・記録が壊れているときの、記録に無い認証の名前の控え（facts.json の unrecorded_certifications.names の部分集合。試験が結ぶ）
 export const FALLBACK_UNRECORDED_CERTIFICATIONS = ['プライバシーマーク', 'Pマーク', 'SOC 2', 'SOC2', 'SCS'];
-const ISMS_WORD = '(?:ISMS|27001|情報セキュリティマネジメントシステム)';
-// 取得したという現在の表明（cor_voice_lint.py の ACQUIRED と同じ判断。試験が結ぶ）
-export const ACQUIRED = '(?:取得済|認証取得|取得しました|取得しています|取得している|取得しており|取得し、|取得いたしました|取得した(?!い)|認証を受け|認証済|登録済|登録されました|認証されました)';
-const ISMS_CLAIM = new RegExp(`${ISMS_WORD}[^。\\n]{0,40}${ACQUIRED}|${ACQUIRED}[^。\\n]{0,40}${ISMS_WORD}`);
-const COMPLETED = /取得しま|取得して|取得し、|取得済|認証取得|登録されま|認証済/;
-
-/** @returns {{isms: object, unrecorded: string[]} | {error: string}} */
-export function loadFacts(url = FACTS_URL) {
-  try {
-    const raw = JSON.parse(readFileSync(url, 'utf8'));
-    const isms = (raw.facts ?? []).filter((f) => f?.id === 'isms');
-    const names = raw.unrecorded_certifications?.names;
-    if (isms.length !== 1 || !Array.isArray(names) || names.length === 0) return { error: 'isms の記録が 1 件でない、または unrecorded_certifications.names が無い' };
-    return { isms: isms[0], unrecorded: names };
-  } catch (err) {
-    return { error: String(err.message ?? err) };
-  }
-}
+const FALLBACK_ACQUIRED = '(?:取得済み|取得しました|取得しています|認証済み|認証取得)';
 
 const RULES = [
   {
@@ -55,53 +41,54 @@ const RULES = [
 ];
 
 const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const hit = (name, reason, line, match) => ({ name, reason, line, match: String(match).trim().slice(0, 120) });
+// cert_unverified だけは、これまでの名前を保つ（content-advisory の表示と記事の既存の指摘に合わせる）
+const ruleName = (id) => (id === 'cert_unverified' ? '未取得認証の取得済み主張' : `事実記録: ${id}`);
 
-/** 記録に無い認証の「取得済み」主張。名前は記録（読めなければ控えの一覧）から作る。 */
-export function certificationRules(names) {
-  const alt = [...names].sort((x, y) => y.length - x.length).map(escape).join('|');
-  const reason = '記録（facts.json）に事実が無い認証を「取得済み」と記載している疑い';
+/** 記録に無い認証の控え。lint が使えないときだけ当てる。 */
+function fallbackRules() {
+  const alt = [...FALLBACK_UNRECORDED_CERTIFICATIONS].sort((x, y) => y.length - x.length).map(escape).join('|');
+  const reason = '記録（facts.json）に事実が無い認証を「取得済み」と記載している疑い（lint が使えないため控えの一覧で検査）';
   return [
-    { name: '未取得認証の取得済み主張', re: new RegExp(`(?:${alt})[^。\\n]{0,16}(?:取得済み|取得しました|取得しています|認証済み|認証取得)`, 'g'), reason },
-    { name: '未取得認証の取得済み主張(語順違い)', re: new RegExp(`(?:取得済み|取得しました|認証取得しました)[^。\\n]{0,16}(?:${alt})`, 'g'), reason: `${reason}（語順違い）` },
+    { name: '未取得認証の取得済み主張', re: new RegExp(`(?:${alt})[^。\\n]{0,16}${FALLBACK_ACQUIRED}`, 'g'), reason },
+    { name: '未取得認証の取得済み主張(語順違い)', re: new RegExp(`${FALLBACK_ACQUIRED}[^。\\n]{0,16}(?:${alt})`, 'g'), reason },
   ];
 }
 
-const hit = (name, reason, line, match) => ({ name, reason, line, match: match.trim().slice(0, 120) });
-
-/** ISMS の状態と古い表現。範囲・番号・日付の照合は cor_voice_lint.py。 */
-export function ismsViolations(lines, rec) {
-  const found = [];
-  const context = new RegExp(`認証|${ISMS_WORD}`);
-  lines.forEach((line, i) => {
-    for (const sentence of line.split(/(?<=。)/)) {
-      if (rec.status !== 'registered' && ISMS_CLAIM.test(sentence)) {
-        found.push(hit('ISMS取得の主張が記録と違う', `記録の status は ${rec.status}（registered ではない）なのに、取得を現在の事実として書いている`, i + 1, sentence));
-      }
-      if (rec.status !== 'registered') continue;
-      const strong = [...(context.test(sentence) ? rec.stale_state_phrases : []), ...rec.stale_state_phrases_any_context].filter((p) => sentence.includes(p));
-      const weak = new RegExp(ISMS_WORD).test(sentence) && !COMPLETED.test(sentence) ? rec.stale_state_phrases_unless_completed.filter((p) => sentence.includes(p)) : [];
-      if (strong.length + weak.length > 0) {
-        found.push(hit('ISMSの古い状態の説明', `記録の status は registered（${rec.valid_from} 登録）なのに、古い状態（「${[...strong, ...weak][0]}」）を現在の説明として書いている`, i + 1, sentence));
-      }
-    }
-  });
-  return found;
+/**
+ * 事実の照合を cor_voice_lint.py に任せる。
+ * @returns {{violations: object[]} | {error: string}}
+ */
+export function factViolations(markdown, { run = spawnSync, lint = LINT_PATH } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'blog-guardrails-'));
+  try {
+    const file = join(dir, 'article.md');
+    writeFileSync(file, markdown);
+    const result = run('python3', ['-I', '-B', lint, 'check', '--only-facts', '--json', file], { encoding: 'utf8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024 });
+    if (result.error || ![0, 1].includes(result.status)) return { error: `cor_voice_lint.py が動かない（${result.error?.message ?? `終了コード ${result.status}`}）` };
+    const hits = Object.values(JSON.parse(result.stdout))[0] ?? [];
+    return { violations: hits.map((h) => hit(ruleName(h.rule_id), h.message, h.line, h.text)) };
+  } catch (err) {
+    return { error: `事実の照合の結果を読めない（${String(err.message ?? err)}）` };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /**
  * @param {string} markdown 記事全文（frontmatter含めてOK）
- * @param {{facts?: object}} [options] facts は loadFacts() の形（試験で差し替える）
+ * @param {{run?: Function, lint?: string}} [options] 試験で lint の呼び出しを差し替える
  * @returns {{name:string, reason:string, line:number, match:string}[]}
  */
 export function scanForViolations(markdown, options = {}) {
-  const facts = options.facts ?? loadFacts();
+  const facts = factViolations(markdown, options);
+  const broken = facts.error !== undefined || facts.violations.some((v) => v.name === ruleName('fact_record_invalid'));
+  const violations = facts.error !== undefined
+    ? [hit('事実記録が使えない', `${facts.error}。他の認証の禁止は控えの一覧で続ける`, 1, 'cor_voice_lint.py')]
+    : facts.violations;
   const lines = markdown.split('\n');
-  const names = facts.error ? FALLBACK_UNRECORDED_CERTIFICATIONS : facts.unrecorded;
-  const violations = facts.error
-    ? [hit('事実記録が読めない', `facts.json を使えない（${facts.error}）。ISMS は cor_voice_lint.py が止める。他の認証の禁止は控えの一覧で続ける`, 1, 'facts.json')]
-    : ismsViolations(lines, facts.isms);
   lines.forEach((line, i) => {
-    for (const rule of [...RULES, ...certificationRules(names)]) {
+    for (const rule of broken ? [...RULES, ...fallbackRules()] : RULES) {
       rule.re.lastIndex = 0;
       for (const m of line.matchAll(rule.re)) {
         violations.push({ name: rule.name, reason: rule.reason, line: i + 1, match: m[0] });
