@@ -207,6 +207,72 @@ class NegativeCaseTest(unittest.TestCase):
         self.assertRule(APPROVED_PARAGRAPHS, "isms_status_mismatch", record=rec)
 
 
+class ReviewCounterexampleTest(unittest.TestCase):
+    """PR #532 の独立査読（review-s1）の反例のうち、閉じたもの。ID は査読の番号（F-5 取得の言い換え・全角、F-7 日付、F-8 認証名の表記ゆれ、F-2 限定句）。
+    閉じていないものは ADR-0029 の「限界」に列挙する（他言語、見出しと別の段落、次の文への拡大、和暦・英語の日付、別形式の番号）。"""
+
+    SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
+    CLOSED = {
+        # F-5: 取得の言い換えと全角
+        "A01 適合": ("Cor.株式会社は ISO/IEC 27001 に適合しています。\n", "isms_scope_missing"),
+        "A04 認証を得ました": ("ISMS 認証を得ました。\n", "isms_scope_missing"),
+        "A05 取得。体言止め": ("2026年11月、ISMS を取得。\n", "isms_scope_missing"),
+        "A29 全角ＩＳＭＳ": ("ＩＳＭＳ認証取得済みです。\n", "isms_scope_missing"),
+        # F-7: 日付と番号の表記
+        "A07 年なしの11月11日": ("ISMS 認証は11月11日に取得しました。%s\n", "isms_date_mismatch"),
+        "A10 令和（月日で照合）": ("ISMS 認証は令和8年11月11日に取得しました。%s\n", "isms_date_mismatch"),
+        "A11 スラッシュの日付": ("ISMS 認証を2026/11/11に取得しました。%s\n", "isms_date_mismatch"),
+        "A12 全角の登録番号": ("ISMS 認証を取得しています（登録番号 ＪＰ２６／００００００３６５）。%s\n", "isms_number_mismatch"),
+        "A37 取得は2026年12月": ("ISMS 認証の取得は2026年12月です。%s\n", "isms_date_mismatch"),
+        "B10 有効期間の終わりが違う": ("ISMS 認証を取得しています。%s 有効期間は2030年11月7日までです。\n", "isms_date_mismatch"),
+        # F-8: 認証名の表記ゆれと言い換え
+        "A23 ISO 27017": ("ISO 27017 の認証を取得しました。\n", "cert_unverified"),
+        "A24 付与認定": ("当社はプライバシーマークの付与認定を受けています。\n", "cert_unverified"),
+        "A26 ISO27701": ("ISO27701 認証を取得しました。\n", "cert_unverified"),
+        "B17 名前と動詞が離れる": ("プライバシーマーク制度に基づく審査を経て、正式に付与を受け取得しています。\n", "cert_unverified"),
+        # F-5: 古い状態の言い換え
+        "A27 登録の見込み": ("ISMS は現在、登録の見込みです。\n", "isms_stale_state"),
+        "A28 認証審査中": ("ISMS は現在、認証審査中です。\n", "isms_stale_state"),
+        "B05 登録見込み": ("ISMS は12月登録見込みです。\n", "isms_stale_state"),
+        "B06 全角の第２段階": ("ISMS の第２段階審査を終え、登録を待っています。\n", "isms_stale_state"),
+        "B07 取得を予定": ("ISMS 認証の取得を予定しています。\n", "isms_stale_state"),
+        "B08 審査が完了し": ("ISMS の第2段階審査が完了し、登録を待つ段階です。\n", "isms_stale_state"),
+        # F-2: 限定句と範囲の拡大
+        "A15 範囲外と言いながら及ぶ": ("ISMS 認証は登録範囲外の Grift にも及び、万全です。%s\n", "isms_scope_overreach"),
+        "A16 全サービス": ("ISMS 認証を取得し、全サービスのセキュリティが保証されています。%s\n", "isms_scope_overreach"),
+        "D01 別の対象の限定句": ("ISMS認証取得済みなのでソフトウエアの受託開発および運用が対象です。ISMSにより全社の安全性を保証し、これはAIの精度保証を意味しません。\n", "isms_scope_overreach"),
+        "D02 D01 の 2 文目": ("ISMSにより全社の安全性を保証し、これはAIの精度保証を意味しません。\n", "isms_scope_overreach"),
+        "D03 範囲が直後の段落": ("ISMS 認証取得済みです。\n\n%s\n", "isms_scope_missing"),
+    }
+    PASSING = {
+        "A08 年なしの11月7日": "ISMS 認証は11月7日に取得しました。%s\n",
+        "B03 2026年11月": "2026年11月に ISMS 認証を取得しました。%s\n",
+        "B09 有効期間の終わりが正しい": "ISMS 認証を取得しています。%s 有効期間は2029年11月7日までです。\n",
+        "A21 否定の限定句": "ISMS を取得しても、完全な防御にはなりません。\n",
+        "A17 取得していなかった": "ISMS を取得していなかった頃の話です。\n",
+        "A31 範囲が同じ項目": "- ISMS 認証取得済み。%s\n",
+    }
+
+    def test_closed_counterexamples_are_stopped(self):
+        for name, (text, rule) in self.CLOSED.items():
+            with self.subTest(case=name):
+                found = errors(text.replace("%s", self.SC))
+                self.assertIn(rule, found, f"{name}: {rule} が出ない（出た error: {found}）")
+
+    def test_neighbours_of_the_closed_counterexamples_still_pass(self):
+        for name, text in self.PASSING.items():
+            with self.subTest(case=name):
+                found = errors(text.replace("%s", self.SC))
+                self.assertEqual(found, [], f"{name}: 通るべき文が止まる（{found}）")
+
+    def test_vocabulary_lives_in_the_record(self):
+        # F-5・F-8: 取得の語彙・古い状態の語は facts.json にある（lint と guardrails が同じ記録を読む）。記録から語を引くと検出も落ちる
+        rec = facts()
+        rec["acquisition"] = [p for p in rec["acquisition"] if p != "認証を得(?:ました|ています|た)"]
+        self.assertEqual(errors("ISMS 認証を得ました。\n", record=rec), [])
+        self.assertIn("isms_scope_missing", errors("ISMS 認証を得ました。\n"))
+
+
 class RecordToTextLinkTest(unittest.TestCase):
     """記録 ↔ 本文の結線。片方だけ変えると、記録の値と本文の値の両方を挙げて落ちる（宣言と実体の二重管理）。"""
 
