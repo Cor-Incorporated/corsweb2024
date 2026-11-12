@@ -38,7 +38,8 @@ jobs:
   build:
     name: Build and test the CMS admin
     if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    # Playwright 1.53.1 は ubuntu 26.04 に未対応のため 24.04 に固定。対応版へ上げたら ubuntu-latest に戻す。
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
