@@ -13,8 +13,8 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [subscribe.sh](subscribe.sh) | 顧客 1 社の契約と毎月末の請求書（1C 章の作り方 B）。`customer`・`find`・`contract`・`card-setup`・`cancel`・`invoice`・`charge`・`mark-paid`・`simulate`・`status`・`clerk-sync`・`hold`・`unhold`・`resync`・`set-payment`。既定は dry-run |
 | [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
-| [contract/](contract/) | 権利（`services`）の判定の見本と試験ベクトル。`judge.sh`（jq。`--services-json`・`--service`・`--date` で 4 つの結果を 1 行）・`entitlement-vectors.json`（判定表の境界 31 件。bd と XESM の試験もこれを読む）・`verify-sample.mjs`（Clerk のトークンの検証の見本。R1・R2） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 390 項目、`test-entitlement-vectors.sh` 68 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
+| [contract/](contract/) | 権利（`services`）の判定の見本と試験ベクトル。`judge.sh`（jq。`--services-json`・`--service`・`--date` で 4 つの結果を 1 行。形の違う行は `closed` を 1 行出して exit 0 にし、理由を標準エラーに 1 行。exit 64 は引数・`--date`・ファイルの使い方の誤りだけ）・`entitlement-vectors.json`（判定表の境界 47 件。うち 16 件は、形の違う行など fail closed を縛るために足した行。bd と XESM の試験もこれを読む）・`verify-sample.mjs`（Clerk のトークンの検証の見本。R1・R2） |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 390 項目、`test-entitlement-vectors.sh` 94 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -32,7 +32,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 身元の正本は Clerk（利用者と Organization）、課金の正本は Stripe の Customer。2 つを顧客の会社ごとに結んだものが、Cor. のサービスに共通の契約の基盤になる。**設計の全文は [ADR-0028](../adr/ADR-0028-cor-account-billing-foundation.md)（corsweb2024 #514）に移した。** この章は、実装が使う形だけを書く。
 
 - 顧客（テナント）= Clerk の Organization（`org_…`）。会社 1 社に 1 つ。契約と請求は Stripe の Customer（`cus_…`）が持ち、`metadata.clerk_org_id` で組織に結ぶ
-- 権利（使えるサービス）= 契約から作り、組織の `public_metadata.services` に写す。形は `services.<サービス> = {from, until, hold}`、サービスの名前は `plans.json` と同じ。サービスは日本時間の今日の日付で判定し、結果は 4 つ（**開ける**／**見るだけ**（hold。書き込みだけ止める）／**読む・書き出すだけ**（終了日の翌日から 30 日）／**閉じる**）。判定表は ADR-0028 の 3 節、見本は `contract/judge.sh` と `contract/entitlement-vectors.json`（決定 1）
+- 権利（使えるサービス）= 契約から作り、組織の `public_metadata.services` に写す。形は `services.<サービス> = {from, until, hold}`、サービスの名前は `plans.json` と同じ。サービスは日本時間の今日の日付で判定し、結果は 4 つ（**開ける**／**見るだけ**（hold。書き込みだけ止める）／**読む・書き出すだけ**（終了日の翌日から 30 日）／**閉じる**）。判定表は ADR-0028 の 3 節、見本は `contract/judge.sh` と `contract/entitlement-vectors.json`（決定 1）。行の形が違うとき（`from` が実在する日付でない、`until` が null でも実在する日付でもない、`hold` が真偽値でない、など）は、判定表に当てる前に **閉じる**（fail closed）。`judge.sh` は `closed` を 1 行出して exit 0 にし、理由を標準エラーに 1 行だけ出す。exit 64 は引数・`--date`・ファイルの使い方の誤りにだけ残す。
 - 写すのは `subscribe.sh clerk-sync`（契約・解約のあと）と `hold`・`unhold`（支払いが遅れたとき）。毎月の `resync` が全件を送り直す（2 節）
 - Clerk のアプリケーションは新しく作り、本番のドメインは `cor-jp.com` にする（決定 11）。Clerk Billing は使わない（請求の通貨が USD だけで、消費税に対応していない。ADR-0028 の代替案）
 - サービスの役割と所属は、今までどおり各サービスの DB に持つ（Clerk の独自の役割は使わない。決定 3）

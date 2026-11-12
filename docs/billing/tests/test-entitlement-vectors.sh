@@ -6,13 +6,16 @@
 #   1. ベクトルの形: schema・結果の 4 つの値・判定の見本のパス・id の重複・日付の実在・サービスの名前（plans.json と同じ）
 #   2. 判定表の境界を全部覆っている（required_tags のタグが 1 件も欠けない）。4 つの結果が全部出る
 #   3. 全件を judge.sh に通し、期待と一致する（1 件でも違えば red）
-#   4. 入力の誤り（実在しない日付、形の違う行、hold が true/false でない、JSON でない）を exit 64 で落とす
+#   4. 使い方の誤り（引数・--date・ファイル）は exit 64 で落とす
+#   5. 形の違う行（services がオブジェクトでない、行がオブジェクトでない、from / until / hold が
+#      実在する日付・真偽値でない）は closed を 1 行出して exit 0 にし、理由を標準エラーに 1 行だけ出す（fail closed）
 #
 # 判定表（ADR-0028 3 節）↔ 試験ベクトル ↔ judge.sh の 3 つは、どれか片方だけを変えるとこの試験が落ちる:
 #   - 判定表の数え方（30 日、当日、hold の順）を judge.sh で変える → 3 が red
 #   - ベクトルの期待値を変える → 3 が red
 #   - ベクトルを消すと境界が欠ける → 1 か 2 が red
 #   - plans.json にサービスを足してベクトルを足さない → 1 が red
+#   - 形の検査（行がオブジェクトか、from / until / hold の形）を judge.sh で 1 つ外す → 4 か 5 が red
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,21 +53,26 @@ N="$(jq '.vectors | length' "$VECTORS")"
 eq "id は重複しない" "$(jq -r '.vectors[].id' "$VECTORS" | sort | uniq -d | wc -l | tr -d ' ')" "0"
 
 # 日付は実在するものだけ（2026-02-30 を通さない）。d・from・until を全部見る。
+# malformed: true のベクトルは、形の違う入力をわざと持つので除く（形の検査は 4・5 で見る）。
 bad_dates="$(jq -r '
   def epoch: . + "T00:00:00Z" | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime;
   def is_ymd:
     (type == "string")
     and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")
     and (((epoch | todate)[0:10]) == (.[0:10]));
-  [ .vectors[] | .id as $id
-    | ([.d] + [ .services[] | .from, .until ])
+  [ .vectors[] | select(.malformed != true) | .id as $id
+    | ([.d] + [ .services | select(type == "object") | .[] | select(type == "object") | .from, .until ])
     | .[] | select(. != null and (is_ymd | not)) | "\($id):\(.)" ]
   | join(" ")' "$VECTORS")"
 [ -z "$bad_dates" ] && ok "ベクトルの日付は全部実在する" || ng "実在しない日付がある: $bad_dates"
 
+# 形の違う行のベクトルは、すべて closed を期待する（fail closed）
+eq "malformed のベクトルは全部 closed を期待する" \
+  "$(jq -r '[.vectors[] | select(.malformed == true) | select(.expect != "closed")] | length' "$VECTORS")" "0"
+
 # サービスの名前は plans.json と同じ。plans.json のサービスは全部、ベクトルに 1 回は出る。
 plans_services="$(jq -r '.services[].service' "$PLANS" | sort)"
-used_services="$(jq -r '.vectors[].service, (.vectors[].services | keys[]?)' "$VECTORS" | sort -u)"
+used_services="$(jq -r '.vectors[].service, (.vectors[].services | select(type == "object") | keys[]?)' "$VECTORS" | sort -u)"
 unknown="$(comm -13 <(printf '%s\n' "$plans_services") <(printf '%s\n' "$used_services"))"
 [ -z "$unknown" ] && ok "ベクトルのサービス名は plans.json にある" || ng "plans.json に無いサービス名がある: $unknown"
 missing="$(comm -23 <(printf '%s\n' "$plans_services") <(printf '%s\n' "$used_services"))"
@@ -89,7 +97,7 @@ done <<<"$(jq -r '.vectors[].tags[]' "$VECTORS" | sort -u)"
 
 # Clerk の metadata に残る形（until のキーが無い）を 1 件は覆っている
 eq "until のキーが無い行のベクトルがある（Clerk の deep merge で null がキーを消すため）" \
-  "$(jq -r '[.vectors[] | select(.services[.service] != null) | select(.services[.service] | has("until") | not)] | length' "$VECTORS")" \
+  "$(jq -r '[.vectors[] | select(.services | type == "object") | select(.services[.service] | type == "object") | select(.services[.service] | has("until") | not)] | length' "$VECTORS")" \
   "1"
 
 # 4 つの結果が全部出る（closed だけ、などの偏りを落とす）
@@ -111,15 +119,22 @@ while [ "$i" -lt "$N" ]; do
   svc="$(jq -r --argjson i "$i" '.vectors[$i].service' "$VECTORS")"
   d="$(jq -r --argjson i "$i" '.vectors[$i].d' "$VECTORS")"
   want="$(jq -r --argjson i "$i" '.vectors[$i].expect' "$VECTORS")"
+  malformed="$(jq -r --argjson i "$i" '.vectors[$i].malformed // false' "$VECTORS")"
   jq -c --argjson i "$i" '.vectors[$i].services' "$VECTORS" >"$WORK/services.json"
   set +e
-  got="$(bash "$JUDGE" --services-json "$WORK/services.json" --service "$svc" --date "$d" 2>&1)"
+  got="$(bash "$JUDGE" --services-json "$WORK/services.json" --service "$svc" --date "$d" 2>"$WORK/err")"
   rc=$?
   set -e
+  err="$(cat "$WORK/err")"
+  err_lines="$(printf '%s\n' "$err" | wc -l | tr -d ' ')"
   if [ "$rc" -ne 0 ]; then
     ng "$id: judge.sh が exit $rc で止まった（$svc ${d}）: $(printf '%s' "$got" | head -1)"
   elif [ "$got" != "$want" ]; then
     ng "$id: 期待 $want 観測 ${got}（${svc}、d=${d}）"
+  elif [ "$malformed" = "true" ] && { [ -z "$err" ] || [ "$err_lines" -ne 1 ]; }; then
+    ng "$id: 形の違う行なのに、理由が標準エラーに 1 行だけ出ていない（${err_lines} 行）: $err"
+  elif [ "$malformed" != "true" ] && [ -n "$err" ]; then
+    ng "$id: 形の正しい行なのに標準エラーに出た: $err"
   else
     ok "$id: ${got}（${svc}、d=${d}）"
   fi
@@ -135,7 +150,7 @@ eq "判定を 1 行ずつ出す（行数がベクトルと同じ）" "$(printf '
 printf 'INFO 結果の内訳: open %s / view_only %s / read_export_only %s / closed %s（合計 %s）\n' \
   "$n_open" "$n_view" "$n_read" "$n_closed" "$N"
 
-# 4. 入力の誤りは exit 64
+# 4. 使い方の誤りは exit 64（判定しない）
 run_bad() {
   local what="$1" expect_text="$2"
   shift 2
@@ -153,8 +168,17 @@ run_bad() {
 jq -c '.vectors[3].services' "$VECTORS" >"$WORK/ok.json"
 jq -c '{xesm: {from: "2026-12-01", until: null}}' "$VECTORS" >"$WORK/nohold.json"
 jq -c '{xesm: {from: "2026-12-01", until: null, hold: "no"}}' "$VECTORS" >"$WORK/badhold.json"
+jq -c '{xesm: {from: "2026-12-01", until: null, hold: null}}' "$VECTORS" >"$WORK/nullhold.json"
+jq -c '{xesm: {from: "2026-12-01", until: null, hold: 0}}' "$VECTORS" >"$WORK/numberhold.json"
 jq -c '{xesm: {from: "2026-12-01", until: "2026-02-30", hold: false}}' "$VECTORS" >"$WORK/baduntil.json"
+jq -c '{xesm: {from: "2026-12-01", until: 20261130, hold: false}}' "$VECTORS" >"$WORK/numberuntil.json"
 jq -c '{xesm: {from: null, until: null, hold: false}}' "$VECTORS" >"$WORK/nofrom.json"
+jq -c '{xesm: {from: "", until: null, hold: false}}' "$VECTORS" >"$WORK/emptyfrom.json"
+jq -c '{xesm: {from: "2026-02-30", until: null, hold: false}}' "$VECTORS" >"$WORK/badfrom.json"
+jq -c '{xesm: "2026-12-01"}' "$VECTORS" >"$WORK/rowstring.json"
+jq -c '{xesm: ["from", "2026-12-01"]}' "$VECTORS" >"$WORK/rowarray.json"
+jq -c '{xesm: 1}' "$VECTORS" >"$WORK/rownumber.json"
+jq -c '{xesm: {from: "2026-12-01", until: null, hold: false, memo: "x"}}' "$VECTORS" >"$WORK/extra.json"
 jq -c '[1, 2]' "$VECTORS" >"$WORK/array.json"
 printf 'not json\n' >"$WORK/notjson.json"
 
@@ -168,11 +192,49 @@ run_bad "日付の形の誤りは exit 64" "実在する日付でない" --servi
 run_bad "知らない引数は exit 64" "知らない引数" --services-json "$WORK/ok.json" --service xesm --date 2026-12-01 --day 2026-12-01
 run_bad "読めないファイルは exit 64" "読めないファイル" --services-json "$WORK/nope.json" --service xesm --date 2026-12-01
 run_bad "JSON でないファイルは exit 64" "JSON として読めない" --services-json "$WORK/notjson.json" --service xesm --date 2026-12-01
-run_bad "services が配列なら exit 64" "JSON のオブジェクトでない" --services-json "$WORK/array.json" --service xesm --date 2026-12-01
-run_bad "from が無い行は exit 64" "from が実在する日付でない" --services-json "$WORK/nofrom.json" --service xesm --date 2026-12-01
-run_bad "until が実在しない日付なら exit 64" "until が null でも実在する日付でもない" --services-json "$WORK/baduntil.json" --service xesm --date 2026-12-01
-run_bad "hold が true/false でなければ exit 64" "hold が true か false でない" --services-json "$WORK/badhold.json" --service xesm --date 2026-12-01
-run_bad "hold の無い行は exit 64（形を 3 つに固定する）" "hold が true か false でない" --services-json "$WORK/nohold.json" --service xesm --date 2026-12-01
+
+# 5. 形の違う行は closed を 1 行出して exit 0。理由は標準エラーに 1 行だけ出す（fail closed）
+run_closed() {
+  local what="$1" expect_text="$2"
+  shift 2
+  set +e
+  local out err rc err_lines
+  out="$(bash "$JUDGE" "$@" 2>"$WORK/err")"
+  rc=$?
+  set -e
+  err="$(cat "$WORK/err")"
+  err_lines="$(printf '%s\n' "$err" | wc -l | tr -d ' ')"
+  if [ "$rc" -eq 0 ] && [ "$out" = "closed" ] && [ -n "$err" ] && [ "$err_lines" -eq 1 ] && printf '%s' "$err" | grep -qF -- "$expect_text"; then
+    ok "$what"
+  else
+    ng "$what: exit 期待 0 観測 ${rc}、標準出力 期待 closed 観測「${out}」、標準エラー 1 行に「${expect_text}」を期待（${err_lines} 行）: $err"
+  fi
+}
+run_closed "services が配列なら closed（exit 64 にしない）" "JSON のオブジェクトでない" --services-json "$WORK/array.json" --service xesm --date 2026-12-01
+run_closed "行が文字列なら closed" "がオブジェクトでない" --services-json "$WORK/rowstring.json" --service xesm --date 2026-12-01
+run_closed "行が配列なら closed" "がオブジェクトでない" --services-json "$WORK/rowarray.json" --service xesm --date 2026-12-01
+run_closed "行が数なら closed" "がオブジェクトでない" --services-json "$WORK/rownumber.json" --service xesm --date 2026-12-01
+run_closed "from が null なら closed" "from が実在する日付でない" --services-json "$WORK/nofrom.json" --service xesm --date 2026-12-01
+run_closed "from が空なら closed" "from が実在する日付でない" --services-json "$WORK/emptyfrom.json" --service xesm --date 2026-12-01
+run_closed "from が実在しない日付なら closed" "from が実在する日付でない" --services-json "$WORK/badfrom.json" --service xesm --date 2026-12-01
+run_closed "until が実在しない日付なら closed" "until が null でも実在する日付でもない" --services-json "$WORK/baduntil.json" --service xesm --date 2026-12-01
+run_closed "until が日付でない値なら closed" "until が null でも実在する日付でもない" --services-json "$WORK/numberuntil.json" --service xesm --date 2026-12-01
+run_closed "hold が true/false でなければ closed" "hold が true か false でない" --services-json "$WORK/badhold.json" --service xesm --date 2026-12-01
+run_closed "hold が null なら closed" "hold が true か false でない" --services-json "$WORK/nullhold.json" --service xesm --date 2026-12-01
+run_closed "hold が数なら closed" "hold が true か false でない" --services-json "$WORK/numberhold.json" --service xesm --date 2026-12-01
+run_closed "hold の無い行は closed（形を 3 つに固定する）" "hold が true か false でない" --services-json "$WORK/nohold.json" --service xesm --date 2026-12-01
+
+# 形は正しく、3 つ以外の key がある行は、その key を読まずに判定表のとおりにする（後方互換）
+set +e
+extra_out="$(bash "$JUDGE" --services-json "$WORK/extra.json" --service xesm --date 2026-12-01 2>"$WORK/err")"
+extra_rc=$?
+set -e
+extra_err="$(cat "$WORK/err")"
+if [ "$extra_rc" -eq 0 ] && [ "$extra_out" = "open" ] && [ -z "$extra_err" ]; then
+  ok "3 つ以外の key は読まずに無視する（判定は open）"
+else
+  ng "3 つ以外の key がある行の判定が open でない（rc=${extra_rc}）: ${extra_out} ${extra_err}"
+fi
 
 set +e
 help_out="$(bash "$JUDGE" --help 2>&1)"
