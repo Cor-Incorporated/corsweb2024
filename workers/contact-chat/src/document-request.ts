@@ -34,6 +34,47 @@ export function documentNotifyMode(value: string | undefined): DocumentNotifyMod
   }
 }
 
+/**
+ * Queue が資料請求の社内通知を最大何回 claim するか。wrangler.toml の max_retries（5）+ 最初の 1 回。
+ * 超えた行は DLQ に入り、cron も拾い直さない。照会 SQL だけが見つける。
+ * wrangler.toml との一致は document-notice-config.test.ts が照合する。
+ */
+export const NOTICE_MAX_ATTEMPTS = 6;
+
+/** cron が「投入できなかった」と見なす、作成からの経過（秒）。 */
+export const NOTICE_REQUEUE_AFTER_SECONDS = 15 * 60;
+
+/**
+ * 解放時刻は 10 桁の unix 秒だけ（2001〜2286 年）。空・0・負・小数・文字混じり、
+ * そしてミリ秒（13 桁）は未設定と同じ扱い（送らない）。ミリ秒を秒と読むと遠い未来になり、黙って送られなくなるため、拒否する。
+ */
+export function parseNotifyReleasedAt(value: string | undefined): number | null {
+  if (typeof value !== 'string' || !/^[1-9]\d{9}$/.test(value.trim())) return null;
+  return Number(value.trim());
+}
+
+export type DocumentNoticeDecision = 'send' | 'hold';
+
+/**
+ * キュー到着で送るかどうか。live で、解放時刻があり、行がそれ以降に作られたときだけ send。
+ * 重複の再申込みは古い行をもう一度 Queue に入れるので、ここで過去の held を止める。
+ */
+export function decideDocumentNotice(
+  mode: DocumentNotifyMode,
+  releasedAtRaw: string | undefined,
+  createdAt: number,
+): DocumentNoticeDecision {
+  if (mode !== 'live') return 'hold';
+  const releasedAt = parseNotifyReleasedAt(releasedAtRaw);
+  if (releasedAt === null || !Number.isFinite(createdAt)) return 'hold';
+  return createdAt >= releasedAt ? 'send' : 'hold';
+}
+
+/** 担当の返信の言語。ja は日本語、それ以外は英語。zh / ko / es で母語の返信は約束しない。 */
+export function documentReplyLanguage(locale: string): '日本語' | 'English' {
+  return locale === '' || locale === 'ja' ? '日本語' : 'English';
+}
+
 export function materialsPath(locale: DocumentLocale): string {
   return locale === 'ja' ? '/contact/materials/' : `/${locale}/contact/materials/`;
 }

@@ -42,6 +42,10 @@ export interface StoredSubmission {
   documentId: string;
   industry: string;
   consentVersion: string;
+  /** 保存行の作成時刻（unix 秒）。live の解放時刻との比較に使う。 */
+  createdAt: number;
+  /** 受付言語（ページの言語）。古い行は ''。 */
+  locale: string;
 }
 
 export interface CreateSubmissionResult {
@@ -307,6 +311,8 @@ export interface DocumentRequestRecord {
   industry: string;
   documentId: string;
   consentVersion: string;
+  /** 資料請求の画面の言語。担当が返信の言語を決めるために保存する。未指定は ''（記録なし）。 */
+  locale?: string;
 }
 
 export function tokyoDayKey(now: Date): string {
@@ -390,6 +396,7 @@ export async function createDocumentRequest(
         documentId: record.documentId,
         industry: record.industry,
         consentVersion: record.consentVersion,
+        locale: record.locale ?? '',
       }),
       createdAt,
     ),
@@ -403,7 +410,32 @@ export async function createDocumentRequest(
     if (raced) return { submissionId: raced.submission_id, receiptId: raced.receipt_id, duplicate: true };
     throw error;
   }
+  await saveDocumentLocale(env, submissionId, record.locale ?? '');
   return { submissionId, receiptId, duplicate: false };
+}
+
+/**
+ * 受付言語は、migration 0007 が当たる前の DB でも受付を止めないよう、保存とは別に書く。
+ * 列が無い・書けないときは '' のまま（通知は「記録なし」と書く）。受付の成否には影響しない。
+ */
+async function saveDocumentLocale(env: Env, submissionId: string, locale: string): Promise<void> {
+  if (!env.DB || !locale) return;
+  try {
+    await env.DB.prepare('UPDATE submission_intake SET locale = ? WHERE submission_id = ?').bind(locale, submissionId).run();
+  } catch {
+    // migration 0007 が未適用。言語は記録なしのまま。
+  }
+}
+
+async function readDocumentLocale(env: Env, submissionId: string): Promise<string> {
+  if (!env.DB) return '';
+  try {
+    const row = await env.DB.prepare('SELECT locale FROM submission_intake WHERE submission_id = ? LIMIT 1')
+      .bind(submissionId).first<{ locale?: string }>();
+    return typeof row?.locale === 'string' ? row.locale : '';
+  } catch {
+    return '';
+  }
 }
 
 export interface DocumentRequestSyncProjection {
@@ -506,6 +538,7 @@ interface SubmissionRow {
   document_id?: string;
   industry?: string;
   consent_version?: string;
+  created_at?: number;
 }
 
 export async function getSubmissionForNotification(
@@ -520,7 +553,7 @@ export async function getSubmissionForNotification(
       s.company_ciphertext, s.message_ciphertext, s.summary_ciphertext,
       s.conversation_excerpt_ciphertext,
       s.intent, s.source, s.structured_lead_json, s.utm_json, s.classification,
-      s.request_kind, s.document_id, s.industry, s.consent_version
+      s.request_kind, s.document_id, s.industry, s.consent_version, s.created_at
     FROM submission_intake s
     JOIN notification_outbox o ON o.submission_id = s.submission_id
     WHERE s.submission_id = ? AND o.message_type = ? AND o.status IN ('pending', 'processing')
@@ -550,6 +583,8 @@ export async function getSubmissionForNotification(
     documentId: row.document_id || '',
     industry: row.industry || '',
     consentVersion: row.consent_version || '',
+    createdAt: Number(row.created_at ?? 0),
+    locale: row.request_kind === 'document' ? await readDocumentLocale(env, row.submission_id) : '',
     inquiry: {
       name,
       email,
@@ -587,13 +622,15 @@ export async function markOutboxSent(
   messageType: NotificationType = 'internal',
   providerMessageId = '',
   deliveryStatus = 'accepted',
-  options: { updateSubmission?: boolean } = {},
+  options: { updateSubmission?: boolean; clearError?: boolean } = {},
 ): Promise<void> {
   if (!env.DB) return;
   const now = nowSeconds();
   const updateSubmission = options.updateSubmission !== false && messageType === 'internal';
+  // 資料請求だけ、送れた時点で以前の last_error（投入失敗・失敗コード）を消す。問い合わせの SQL は変えない。
+  const clearError = options.clearError === true ? ', last_error=NULL' : '';
   await env.DB.batch([
-    env.DB.prepare("UPDATE notification_outbox SET status='sent', delivery_status=?, provider_message_id=?, sent_at=?, updated_at=? WHERE submission_id=? AND message_type=?").bind(deliveryStatus, providerMessageId, now, now, submissionId, messageType),
+    env.DB.prepare(`UPDATE notification_outbox SET status='sent', delivery_status=?, provider_message_id=?, sent_at=?, updated_at=?${clearError} WHERE submission_id=? AND message_type=?`).bind(deliveryStatus, providerMessageId, now, now, submissionId, messageType),
     // 既存のsubmission statusは「社内通知が送れた」ことを意味するため、本人確認メールの
     // 成否で上書きしない。資料請求は status を stored のままにし、送付済みと読ませない。
     ...(updateSubmission
@@ -608,6 +645,40 @@ export async function markOutboxHeld(env: Env, submissionId: string, messageType
   await env.DB.prepare(
     "UPDATE notification_outbox SET status='pending', delivery_status='held', last_error='notify_not_released', updated_at=? WHERE submission_id=? AND message_type=?",
   ).bind(nowSeconds(), submissionId, messageType).run();
+}
+
+/**
+ * 保存はできたが、Queue へ投入できなかった社内通知の印。応答は notification:'pending'。
+ * pending/queued のままの行だけに付ける（held・failed・sent は上書きしない）。cron の回収と照会 SQL が読む。
+ */
+export async function markOutboxNotEnqueued(env: Env, submissionId: string): Promise<void> {
+  if (!env.DB) return;
+  await env.DB.prepare(
+    "UPDATE notification_outbox SET last_error='notify_not_enqueued', updated_at=? WHERE submission_id=? AND message_type='internal' AND status='pending' AND delivery_status='queued'",
+  ).bind(nowSeconds(), submissionId).run();
+}
+
+/**
+ * cron が Queue へ入れ直す資料請求の社内通知。送信器が受け付けていないもののうち、
+ * 作成から一定時間たち、Queue の再試行の上限（attempts）に達していないものだけ。held は含めない
+ * （過去の held を設定変更で流さない。明示の再処理だけが送る）。PII は読まない。
+ */
+export async function listStrandedDocumentNotices(
+  env: Env,
+  options: { olderThanSeconds: number; maxAttempts: number; limit?: number },
+): Promise<string[]> {
+  if (!env.DB) return [];
+  const cutoff = nowSeconds() - options.olderThanSeconds;
+  const result = await env.DB.prepare(`
+    SELECT o.submission_id AS submission_id
+    FROM notification_outbox o JOIN submission_intake s ON s.submission_id = o.submission_id
+    WHERE s.request_kind = 'document' AND o.message_type = 'internal'
+      AND o.status = 'pending' AND o.delivery_status IN ('queued', 'failed')
+      AND o.created_at <= ? AND o.attempts < ?
+    ORDER BY o.created_at
+    LIMIT ?
+  `).bind(cutoff, options.maxAttempts, options.limit ?? 50).all<{ submission_id: string }>();
+  return (result.results ?? []).map((item) => item.submission_id);
 }
 
 export function markOutboxFailed(env: Env, submissionId: string, errorMessage: string): Promise<void>;

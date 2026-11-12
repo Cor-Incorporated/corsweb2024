@@ -282,12 +282,13 @@ describe('document request intake', () => {
     expect(text).not.toContain('お送りしました');
   });
 
-  it('live でもキューも再処理も送らず、復号に失敗しても行は残る', async () => {
+  it('hold では鍵があってもキューも再処理も送らず、復号に失敗しても行は残る', async () => {
+    // 旧題は「live でも…送らず」。live の社内通知は document-notice.test.ts が担う（解放時刻つきで送る）。
     const fetchSpy = vi.fn(async () => new Response('nope', { status: 502 }));
     vi.stubGlobal('fetch', fetchSpy);
     const db = openDatabase();
     const { env, sent } = envFor(db, {
-      DOCUMENT_REQUEST_NOTIFY_MODE: 'live',
+      DOCUMENT_REQUEST_NOTIFY_MODE: 'hold',
       RESEND_API_KEY: 're_test',
     });
     await worker.fetch(post(valid, { 'cf-connecting-ip': '198.51.100.45' }), env);

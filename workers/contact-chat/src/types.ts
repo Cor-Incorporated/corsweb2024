@@ -22,11 +22,17 @@ export interface Env {
   PII_ENCRYPTION_KEY?: string;
   PII_HMAC_KEY?: string;
   /**
-   * 資料請求の再処理モード。wrangler には書かない。キュー消費はどの値でも送らない。
-   * mock のときだけ、HTTP に出していない replayHeldDocumentNotice が擬似送信する。
-   * live にしても本番送信はしない。
+   * 資料請求の社内通知のモード。wrangler には書かない（未設定 = hold = 送らない）。
+   * live のときだけ、DOCUMENT_REQUEST_NOTIFY_RELEASED_AT 以降に作られた行の社内通知を送る。
+   * hold と mock は、キュー消費で送らず held に戻す。mock は明示の再処理だけが擬似送信する。
    */
   DOCUMENT_REQUEST_NOTIFY_MODE?: string;
+  /**
+   * live の解放時刻（unix 秒、正の整数）。秘密ではない。これより前に作られた行は、
+   * 重複の再申込みや cron では送らない（hold の時期の held を設定変更で流さない）。
+   * 未設定・不正なら live でも送らない（fail closed）。
+   */
+  DOCUMENT_REQUEST_NOTIFY_RELEASED_AT?: string;
   /**
    * 案件同期。wrangler には書かない。mock 以外は binding があっても呼ばない。
    * 資格は PII の鍵とは別。未設定なら外部通信しない。

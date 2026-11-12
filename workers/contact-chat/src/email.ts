@@ -6,6 +6,7 @@ import {
   maskSensitiveContent,
   MAX_CONVERSATION_EXCERPT_LEN,
 } from './validate';
+import { documentReplyLanguage } from './document-request';
 
 // --- メール送信プロバイダ抽象化 ---
 // 既定実装は Resend API。将来 SendGrid / SES 等を足すときは EmailProvider を実装するだけ。
@@ -255,6 +256,8 @@ export interface DocumentNotice {
   documentId: string;
   consentVersion: string;
   receiptId: string;
+  /** 受付言語（ページの言語）。古い行や未指定は空。 */
+  locale?: string;
 }
 
 /** 件名に氏名もメールも置かない。本文は社内通知だけ。資料を送ったとは書かない。 */
@@ -270,6 +273,8 @@ export function buildDocumentRequestBody(notice: DocumentNotice): string {
     `受付番号: ${notice.receiptId}`,
     `資料ID: ${notice.documentId}`,
     `業種: ${notice.industry || '(未選択)'}`,
+    `ページの言語: ${notice.locale || '(記録なし)'}`,
+    `返信の言語: ${documentReplyLanguage(notice.locale || '')}`,
     `同意の版: ${notice.consentVersion}`,
     `氏名: ${notice.name}`,
     `メール: ${notice.email}`,
