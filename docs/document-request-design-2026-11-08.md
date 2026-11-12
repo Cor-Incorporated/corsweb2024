@@ -10,7 +10,7 @@
 
 ## 今回の受付
 
-`POST /api/contact/document-request`。保存は既存の `submission_intake`（AES-GCM、メールの HMAC、90日で消す `purgeExpiredData`）。通知の行は社内向けの outbox だけで、Queue の中身は submission ID と `internal` だけ。
+`POST /api/contact/document-request`。保存は既存の `submission_intake`（AES-GCM、メールの HMAC、90日で消す `purgeExpiredData`）。通知の行は社内向けの outbox だけで、Queue の中身は submission ID と `internal` だけ。担当への通知は `live` のときだけ送る（下の「社内通知の流れ」）。
 
 画面は `/contact/materials/`（5言語）。JavaScript があるときは JSON。無いときは同じ URL へフォームを送り、Worker が HTML を返す。成功の文は、保存できたときだけ出す。通知が止まっても、その文は「記録は残っている」であり、「送れなかったので受付ではない」「資料を送った」にはしない。
 
@@ -18,19 +18,29 @@
 
 ## 設定差分（既存の値は変えていない）
 
-`workers/contact-chat/wrangler.toml` の `CONTACT_TO_EMAIL`、`CONTACT_CC_EMAILS`、`CONTACT_FROM_EMAIL` は変えていない。新しい変数は toml に書いていない。
+`workers/contact-chat/wrangler.toml` の `CONTACT_TO_EMAIL`、`CONTACT_CC_EMAILS`、`CONTACT_FROM_EMAIL` は変えていない。新しい変数は toml に書いていない。本番で `live` にする手順は `workers/contact-chat/RUNBOOK-document-request-notice.md`（人間ゲート）。2 つの値は、専用の PR で `wrangler.toml` の本番側の `[vars]` に対で書く。この PR（#530）には足していない。
 
 | 名前 | いま | 意味 |
 |---|---|---|
 | `DOCUMENT_REQUEST_NOTIFY_MODE` 未設定 | コードの既定 | Resend を呼ばない。outbox は `held` / `notify_not_released`。行は残る |
-| `mock` | テストだけ | HTTP をしない。受付 status は `stored` のまま |
-| `live` | 未設定。設定してもキューは送らない | 過去の held を自動送信しない。再処理の HTTP は無い |
+| `mock` | テストだけ | キュー消費は送らず `held`。明示の再処理だけが擬似送信する。受付 status は `stored` のまま |
+| `live` + `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` | 未設定 | 解放時刻（10 桁の unix 秒）以降に作られた行の社内通知を、既存の問い合わせと同じ送信器・同じ宛先で送る。解放時刻が無い・不正なら送らない。mode は小文字の `live` だけ（`LIVE` や空白つきは hold）。解放時刻は配備が終わる予定より後にし、止めて再び live にするときは必ず新しくする（この境界は手順で閉じていて、コードでは閉じていない） |
 
-## 通知を出さない理由
+## 社内通知の流れ
 
-キューが資料請求を受け取ると、outbox を `pending` / `held` / `notify_not_released` に戻して ack する。`mock` でも `live` でもここでは送らない。行は期限まで D1 に残る。消えるのは既存の90日 purge だけである。
+キューが資料請求を受け取ると、`live` で、行が解放時刻以降に作られていれば、既存の `CONTACT_TO_EMAIL`（CC は `CONTACT_CC_EMAILS`）へ社内通知を送る。`reply_to` は請求者。送れたら outbox は `sent` / `accepted`。これは送信器が受け付けたという意味で、担当が読んだことでも、資料が渡ったことでもない。受付の status は `stored` のまま。
 
-擬似の再処理は `replayHeldDocumentNotice`。fetch のルートには無い。`DOCUMENT_REQUEST_NOTIFY_MODE=mock` のときだけ擬似送信し、受付の status は `stored` のまま。復号に失敗したら再び `held` に戻し、行は消さない。`live` や未設定ではこの関数も送らない。
+送信器が失敗した、または `RESEND_API_KEY` が無いときは、送らずに `failed` にして Queue の再試行に任せる（最大 6 回。`wrangler.toml` の `max_retries` + 1、試験で照合）。使い切った行は DLQ に入り、cron も入れ直さない。
+
+Queue へ入れられなかった受付は、応答を `stored` + `notification: 'pending'` のまま返し、行に `notify_not_enqueued` を残す。cron（15 分ごと）が、作成から 15 分たった `pending` / `queued` または `failed`（上限の手前）の行を Queue へ入れ直す。`held` は入れ直さない。
+
+解放時刻より前に作られた行（hold の時期の受付）は、重複の再申込みで Queue に入り直しても送らない。送る入口は、この波には無い。`replayHeldDocumentNotice` は関数としてあるが、HTTP にも CLI にも出していない（試験からだけ呼ぶ）。DLQ の行（`failed` で `attempts` 6 以上）と `sending` のまま 15 分以上残った行は、手順書の照会（寺田さんが毎営業日）で見つけ、手順書の「もう一度送らせる」（D1 の outbox の行を投入待ちに戻す SQL。人間ゲート）で、既存の cron と consumer に送り直させる。`held` は対象外。申込者の連絡先を人が読む入口は作らない（担当は届いた通知の「返信」で連絡する）。
+
+担当が未通知の受付は、手順書の照会 SQL（読み取りだけ、PII の列は選ばない）で、寺田さんが毎営業日に見つける。
+
+## 受付言語
+
+保存行に `locale`（migration 0007）を持たせ、通知本文に「ページの言語」と「返信の言語」を書く。返信の言語は、ja は日本語、それ以外は英語。zh、ko、es で母語の返信を約束する文は、画面にも通知にも書かない。0007 が当たる前の DB でも受付は止まらず、言語は「記録なし」になる。
 
 ## 別サイトからの投稿
 
@@ -44,11 +54,11 @@
 
 請求フォームへは、`/contact` の「会社紹介資料の請求」から `/contact/materials/` へ進む。業種ページの相談ボタンは `/contact` へ行き、そのページに同じリンクがある。請求の結果ページにも、公開スライドへのリンクが残る。これは送付済みの表示ではない。
 
-保持期間の最終判断は未確定。いまの行は、問い合わせと同じ `SUBMISSION_TTL_SECONDS`（90日）で消える。これは新しい期間の決定ではなく、既存の削除に乗せた結果である。変えるなら、この列の期限と purge を一緒に変える。
+保持期間は 90 日（問い合わせと同じ `SUBMISSION_TTL_SECONDS`）。寺田さん本人が 2026-11-12T09:21:21.565Z に、Codex のチャットで「この案を採用。未達確認は寺田が毎営業日（推奨）」と答えた（問いに「受付記録は90日保持」。記録は `統括/codex_fable_followup_20261112/evidence/user-decisions.json`）。変えるなら、この列の期限と purge を一緒に変える。
 
 請求者への自動返信は作っていない。送付済みと読まれるため。配布の方法（公開 URL の案内だけにするか、人がメールで送るか）は未確定。
 
-キューへ同じ ID を再投入しても、また `held` に戻るだけである。送る処理は HTTP に出していない。
+キューへ同じ ID を再投入しても、送信済みの行は claim できず二重に送らない。`held` の行は、解放時刻より前に作られていれば、再投入でもまた `held` に戻る。
 
 ## 案件同期（送信側だけ。未接続）
 
