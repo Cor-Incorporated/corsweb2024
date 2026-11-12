@@ -20,7 +20,11 @@
 # 使う道具は jq だけ（date の解釈は macOS と GNU で違うので使わない）。jq の strptime / mktime / todate は UTC で計算するが、
 # 日付だけを比べるので、日本時間の日付と同じ順序になる（夏時間が無いため）。実在しない日付（2026-02-30 など）は止める。
 #
-# 終了コード: 0 = 判定した / 64 = 使い方・入力の誤り（何も判定していない）
+# 行の形が違うとき（services がオブジェクトでない、行がオブジェクトでない、from / until / hold が
+# 実在する日付・真偽値でない）は、判定表に当てる前に closed を 1 行出して exit 0 にする（fail closed）。
+# 理由は標準エラーに 1 行だけ出す。exit 64 は「使い方の誤り」（引数・--date・ファイル）にだけ残す。
+#
+# 終了コード: 0 = 判定した（形の違う行は closed）/ 64 = 使い方の誤り（引数・--date・ファイル。何も判定していない）
 set -euo pipefail
 
 SERVICES_JSON=""
@@ -63,15 +67,17 @@ main() {
   [ -f "$SERVICES_JSON" ] || die "読めないファイル（観測: ${SERVICES_JSON}）"
   jq -e . "$SERVICES_JSON" >/dev/null 2>&1 || die "JSON として読めない（観測: ${SERVICES_JSON}）"
 
-  # 判定は jq だけで行う。入力の形が違えば "STOP: ..." を返し、下で exit 64 にする。
+  # 判定は jq だけで行う。形の違う行は "MALFORMED: ..." を返し、下で closed + exit 0 にする。
+  # 使い方の誤り（--date）は "STOP: ..." のまま残し、下で exit 64 にする。
   out="$(jq -r --arg service "$SERVICE" --arg date "$DATE" '
     def epoch: . + "T00:00:00Z" | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime;
     def is_ymd:
       (type == "string")
       and test("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")
       and (((epoch | todate)[0:10]) == (.[0:10]));
+    def malformed($why): "MALFORMED: " + $why;
 
-    (. | if type == "object" then . else "STOP: services が JSON のオブジェクトでない" end) as $sv
+    (. | if type == "object" then . else malformed("services が JSON のオブジェクトでない") end) as $sv
     | ($date | if is_ymd then . else "STOP: --date が実在する日付でない（観測: " + ($date | tostring) + "）" end) as $d0
     | if ($sv | type) != "object" then $sv
       elif ($d0 | startswith("STOP:")) then $d0
@@ -79,18 +85,18 @@ main() {
         ($sv[$service] // null) as $row
         | if $row == null then "closed"
           else
-            ($row | if type == "object" then . else ("STOP: services." + $service + " がオブジェクトでない") end) as $r
+            ($row | if type == "object" then . else malformed("services." + $service + " がオブジェクトでない") end) as $r
             | if ($r | type) != "object" then $r
               else
                 (if ($r | has("from")) then $r.from else null end) as $from
                 | (if ($r | has("until")) then $r.until else null end) as $until
                 | (if ($r | has("hold")) then $r.hold else null end) as $hold
                 | if ($from == null) or (($from | is_ymd) | not) then
-                    "STOP: services." + $service + ".from が実在する日付でない（観測: " + ($from | tostring) + "）"
+                    malformed("services." + $service + ".from が実在する日付でない（観測: " + ($from | tostring) + "）")
                   elif ($until != null) and (($until | is_ymd) | not) then
-                    "STOP: services." + $service + ".until が null でも実在する日付でもない（観測: " + ($until | tostring) + "）"
+                    malformed("services." + $service + ".until が null でも実在する日付でもない（観測: " + ($until | tostring) + "）")
                   elif ($hold | type) != "boolean" then
-                    "STOP: services." + $service + ".hold が true か false でない（観測: " + ($hold | tostring) + "）"
+                    malformed("services." + $service + ".hold が true か false でない（観測: " + ($hold | tostring) + "）")
                   else
                     ($d0 | epoch) as $dt
                     | ($from | epoch) as $ft
@@ -109,6 +115,11 @@ main() {
 
   case "$out" in
     open | view_only | read_export_only | closed) printf '%s\n' "$out" ;;
+    "MALFORMED: "*)
+      # 形の違う行は閉じる。理由は標準エラーに 1 行だけ出す（判定は exit 0 で返す）。
+      printf 'closed\n'
+      printf '%s\n' "${out#MALFORMED: }" >&2
+      ;;
     "STOP: "*) die "${out#STOP: }" ;;
     *) die "判定の値を読めない（観測: ${out}）" ;;
   esac

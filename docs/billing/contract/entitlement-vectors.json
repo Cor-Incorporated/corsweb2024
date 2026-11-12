@@ -27,7 +27,13 @@
     "hold",
     "hold_outside_until",
     "month_end",
-    "leap"
+    "leap",
+    "services_not_object",
+    "row_not_object",
+    "from_bad",
+    "until_bad",
+    "hold_bad",
+    "extra_key"
   ],
   "vectors": [
     {
@@ -368,6 +374,194 @@
       },
       "service": "xesm",
       "d": "2029-01-01",
+      "expect": "open"
+    },
+    {
+      "id": "v32-services-not-object",
+      "tags": ["services_not_object"],
+      "note": "services がオブジェクトでない（配列）。判定表に当てる前に閉じる（fail closed）",
+      "malformed": true,
+      "services": [],
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v33-row-null",
+      "tags": ["row_missing"],
+      "note": "自分のサービスの値が null。行が無いのと同じに閉じる（判定表の 1 行目。理由は出さない）",
+      "services": {
+        "xesm": null
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v34-row-string",
+      "tags": ["row_not_object"],
+      "note": "行がオブジェクトでない（文字列）。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": "2026-12-01"
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v35-row-array",
+      "tags": ["row_not_object"],
+      "note": "行がオブジェクトでない（配列）。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": ["from", "2026-12-01", "hold", false]
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v36-row-number",
+      "tags": ["row_not_object"],
+      "note": "行がオブジェクトでない（数）。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": 1
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v37-from-missing",
+      "tags": ["from_bad"],
+      "note": "from の key が無い。形の違う行として閉じる（開始日を推測しない）",
+      "malformed": true,
+      "services": {
+        "xesm": { "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v38-from-null",
+      "tags": ["from_bad"],
+      "note": "from が null。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": null, "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v39-from-empty",
+      "tags": ["from_bad"],
+      "note": "from が空の文字列。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v40-from-nonexistent",
+      "tags": ["from_bad"],
+      "note": "from が実在しない日付（2026-02-30）。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-02-30", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v41-until-nonexistent",
+      "tags": ["until_bad"],
+      "note": "until が実在しない日付（2026-02-30）。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2026-02-30", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v42-until-not-string",
+      "tags": ["until_bad"],
+      "note": "until が日付でない値（数）。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": 20261130, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v43-hold-missing",
+      "tags": ["hold_bad"],
+      "note": "hold の key が無い。形の違う行として閉じる（hold は必須）",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v44-hold-null",
+      "tags": ["hold_bad"],
+      "note": "hold が null。形の違う行として閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": null }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v45-hold-string-false",
+      "tags": ["hold_bad"],
+      "note": "hold が文字列の \"false\"。真偽値でないので閉じる（文字列を真偽値に読み替えない）",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": "false" }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v46-hold-number",
+      "tags": ["hold_bad"],
+      "note": "hold が数（0）。真偽値でないので閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": 0 }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v47-extra-key-ignored",
+      "tags": ["extra_key", "no_until"],
+      "note": "from・until・hold 以外の key は読まずに無視する（後方互換）。行の形は正しいので判定表のとおり open",
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": null, "hold": false, "memo": "読まない" }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
       "expect": "open"
     }
   ]
