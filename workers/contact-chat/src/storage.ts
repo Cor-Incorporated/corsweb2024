@@ -38,6 +38,10 @@ export interface StoredSubmission {
   receiptId: string;
   outboxId: string;
   messageType: NotificationType;
+  requestKind: 'inquiry' | 'document';
+  documentId: string;
+  industry: string;
+  consentVersion: string;
 }
 
 export interface CreateSubmissionResult {
@@ -296,6 +300,192 @@ export async function createSubmission(
   return { submissionId, receiptId, duplicate: false };
 }
 
+export interface DocumentRequestRecord {
+  name: string;
+  email: string;
+  company: string;
+  industry: string;
+  documentId: string;
+  consentVersion: string;
+}
+
+export function tokyoDayKey(now: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+export async function createDocumentRequest(
+  env: Env,
+  record: DocumentRequestRecord,
+  now: Date = new Date(),
+): Promise<CreateSubmissionResult> {
+  if (!env.DB) throw new Error('D1 is not configured');
+  const day = tokyoDayKey(now);
+  // 問い合わせの email_hmac と同じく、文字列全体を小文字にしてから HMAC する。
+  const idempotencyKey = `doc.${await emailHmac(env.PII_HMAC_KEY, `${record.email}|${record.documentId}|${day}`)}`;
+  const existing = await env.DB.prepare(
+    'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
+  ).bind(idempotencyKey).first<{ submission_id: string; receipt_id: string }>();
+  if (existing) return { submissionId: existing.submission_id, receiptId: existing.receipt_id, duplicate: true };
+
+  const submissionId = crypto.randomUUID();
+  const receiptId = newReceiptId();
+  const createdAt = Math.floor(now.getTime() / 1000);
+  const summary = '資料請求を記録した。資料は送っていない。';
+  const [name, email, company, message, summaryCipher, excerpt, emailHash] = await Promise.all([
+    encryptText(env.PII_ENCRYPTION_KEY, record.name),
+    encryptText(env.PII_ENCRYPTION_KEY, record.email),
+    encryptText(env.PII_ENCRYPTION_KEY, record.company),
+    encryptText(env.PII_ENCRYPTION_KEY, record.documentId),
+    encryptText(env.PII_ENCRYPTION_KEY, summary),
+    encryptText(env.PII_ENCRYPTION_KEY, ''),
+    emailHmac(env.PII_HMAC_KEY, record.email),
+  ]);
+  const statements = [
+    env.DB.prepare(`
+      INSERT INTO submission_intake
+        (submission_id, idempotency_key, session_id, receipt_id,
+         name_ciphertext, email_ciphertext, company_ciphertext,
+         message_ciphertext, summary_ciphertext, conversation_excerpt_ciphertext,
+         email_hmac, intent, source,
+         structured_lead_json, utm_json, classification, status,
+         created_at, updated_at, expires_at,
+         request_kind, document_id, industry, consent_version)
+      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'document-request', '{}', '{}', '', 'stored', ?, ?, ?, 'document', ?, ?, ?)
+    `).bind(
+      submissionId,
+      idempotencyKey,
+      receiptId,
+      name,
+      email,
+      company,
+      message,
+      summaryCipher,
+      excerpt,
+      emailHash,
+      createdAt,
+      createdAt,
+      createdAt + SUBMISSION_TTL_SECONDS,
+      record.documentId,
+      record.industry,
+      record.consentVersion,
+    ),
+    env.DB.prepare(`
+      INSERT INTO notification_outbox
+        (outbox_id, submission_id, message_type, status, attempts, available_at,
+         delivery_status, created_at, updated_at)
+      VALUES (?, ?, 'internal', 'pending', 0, ?, 'queued', ?, ?)
+    `).bind(crypto.randomUUID(), submissionId, createdAt, createdAt, createdAt),
+    env.DB.prepare(`
+      INSERT INTO audit_events (event_id, event_type, submission_id, session_id, metadata_json, created_at)
+      VALUES (?, 'document_request_stored', ?, NULL, ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      submissionId,
+      JSON.stringify({
+        documentId: record.documentId,
+        industry: record.industry,
+        consentVersion: record.consentVersion,
+      }),
+      createdAt,
+    ),
+  ];
+  try {
+    await env.DB.batch(statements);
+  } catch (error) {
+    const raced = await env.DB.prepare(
+      'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
+    ).bind(idempotencyKey).first<{ submission_id: string; receipt_id: string }>();
+    if (raced) return { submissionId: raced.submission_id, receiptId: raced.receipt_id, duplicate: true };
+    throw error;
+  }
+  return { submissionId, receiptId, duplicate: false };
+}
+
+export interface DocumentRequestSyncProjection {
+  receiptId: string;
+  documentId: string;
+  industry: '' | 'medical' | 'shigyo' | 'construction' | 'manufacturing' | 'education';
+  consentVersion: string;
+  recordedAt: string;
+  intakeStatus: 'stored';
+  caseSyncStatus: string;
+}
+
+/**
+ * 保存済みの資料請求から、同期に使う列だけを読む。
+ * 暗号文の列は SELECT しない。復号しない。
+ * createDocumentRequest の戻り（ID と duplicate）からは組み立てない。
+ */
+export async function readDocumentRequestSyncSource(
+  env: Env,
+  receiptId: string,
+): Promise<DocumentRequestSyncProjection | null> {
+  if (!env.DB) return null;
+  const row = await env.DB.prepare(`
+    SELECT receipt_id, document_id, industry, consent_version, created_at, status, request_kind, case_sync_status
+    FROM submission_intake
+    WHERE receipt_id = ? AND request_kind = 'document'
+    LIMIT 1
+  `).bind(receiptId).first<{
+    receipt_id: string;
+    document_id: string;
+    industry: string;
+    consent_version: string;
+    created_at: number;
+    status: string;
+    request_kind: string;
+    case_sync_status: string;
+  }>();
+  if (!row || row.status !== 'stored' || row.request_kind !== 'document') return null;
+  if (!row.receipt_id || row.document_id !== 'company-deck' || !row.consent_version || !Number.isFinite(row.created_at)) return null;
+  const industry = row.industry.trim();
+  if (
+    industry !== ''
+    && industry !== 'medical'
+    && industry !== 'shigyo'
+    && industry !== 'construction'
+    && industry !== 'manufacturing'
+    && industry !== 'education'
+  ) return null;
+  return {
+    receiptId: row.receipt_id,
+    documentId: row.document_id,
+    industry,
+    consentVersion: row.consent_version,
+    recordedAt: new Date(row.created_at * 1000).toISOString(),
+    intakeStatus: 'stored',
+    caseSyncStatus: row.case_sync_status || '',
+  };
+}
+
+export async function claimDocumentCaseSync(
+  env: Env,
+  receiptId: string,
+  fromStatus: '' | 'retry_scheduled',
+): Promise<boolean> {
+  if (!env.DB) return false;
+  const result = await env.DB.prepare(`
+    UPDATE submission_intake
+    SET case_sync_status = 'sending', updated_at = ?
+    WHERE receipt_id = ? AND request_kind = 'document' AND status = 'stored' AND case_sync_status = ?
+  `).bind(nowSeconds(), receiptId, fromStatus).run();
+  return (result.meta?.changes || 0) > 0;
+}
+
+export async function setDocumentCaseSyncStatus(env: Env, receiptId: string, status: string): Promise<void> {
+  if (!env.DB) return;
+  await env.DB.prepare(`
+    UPDATE submission_intake
+    SET case_sync_status = ?, updated_at = ?
+    WHERE receipt_id = ? AND request_kind = 'document'
+  `).bind(status, nowSeconds(), receiptId).run();
+}
+
 interface SubmissionRow {
   outbox_id: string;
   submission_id: string;
@@ -312,6 +502,10 @@ interface SubmissionRow {
   structured_lead_json: string;
   utm_json: string;
   classification: Classification | '';
+  request_kind?: string;
+  document_id?: string;
+  industry?: string;
+  consent_version?: string;
 }
 
 export async function getSubmissionForNotification(
@@ -325,7 +519,8 @@ export async function getSubmissionForNotification(
       s.name_ciphertext, s.email_ciphertext,
       s.company_ciphertext, s.message_ciphertext, s.summary_ciphertext,
       s.conversation_excerpt_ciphertext,
-      s.intent, s.source, s.structured_lead_json, s.utm_json, s.classification
+      s.intent, s.source, s.structured_lead_json, s.utm_json, s.classification,
+      s.request_kind, s.document_id, s.industry, s.consent_version
     FROM submission_intake s
     JOIN notification_outbox o ON o.submission_id = s.submission_id
     WHERE s.submission_id = ? AND o.message_type = ? AND o.status IN ('pending', 'processing')
@@ -351,6 +546,10 @@ export async function getSubmissionForNotification(
     receiptId: row.receipt_id,
     outboxId: row.outbox_id,
     messageType: row.message_type,
+    requestKind: row.request_kind === 'document' ? 'document' : 'inquiry',
+    documentId: row.document_id || '',
+    industry: row.industry || '',
+    consentVersion: row.consent_version || '',
     inquiry: {
       name,
       email,
@@ -388,17 +587,27 @@ export async function markOutboxSent(
   messageType: NotificationType = 'internal',
   providerMessageId = '',
   deliveryStatus = 'accepted',
+  options: { updateSubmission?: boolean } = {},
 ): Promise<void> {
   if (!env.DB) return;
   const now = nowSeconds();
+  const updateSubmission = options.updateSubmission !== false && messageType === 'internal';
   await env.DB.batch([
     env.DB.prepare("UPDATE notification_outbox SET status='sent', delivery_status=?, provider_message_id=?, sent_at=?, updated_at=? WHERE submission_id=? AND message_type=?").bind(deliveryStatus, providerMessageId, now, now, submissionId, messageType),
     // 既存のsubmission statusは「社内通知が送れた」ことを意味するため、本人確認メールの
-    // 成否で上書きしない。本人向けOutboxの状態は同じ行に保存する。
-    ...(messageType === 'internal'
+    // 成否で上書きしない。資料請求は status を stored のままにし、送付済みと読ませない。
+    ...(updateSubmission
       ? [env.DB.prepare("UPDATE submission_intake SET status='sent', updated_at=? WHERE submission_id=?").bind(now, submissionId)]
       : []),
   ]);
+}
+
+/** 通知先が未確定の資料請求。行は残し、Resend は呼ばない。 */
+export async function markOutboxHeld(env: Env, submissionId: string, messageType: NotificationType = 'internal'): Promise<void> {
+  if (!env.DB) return;
+  await env.DB.prepare(
+    "UPDATE notification_outbox SET status='pending', delivery_status='held', last_error='notify_not_released', updated_at=? WHERE submission_id=? AND message_type=?",
+  ).bind(nowSeconds(), submissionId, messageType).run();
 }
 
 export function markOutboxFailed(env: Env, submissionId: string, errorMessage: string): Promise<void>;
