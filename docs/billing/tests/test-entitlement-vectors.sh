@@ -95,6 +95,11 @@ while IFS= read -r tag; do
 done <<<"$(jq -r '.vectors[].tags[]' "$VECTORS" | sort -u)"
 [ -z "$unused_tags" ] && ok "ベクトルのタグは required_tags にある（宣言に無いタグを作らない）" || ng "required_tags に無いタグがある: $unused_tags"
 
+# 日付の書式（YYYY-MM-DD の 10 文字だけ）を縛るベクトルが 8 件ある
+eq "日付の書式（YYYY-MM-DD）のベクトルが 8 件" \
+  "$(jq -r '[.vectors[] | select(.tags | index("date_format"))] | length' "$VECTORS")" \
+  "8"
+
 # Clerk の metadata に残る形（until のキーが無い）を 1 件は覆っている
 eq "until のキーが無い行のベクトルがある（Clerk の deep merge で null がキーを消すため）" \
   "$(jq -r '[.vectors[] | select(.services | type == "object") | select(.services[.service] | type == "object") | select(.services[.service] | has("until") | not)] | length' "$VECTORS")" \
