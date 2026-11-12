@@ -34,6 +34,8 @@ Cor.株式会社は、情報セキュリティマネジメントシステム（I
 
 初回登録日：2026年11月7日。登録番号：JP26/00000364。
 """
+# 見出しの行を除いた、同じ段落に範囲がある形。範囲を同じ段落に置く規則（本人回答 2026-11-12 ①）を満たす
+APPROVED_PARAGRAPHS = "\n".join(APPROVED_BLOCK.split("\n")[2:])
 # 4 本の参考資料の行（医療・士業・建設・製造）。ISMS の登録概要を指す行で、取得の表明ではない
 APPROVED_REFERENCES = (
     "7. [Cor.株式会社・会社情報](https://cor-jp.com/company/) — SGSジャパン株式会社発行の審査登録証 JP26/00000364に基づく、ISMS認証の登録概要。",
@@ -55,22 +57,33 @@ def errors(text: str, **kw) -> list[str]:
 
 
 class ApprovedBodiesPassTest(unittest.TestCase):
-    def test_approved_isms_block_has_no_errors(self):
-        self.assertEqual(errors(APPROVED_BLOCK), [])
+    def test_approved_paragraphs_have_no_errors(self):
+        self.assertEqual(errors(APPROVED_PARAGRAPHS), [])
+
+    def test_heading_only_line_stops_because_scope_is_in_the_next_paragraph(self):
+        # 承認 5 本文の実測（2026-11-12、5 本とも同じ）: 見出し「**ISMS認証取得済み**」だけの行が isms_scope_missing で止まる。
+        # 範囲は次の段落にあり、同じ段落ではない。見出しを特別扱いする規則は足していない（扱いは寺田さんに確認する）
+        found = [(h.rule_id, h.line) for h in hits(APPROVED_BLOCK) if h.level == "error"]
+        self.assertEqual(found, [("isms_scope_missing", 1)])
 
     def test_approved_reference_lines_have_no_errors(self):
         for line in APPROVED_REFERENCES:
             with self.subTest(line=line[:40]):
                 self.assertEqual(errors(line + "\n"), [])
 
-    def test_heading_then_next_paragraph_scope_is_enough(self):
-        self.assertEqual(errors("**ISMS認証取得済み**\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n"), [])
+    def test_scope_in_the_next_paragraph_is_not_enough(self):
+        # 範囲は同じ段落だけ。直後の段落は数えない（本人回答 2026-11-12 ①）
+        self.assertEqual(errors("**ISMS認証取得済み**\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n"), ["isms_scope_missing"])
+        self.assertEqual(errors("ISMS 認証を取得しました。\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n"), ["isms_scope_missing"])
+
+    def test_scope_in_the_same_paragraph_is_enough(self):
+        self.assertEqual(errors("ISMS 認証を取得しました。\n登録範囲は「ソフトウエアの受託開発および運用」です。\n"), [])
 
     def test_month_level_date_is_enough(self):
         self.assertEqual(errors("2026年11月に ISO/IEC 27001 の認証を取得しました。登録範囲は「ソフトウエアの受託開発および運用」です。\n"), [])
 
     def test_validity_period_dates_are_allowed(self):
-        text = APPROVED_BLOCK + "\n有効期間は2026年11月7日から2029年11月7日までです。\n"
+        text = APPROVED_PARAGRAPHS + "\n有効期間は2026年11月7日から2029年11月7日までです。\n"
         self.assertEqual(errors(text), [])
 
     def test_scope_limiting_sentence_is_not_overreach(self):
@@ -87,7 +100,7 @@ class ApprovedBodiesPassTest(unittest.TestCase):
         for rule in lint.RULES:
             for word in ("北極星", "脳に汗", "通訳"):
                 self.assertNotIn(word, rule.pattern.pattern)
-        self.assertEqual(errors(APPROVED_BLOCK), [])
+        self.assertEqual(errors(APPROVED_PARAGRAPHS), [])
 
 
 class NegativeCaseTest(unittest.TestCase):
@@ -103,6 +116,9 @@ class NegativeCaseTest(unittest.TestCase):
     def test_scope_two_paragraphs_away_is_missing(self):
         self.assertRule("ISMS 認証取得済みです。\n\n別の話です。\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n", "isms_scope_missing")
 
+    def test_scope_in_the_next_paragraph_is_missing(self):
+        self.assertRule("ISMS 認証取得済みです。\n\n登録範囲は「ソフトウエアの受託開発および運用」です。\n", "isms_scope_missing")
+
     def test_unrecorded_certifications(self):
         for text in ("プライバシーマークを取得しています\n", "SOC 2 認証済み\n", "Pマークを取得しました。\n", "SCS 認証を取得しました。\n"):
             with self.subTest(text=text):
@@ -117,6 +133,26 @@ class NegativeCaseTest(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertRule(text, "isms_scope_overreach")
+
+    def test_limiting_phrase_does_not_cancel_a_different_clause(self):
+        # Codex の実測（2026-11-12T09:25Z）: 今の lint で指摘なしだった入力。肯定の拡張が、同じ文の別の対象への限定句で打ち消されない
+        text = "ISMS認証取得済みなのでソフトウエアの受託開発および運用が対象です。ISMSにより全社の安全性を保証し、これはAIの精度保証を意味しません。\n"
+        self.assertRule(text, "isms_scope_overreach")
+        for variant in (
+            "ISMSにより全社の安全性を保証し、これはAIの精度保証を意味しません。登録範囲は「ソフトウエアの受託開発および運用」です。\n",
+            "ISMS 認証は、ソフトウエアの受託開発および運用が対象であり、製品は保証しますが、AIの精度保証はしません。登録範囲は「ソフトウエアの受託開発および運用」です。\n",
+        ):
+            with self.subTest(variant=variant[:30]):
+                self.assertRule(variant, "isms_scope_overreach")
+
+    def test_limiting_phrase_on_the_same_clause_still_passes(self):
+        for text in (
+            "ISMS 認証は、Grift の機能を保証するものではありません。\n",
+            "ISMS は、個別製品、AIの回答精度、医療機器、機能安全、すべての事業や情報漏えいゼロを保証するものではありません。\n",
+            "ISMS の対象は、ソフトウエアの受託開発および運用で、製品は範囲外です。\n",
+        ):
+            with self.subTest(text=text[:30]):
+                self.assertEqual([e for e in errors(text) if e == "isms_scope_overreach"], [])
 
     def test_confirmation_date_is_not_the_acquisition_date(self):
         self.assertRule("2026年11月11日に認証を取得した\n", "isms_date_mismatch")
@@ -150,9 +186,9 @@ class NegativeCaseTest(unittest.TestCase):
     def test_status_expected_blocks_the_acquisition_claim(self):
         # 片側変異: 記録を変えるだけで、同じ文が止まる（根拠あり → 通る / 根拠なし → 止まる）
         rec = facts()
-        self.assertEqual(errors(APPROVED_BLOCK, record=rec), [])
+        self.assertEqual(errors(APPROVED_PARAGRAPHS, record=rec), [])
         rec["isms"]["status"] = "registration_expected"
-        self.assertRule(APPROVED_BLOCK, "isms_status_mismatch", record=rec)
+        self.assertRule(APPROVED_PARAGRAPHS, "isms_status_mismatch", record=rec)
         # 同じ記録なら、予定の説明は止めない（記録に追随する）
         self.assertEqual(errors("ISMS の第2段階審査を終え、認証登録を見込んでいます\n", record=rec), [])
 
@@ -161,21 +197,21 @@ class NegativeCaseTest(unittest.TestCase):
             with self.subTest(status=status):
                 rec = facts()
                 rec["isms"]["status"] = status
-                self.assertRule(APPROVED_BLOCK, "isms_status_mismatch", record=rec)
+                self.assertRule(APPROVED_PARAGRAPHS, "isms_status_mismatch", record=rec)
 
     def test_as_of_outside_the_validity_period_blocks_the_claim(self):
-        self.assertRule(APPROVED_BLOCK, "isms_status_mismatch", as_of=date(2026, 11, 6))
-        self.assertRule(APPROVED_BLOCK, "isms_status_mismatch", as_of=date(2029, 11, 8))
+        self.assertRule(APPROVED_PARAGRAPHS, "isms_status_mismatch", as_of=date(2026, 11, 6))
+        self.assertRule(APPROVED_PARAGRAPHS, "isms_status_mismatch", as_of=date(2029, 11, 8))
         rec = facts()
         rec["isms"]["valid_to"] = "2026-11-10"  # valid_to を検査日より前にした記録
-        self.assertRule(APPROVED_BLOCK, "isms_status_mismatch", record=rec)
+        self.assertRule(APPROVED_PARAGRAPHS, "isms_status_mismatch", record=rec)
 
 
 class RecordToTextLinkTest(unittest.TestCase):
     """記録 ↔ 本文の結線。片方だけ変えると、記録の値と本文の値の両方を挙げて落ちる（宣言と実体の二重管理）。"""
 
     def message_for(self, rule_id: str, record: dict) -> str:
-        found = [h for h in hits(APPROVED_BLOCK, record=record) if h.rule_id == rule_id]
+        found = [h for h in hits(APPROVED_PARAGRAPHS, record=record) if h.rule_id == rule_id]
         self.assertTrue(found, f"記録を変えたのに {rule_id} が出ない")
         return found[0].message
 
@@ -220,11 +256,31 @@ class SkillTextLinkTest(unittest.TestCase):
         for rel in ("cor-voice/SKILL.md", "cor-voice-gate/SKILL.md"):
             self.assertIn("facts.json", (SKILLS / rel).read_text(encoding="utf-8"), f"{rel} が facts.json を指していません")
 
+    def test_decision_record_is_the_original_answer(self):
+        # 本人指示の根拠は、発言の原文・日時・経路（本人回答 2026-11-12 ③）。統括の推奨の文面を本人の回答として置かない
+        rec = facts()["isms"]["decision_records"][0]
+        self.assertEqual((rec["quote"], rec["decided_at"], rec["decided_by"]), ("3点とも採用（推奨）", "2026-11-12T09:23:37.773Z", "寺田康佑"))
+        self.assertIn("Codex のチャット", rec["route"])
+        for point in ("同じ段落に「ソフトウエアの受託開発および運用」という登録範囲を併記する", "期限まで無条件に有効とは扱わない", "AIの推奨を本人回答に置き換えない"):
+            self.assertIn(point, rec["question"])
+
+    def test_adr_cites_the_decision_with_quote_date_and_route(self):
+        adr = (SKILLS.parents[1] / "docs/adr/ADR-0029-company-facts-record.md").read_text(encoding="utf-8")
+        rec = facts()["isms"]["decision_records"][0]
+        for key in ("quote", "decided_at"):
+            self.assertIn(rec[key], adr, f"ADR-0029 に facts.json の decision_records の {key}（{rec[key]}）がありません")
+        self.assertIn("Codex のチャット", adr)
+
     def test_record_is_the_published_fact(self):
         isms = facts()["isms"]
         self.assertEqual((isms["status"], isms["standard"], isms["registration_number"], isms["scope"]), ("registered", "ISO/IEC 27001:2022", "JP26/00000364", "ソフトウエアの受託開発および運用"))
         self.assertEqual((isms["issuer"], isms["valid_from"], isms["valid_to"], isms["confirmed_on"]), ("SGSジャパン株式会社", "2026-11-07", "2029-11-07", "2026-11-11"))
-        self.assertIn("維持審査", isms["recheck"])
+        # 再確認（本人回答 2026-11-12 ②）: 更新のきっかけと、期限・条件の保持。期限まで無条件に有効とは扱わない
+        self.assertIn("維持審査の結果・範囲変更・停止等が判明した時", isms["recheck"])
+        self.assertIn("2029-11-07", isms["recheck"])
+        self.assertIn("期限まで無条件に有効とは扱わない", isms["recheck"])
+        self.assertNotIn("それまでは", isms["recheck"])
+        self.assertEqual(isms["validity_condition"], "有効期間中の維持審査にて登録の継続が認められる限り有効")
         self.assertNotRegex(json.dumps(isms, ensure_ascii=False), r"住所|所在地:|不適合")  # 所在地・審査報告の中身は入れない
 
 
@@ -245,7 +301,7 @@ class BrokenRecordTest(unittest.TestCase):
         self.assertIn("fact_record_invalid", self.run_with_record("{壊れている"))
 
     def test_required_key_removed(self):
-        for key in ("scope", "status", "valid_from", "forbidden_extensions", "stale_state_phrases"):
+        for key in ("scope", "status", "valid_from", "forbidden_extensions", "stale_state_phrases", "decision_records"):
             with self.subTest(key=key):
                 rec = json.loads((lint.FACTS_PATH).read_text(encoding="utf-8"))
                 del rec["facts"][0][key]
@@ -257,6 +313,16 @@ class BrokenRecordTest(unittest.TestCase):
                 rec = json.loads((lint.FACTS_PATH).read_text(encoding="utf-8"))
                 rec["facts"][0][key] = value
                 self.assertIn("fact_record_invalid", self.run_with_record(json.dumps(rec, ensure_ascii=False)))
+
+    def test_decision_record_without_quote_date_or_route_is_invalid(self):
+        for key in ("quote", "decided_at", "route", "question", "decided_by"):
+            with self.subTest(key=key):
+                rec = json.loads((lint.FACTS_PATH).read_text(encoding="utf-8"))
+                rec["facts"][0]["decision_records"][0][key] = " "
+                self.assertIn("fact_record_invalid", self.run_with_record(json.dumps(rec, ensure_ascii=False)))
+        rec = json.loads((lint.FACTS_PATH).read_text(encoding="utf-8"))
+        rec["facts"][0]["decision_records"] = []
+        self.assertIn("fact_record_invalid", self.run_with_record(json.dumps(rec, ensure_ascii=False)))
 
     def test_invalid_record_stops_even_a_correct_sentence(self):
         self.assertIn("fact_record_invalid", self.run_with_record("[]"))

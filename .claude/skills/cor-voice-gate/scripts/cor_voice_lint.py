@@ -141,7 +141,9 @@ ISMS_REQUIRED_KEYS = (
     "id", "subject", "status", "standard", "registration_number", "scope", "issuer", "valid_from", "valid_to",
     "validity_condition", "confirmed_on", "evidence", "allowed_claims", "forbidden_extensions", "recheck", "history",
     "scope_limiting_phrases", "stale_state_phrases", "stale_state_phrases_any_context", "stale_state_phrases_unless_completed",
+    "decision_records",
 )
+DECISION_KEYS = ("decided_by", "decided_at", "route", "question", "quote")
 FACT_SOURCE = "cor-voice §6 / references/facts.json / ADR-0029"
 
 
@@ -171,9 +173,20 @@ def _validate_isms(rec: dict) -> dict:
     groups = rec["forbidden_extensions"]
     if not isinstance(groups, list) or not groups or not all(isinstance(g, dict) and g.get("terms") for g in groups):
         raise FactRecordError("facts.json の isms.forbidden_extensions が {label, terms} の配列ではありません")
+    _validate_decisions(rec["decision_records"])
     _iso_date(rec["valid_from"], "isms.valid_from")
     _iso_date(rec["valid_to"], "isms.valid_to")
     return rec
+
+
+def _validate_decisions(records: object) -> None:
+    """本人指示の根拠は、発言の原文・日時・経路を必須にする。AI の推奨や統括の言い換えを、本人の回答として置かない。"""
+    if not isinstance(records, list) or not records:
+        raise FactRecordError("facts.json の isms.decision_records が空です（本人の回答の原文・日時・経路が要る）")
+    for i, rec in enumerate(records):
+        missing = [k for k in DECISION_KEYS if not (isinstance(rec, dict) and isinstance(rec.get(k), str) and rec[k].strip())]
+        if missing:
+            raise FactRecordError(f"facts.json の isms.decision_records[{i}] に {', '.join(missing)} がありません（原文・日時・経路が要る）")
 
 
 def load_facts(path: Path | None = None) -> dict:
@@ -241,6 +254,7 @@ def _cert_unverified_hits(lines: list[str], names: list[str]) -> list[Hit]:
 
 
 def _status_hits(claims: list[tuple[int, str]], rec: dict, as_of: date) -> list[Hit]:
+    # 有効期間の外は止める。内側でも、維持審査の結果・範囲変更・停止等は status で表す（期限まで無条件に有効とは扱わない。本人回答②）
     start, end = date.fromisoformat(rec["valid_from"]), date.fromisoformat(rec["valid_to"])
     reason = ""
     if rec["status"] != "registered":
@@ -251,25 +265,33 @@ def _status_hits(claims: list[tuple[int, str]], rec: dict, as_of: date) -> list[
 
 
 def _scope_missing_hits(claims: list[tuple[int, str]], lines: list[str], rec: dict) -> list[Hit]:
+    # 範囲は同じ段落に書く（直後の段落は数えない）。2026-11-12 の本人回答①（SNS を含む）。見出しだけの行も同じ扱い
     ids, scope, hits = _paragraph_ids(lines), rec["scope"], []
     for no, sent in claims:
-        here = ids[no - 1]
-        near = [i for i, pid in enumerate(ids) if pid in (here, here + 1) and lines[i].strip()]
-        if not any(scope in lines[i] for i in near):
-            hits.append(_fact_hit("isms_scope_missing", no, sent, f"ISMS の取得を書く文には、同じ段落か直後の段落に登録範囲「{scope}」が要ります（記録の scope）"))
+        same = [i for i, pid in enumerate(ids) if pid == ids[no - 1] and lines[i].strip()]
+        if not any(scope in lines[i] for i in same):
+            hits.append(_fact_hit("isms_scope_missing", no, sent, f"ISMS の取得を書く文と同じ段落に、登録範囲「{scope}」が要ります（記録の scope）"))
     return hits
 
 
+# 述語で終わる読点（「保証し、」「であり、」「ですが、」）は節の切れ目。「個別製品、AIの回答精度、」のような並べる読点は切れ目にしない
+CLAUSE_BREAK = re.compile(r"(?<=[しりてでがずくいれ])、|(?<=ます)、|(?<=です)、")
+
+
 def _overreach_hits(lines: list[str], rec: dict) -> list[Hit]:
+    """ISMS の文が、記録の forbidden_extensions の語を含むとき止める。限定句（「〜ものではありません」）が打ち消すのは、
+    その限定句と同じ節の語だけ（「全社の安全性を保証し、これは AI の精度保証を意味しません」の前半は打ち消されない）。"""
     hits = []
     limiters = rec["scope_limiting_phrases"]
     for no, sent in _sentences(lines):
         if not re.search(ISMS_WORD, sent):
             continue
-        found = [(g.get("label", "?"), t) for g in rec["forbidden_extensions"] for t in g["terms"] if t in sent]
-        if found and not (any(p in sent for p in limiters) and not CAUSAL.search(sent)):
-            label, term = found[0]
-            hits.append(_fact_hit("isms_scope_overreach", no, sent, f"ISMS の表明を登録範囲「{rec['scope']}」の外へ広げています（{label}: 「{term}」）。範囲を限った文にする"))
+        for clause in CLAUSE_BREAK.split(sent):
+            found = [(g.get("label", "?"), t) for g in rec["forbidden_extensions"] for t in g["terms"] if t in clause]
+            if found and not (any(p in clause for p in limiters) and not CAUSAL.search(sent)):
+                label, term = found[0]
+                hits.append(_fact_hit("isms_scope_overreach", no, sent, f"ISMS の表明を登録範囲「{rec['scope']}」の外へ広げています（{label}: 「{term}」）。範囲を限った文にする"))
+                break
     return hits
 
 
