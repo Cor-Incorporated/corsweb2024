@@ -1,16 +1,27 @@
 ---
-title: "ISO/IEC 27001(ISMS)의 2단계 심사를 마쳤습니다"
-description: "Cor.주식회사는 2026년 10월 7일에 정보 보안 국제 규격인 ISO/IEC 27001(ISMS)의 2단계 심사를 마쳤습니다. 2026년 12월경 인증 등록을 예상하고 있습니다."
+title: "ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다 (2026년 11월 추가)"
+description: "Cor.주식회사는 2026년 11월 소프트웨어 수탁 개발 및 운영을 범위로 ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다. 인증 기관은 SGS재팬(SGS), 등록 번호는 JP26/00000364이며, 유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다."
 publishedAt: 2026-10-20
+updatedAt: 2026-11-12
 category: "info"
 tags: ["공지사항", "정보 보안", "ISMS"]
 source: "Cor.주식회사"
 isDraft: false
 featured: true
 lang: "ko"
-translationSourceHash: "413bf167fe597944f216927f8d65d891302985864fd067813ed618f90103d8e1"
-translatedAt: "2026-10-23T06:33:11.454Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
+---
+
+## 2026년 11월 추가: 인증을 취득했습니다
+
+Cor.주식회사는 2026년 11월 ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다. 인증 범위는 소프트웨어 수탁 개발 및 운영입니다.
+
+인증 기관은 SGS재팬(SGS), 등록 번호는 JP26/00000364입니다. 유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다.
+
+아래는 인증 등록 전인 2026년 10월 20일에 게시한 기존 공지입니다.
+
 ---
 
 ## 2단계 심사 종료

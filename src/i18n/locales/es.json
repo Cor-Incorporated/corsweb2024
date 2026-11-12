@@ -32,7 +32,7 @@
     "trustBadges": [
       {
         "id": "isms",
-        "label": "Auditoría de etapa 2 de ISMS completada (oct. 2026)"
+        "label": "Certificación ISMS obtenida (alcance: desarrollo y operación de software por encargo)"
       },
       {
         "id": "engineer-cafe",
@@ -87,7 +87,7 @@
   },
   "griftBridge": {
     "eyebrow": "Producto propio",
-    "title": "El currículum se puede inflar. La evidencia, no.",
+    "title": "Una base verificable para explicar tu trayectoria.",
     "description": "Grift es nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). Los equipos comerciales de agencias de selección y empresas de SES (cesión de ingenieros) pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato. Los responsables de contratación de empresas que desarrollan su propio software pueden usar los registros que el propio candidato comparte para comprobar en qué ha consistido realmente su trabajo.",
     "cta": "Ver cómo funciona Grift",
     "ctaGithub": "Ver Grift CLI en GitHub",
@@ -130,8 +130,8 @@
       },
       {
         "id": "isms",
-        "title": "Auditoría de etapa 2 de ISMS completada",
-        "body": "Completamos la auditoría de etapa 2 de la ISO/IEC 27001 (ISMS) en octubre de 2026; prevemos el registro de la certificación hacia diciembre de 2026."
+        "title": "Certificación ISMS obtenida",
+        "body": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029."
       },
       {
         "id": "fukuoka100",
@@ -146,7 +146,7 @@
     "title": "Respondemos con diseño a las dudas sobre el manejo de datos confidenciales.",
     "description": "Datos de entrada, permisos de acceso, registros de operación, aprobación humana, reglas de borrado y responsables de la operación. Resolvemos en el diseño, una por una, las dudas sobre el manejo de datos confidenciales.",
     "items": [
-      "Revisamos contratos, IA, información personal y la operación de ISMS junto con nuestro asesor legal",
+      "Revisamos contratos, IA, información personal y la operación de ISMS junto con nuestro asesor legal. El alcance del ISMS es «Desarrollo y operación de software por encargo».",
       "Según la confidencialidad de la información, usamos IA aprobada, cuentas de empresa o entornos aislados",
       "Macs proporcionados por la empresa, cifrado, MDM (gestión de dispositivos) y controles ligeros centrados en la detección y la respuesta"
     ],
@@ -549,7 +549,7 @@
       {
         "name": "«Grift», nuestro producto propio que extrae hechos verificables del historial de git",
         "tag": "Producto propio",
-        "description": "El currículum se puede inflar. La evidencia, no. Reto: con el currículum y una entrevista apenas se transmite en qué consiste realmente el trabajo de un ingeniero, y métricas de actividad como el número de commits se inflan fácilmente con IA generativa. Diseño e implementación: desarrollamos una CLI que no usa IA (LLM) para medir y que extrae del historial de git hechos como la atribución del trabajo o los cambios en las pruebas hechos junto al código, y la publicamos como código abierto (licencia MIT). Operación: atendemos consultas sobre pruebas piloto (PoC) de equipos comerciales de agencias de selección y empresas de SES, y de responsables de contratación de empresas que desarrollan su propio software.",
+        "description": "Reto: con el currículum y una entrevista apenas se transmite en qué consiste realmente el trabajo de un ingeniero, y métricas de actividad como el número de commits se inflan fácilmente con IA generativa. Diseño e implementación: desarrollamos una CLI que no usa IA (LLM) para medir y que extrae del historial de git hechos como la atribución del trabajo o los cambios en las pruebas hechos junto al código, y la publicamos como código abierto (licencia MIT). Operación: atendemos consultas sobre pruebas piloto (PoC) de equipos comerciales de agencias de selección y empresas de SES, y de responsables de contratación de empresas que desarrollan su propio software.",
         "href": "grift"
       },
       {
@@ -596,7 +596,7 @@
     "title": "Cinco pilares para que la IA esté lista para usarse con tranquilidad.",
     "items": [
       {
-        "name": "Grift | El currículum se puede inflar. La evidencia, no.",
+        "name": "Grift",
         "description": "Nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero. No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute. Los equipos comerciales de agencias de selección y empresas de SES pueden usarlo para explicar, con evidencias, por qué recomiendan a un candidato. Los responsables de contratación de empresas que desarrollan su propio software pueden usar los registros que el propio candidato comparte para comprobar en qué ha consistido realmente su trabajo."
       },
       {
@@ -904,7 +904,7 @@
       },
       {
         "question": "¿Cómo se manejan la seguridad y la privacidad?",
-        "answer": "Incorporamos al diseño los requisitos prácticos: gestión de los datos de entrada, derechos de acceso, registro de operaciones, flujos de aprobación humana, reglas de eliminación y la asignación de responsabilidades operativas. Además, internamente operamos un ISMS y en octubre de 2026 completamos la auditoría de etapa 2 de la ISO/IEC 27001. Prevemos el registro de la certificación hacia diciembre de 2026."
+        "answer": "Incorporamos al diseño los requisitos prácticos: gestión de los datos de entrada, derechos de acceso, registro de operaciones, flujos de aprobación humana, reglas de eliminación y la asignación de responsabilidades operativas. En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029."
       },
       {
         "question": "¿Qué es Grift?",
@@ -1465,7 +1465,7 @@
     "business": [
       {
         "name": "Grift",
-        "tagline": "El currículum se puede inflar. La evidencia, no.",
+        "tagline": "",
         "description": "Nuestro producto propio que extrae hechos verificables del historial de desarrollo de un ingeniero (historial de git). No asigna puntuaciones y da el mismo resultado sin importar quién lo ejecute.",
         "status": "La CLI está disponible gratis con licencia MIT. Estamos preparando pruebas piloto (PoC) para agencias de selección, empresas de SES (cesión de ingenieros) y empresas que desarrollan su propio software."
       },
@@ -1495,7 +1495,7 @@
       }
     ],
     "securityTitle": "Seguridad de la información",
-    "securityBody": "En octubre de 2026 completamos la auditoría de etapa 2 de la ISO/IEC 27001 (ISMS), la norma internacional de seguridad de la información. Prevemos el registro de la certificación hacia diciembre de 2026.",
+    "securityBody": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029.",
     "securityLink": "Ver nuestra política de seguridad",
     "recognitionTitle": "Reconocimientos y vínculos con la comunidad",
     "fukuoka100Body": "Fuimos seleccionados entre las «100 empresas representativas de Fukuoka 2026-2027» de Made In Local.",
