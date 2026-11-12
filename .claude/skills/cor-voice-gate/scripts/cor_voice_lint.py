@@ -341,19 +341,31 @@ def _scope_missing_hits(claims: list[tuple[int, str]], lines: list[str], vocab: 
 CLAUSE_BREAK = re.compile(r"(?<=[しりてでがずくいれび])、|(?<=ます)、|(?<=です)、")
 
 
+def _overreach_units(lines: list[str]) -> list[int]:
+    """行ごとの「拡大を見る単位」。通常の段落は 1 つに数える。箇条書き・表・引用・見出しは、1 行ごとに別の単位にする
+    （参考資料の一覧で、別の項目の語を ISMS の項目に結びつけない）。空行は -1。"""
+    ids, units = _paragraph_ids(lines), []
+    for i, line in enumerate(lines):
+        units.append(-1 if ids[i] < 0 else (-(i + 2) if NOT_A_PARAGRAPH.match(line) else ids[i]))
+    return units
+
+
 def _overreach_hits(lines: list[str], rec: dict) -> list[Hit]:
-    """ISMS の文が、記録の forbidden_extensions の語を含むとき止める。限定句（「〜ものではありません」）が打ち消すのは、
+    """ISMS の語がある単位（同じ段落）の文が、記録の forbidden_extensions の語を含むとき止める（F-6: ISMS の文とは別の文に
+    書いた「だから当社の AI は誤回答しません」も止める）。限定句（「〜ものではありません」）が打ち消すのは、
     その限定句と同じ節の語だけ（「全社の安全性を保証し、これは AI の精度保証を意味しません」の前半は打ち消されない）。"""
     hits = []
     limiters = [_nfkc(p) for p in rec["scope_limiting_phrases"]]
-    for no, sent in _sentences(lines):
-        if not re.search(ISMS_WORD, sent):
+    units, sentences = _overreach_units(lines), list(_sentences(lines))
+    with_isms = {units[no - 1] for no, sent in sentences if re.search(ISMS_WORD, sent)}
+    for no, sent in sentences:
+        if units[no - 1] not in with_isms:
             continue
         for clause in CLAUSE_BREAK.split(sent):
             found = [(g.get("label", "?"), t) for g in rec["forbidden_extensions"] for t in map(_nfkc, g["terms"]) if t in clause]
             if found and not (any(p in clause for p in limiters) and not CAUSAL.search(sent)):
                 label, term = found[0]
-                hits.append(_fact_hit("isms_scope_overreach", no, sent, f"ISMS の表明を登録範囲「{rec['scope']}」の外へ広げています（{label}: 「{term}」）。範囲を限った文にする"))
+                hits.append(_fact_hit("isms_scope_overreach", no, sent, f"ISMS の表明を登録範囲「{rec['scope']}」の外へ広げています（{label}: 「{term}」）。範囲を限った文にする（同じ段落に ISMS の語がある文は、別の文でも見る）"))
                 break
     return hits
 
