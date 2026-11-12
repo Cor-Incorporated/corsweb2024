@@ -119,7 +119,7 @@ describe('手順書', () => {
   const runbook = read('RUNBOOK-document-request-notice.md');
 
   it('手順書の awk で取り出した SQL は、照会の SQL ブロックと一致し、SELECT だけである', () => {
-    const extracted = execFileSync('awk', ['/^```sql/{f=1;next} /^```/{f=0} f', resolve(root, 'RUNBOOK-document-request-notice.md')], { encoding: 'utf8' });
+    const extracted = execFileSync('awk', ['/^```sql$/{f=1;next} /^```/{f=0} f', resolve(root, 'RUNBOOK-document-request-notice.md')], { encoding: 'utf8' });
     const blocks = [...runbook.matchAll(/```sql\n([\s\S]*?)```/g)].map((match) => match[1]);
     expect(blocks).toHaveLength(1);
     expect(extracted).toBe(blocks[0]);

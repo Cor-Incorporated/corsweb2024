@@ -27,9 +27,9 @@
 |---|---|---|
 | `queued` / 空 | Queue に入れた。まだ処理していない | Queue が処理します。15 分以上残っていれば未達です |
 | `queued` / `notify_not_enqueued` | 保存はできたが、Queue に入れられなかった。応答は `notification: 'pending'` | cron（15 分ごと）が、作成から 15 分たった行を Queue に入れ直します。1 回の cron で最大 50 件で、入れ直した行は後回しになり、順に回ります |
-| `held` / `notify_not_released` | 送っていない。hold のまま、または解放時刻より前に作られた、解放時刻が無効 | 自動では送りません。この波には再処理の入口がありません |
-| `sending` | 処理中 | 完了か失敗に変わります。15 分以上 `sending` のまま残った行は、処理が途中で止まっています。自動では回収せず、再び送られることもありません |
-| `failed` / `provider_status_NNN` または `notification_failed` | 送信器が失敗した、または送信器を使えない（`RESEND_API_KEY` が無い） | Queue が最大 6 回（初回 + 再試行 5 回）まで試します。`attempts` が 6 になった行は DLQ に入り、cron も入れ直しません |
+| `held` / `notify_not_released` | 送っていない。hold のまま、または解放時刻より前に作られた、解放時刻が無効 | 自動では送りません。「もう一度送らせる」の対象外です |
+| `sending` | 処理中 | 完了か失敗に変わります。15 分以上 `sending` のまま残った行は、処理が途中で止まっています。自動では回収しません。「もう一度送らせる」で戻せます |
+| `failed` / `provider_status_NNN` または `notification_failed` | 送信器が失敗した、または送信器を使えない（`RESEND_API_KEY` が無い） | Queue が最大 6 回（初回 + 再試行 5 回）まで試します。`attempts` が 6 になった行は DLQ に入り、cron も入れ直しません。「もう一度送らせる」で戻せます |
 | `accepted`（`status='sent'`） | 送信器が受け付けた | 終わりです |
 
 ## 本番へ出す手順（人間ゲート）
@@ -109,7 +109,7 @@ test "$(date +%s)" -lt <RELEASED_AT> && echo "OK: 解放時刻より前です" |
 寺田さんが毎営業日に、次のコマンドを 1 本実行します。作業ディレクトリは `workers/contact-chat` です。コマンドは、この手順書の次の SQL ブロックをそのまま取り出して、本番の D1 `cor-contact-chat-prod` で読み取りだけを実行します。
 
 ```bash
-cd workers/contact-chat && npx wrangler d1 execute cor-contact-chat-prod --remote --json --command "$(awk '/^```sql/{f=1;next} /^```/{f=0} f' RUNBOOK-document-request-notice.md)"
+cd workers/contact-chat && npx wrangler d1 execute cor-contact-chat-prod --remote --json --command "$(awk '/^```sql$/{f=1;next} /^```/{f=0} f' RUNBOOK-document-request-notice.md)"
 ```
 
 実行される SQL です（氏名・メール・会社名の列は選びません）。
@@ -133,7 +133,65 @@ ORDER BY s.created_at;
 | 出た行 | 対応 |
 |---|---|
 | `failed` で `attempts` が 5 以下 | 待ちます。Queue と cron が再試行します。翌営業日にも残っていれば、「問題が起きたら」の表を見ます |
-| `failed` で `attempts` が 6、`held`、`sending` のまま残った行、`queued` のまま残った行 | 通知メールが担当に届いていません。申込者の連絡先は、通知メールの本文にしかありません。照会は連絡先を選ばず、連絡先は暗号化列にあり、この波には、運用者が読み出す入口も、再処理の入口もありません。受付番号、時刻、業種を寺田さんが控え、連絡先の読み出しの入口を別の変更で決めます（未決） |
+| `failed` で `attempts` が 6 以上、`sending` のまま `idle_minutes` が 15 以上 | 通知メールが担当に届いていません。下の「もう一度送らせる」で、同じ通知をもう一度送らせます。担当は、届いた通知の「返信」で申込者へ連絡します |
+| `held` | この手順の対象外です。解放時刻より前に受け付けた申込みで、通知は送られません。扱いは寺田さんが決めます。申込者の連絡先を人が読む入口は作りません |
+| `queued` のまま 15 分以上 | cron が入れ直します。残り続けるときは「問題が起きたら」の表を見ます |
+
+## もう一度送らせる（本番の D1 への書き込み。人間ゲート）
+
+届かなかった通知の行を、D1 の `notification_outbox` で「投入待ち」に戻します。既存の cron（15 分ごと）が、作成から 15 分以上たった `pending` の行（`queued` か `failed`、`attempts` が 6 未満）を Queue に入れ、consumer が 1 回だけ送ります。新しい入口は足していません。通知が担当に届くと、担当は通知の「返信」で申込者へ連絡します。
+
+実行できるのは、寺田さん、または寺田さんの直接の Yes を受けた担当だけです。本番の D1 への書き込みです。
+
+SQL の WHERE が、次の行だけを更新します。ほかの行には当たらず、更新は 0 行になります。
+
+| 当たる行 | 当たらない行 |
+|---|---|
+| `failed` で `attempts` が 6 以上（再試行を使い切った行、DLQ に入った行） | `held`（解放時刻より前の受付） |
+| `sending` のまま、更新から 15 分以上たった行 | `accepted`（送信済み） |
+| | `failed` で `attempts` が 5 以下（Queue が自動で再試行中） |
+| | `sending` で更新から 15 分未満（処理中） |
+| | `queued`（cron が自動で入れ直す） |
+
+1 回に 1 件、受付番号で指定します。
+
+1. 受付番号を決めます。直前の「未達の確認」の出力の `receipt_id` 列の値（`COR-` で始まる）を写します。
+2. 前の確認: 次のコマンドで、その行の `delivery_status` と `attempts` が上の表の「当たる行」であることを確かめます。`<受付番号>` を、手順 1 の値に置き換えます。
+
+   ```bash
+   cd workers/contact-chat && RECEIPT_ID=<受付番号> && npx wrangler d1 execute cor-contact-chat-prod --remote --json --command "$(awk '/^```sql-check$/{f=1;next} /^```/{f=0} f' RUNBOOK-document-request-notice.md | sed "s/__RECEIPT_ID__/$RECEIPT_ID/")"
+   ```
+
+3. 実行: 受付番号の形（`COR-` + 8 桁の日付 + `-` + 16 進 8 桁）を確かめてから、書き込みます。形が違うと、書き込まずに止まります。`<受付番号>` を、手順 1 の値に置き換えます。
+
+   ```bash
+   cd workers/contact-chat && RECEIPT_ID=<受付番号> && case "$RECEIPT_ID" in COR-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) ;; *) echo "受付番号の形が違います" >&2; false;; esac && npx wrangler d1 execute cor-contact-chat-prod --remote --json --command "$(awk '/^```sql-resend$/{f=1;next} /^```/{f=0} f' RUNBOOK-document-request-notice.md | sed "s/__RECEIPT_ID__/$RECEIPT_ID/")"
+   ```
+
+   更新した行数は、出力から読めるとは限りません。戻せたかどうかは、手順 4 の確認で判断します。対象外の行なら、何も変わりません。
+
+4. 直後の確認: 手順 2 と同じコマンドで、`status` が `pending`、`delivery_status` が `queued`、`attempts` が 0 になっていることを確かめます。変わっていなければ、対象外の行です。次の手順へ進みません。
+5. 15 分から 30 分待ち、手順 2 と同じコマンドで、`status` が `sent`、`delivery_status` が `accepted` になっていることを確かめます。`cloudia@cor-jp.com` に通知が 1 通届きます。同じ受付番号に、もう一度この手順を実行しません。
+
+戻す SQL（`__RECEIPT_ID__` を受付番号に置き換えて実行されます）です。
+
+```sql-resend
+UPDATE notification_outbox
+SET status = 'pending', delivery_status = 'queued', attempts = 0, last_error = NULL,
+  updated_at = CAST(strftime('%s', 'now') AS INTEGER)
+WHERE message_type = 'internal'
+  AND submission_id IN (SELECT submission_id FROM submission_intake WHERE receipt_id = '__RECEIPT_ID__' AND request_kind = 'document')
+  AND ((status = 'pending' AND delivery_status = 'failed' AND attempts >= 6)
+    OR (status = 'processing' AND delivery_status = 'sending' AND updated_at <= CAST(strftime('%s', 'now') AS INTEGER) - 900));
+```
+
+前後の確認の SQL です（氏名・メール・会社名の列は選びません）。
+
+```sql-check
+SELECT s.receipt_id, o.status, o.delivery_status, o.attempts, o.last_error, o.updated_at
+FROM submission_intake s JOIN notification_outbox o ON o.submission_id = s.submission_id
+WHERE s.receipt_id = '__RECEIPT_ID__' AND s.request_kind = 'document' AND o.message_type = 'internal';
+```
 
 ## 問題が起きたら
 
@@ -142,16 +200,17 @@ ORDER BY s.created_at;
 | 合成申込みのあと、メールが届かず、照会に `held` / `notify_not_released` が出る | `DOCUMENT_REQUEST_NOTIFY_MODE` が `live` でない。または解放時刻が 10 桁の秒でない（ミリ秒の 13 桁、空、文字混じり）。または行が解放時刻より前に作られた | 手順 4 の値を確かめ、直して配備し直します。解放時刻より前の行は自動では送りません |
 | 照会に `failed` / `notification_failed`、`attempts` が 1 から 5 | `RESEND_API_KEY` が無い、または送信器を使えない | secret を確かめます。Queue が自動で再試行します |
 | 照会に `failed` / `provider_status_4xx` | 送信器が拒否した（鍵が無効、差出人 `noreply@cor-jp.com` が未検証など） | Resend の設定を確かめます |
-| 照会に `failed`、`attempts` が 6 | Queue の再試行を使い切った（DLQ） | 自動では回収しません。この波には再処理の入口はありません。未達は照会と手動対応で扱います |
+| 照会に `failed`、`attempts` が 6 | Queue の再試行を使い切った（DLQ） | 自動では回収しません。「もう一度送らせる」で、同じ通知をもう一度送らせます |
 | 照会に `queued` / `notify_not_enqueued` が 15 分より長く残る | Queue が止まっている | Cloudflare の Queue の状態を確かめます。cron は 15 分ごとに入れ直します |
-| 照会に `sending` が 15 分より長く残る | 処理が途中で止まった | 自動では回収しません。この波には再処理の入口はありません |
+| 照会に `sending` が 15 分より長く残る | 処理が途中で止まった | 自動では回収しません。「もう一度送らせる」で、同じ通知をもう一度送らせます |
 | 照会に `locale` が空の行がある | migration 0007 の前に作られた行、または 0007 が未適用 | 手順 2 を確かめます。担当は返信の言語を日本語として扱います |
 
 ## 限界
 
 - 送信器が受理した後、記録の書き込みが落ちると、同じ通知が 2 通届くことがあります。対応は 1 回でかまいません。受付番号で見分けます。この型は、#510 と問い合わせの経路も同じです。3 つの経路に共通の改善として、別に扱います
+- 送信器が受理しているのに、記録が `sending` のまま残った行に「もう一度送らせる」を使うと、同じ通知が 2 通届きます（上の二重通知と同じ性質です）。対応は 1 回でかまいません。受付番号で見分けます
 - 解放時刻と hold の境界は、手順で閉じています。コードでは閉じていません（「止め方・戻し方」を参照）
-- 解放時刻より前に hold で作られた行は、重複の再申込みでも cron でも送られません。送る入口がありません
+- 解放時刻より前に hold で作られた行は、重複の再申込みでも cron でも「もう一度送らせる」でも送られません
 
 ## 保持
 
@@ -160,6 +219,6 @@ ORDER BY s.created_at;
 ## この手順書で未確認のこと
 
 - 本番の D1 への実行、本番の実送信、担当の実受信（手順 6 の 2）は、実行していません
-- `wrangler d1 execute --remote` の実行は、していません。同じコマンドを local の D1（`--local --persist-to`）で実行し、結果が返ることは確かめました
+- `wrangler d1 execute --remote` の実行は、していません。「未達の確認」と「もう一度送らせる」の同じコマンドを local の D1（`--local --persist-to`）で実行し、結果が返ることは確かめました。「もう一度送らせる」が本番の cron と Queue でどう動くかは、確認していません
 - `https://cor-jp.com/contact/materials/` が本番で開くかは、PR #510 のフロント側が配備されているかによります。確認していません
 - 公開スライドのリンク先の最新版、ダウンロードできるかどうかは、確認していません

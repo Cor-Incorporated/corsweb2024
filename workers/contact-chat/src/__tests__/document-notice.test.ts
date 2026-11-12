@@ -8,7 +8,7 @@ import worker, { replayHeldDocumentNotice } from '../index';
 import { resetRateLimits } from '../security';
 import { claimOutbox } from '../storage';
 import { MAX_COMPANY_LEN, MAX_NAME_LEN } from '../validate';
-import type { Env } from '../types';
+import type { Env, NotificationMessage } from '../types';
 import { deliver, envFor, openDatabase, post, row, runCron, stubResend, valid } from './document-test-kit';
 
 const T0 = new Date('2026-11-12T00:00:00Z');
@@ -45,14 +45,18 @@ interface OutboxRow {
 const outbox = (db: ReturnType<typeof openDatabase>): OutboxRow =>
   row<OutboxRow>(db, 'SELECT status, delivery_status, attempts, last_error, provider_message_id FROM notification_outbox');
 
-/** 手順書にある照会の SQL を、手順書の本文から取り出す（手順書と試験が別の SQL にならないように）。 */
+/** 手順書の SQL ブロック（```<label>）を本文から取り出す（手順書と試験が別の SQL にならないように）。 */
+function runbookBlock(label: string): string {
+  const text = readFileSync(resolve(__dirname, '../../RUNBOOK-document-request-notice.md'), 'utf8');
+  const found = new RegExp('```' + label + '\\n([\\s\\S]*?)```').exec(text);
+  if (!found) throw new Error(`runbook has no ${label} block`);
+  return found[1] ?? '';
+}
+
+/** 手順書にある照会の SQL。 */
 function runbookInquirySql(): string {
-  const path = resolve(__dirname, '../../RUNBOOK-document-request-notice.md');
-  const text = readFileSync(path, 'utf8');
-  const block = [...text.matchAll(/```sql\n([\s\S]*?)```/g)]
-    .map((match) => match[1] ?? '')
-    .find((sql) => sql.includes('FROM submission_intake s JOIN notification_outbox o'));
-  if (!block) throw new Error('runbook has no inquiry SQL block');
+  const block = runbookBlock('sql');
+  if (!block.includes('FROM submission_intake s JOIN notification_outbox o')) throw new Error('runbook has no inquiry SQL block');
   return block;
 }
 
@@ -339,6 +343,138 @@ describe('Queue への投入失敗の回収（cron）', () => {
     await deliver(env, queue.sent[1]!);
     await deliver(env, queue.sent[1]!);
     expect(resend.calls).toHaveLength(1);
+  });
+});
+
+/** 「もう一度送らせる」の SQL を、受付番号を入れて 1 回実行し、更新した行数を返す。 */
+function applyResend(db: ReturnType<typeof openDatabase>, receiptId: string): number {
+  const result = db.prepare(runbookBlock('sql-resend').replace('__RECEIPT_ID__', receiptId)).run();
+  return Number(result.changes);
+}
+
+async function newRow(
+  db: ReturnType<typeof openDatabase>,
+  env: Env,
+  email: string,
+  ip: string,
+): Promise<{ receiptId: string; submissionId: string; message: NotificationMessage }> {
+  const res = await worker.fetch(post({ ...valid, email }, ip), env);
+  const { receiptId } = await res.json() as { receiptId: string };
+  const submissionId = row<{ submission_id: string }>(db, `SELECT submission_id FROM submission_intake WHERE receipt_id = '${receiptId}'`).submission_id;
+  resetRateLimits();
+  return { receiptId, submissionId, message: { submissionId, messageType: 'internal' } };
+}
+
+const rowOf = (db: ReturnType<typeof openDatabase>, receiptId: string): OutboxRow & { updated_at: number } =>
+  db.prepare(`SELECT o.status, o.delivery_status, o.attempts, o.last_error, o.provider_message_id, o.updated_at
+    FROM notification_outbox o JOIN submission_intake s ON s.submission_id = o.submission_id WHERE s.receipt_id = ?`)
+    .get(receiptId) as unknown as OutboxRow & { updated_at: number };
+
+describe('もう一度送らせる（手順書の SQL → 既存の cron → consumer）', () => {
+  const states: Array<[string, (ctx: { db: ReturnType<typeof openDatabase>; env: Env; resend: ReturnType<typeof stubResend>; row: { receiptId: string; submissionId: string; message: NotificationMessage } }) => Promise<void>]> = [
+    ['失敗が上限（attempts 6）に達した行', async ({ db, env, resend, row: r }) => {
+      resend.setStatus(502);
+      for (let i = 0; i < 6; i += 1) await deliver(env, r.message);
+      resend.setStatus(200);
+      expect(rowOf(db, r.receiptId)).toMatchObject({ status: 'pending', delivery_status: 'failed', attempts: 6 });
+    }],
+    ['DLQ に入った行（attempts が 6 を超えている）', async ({ db, env, resend, row: r }) => {
+      resend.setStatus(502);
+      for (let i = 0; i < 6; i += 1) await deliver(env, r.message);
+      resend.setStatus(200);
+      db.prepare('UPDATE notification_outbox SET attempts = 8 WHERE submission_id = ?').run(r.submissionId);
+    }],
+    ['sending のまま 15 分以上残った行', async ({ db, env, row: r }) => {
+      await claimOutbox(env, r.submissionId, 'internal');
+      expect(rowOf(db, r.receiptId)).toMatchObject({ status: 'processing', delivery_status: 'sending' });
+    }],
+  ];
+
+  for (const [name, arrange] of states) {
+    it(`${name}は、SQL で投入待ちに戻すと、cron → consumer で 1 回だけ送られ、2 回目の cron では送られない`, async () => {
+      const resend = stubResend();
+      const db = openDatabase();
+      const { env, queue } = envFor(db, live());
+      const r = await newRow(db, env, 'taro@example.com', '198.51.100.100');
+      await arrange({ db, env, resend, row: r });
+      expect(resend.calls).toHaveLength(0);
+
+      expect(applyResend(db, r.receiptId)).toBe(1);
+      expect(rowOf(db, r.receiptId)).toMatchObject({ status: 'pending', delivery_status: 'queued', attempts: 0, last_error: null });
+
+      const before = queue.sent.length;
+      advance(16 * MINUTE);
+      await runCron(env);
+      expect(queue.sent).toHaveLength(before + 1);
+      await deliver(env, queue.sent.at(-1)!);
+      expect(resend.calls).toHaveLength(1);
+      expect(rowOf(db, r.receiptId)).toMatchObject({ status: 'sent', delivery_status: 'accepted' });
+
+      await runCron(env);
+      expect(queue.sent, '2 回目の cron は入れ直さない').toHaveLength(before + 1);
+      expect(applyResend(db, r.receiptId), '送信済みの行には当たらない').toBe(0);
+      expect(resend.calls).toHaveLength(1);
+    });
+  }
+
+  it('held・送信済み・自動再試行中・処理中・queued の行には当たらず、何も送られない', async () => {
+    const resend = stubResend();
+    const db = openDatabase();
+    const holdEnv = envFor(db);
+    const held = await newRow(db, holdEnv.env, 'held@example.com', '198.51.100.101');
+    await deliver(holdEnv.env, held.message);
+
+    const { env, queue } = envFor(db, live());
+    const sent = await newRow(db, env, 'sent@example.com', '198.51.100.102');
+    await deliver(env, sent.message);
+    expect(resend.calls).toHaveLength(1);
+
+    resend.setStatus(502);
+    const retrying = await newRow(db, env, 'retry@example.com', '198.51.100.103');
+    for (let i = 0; i < 3; i += 1) await deliver(env, retrying.message);
+    resend.setStatus(200);
+
+    const young = await newRow(db, env, 'young@example.com', '198.51.100.104');
+    await claimOutbox(env, young.submissionId, 'internal');
+    db.prepare("UPDATE notification_outbox SET updated_at = CAST(strftime('%s', 'now') AS INTEGER) WHERE submission_id = ?").run(young.submissionId);
+
+    queue.failing = true;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const queued = await newRow(db, env, 'queued@example.com', '198.51.100.105');
+    queue.failing = false;
+
+    const snapshot = (id: string) => JSON.stringify(rowOf(db, id));
+    const targets = [held, sent, retrying, young, queued];
+    const before = targets.map((r) => snapshot(r.receiptId));
+    for (const r of targets) expect(applyResend(db, r.receiptId), r.receiptId).toBe(0);
+    expect(targets.map((r) => snapshot(r.receiptId))).toEqual(before);
+    expect(resend.calls).toHaveLength(1);
+    expect(rowOf(db, held.receiptId)).toMatchObject({ status: 'pending', delivery_status: 'held' });
+  });
+
+  it('受付番号で指定した 1 行だけを戻し、ほかの失敗した行には触れない', async () => {
+    const resend = stubResend(502);
+    const db = openDatabase();
+    const { env, queue } = envFor(db, live());
+    const a = await newRow(db, env, 'a@example.com', '198.51.100.106');
+    const b = await newRow(db, env, 'b@example.com', '198.51.100.107');
+    for (let i = 0; i < 6; i += 1) { await deliver(env, a.message); await deliver(env, b.message); }
+    expect(resend.calls).toHaveLength(0);
+    expect(applyResend(db, a.receiptId)).toBe(1);
+    expect(rowOf(db, a.receiptId)).toMatchObject({ delivery_status: 'queued', attempts: 0 });
+    expect(rowOf(db, b.receiptId)).toMatchObject({ delivery_status: 'failed', attempts: 6 });
+  });
+
+  it('戻す SQL は 1 文の UPDATE で outbox だけを書き、確認の SQL は PII の列を選ばない', () => {
+    const write = runbookBlock('sql-resend').split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
+    expect(write.trim().toUpperCase().startsWith('UPDATE NOTIFICATION_OUTBOX')).toBe(true);
+    expect(write.replace(/;\s*$/, '')).not.toContain(';');
+    expect(write).not.toMatch(/\b(INSERT|DELETE|DROP|ALTER|REPLACE|CREATE|PRAGMA|ATTACH)\b/i);
+    expect(write).not.toMatch(/ciphertext|email_hmac/i);
+    expect(write).toContain("AND request_kind = 'document'");
+    const check = runbookBlock('sql-check');
+    expect(check.trim().toUpperCase().startsWith('SELECT')).toBe(true);
+    expect(check).not.toMatch(/ciphertext|email_hmac|idempotency|SELECT\s+\*|\.\*/i);
   });
 });
 
