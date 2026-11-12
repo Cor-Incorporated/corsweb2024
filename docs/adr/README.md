@@ -14,7 +14,7 @@
 | [ADR-0004](./ADR-0004-analytics-cloudflare-clarity.md) | 計測を Cloudflare Web Analytics＋Microsoft Clarity（cookieless 優先・Clarity は PP 明記。ファネルイベント含む） | Accepted (2026-06-13) / rev 2026-07-10 / rev 2026-07-17（Clarity のタグと PP の開示）/ rev 2026-11-06（GA4 を足す。有効化は PP の公開のあと） |
 | [ADR-0005](./ADR-0005-contact-phased-migration.md) | Contact 段階移行（Phase2 = Cloudia UI + contact-chat Worker） | Accepted (2026-06-13) / rev 2026-07-10 / **rev 2026-09-13（§6 撤回・Cloudia 一本化）** |
 | [ADR-0006](./ADR-0006-i18n-single-source.md) | i18n source of truth を `src/utils/i18n.ts` に一本化（`*.json` 廃止） | **Superseded** (2026-09-27)（正本は `src/i18n/locales/*.json`） |
-| [ADR-0007](./ADR-0007-external-expression-guardrails.md) | 対外表現ガードレール（ISMS・旧事業・社名・証拠ルール） | Accepted (2026-06-13) / rev 2026-07-10 / 一部置換 2026-10-20（ISMS の表現と Grift の項を ADR-0022 で置き換え） |
+| [ADR-0007](./ADR-0007-external-expression-guardrails.md) | 対外表現ガードレール（ISMS・旧事業・社名・証拠ルール） | Accepted (2026-06-13) / rev 2026-07-10 / 一部置換 2026-10-20（ISMS の表現と Grift の項を ADR-0022 で置き換え）。ISMS の表現の項は ADR-0029 で置換（2026-11-12） |
 | [ADR-0008](./ADR-0008-yomimono-ai-workflow.md) | 読みもの AI 支援ワークフロー | **Deprecated** (2026-09-27)（yomimono 退役。後継候補 ADR-0018） |
 | [ADR-0009](./ADR-0009-news-cases-cms-expansion.md) | news/cases CMS 拡張 + プレスリリース運用 + OGP PNG | Accepted (2026-07-14) / **一部 Deprecated** (2026-09-27)（yomimono 部分） |
 | [ADR-0010](./ADR-0010-cross-site-cta-env-and-intent.md) | Cor↔Grift CTA 環境変数・intent・Preview noindex | Accepted (2026-07-10) / 注記 2026-10-27（intent は ADR-0014、Grift の扱いは ADR-0022） |
@@ -29,12 +29,13 @@
 | [ADR-0019](./ADR-0019-i18n-auto-translation.md) | コンテンツ多言語化は ja 正本・他言語は CI が Gemini で差分翻訳・検証して専有（ADR-0006 の原則をコンテンツへ拡張） | Accepted (2026-09-28) / rev 2026-10-25（代表の氏名を用語集に追加・翻訳コミット後の CI を approve-checks で承認）/ rev 2026-10-26（Grift の用語を固定）/ rev 2026-10-27（Grift の記事を tags で判定） |
 | [ADR-0020](./ADR-0020-blog-cta-intent.md) | ブログ記事の CTA と相談の種類（intent）の既定値 | Accepted (2026-10-27)（Proposed 2026-09-27）/ 注記 2026-10-27（決定 7 の Grift への自動引き継ぎは取り下げ） |
 | [ADR-0021](./ADR-0021-contact-guard-phone-detection.md) | /contact 回帰ガードの電話検出（判定の対象・電話番号・句） | Accepted (2026-09-28) |
-| [ADR-0022](./ADR-0022-business-pillars-grift-cli.md) | 事業の柱を5本にし、Grift を CLI（OSS）＋紹介会社向けテスト導入として扱う（ISMS 表現・会社概要・llms.txt を含む） | Accepted (2026-10-27)（Proposed 2026-10-20）/ rev 2026-10-26（自社開発企業の採用担当を対象に追加） |
+| [ADR-0022](./ADR-0022-business-pillars-grift-cli.md) | 事業の柱を5本にし、Grift を CLI（OSS）＋紹介会社向けテスト導入として扱う（ISMS 表現・会社概要・llms.txt を含む） | Accepted (2026-10-27)（Proposed 2026-10-20）/ rev 2026-10-26（自社開発企業の採用担当を対象に追加）。ISMS の表現の項は ADR-0029 で置換（2026-11-12） |
 | [ADR-0023](./ADR-0023-grift-cli-version-source.md) | Grift CLI の版は 1 か所（`src/config/grift-cli-release.json`）に書き、記事はその時点の記録として書く。CI の検査と、PyPI との毎日の照合（Issue） | Accepted (2026-10-27)（Proposed 2026-10-26） |
 | [ADR-0024](./ADR-0024-service-pages.md) | サービスのページ（診断・PoC・AI受託）を作り、ヘッダーの「サービス」を説明のページへ向ける（ADR-0011 のサービス導線を置き換え） | Accepted (2026-10-27)（Proposed 2026-10-26） |
 | [ADR-0025](./ADR-0025-contact-channels-beyond-chat.md) | チャット以外の連絡の手段: Cloudia に「AI と話さずに伝言だけ残す」入口を足し、日程調整は測ってから足す（調査: `docs/contact-channels-research-2026-10.md`） | Proposed (2026-10-26) |
 | [ADR-0026](./ADR-0026-voice-skills-upkeep-and-cms.md) | 文体の仕組み（yomiyasu・cor-voice）を定期的に更新し、どのエージェントでも使え、CMS で書いた記事にも検査がかかるようにする（Epic #452） | Proposed (2026-10-28) / 改訂 2026-10-28（指示は公開の Issue、反響と文体は Grok、実装は Claude Code 以外のエージェント）/ 追記 2026-10-30（日本語の対外文の入口を 1 つの元ファイルから生成する。#477） |
 | [ADR-0027](./ADR-0027-article-polish-gate.md) | 記事とニュースの推敲を、ツールに依存しないゲートにする | Proposed (2026-10-28) |
+| [ADR-0029](./ADR-0029-company-facts-record.md) | 会社の現在の事実（最初は ISMS）を `cor-voice/references/facts.json` に記録し、文体のゲートが記録と照合する（ADR-0007・0022 の ISMS の項を置き換え） | Proposed (2026-11-12) |
 
 ## フェーズ対応
 
