@@ -102,7 +102,7 @@ and the ADR disagree.
   `docs/adr/ADR-0007-external-expression-guardrails.md`, partly replaced by
   `docs/adr/ADR-0022-business-pillars-grift-cli.md`:
   - ISMS: write only what `.claude/skills/cor-voice/references/facts.json`
-    records (ADR-0029), with the recorded scope in the same paragraph; never
+    records (ADR-0029), with the recorded scope in the same paragraph (a heading counts with the paragraph below); never
     widen it to a product, AI accuracy or "zero leaks". Certifications with
     no record (P-mark, SOC 2, SCS) are never written as obtained
   - The retired business lines and product names listed in ADR-0007 were
