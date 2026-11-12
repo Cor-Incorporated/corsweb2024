@@ -46,6 +46,7 @@ import {
   markOutboxFailed,
   markOutboxHeld,
   markOutboxNotEnqueued,
+  markOutboxRequeued,
   markOutboxSent,
   newSessionId,
   normalizeIdempotencyKey,
@@ -647,9 +648,9 @@ async function deliverDocumentNotice(env: Env, stored: StoredSubmission): Promis
 }
 
 /**
- * 明示の再処理の入口。HTTP には出さない。運用者が wrangler から呼ぶ。呼ぶこと自体が実送信になる（人間ゲート）。
- * mock は擬似送信、live は実送信（解放時刻は見ない。held を人が選んで流す操作）、hold は何もしない。
- * claim を通すので、同じ行は二重に送られない。
+ * 再処理の関数。この波では呼ぶ入口が無い（HTTP にも、wrangler の CLI にも出していない。試験からだけ呼ぶ）。
+ * 呼べるようにするなら、別の変更で入口を足す。呼ぶこと自体が実送信になるので、足すときは人間ゲートにする。
+ * mock は擬似送信、live は実送信（解放時刻は見ない）、hold は何もしない。claim を通すので、同じ行は二重に送られない。
  */
 export async function replayHeldDocumentNotice(env: Env, submissionId: string): Promise<'replayed' | 'left-held'> {
   const mode = documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE);
@@ -694,6 +695,7 @@ async function requeueStrandedDocumentNotices(env: Env): Promise<void> {
   for (const submissionId of ids) {
     try {
       await env.CONTACT_NOTIFICATIONS.send(queueMessage(submissionId, 'internal'));
+      await markOutboxRequeued(env, submissionId);
     } catch {
       logContactFailure('notification_enqueue_failed');
     }

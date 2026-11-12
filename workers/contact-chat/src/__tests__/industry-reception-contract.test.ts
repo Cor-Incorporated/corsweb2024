@@ -1,5 +1,6 @@
 // 業種ページ → Cloudia → Worker の受付の契約。Cloudia 側の試験が同じバイト列の fixture を読む（O2a 5.4）。
 // 片側だけ文や列挙を変えると、期待値と観測値の両方を挙げて落ちる。
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -31,7 +32,16 @@ function firstSentence(text: string, locale: 'ja' | 'en'): string {
   return found ? found[0] : text;
 }
 
+/** この PR の fixture の実測値。Cloudia 側の写しとの一致は、別の束が両 head の sha256 を並べて照合する（O2a 5.4-5）。 */
+const FIXTURE_SHA256 = 'd961812efba1b6bd8afac0ae37fb0024e698b8e60c8f78c427c55f28c75ac9aa';
+
 describe('industry-reception-v1 の fixture', () => {
+  it('file の生バイトの sha256 が、この PR の fixture の実測値と一致する（書式の 1 バイトでも落ちる）', () => {
+    const bytes = readFileSync(resolve(__dirname, 'fixtures/industry-reception-contract.v1.json'));
+    const observed = createHash('sha256').update(bytes).digest('hex');
+    expect(observed, `fixture sha256 expected=${FIXTURE_SHA256} observed=${observed} bytes=${bytes.length}`).toBe(FIXTURE_SHA256);
+  });
+
   it('契約名と、業種 5 × 言語 2 の 10 行がそろっている', () => {
     expect(contract.contract).toBe('industry-reception-v1');
     expect(contract.markers).toHaveLength(10);

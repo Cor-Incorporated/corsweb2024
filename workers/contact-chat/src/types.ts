@@ -22,15 +22,19 @@ export interface Env {
   PII_ENCRYPTION_KEY?: string;
   PII_HMAC_KEY?: string;
   /**
-   * 資料請求の社内通知のモード。wrangler には書かない（未設定 = hold = 送らない）。
-   * live のときだけ、DOCUMENT_REQUEST_NOTIFY_RELEASED_AT 以降に作られた行の社内通知を送る。
-   * hold と mock は、キュー消費で送らず held に戻す。mock は明示の再処理だけが擬似送信する。
+   * 資料請求の社内通知のモード。未設定 = hold = 送らない。この PR（#530）は wrangler.toml に書かない。
+   * live にするときは、専用の PR で、本番側の [vars] に DOCUMENT_REQUEST_NOTIFY_RELEASED_AT と一緒に書く
+   * （片方だけなら document-notice-config.test.ts が落ちる。preview の vars には書かない）。
+   * 値は小文字の live だけ。LIVE や前後の空白つきは hold。
+   * live のときだけ、解放時刻以降に作られた行の社内通知を送る。hold と mock は、キュー消費で送らず held に戻す。
    */
   DOCUMENT_REQUEST_NOTIFY_MODE?: string;
   /**
-   * live の解放時刻（unix 秒、正の整数）。秘密ではない。これより前に作られた行は、
+   * live の解放時刻（10 桁の unix 秒）。秘密ではない。これより前に作られた行は、
    * 重複の再申込みや cron では送らない（hold の時期の held を設定変更で流さない）。
    * 未設定・不正なら live でも送らない（fail closed）。
+   * 配備が終わる予定より後の時刻を書く。止めて再び live にするときは、必ず新しい時刻にする
+   * （行は held になった理由を持たないので、古い値を使い回すと、止めていた間の保留分が同日の再申込みで流れる）。
    */
   DOCUMENT_REQUEST_NOTIFY_RELEASED_AT?: string;
   /**

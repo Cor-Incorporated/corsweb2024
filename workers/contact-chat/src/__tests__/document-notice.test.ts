@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker, { replayHeldDocumentNotice } from '../index';
 import { resetRateLimits } from '../security';
+import { claimOutbox } from '../storage';
+import { MAX_COMPANY_LEN, MAX_NAME_LEN } from '../validate';
 import type { Env } from '../types';
 import { deliver, envFor, openDatabase, post, row, runCron, stubResend, valid } from './document-test-kit';
 
@@ -145,6 +147,58 @@ describe('live の社内通知', () => {
       resetRateLimits();
     }
     expect(resend.calls).toHaveLength(0);
+  });
+});
+
+describe('live の判定は厳密', () => {
+  it('mode は小文字の live だけ。LIVE・Live・前後の空白つきは hold として扱い、送らない', async () => {
+    const resend = stubResend();
+    for (const mode of ['LIVE', 'Live', ' live', 'live ', 'live\n']) {
+      const db = openDatabase();
+      const { env, queue } = envFor(db, { ...live(), DOCUMENT_REQUEST_NOTIFY_MODE: mode });
+      await worker.fetch(post(valid, '198.51.100.90'), env);
+      await deliver(env, queue.sent[0]!);
+      expect(outbox(db).delivery_status, `mode=${JSON.stringify(mode)}`).toBe('held');
+      resetRateLimits();
+    }
+    expect(resend.calls).toHaveLength(0);
+  });
+
+  it('処理中の行は、Queue の再配信でも取り直せず、2 回目は送られない', async () => {
+    const resend = stubResend();
+    const db = openDatabase();
+    const { env, queue } = envFor(db, live());
+    await worker.fetch(post(valid), env);
+    const submissionId = row<{ submission_id: string }>(db, 'SELECT submission_id FROM submission_intake').submission_id;
+    await expect(claimOutbox(env, submissionId, 'internal')).resolves.toBe(true);
+    expect(outbox(db)).toMatchObject({ status: 'processing', delivery_status: 'sending', attempts: 1 });
+    await expect(claimOutbox(env, submissionId, 'internal')).resolves.toBe(false);
+    const redelivery = await deliver(env, queue.sent[0]!);
+    expect(redelivery).toEqual({ acked: 1, retried: 0 });
+    expect(resend.calls).toHaveLength(0);
+    expect(outbox(db)).toMatchObject({ status: 'processing', attempts: 1 });
+  });
+
+  it('氏名・会社名の改行・制御文字・長さは、通知の本文に入る前に整えられる', async () => {
+    const resend = stubResend();
+    const db = openDatabase();
+    const { env, queue } = envFor(db, live());
+    const res = await worker.fetch(post({
+      ...valid,
+      name: `山田\r\nBcc: evil@example.com\n${'あ'.repeat(5000)}`,
+      company: `例\nSubject: 乗っ取り\r\n${'い'.repeat(5000)}`,
+    }), env);
+    expect(res.status).toBe(200);
+    await deliver(env, queue.sent[0]!);
+    const text = resend.calls[0]!.text;
+    const lines = text.split('\n');
+    expect(lines.filter((line) => /^(Bcc|Subject|Cc|To)\s*:/i.test(line))).toEqual([]);
+    expect(text).not.toContain('\r');
+    const nameLine = lines.find((line) => line.startsWith('氏名: '))!;
+    const companyLine = lines.find((line) => line.startsWith('会社名: '))!;
+    expect(nameLine.length, `name line length=${nameLine.length}`).toBeLessThanOrEqual('氏名: '.length + MAX_NAME_LEN);
+    expect(companyLine.length, `company line length=${companyLine.length}`).toBeLessThanOrEqual('会社名: '.length + MAX_COMPANY_LEN);
+    expect(resend.calls[0]!.subject).toBe(`[資料請求] 受付 ${(await res.json() as { receiptId: string }).receiptId}`);
   });
 });
 
@@ -288,6 +342,27 @@ describe('Queue への投入失敗の回収（cron）', () => {
   });
 });
 
+describe('cron の回収は、上限より多いときも順に回る', () => {
+  it('投入失敗が 55 件あるとき、cron 2 回で 55 件すべてを入れ直す（先頭の 50 件に押し出されない）', async () => {
+    const db = openDatabase();
+    const { env, queue } = envFor(db, live());
+    queue.failing = true;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    for (let i = 0; i < 55; i += 1) {
+      await worker.fetch(post({ ...valid, email: `user${i}@example.com` }, '198.51.100.91'), env);
+      resetRateLimits();
+    }
+    queue.failing = false;
+    advance(16 * MINUTE);
+    await runCron(env);
+    expect(queue.sent).toHaveLength(50);
+    await runCron(env);
+    const distinct = new Set(queue.sent.map((message) => message.submissionId));
+    expect(queue.sent.length).toBe(100);
+    expect(distinct.size, `requeued distinct=${distinct.size} of 55`).toBe(55);
+  });
+});
+
 describe('担当が未通知の受付を見つける照会（手順書の SQL）', () => {
   it('読み取りだけで、PII の列を選ばない', () => {
     const sql = runbookInquirySql();
@@ -318,18 +393,25 @@ describe('担当が未通知の受付を見つける照会（手順書の SQL）
     const hold = envFor(db);
     await worker.fetch(post({ ...valid, email: 'held@example.com' }, '198.51.100.66'), hold.env);
     await deliver(hold.env, hold.queue.sent[0]!);
+    // E: claim したまま落ちた行（sending のまま残る）
+    queue.failing = false;
+    await worker.fetch(post({ ...valid, email: 'stuck@example.com' }, '198.51.100.67'), env);
+    const stuckId = row<{ submission_id: string }>(db, 'SELECT submission_id FROM submission_intake ORDER BY rowid DESC LIMIT 1').submission_id;
+    await claimOutbox(env, stuckId, 'internal');
 
     const rows = db.prepare(runbookInquirySql()).all() as Array<Record<string, unknown>>;
     expect(rows.map((r) => `${String(r.delivery_status)}/${String(r.last_error)}`).sort()).toEqual([
       'failed/provider_status_502',
       'held/notify_not_released',
       'queued/notify_not_enqueued',
+      'sending/null',
     ]);
     const failed = rows.find((r) => r.delivery_status === 'failed')!;
     expect(failed.attempts).toBe(6);
     expect(Object.keys(failed).sort()).toEqual([
-      'attempts', 'created_at', 'delivery_status', 'industry', 'last_error', 'locale', 'receipt_id', 'status',
+      'attempts', 'created_at', 'delivery_status', 'idle_minutes', 'industry', 'last_error', 'locale', 'receipt_id', 'status', 'updated_at',
     ]);
+    expect(typeof failed.idle_minutes).toBe('number');
     const serialized = JSON.stringify(rows);
     expect(serialized).not.toContain('example.com');
     expect(serialized).not.toContain('山田');

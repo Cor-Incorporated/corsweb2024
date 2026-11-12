@@ -661,7 +661,9 @@ export async function markOutboxNotEnqueued(env: Env, submissionId: string): Pro
 /**
  * cron が Queue へ入れ直す資料請求の社内通知。送信器が受け付けていないもののうち、
  * 作成から一定時間たち、Queue の再試行の上限（attempts）に達していないものだけ。held は含めない
- * （過去の held を設定変更で流さない。明示の再処理だけが送る）。PII は読まない。
+ * （過去の held を設定変更で流さない）。PII は読まない。
+ * 入れ直した行は markOutboxRequeued で updated_at を進めるので、Queue が止まっている間も、
+ * 上限（limit）より後ろの行が先頭の行に押し出されず、順に回る。
  */
 export async function listStrandedDocumentNotices(
   env: Env,
@@ -675,10 +677,18 @@ export async function listStrandedDocumentNotices(
     WHERE s.request_kind = 'document' AND o.message_type = 'internal'
       AND o.status = 'pending' AND o.delivery_status IN ('queued', 'failed')
       AND o.created_at <= ? AND o.attempts < ?
-    ORDER BY o.created_at
+    ORDER BY o.updated_at, o.created_at
     LIMIT ?
   `).bind(cutoff, options.maxAttempts, options.limit ?? 50).all<{ submission_id: string }>();
   return (result.results ?? []).map((item) => item.submission_id);
+}
+
+/** cron が Queue へ入れ直した印。updated_at を進め、次の cron では別の行を先に拾う。状態は変えない。 */
+export async function markOutboxRequeued(env: Env, submissionId: string): Promise<void> {
+  if (!env.DB) return;
+  await env.DB.prepare(
+    "UPDATE notification_outbox SET updated_at=? WHERE submission_id=? AND message_type='internal' AND status='pending'",
+  ).bind(nowSeconds(), submissionId).run();
 }
 
 export function markOutboxFailed(env: Env, submissionId: string, errorMessage: string): Promise<void>;
