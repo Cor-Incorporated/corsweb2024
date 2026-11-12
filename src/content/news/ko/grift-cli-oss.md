@@ -8,16 +8,16 @@ source: "Grift"
 isDraft: false
 featured: true
 lang: "ko"
-translationSourceHash: "ed5a3adbdd57154b1cbb7ab4f8318fb3e0b08de7c0d8a8e3a1084e6b7179df2e"
-translatedAt: "2026-10-26T13:33:49.794Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "212b639c64ecc34de6dab7f45e1a53da368609ce7e719b0e7f83922d6e663b8a"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
 
 ## Grift CLI 공개
 
 Cor.주식회사는 자사 프로덕트인 'Grift'의 명령줄 도구 'Grift CLI'를 MIT 라이선스의 오픈소스 소프트웨어(OSS)로 공개하고 있습니다. 2026년 9월 8일에 PyPI를 통해 v0.7.2를 공개했습니다.
 
-Grift CLI는 엔지니어의 git 이력에서 '확인 가능한 사실(검사값)'을 추출하는 도구입니다. 캐치프레이즈는 "경력은 과장할 수 있어도, 증거는 과장할 수 없다."입니다.
+Grift CLI는 엔지니어의 git 이력에서 '확인 가능한 사실(검사값)'을 추출하는 도구입니다.
 
 ## 3가지 약속
 

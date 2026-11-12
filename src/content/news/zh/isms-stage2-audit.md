@@ -1,16 +1,27 @@
 ---
-title: "已完成 ISO/IEC 27001（ISMS）第二阶段审核"
-description: "Cor.株式会社已于2026年10月7日完成信息安全国际标准 ISO/IEC 27001（ISMS）的第二阶段审核。预计将于2026年12月左右完成认证注册。"
+title: "已取得 ISO/IEC 27001:2022（ISMS）认证（2026年11月补充）"
+description: "Cor.株式会社于2026年11月取得 ISO/IEC 27001:2022（ISMS）认证，认证范围为软件的受托开发及运营。认证机构为SGS日本（SGS），注册编号为JP26/00000364，有效期为2026年11月7日至2029年11月7日。"
 publishedAt: 2026-10-20
+updatedAt: 2026-11-12
 category: "info"
 tags: ["通知", "信息安全", "ISMS"]
 source: "Cor.株式会社"
 isDraft: false
 featured: true
 lang: "zh"
-translationSourceHash: "413bf167fe597944f216927f8d65d891302985864fd067813ed618f90103d8e1"
-translatedAt: "2026-10-23T06:32:28.285Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
+---
+
+## 2026年11月补充：已取得认证
+
+Cor.株式会社于2026年11月取得了 ISO/IEC 27001:2022（ISMS）认证。认证范围为软件的受托开发及运营。
+
+认证机构为SGS日本（SGS），注册编号为JP26/00000364。有效期为2026年11月7日至2029年11月7日。
+
+以下为2026年10月20日发布、认证注册前的原始公告。
+
 ---
 
 ## 第二阶段审核结束
