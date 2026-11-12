@@ -33,7 +33,8 @@
     "from_bad",
     "until_bad",
     "hold_bad",
-    "extra_key"
+    "extra_key",
+    "date_format"
   ],
   "vectors": [
     {
@@ -563,6 +564,102 @@
       "service": "xesm",
       "d": "2026-12-01",
       "expect": "open"
+    },
+    {
+      "id": "v48-from-compact",
+      "tags": ["date_format", "from_bad"],
+      "note": "from が区切りなしの 8 桁（20261101）。YYYY-MM-DD の 10 文字ではないので閉じる（Python の fromisoformat は受けるが、判定の見本は受けない）",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "20261101", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v49-from-iso-week",
+      "tags": ["date_format", "from_bad"],
+      "note": "from が週の形（2026-W45-1）。YYYY-MM-DD ではないので閉じる（Python 3.11 以降の fromisoformat は受ける）",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-W45-1", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v50-from-datetime",
+      "tags": ["date_format", "from_bad"],
+      "note": "from が時刻つき（2026-11-01T00:00:00）。YYYY-MM-DD の 10 文字ではないので閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-11-01T00:00:00", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v51-from-leading-space",
+      "tags": ["date_format", "from_bad"],
+      "note": "from の前に空白（ 2026-11-01）。前後の空白を落とさず、YYYY-MM-DD の 10 文字として読まないので閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": " 2026-11-01", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v52-from-trailing-space",
+      "tags": ["date_format", "from_bad"],
+      "note": "from の後ろに空白（2026-11-01 ）。前後の空白を落とさないので閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-11-01 ", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v53-from-no-zero-pad",
+      "tags": ["date_format", "from_bad"],
+      "note": "from のゼロ埋めなし（2026-11-1）。YYYY-MM-DD の 10 文字ではないので閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-11-1", "until": null, "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v54-until-compact",
+      "tags": ["date_format", "until_bad"],
+      "note": "until が区切りなしの 8 桁（20261130）。数値の v42 とは別で、文字列でも YYYY-MM-DD ではないので閉じる",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "20261130", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v55-until-iso-week",
+      "tags": ["date_format", "until_bad"],
+      "note": "until が週の形（2026-W48-1）。YYYY-MM-DD ではないので閉じる（Python 3.11 以降の fromisoformat は受ける）",
+      "malformed": true,
+      "services": {
+        "xesm": { "from": "2026-12-01", "until": "2026-W48-1", "hold": false }
+      },
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
     }
   ]
 }
