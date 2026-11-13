@@ -7,6 +7,8 @@
 
 `CONTACT_ORIGIN` は `firebase`（既定）または `pages` のみを受け付けます。Pagesを有効化しても、Pagesが5xx・404・通信失敗の場合はFirebaseへ一度だけフォールバックします。
 
+Pages も Firebase も応えないとき、文書の要求（`/contact/chat/` と `/contact/chat/ambassador/` の GET・HEAD）には、その場で 503 の終わりのページを返します。`/contact/` へは戻しません（`/contact/` の主ボタンも同じチャットを開くので、戻すと同じ所を回る。#352）。URL と query は残り、読み込み直せば同じ文脈で試し直せます。文は浮きボタンと代わりのページと同じ `src/components/contact/chat/cloudiaUnavailableCopy.ts` から読み、要求の値は本文に写しません。電話の行はまだ描きません。資産の要求は短い 503 の text のままです。
+
 Node.js 22.12 以上で実行する（wrangler 4 は Node.js 22 以上、vitest 5 は 22.12 以上を求める）。
 
 ```bash
