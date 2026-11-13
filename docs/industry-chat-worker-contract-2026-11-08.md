@@ -1,6 +1,6 @@
 # Worker の業種契約（Cloudia 向け、2026-11-08）
 
-文の状態は `aligned-2026-11-13`（5 業種の掲載用本文に合わせた）。最初の一文（「〇〇のページから開いています。」）は照合の目印なので変えない。業種の一覧と最初の一文は、Cloudia の repo と同じ fixture（`industry-reception-contract.v1.json`）で照らす。
+文の状態は言語ごと（ja は `page-body-checked-2026-11-13`、5 業種のページの掲載用本文と照らした。en は `provisional-2026-11-08`、まだ確かめていない訳）。最初の一文（「〇〇のページから開いています。」）は照合の目印なので変えない。業種の一覧と最初の一文は、Cloudia の repo と同じ fixture（`industry-reception-contract.v1.json`）で照らす。
 
 ## source
 

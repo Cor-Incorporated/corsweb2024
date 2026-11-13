@@ -15,7 +15,7 @@ import {
 interface Marker { source: string; locale: 'ja' | 'en'; marker: string }
 interface Contract {
   contract: string;
-  copyStatus: string;
+  copyStatus: Record<'ja' | 'en', string>;
   sources: string[];
   genericSources: string[];
   localeFallback: Record<string, string>;
@@ -33,7 +33,7 @@ function firstSentence(text: string, locale: 'ja' | 'en'): string {
 }
 
 /** この fixture の実測値。Cloudia の repo の同じ fixture とは、両方の sha256 を並べて照合する。 */
-const FIXTURE_SHA256 = '7a5fb2f9e77ffec6cad4ce169d994f67d21cb3da78178d30fd4ad8cdd6d87499';
+const FIXTURE_SHA256 = '04bb938fd4a6b2f02a5418aa0ee697e492c020b195ef997ef18a0dfe16d96bb6';
 
 describe('industry-reception-v1 の fixture', () => {
   it('file の生バイトの sha256 が、この PR の fixture の実測値と一致する（書式の 1 バイトでも落ちる）', () => {
@@ -69,7 +69,7 @@ describe('industry-reception-v1 の fixture', () => {
   });
 
   it('文案の状態が、Worker の定数と一致する', () => {
-    expect(INDUSTRY_COPY_STATUS, `copyStatus fixture="${contract.copyStatus}"`).toBe(contract.copyStatus);
+    expect(INDUSTRY_COPY_STATUS, `copyStatus fixture=${JSON.stringify(contract.copyStatus)}`).toEqual(contract.copyStatus);
   });
 
   it('受付言語の落とし先は ja だけ ja、それ以外（en・zh・ko・es）は en', () => {
