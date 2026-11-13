@@ -7,6 +7,7 @@ import type {
   ContactIntent,
   Env,
   InquiryInput,
+  NormalizedInquiry,
   NotificationMessage,
   NotificationType,
   StructuredLead,
@@ -34,6 +35,8 @@ import {
 import { readJsonBody, type JsonBodyFailure } from './body';
 import { logContactFailure, notificationFailureCode } from './log';
 import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
+import { classifyFromModel, unclassified } from './inquiry-classification';
+import { entryContextFromTraffic } from './inquiry-context';
 import { buildSystemPrompt, getProvider } from './llm';
 import { getEmailProvider, sendInquiryEmail, sendReceiptEmail } from './email';
 import {
@@ -48,7 +51,9 @@ import {
   newReceiptId,
   purgeExpiredData,
   queueMessage,
+  readTrustedSession,
   upsertContactSession,
+  type InquiryRecordContext,
 } from './storage';
 
 const json = (data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response =>
@@ -154,9 +159,22 @@ export function extractJsonObject(s: string): string | null {
 // 試行順: (a) フェンスブロック → (b) trim 全体 → (c) extractJsonObject。
 // 全て失敗したときのみ素のテキストへフォールバックする。
 export function parseChatResult(raw: string, fallbackIntent: ContactIntent | '' = '', locale: ChatLocale = 'ja'): ChatResult {
+  return parseChatResultDetailed(raw, fallbackIntent, locale).result;
+}
+
+/**
+ * parseChatResult と同じ。加えて、モデルが有効な classification を返したかを返す。
+ * 応答の classification は読めないとき genuine に倒すが、受付の記録はそれを相談と数えない。
+ */
+export function parseChatResultDetailed(
+  raw: string,
+  fallbackIntent: ContactIntent | '' = '',
+  locale: ChatLocale = 'ja',
+): { result: ChatResult; modelClassification: Classification | null } {
   if (new TextEncoder().encode(raw).length > 16 * 1024) raw = '';
   const trimmed = raw.trim();
   let classification: Classification = 'genuine';
+  let modelClassification: Classification | null = null;
   let readyForContact = false;
   let intent: ContactIntent | '' = fallbackIntent;
   let structuredLead: StructuredLead | undefined;
@@ -181,6 +199,7 @@ export function parseChatResult(raw: string, fallbackIntent: ContactIntent | '' 
       if (typeof o.reply === 'string') reply = o.reply.trim();
       if (typeof o.classification === 'string' && VALID_CLASS.includes(o.classification)) {
         classification = o.classification;
+        modelClassification = o.classification;
       }
       if (typeof o.readyForContact === 'boolean') readyForContact = o.readyForContact;
       if (typeof o.summary === 'string') {
@@ -227,7 +246,7 @@ export function parseChatResult(raw: string, fallbackIntent: ContactIntent | '' 
       ? fallbackSummary
       : EMPTY_SUMMARY[locale];
   }
-  return result;
+  return { result, modelClassification: parsedOk ? modelClassification : null };
 }
 
 function leadMissingFields(lead: StructuredLead | undefined): string[] {
@@ -323,6 +342,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
         classification: 'genuine',
         summary: result.summary,
         conversationExcerpt: '',
+        entry: entryContextFromTraffic(traffic),
+        machineClassification: unclassified('no_model_turn'),
       });
     } catch {
       logContactFailure('session_storage_failed');
@@ -355,7 +376,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
     return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください', fallback: true }, 503);
   }
 
-  const result = parseChatResult(raw, initialIntent, locale);
+  const parsedChat = parseChatResultDetailed(raw, initialIntent, locale);
+  const result = parsedChat.result;
   result.reply = normalizeCompanyNameReply(result.reply, norm.messages);
   const sessionId = normalizeSessionId(body.sessionId) || newSessionId();
   result.sessionId = sessionId;
@@ -387,12 +409,57 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
       classification: result.classification,
       summary: result.summary,
       conversationExcerpt: buildConversationExcerpt(norm.messages),
+      entry: entryContextFromTraffic(traffic),
+      machineClassification: classifyFromModel(parsedChat.modelClassification),
     });
   } catch {
     logContactFailure('session_storage_failed');
     if (env.DB) return json({ error: 'チャットを保存できません。時間をおいて再試行してください' }, 503);
   }
   return json(result);
+}
+
+const NO_SESSION_CONTEXT: InquiryRecordContext = {
+  entry: { industry: '', entryPath: '' },
+  classification: unclassified('no_session'),
+};
+
+/**
+ * submit の時に、サーバー側の会話の状態で問い合わせを組み直す。
+ * 要約・構造化の欄・分類・業種・path はブラウザが送った値で置き換えさせない。
+ * 会話が見つからないときは構造化の欄だけで要約を作り、分類は unknown（no_session）にする。
+ */
+async function readTrustedInquiry(
+  env: Env,
+  inquiry: NormalizedInquiry,
+  sessionId: string | null,
+): Promise<{ inquiry: NormalizedInquiry; context: InquiryRecordContext }> {
+  const session = await readTrustedSession(env, sessionId);
+  const structuredLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
+  const summary = session?.summary || buildDeterministicSummary({
+    classification: inquiry.classification,
+    intent: inquiry.intent,
+    structuredLead: inquiry.structuredLead,
+  });
+  return {
+    inquiry: {
+      ...inquiry,
+      summaryText: summary,
+      conversationSummary: summary,
+      ...(structuredLead ? { structuredLead } : {}),
+      ...(session ? { classification: session.classification } : {}),
+    },
+    context: session ? session.context : NO_SESSION_CONTEXT,
+  };
+}
+
+function parseTrustedLead(json: string | null): StructuredLead | undefined {
+  if (json === null) return undefined;
+  try {
+    return normalizeStructuredLead(JSON.parse(json));
+  } catch {
+    return {};
+  }
 }
 
 // POST /api/contact/submit — 最終送信。PIIはここで扱い、LLMには絶対渡さずメールにのみ送る。
@@ -428,38 +495,8 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   // fall back to structured fields only. Structured lead fields are restored
   // from the same server-side session so the browser cannot replace them at
   // submit time (including discoverySource/contactReason).
-  let inquiry = norm.inquiry;
-  if (env.DB) {
-    const sessionId = normalizeSessionId(body.sessionId);
-    let trustedSummary = '';
-    let trustedStructuredLead: StructuredLead | undefined;
-    if (sessionId) {
-      const session = await env.DB.prepare(
-        'SELECT summary_text, structured_lead_json FROM contact_sessions WHERE session_id = ? AND status = \'active\' LIMIT 1',
-      ).bind(sessionId).first<{ summary_text?: string; structured_lead_json?: string }>();
-      trustedSummary = typeof session?.summary_text === 'string' ? session.summary_text.trim() : '';
-      if (typeof session?.structured_lead_json === 'string') {
-        try {
-          trustedStructuredLead = normalizeStructuredLead(JSON.parse(session.structured_lead_json));
-        } catch {
-          trustedStructuredLead = {};
-        }
-      }
-    }
-    if (!trustedSummary) {
-      trustedSummary = buildDeterministicSummary({
-        classification: norm.inquiry.classification,
-        intent: norm.inquiry.intent,
-        structuredLead: norm.inquiry.structuredLead,
-      });
-    }
-    inquiry = {
-      ...norm.inquiry,
-      summaryText: trustedSummary,
-      conversationSummary: trustedSummary,
-      ...(trustedStructuredLead ? { structuredLead: trustedStructuredLead } : {}),
-    };
-  }
+  const trusted = env.DB ? await readTrustedInquiry(env, norm.inquiry, normalizeSessionId(body.sessionId)) : null;
+  const inquiry = trusted ? trusted.inquiry : norm.inquiry;
 
   // 本番（D1 bindingあり）は、PIIを暗号化してD1へ保存し、QueueのID payload
   // だけを発行する。メール送信はqueue consumerだけが行う。
@@ -468,7 +505,11 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
     const idempotencyKey = normalizeIdempotencyKey(body.idempotencyKey);
     let created;
     try {
-      created = await createSubmission(env, inquiry, { idempotencyKey, sessionId });
+      created = await createSubmission(env, inquiry, {
+        idempotencyKey,
+        sessionId,
+        context: trusted?.context ?? NO_SESSION_CONTEXT,
+      });
     } catch {
       logContactFailure('submission_storage_failed');
       return json({ error: 'お問い合わせを受け付けられません。時間をおいて再試行してください' }, 503);

@@ -51,6 +51,18 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 
 `corsweb-contact-primary`、`corsweb-launcher`、`corsweb-launcher-fallback`、`cloudia` は業種ではない既知のタグ。それ以外の source は保存用のタグとしては残し、モデルへの文には入れない。不明、無効、営業の分類でも、その理由だけでは受付を終わらせない。
 
+### 受付の記録の文脈（migration `0005_inquiry_context.sql`）
+
+`contact_sessions` と `submission_intake` に、次の 6 列を足す。個人情報の列は増やさない。
+
+- `industry` と `entry_path`: 業種の source のときだけ、サーバーが決める（`industry` は 5 つの値のどれか、`entry_path` は `/industries/<業種>/`）。最初に決まった値を保ち、後の要求の source では変えない。業種でない入口は空文字。
+- `machine_classification`: `consult` / `sales` / `unknown`。会話の応答の `genuine` は `consult`、`sales` は `sales`、`spam` は `unknown` に写す。応答を解析できない・未知の値・会話が無いときは `unknown`。
+- `classification_reason`・`classification_origin`・`classification_version`: 写した理由（`model_genuine` など）、元（`model` か `fallback`）、写し方の版（`inquiry-classification-v1`）。
+
+submit では、分類・業種・path をサーバー側の会話の状態から写す。ブラウザが送った `classification` や `source` では変わらない。会話が見つからない submit は、業種なし・`unknown`（`no_session`）で受け付ける。
+
+案件の側へ渡す写しは `buildInquiryCaseCopy`（`src/case-copy.ts`）が作る。欄は受付の番号・業種・path・分類・分類の版・作った時刻の 6 つだけで、送る口は無い。
+
 ## 環境変数・シークレット
 
 ### vars（`wrangler.toml` の `[vars]`・非シークレット）

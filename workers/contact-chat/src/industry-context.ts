@@ -43,6 +43,9 @@ const INDUSTRY_BY_TOKEN: Record<IndustryEntrySource, IndustrySlug> = {
   'industry-education': 'education',
 };
 
+/** 業種の値の一覧。サイトの業種の一覧と照らす試験がある。 */
+export const INDUSTRY_SLUGS: readonly IndustrySlug[] = INDUSTRY_ENTRY_SOURCES.map((token) => INDUSTRY_BY_TOKEN[token]);
+
 export function readTrafficSource(raw: unknown): TrafficReading {
   const stored = normalizeSource(raw);
   if ((INDUSTRY_ENTRY_SOURCES as readonly string[]).includes(stored)) {

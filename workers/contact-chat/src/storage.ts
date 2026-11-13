@@ -10,6 +10,11 @@ import type {
   NotificationType,
 } from './types';
 import { notificationFailureCode } from './log';
+import type { InquiryCaseCopySource } from './case-copy';
+import type { InquiryClassification } from './inquiry-classification';
+import { readStoredClassification } from './inquiry-classification';
+import type { InquiryEntryContext } from './inquiry-context';
+import { readStoredEntryContext } from './inquiry-context';
 import { MAX_CONVERSATION_EXCERPT_LEN, normalizeStructuredLead } from './validate';
 
 export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -30,6 +35,15 @@ export interface SessionState {
   classification: Classification;
   summary: string;
   conversationExcerpt: string;
+  /** 業種と path は最初に決まった値を保つ（後の要求で変えない）。 */
+  entry: InquiryEntryContext;
+  machineClassification: InquiryClassification;
+}
+
+/** 受付の記録へ写す、サーバーが決めた文脈。ブラウザの値からは作らない。 */
+export interface InquiryRecordContext {
+  entry: InquiryEntryContext;
+  classification: InquiryClassification;
 }
 
 export interface StoredSubmission {
@@ -158,9 +172,10 @@ export async function upsertContactSession(env: Env, state: SessionState): Promi
     INSERT INTO contact_sessions
       (session_id, intent, mode, locale, source, stage, turn_count,
        structured_lead_json, missing_fields_json, classification, summary_text,
-       conversation_excerpt_ciphertext, status,
-       created_at, updated_at, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+       conversation_excerpt_ciphertext, industry, entry_path,
+       machine_classification, classification_reason, classification_origin, classification_version,
+       status, created_at, updated_at, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
     ON CONFLICT(session_id) DO UPDATE SET
       intent=excluded.intent, mode=excluded.mode, locale=excluded.locale,
       source=excluded.source, stage=excluded.stage, turn_count=excluded.turn_count,
@@ -169,8 +184,14 @@ export async function upsertContactSession(env: Env, state: SessionState): Promi
       structured_lead_json=json_patch(contact_sessions.structured_lead_json, excluded.structured_lead_json),
       missing_fields_json=excluded.missing_fields_json,
       classification=excluded.classification, summary_text=excluded.summary_text,
-      conversation_excerpt_ciphertext=excluded.conversation_excerpt_ciphertext, status='active',
-      updated_at=excluded.updated_at, expires_at=excluded.expires_at
+      conversation_excerpt_ciphertext=excluded.conversation_excerpt_ciphertext,
+      industry=CASE WHEN contact_sessions.industry <> '' THEN contact_sessions.industry ELSE excluded.industry END,
+      entry_path=CASE WHEN contact_sessions.industry <> '' THEN contact_sessions.entry_path ELSE excluded.entry_path END,
+      machine_classification=excluded.machine_classification,
+      classification_reason=excluded.classification_reason,
+      classification_origin=excluded.classification_origin,
+      classification_version=excluded.classification_version,
+      status='active', updated_at=excluded.updated_at, expires_at=excluded.expires_at
   `).bind(
     state.sessionId,
     state.intent,
@@ -184,16 +205,59 @@ export async function upsertContactSession(env: Env, state: SessionState): Promi
     state.classification,
     state.summary.slice(0, 1500),
     conversationExcerpt,
+    state.entry.industry,
+    state.entry.entryPath,
+    state.machineClassification.value,
+    state.machineClassification.reason,
+    state.machineClassification.origin,
+    state.machineClassification.version,
     now,
     now,
     now + SESSION_TTL_SECONDS,
   ).run();
 }
 
+export interface TrustedSession {
+  summary: string;
+  structuredLeadJson: string | null;
+  classification: Classification | '';
+  context: InquiryRecordContext;
+}
+
+/** submit の時に、サーバーが保存した会話の状態を読む。暗号文の列は読まない。 */
+export async function readTrustedSession(env: Env, sessionId: string | null): Promise<TrustedSession | null> {
+  if (!env.DB || !sessionId) return null;
+  const row = await env.DB.prepare(`
+    SELECT summary_text, structured_lead_json, classification, industry, entry_path,
+      machine_classification, classification_reason, classification_origin, classification_version
+    FROM contact_sessions WHERE session_id = ? AND status = 'active' LIMIT 1
+  `).bind(sessionId).first<Record<string, unknown>>();
+  if (!row) return null;
+  const classification = row.classification;
+  return {
+    summary: typeof row.summary_text === 'string' ? row.summary_text.trim() : '',
+    structuredLeadJson: typeof row.structured_lead_json === 'string' ? row.structured_lead_json : null,
+    classification: classification === 'genuine' || classification === 'sales' || classification === 'spam'
+      ? classification
+      : '',
+    context: { entry: readStoredEntryContext(row), classification: readStoredClassification(row) },
+  };
+}
+
+/** 案件の写しの元。受付の番号で引き、個人情報と暗号文の列は SELECT しない。 */
+export async function getInquiryCaseCopySource(env: Env, receiptId: string): Promise<InquiryCaseCopySource | null> {
+  if (!env.DB) return null;
+  return env.DB.prepare(`
+    SELECT receipt_id, industry, entry_path, machine_classification, classification_reason,
+      classification_origin, classification_version, created_at
+    FROM submission_intake WHERE receipt_id = ? LIMIT 1
+  `).bind(receiptId).first<InquiryCaseCopySource>();
+}
+
 export async function createSubmission(
   env: Env,
   inquiry: NormalizedInquiry,
-  options: { idempotencyKey: string; sessionId?: string | null },
+  options: { idempotencyKey: string; sessionId?: string | null; context: InquiryRecordContext },
 ): Promise<CreateSubmissionResult> {
   if (!env.DB) throw new Error('D1 is not configured');
   const existing = await env.DB.prepare(
@@ -242,9 +306,10 @@ export async function createSubmission(
          name_ciphertext, email_ciphertext, company_ciphertext,
          message_ciphertext, summary_ciphertext, conversation_excerpt_ciphertext,
          email_hmac, intent, source,
-         structured_lead_json, utm_json, classification, status,
-         created_at, updated_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)
+         structured_lead_json, utm_json, classification, industry, entry_path,
+         machine_classification, classification_reason, classification_origin, classification_version,
+         status, created_at, updated_at, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)
     `).bind(
       submissionId,
       options.idempotencyKey,
@@ -262,6 +327,12 @@ export async function createSubmission(
       JSON.stringify(redactStructuredLead(inquiry.structuredLead)),
       JSON.stringify(inquiry.utm),
       inquiry.classification,
+      options.context.entry.industry,
+      options.context.entry.entryPath,
+      options.context.classification.value,
+      options.context.classification.reason,
+      options.context.classification.origin,
+      options.context.classification.version,
       now,
       now,
       now + SUBMISSION_TTL_SECONDS,
