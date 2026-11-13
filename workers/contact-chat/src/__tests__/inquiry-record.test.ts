@@ -257,7 +257,10 @@ describe('案件へ渡す写し', () => {
       classification: 'consult',
       classificationVersion: INQUIRY_CLASSIFICATION_VERSION,
     });
-    expect(copy.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    // 作った時刻は、保存した created_at（秒）と同じ時刻の ISO の文字列。秒をミリ秒に直さないと 1970 年になる。
+    const stored = db.prepare('SELECT created_at FROM submission_intake WHERE receipt_id = ?').get(receiptId) as { created_at: number };
+    expect(copy.createdAt).toBe(new Date(stored.created_at * 1000).toISOString());
+    expect(Math.abs(Date.parse(copy.createdAt) - Date.now())).toBeLessThan(5 * 60 * 1000);
     expect(JSON.stringify(copy)).not.toContain('taro@example.com');
     expect(JSON.stringify(copy)).not.toContain('山田');
   });
