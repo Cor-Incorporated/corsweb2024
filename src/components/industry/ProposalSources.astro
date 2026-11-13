@@ -1,0 +1,51 @@
+---
+// CTA の後の参考資料の欄（#525「出典の表示」）。資料名・確認できる内容・PDF か Web かを並べる。
+// 見た目はブログの参考資料の欄（BlogLayout の [data-article-sources-list]）にそろえる。
+// 参考資料の欄が無い業種（教育。出典は本文の近くのリンク）では何も出さない。
+import type { IndustrySlug } from '../../config/industry-context';
+import { getCurrentLocale } from '../../utils/i18n';
+import ProposalInline from './ProposalInline.astro';
+import { PROPOSAL_LINKS, isInternalHref, isPdfHref, resolveProposalHref } from './proposal-links';
+import type { ProposalPage } from './proposal-schema';
+
+interface Props {
+  industry: IndustrySlug;
+  page: ProposalPage;
+}
+
+const { industry, page } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const urls = PROPOSAL_LINKS[industry].sources;
+const items = page.sources.map((source, index) => ({
+  ...source,
+  number: index + 1,
+  href: resolveProposalHref(urls[index], locale),
+  format: isPdfHref(urls[index]) ? 'PDF' : 'Web',
+  newTab: isInternalHref(urls[index]) ? {} : { target: '_blank', rel: 'noopener noreferrer' },
+}));
+const headingId = `proposal-sources-${industry}`;
+---
+
+{
+  items.length > 0 && (
+    <section class="pb-16 sm:pb-24" aria-labelledby={headingId} data-proposal-sources>
+      <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <div class="border-t border-stone-200 pt-6 dark:border-stone-700">
+          <h2 id={headingId} class="type-heading text-2xl font-medium tracking-tight">{page.sourcesTitle}</h2>
+          <ol class="mt-6 flex flex-col gap-3">
+            {items.map((item) => (
+              <li class="flex gap-3 rounded-lg bg-stone-50 p-4 text-base leading-relaxed dark:bg-stone-900" data-source-card={item.number}>
+                <span class="shrink-0 font-medium text-primary-600 dark:text-primary-400">{item.number}.</span>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <a href={item.href} class="break-words font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600" {...item.newTab}>{item.title}</a>
+                  <p class="break-words text-sm text-primary-950/70 dark:text-primary-200/70"><ProposalInline value={item.note} industry={industry} /></p>
+                  <span class="w-fit rounded-full bg-stone-200 px-2 py-0.5 text-xs font-medium text-stone-700 dark:bg-stone-800 dark:text-stone-300">{item.format}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+  )
+}

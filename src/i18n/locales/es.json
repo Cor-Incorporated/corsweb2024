@@ -211,332 +211,1240 @@
     ]
   },
   "industryMedical": {
-    "hero": {
-      "eyebrow": "Medical & Healthcare",
-      "title": "En el ámbito sanitario, ¿no tienes también estos «atascos»?",
-      "subtitle": "Orden de los datos internos, atención al paciente, manejo de la información——cada terreno se detiene por motivos distintos. Cor. ordena los requisitos contigo y te acompaña en el siguiente paso."
-    },
-    "challenges": {
-      "eyebrow": "01 / Desafíos frecuentes",
-      "title": "Los «motivos de atasco» que más se oyen en el ámbito sanitario.",
-      "items": [
-        {
-          "title": "Gestión de revisiones y devoluciones de la facturación sanitaria",
-          "description": "Errores en la facturación mensual o incoherencias entre diagnóstico y tratamiento provocan revisiones y devoluciones por parte de la entidad evaluadora. El personal administrativo dedica un esfuerzo enorme a revisar y corregir cada caso a la vista."
-        },
-        {
-          "title": "Carga de registro en la historia clínica electrónica",
-          "description": "Registrar la consulta lleva varios minutos por paciente y, en jornadas con más de 100 consultas externas, la documentación se alarga hasta la madrugada. Es un punto de impacto directo de la reforma laboral médica (el «problema 2024»)."
-        },
-        {
-          "title": "Adecuación a la reforma laboral médica (registro de guardias y traspaso de tareas)",
-          "description": "Para cumplir con el límite de horas extra del personal médico vigente desde abril de 2024, hace falta gestionar las solicitudes de guardia, el registro del traspaso de tareas y los acuerdos laborales, pero se exige cumplirlo sin un flujo operativo definido."
-        },
-        {
-          "title": "Ineficiencia en la gestión de citas y cancelaciones de consulta externa",
-          "description": "Con reservas mayoritariamente telefónicas se producen muchas cancelaciones sin aviso. Al no poder cubrir los huecos en tiempo real, se pierden ingresos asistenciales."
+    "eyebrow": "Medical & Healthcare",
+    "title": "La implantación de la IA en centros sanitarios, empezando por ordenar los registros y preparar documentos.",
+    "lead": [
+      {
+        "p": "Supongamos, por ejemplo, que quiere probar la IA para redactar borradores de cartas de derivación."
+      },
+      {
+        "p": "La información necesaria está en la historia clínica electrónica. También existe el formato que usan siempre. Pero ¿dónde se tratará la información del paciente y cómo se volcará en ese formato? Si se piensa hasta el momento en que el médico revisa el contenido, no es posible decidir la implantación de inmediato."
+      },
+      {
+        "p": "El resumen de enfermería al alta o al traslado, del que se encarga el departamento de enfermería. El resumen de gestión farmacéutica que prepara el servicio de farmacia para traspasar la información a otros centros o a farmacias. También para documentos como estos, pensamos con usted el flujo de reunir los registros, darles formato y que los revise el profesional responsable."
+      },
+      {
+        "p": "Pueden consultarnos no solo directores de centro y equipos directivos, sino también directores y jefes de enfermería, jefes del servicio de farmacia, y personal de sistemas de información o de administración."
+      },
+      {
+        "p": "Cor. le ayuda desde la investigación de sus datos actuales y de su forma de trabajar. Qué tareas reducir y qué decisiones asumen las personas. Desde ordenar eso hasta diseñar e implementar la configuración, avanzamos juntos."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "Certificación ISMS obtenida",
+          "body": [
+            {
+              "p": "Cor.Inc. ha obtenido la certificación de la norma internacional ISO/IEC 27001:2022 para sistemas de gestión de la seguridad de la información (ISMS). El alcance del registro es «Desarrollo y operación de software por encargo»."
+            },
+            {
+              "p": "Fecha de registro inicial: 7 de noviembre de 2026. Número de registro: JP26/00000364.",
+              "cite": [
+                7
+              ]
+            },
+            {
+              "p": [
+                "Publicamos nuestra política sobre el tratamiento de la información y el uso de la IA en la ",
+                {
+                  "link": "security",
+                  "text": "página de seguridad de la información"
+                },
+                "."
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / El acompañamiento de Cor.",
-      "title": "Así te acompañamos.",
-      "intro": "Para cada desafío avanzamos juntos combinando los servicios de Cor. Más que afirmaciones tajantes, valoramos un acompañamiento adaptado a los desafíos del terreno.",
-      "items": [
-        {
-          "challenge": "Orden de datos · renovación de sistemas",
-          "service": "Desarrollo a medida con IA",
-          "description": "Desde ordenar los datos hasta la migración a la nube y la integración de sistemas internos, avanzamos juntos desde la definición de requisitos hasta la implementación y la operación."
-        },
-        {
-          "challenge": "Consultas y atención informativa",
-          "service": "Desarrollo a medida con IA",
-          "description": "Te ayudamos a diseñar una experiencia de atención con IA de voz, IA entrenada con documentos internos y mecanismos automatizados. Aprovechamos el conocimiento adquirido al implementar recepción con IA multilingüe."
-        },
-        {
-          "challenge": "Seguridad de la información · datos confidenciales",
-          "service": "LLM local · IA segura",
-          "description": "Pensamos contigo un entorno de IA que no expone tu información y un diseño de selección y operación de herramientas según el nivel de confidencialidad."
-        },
-        {
-          "challenge": "Estrategia de uso de IA · internalización",
-          "service": "Asesoría y formación en IA",
-          "description": "Acompañamos al equipo interno en la estrategia de uso de IA, la selección de herramientas, su adopción operativa y la forma de internalizarla."
-        },
-        {
-          "challenge": "Presupuestos y preparación de la justificación interna",
-          "service": "Desarrollo a medida con IA",
-          "description": "Elaboramos presupuestos que dejan claros los requisitos, los supuestos, los riesgos y el alcance del trabajo, y puedes consultarnos desde la preparación de una base para tu solicitud de aprobación o tu presupuesto. El importe y el plazo definitivos se fijan tras confirmar los requisitos."
+      },
+      {
+        "founder": {
+          "h2": "Usar la IA para crear un entorno en el que las personas puedan concentrarse en lo que les corresponde decidir.",
+          "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
+          "bylineAt": "top",
+          "body": [
+            {
+              "p": "El diagnóstico afecta a la vida del paciente. Creo que plantear a la ligera «hacerlo todo más eficiente con IA» no responde al verdadero propósito."
+            },
+            {
+              "strong": "Usar la IA para crear un entorno en el que las personas puedan concentrarse en lo que les corresponde decidir."
+            },
+            {
+              "p": "Creo que esa es la esencia de un sistema de IA para la medicina."
+            },
+            {
+              "p": "Reunir y ordenar la información registrada en historias clínicas anteriores: que la IA ayude en esa tarea es algo que se puede estudiar. En cambio, el diagnóstico lo hace el médico. Las decisiones de enfermería y las evaluaciones farmacéuticas también las asumen los profesionales correspondientes. Eso quiero separarlo con claridad."
+            },
+            {
+              "p": "Primero, empezar por las tareas administrativas y rutinarias. Los sistemas que entren en el diagnóstico o el tratamiento quiero pensarlos más adelante, teniendo en cuenta las comprobaciones legales y de seguridad necesarias."
+            }
+          ]
         }
-      ]
-    },
+      },
+      {
+        "h2": "Cartas de derivación, resúmenes de enfermería, resúmenes de gestión farmacéutica. Partimos de los formatos que se usan en el centro."
+      },
+      {
+        "h3": "Médicos y servicios clínicos: llevar el borrador de la carta de derivación al formato propio del centro"
+      },
+      {
+        "p": "Aunque se pueda generar el resumen para la carta de derivación, queda el trabajo de pasarlo al formato habitual. Una entrevista con el director de una clínica, publicada por medimo, proveedor de IA para la medicina, también describe esta tarea.",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "Cor. comprueba dónde están los registros necesarios y de qué manera se pueden extraer de la historia clínica electrónica. También investigamos los métodos de exportación e integración que ofrece el proveedor y hasta dónde se pueden usar."
+      },
+      {
+        "p": "Reunir la información, volcarla en el formato y que el médico la contraste con el registro original, la corrija y la dé por definitiva. Estudiamos las formas viables de hacerlo, incluido, por ejemplo, un sistema que se use desde el navegador en los terminales del centro."
+      },
+      {
+        "h3": "Enfermería: preparar el resumen de enfermería para el alta o el traslado"
+      },
+      {
+        "p": "Por ejemplo, cuando hay que repasar la evolución hasta ahora y resumir lo que se traspasa al siguiente centro."
+      },
+      {
+        "p": "Aunque la IA pueda redactar un borrador, hay que decidir también qué registros se usan, cómo se contrasta con los registros originales y quién lo revisa y lo da por definitivo."
+      },
+      {
+        "p": "Cor. pregunta a los directores y jefes de enfermería y a quienes redactan realmente los registros, y comprueba el formato y el flujo de trabajo actuales. Tenemos en cuenta a la vez el tiempo de redacción y el esfuerzo de revisión y corrección."
+      },
+      {
+        "p": "La recopilación de casos de transformación digital (DX) en enfermería del Ministerio de Salud, Trabajo y Bienestar (MHLW) también presenta un caso en el que la dirección de enfermería, los supervisores de planta y otros estudian el flujo de trabajo, y el personal de enfermería contrasta el borrador de la IA con los registros originales.",
+        "cite": [
+          2
+        ]
+      },
+      {
+        "h3": "Servicio de farmacia: preparar resúmenes de gestión farmacéutica y documentos internos"
+      },
+      {
+        "p": "Traspasar la información necesaria al siguiente centro médico o a la farmacia comunitaria. La Sociedad Japonesa de Farmacéuticos Hospitalarios (Japanese Society of Hospital Pharmacists) publica el resumen de gestión farmacéutica como formulario para ello.",
+        "cite": [
+          3
+        ]
+      },
+      {
+        "p": "Qué registros se recogen y en qué formulario. Cor. investiga en qué parte de la recogida de información, la transcripción y el borrador puede ayudar."
+      },
+      {
+        "p": "La elaboración de documentos para investigar información sobre medicamentos y compartirla dentro del centro también puede ser objeto de la investigación. Pensamos en un formato que permita comprobar las fuentes y la fecha de actualización; la revisión del contenido y el juicio farmacéutico corresponden al farmacéutico.",
+        "cite": [
+          4
+        ]
+      },
+      {
+        "p": "Quién se encarga, qué formato se usa, quién revisa y da por definitivo. Tras conocer las diferencias de cada servicio, decidimos hasta dónde se deja a la IA. Para transcribir a campos fijos o dar formato, también comparamos con funciones existentes o con un procesamiento basado en reglas."
+      },
+      {
+        "h2": "Dónde, quién y cómo se trata la información de los pacientes."
+      },
+      {
+        "p": "En Cor., antes de recibir datos reales, firmamos un acuerdo de confidencialidad y acordamos qué información se usará y dónde se trabajará."
+      },
+      {
+        "p": "A quién se da acceso. Para qué tareas se usa. Dónde se guarda y cuándo se devuelve o se elimina. Lo ordenamos junto con las normas del centro. En el diseño también decidimos qué se procesa con IA, cómo se tratan los registros y qué papel tiene la persona que revisa.",
+        "cite": [
+          8
+        ]
+      },
+      {
+        "p": "En cada desarrollo concreto, teniendo en cuenta las directrices de gestión de la seguridad del MHLW y la operativa del centro, comprobamos incluso los permisos, la actualización de los equipos y los métodos de copia de seguridad y recuperación.",
+        "cite": [
+          5
+        ]
+      },
+      {
+        "h3": "Primero comprobamos si hace falta una «gran mudanza» de los datos"
+      },
+      {
+        "p": "Reunir de nuevo en otro lugar los datos que ya existen para poder usar la IA. Esa preparación puede llegar a ser lo que frene la implantación."
+      },
+      {
+        "p": "Cor. también estudia opciones que aprovechen el lugar donde están ahora. Usar la unidad compartida existente, aprovechar los servidores del centro o preparar algo nuevo. Pensamos por separado dónde se guardan los datos y dónde se procesan con IA."
+      },
+      {
+        "p": "También se puede estudiar una configuración que procese la información de los pacientes sin enviarla fuera del centro. La configuración que se pueda montar en la práctica depende de cómo se conecte con la historia clínica electrónica, de las funciones necesarias y de la operativa del centro."
+      },
+      {
+        "h3": "Antes de comprar equipos, comprobamos qué se va a usar y en qué medida"
+      },
+      {
+        "p": "Cor. cuenta con la tecnología para integrar un LLM local en sistemas que funcionan en PC de uso general. Un LLM local es una IA generativa que funciona en un PC propio, en servidores del centro u otros equipos."
+      },
+      {
+        "p": "Confirmamos el volumen de datos, el número de personas que lo usarán a la vez y la velocidad de respuesta necesaria, y pensamos la configuración. En ese proceso también valoramos si se pueden aprovechar los equipos actuales o si hace falta preparar algo más."
+      },
+      {
+        "p": "La terminología, los formatos y la operativa del ámbito sanitario los aprendemos preguntando a quienes realizan ese trabajo. Cor. se encarga desde la infraestructura y la plataforma de datos hasta la definición de requisitos y el desarrollo, y le da forma junto con quienes conocen el trabajo."
+      },
+      {
+        "h2": "También las consultas de un departamento se convierten en una propuesta que el centro pueda valorar."
+      },
+      {
+        "p": "Aunque el estudio empiece desde enfermería o farmacia, identificamos a quienes lo usarán, a quienes revisan los sistemas y la gestión de la información, y a quienes deciden el presupuesto y los contratos. Avanzamos con las personas necesarias según la organización del centro."
+      },
+      {
+        "h3": "En la primera reunión le preguntamos qué quiere hacer y por qué se ha detenido"
+      },
+      {
+        "p": "Prevemos que la reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y qué dificultades encuentra para avanzar."
+      },
+      {
+        "p": "Ordenamos lo imprescindible y lo que le gustaría conseguir si es posible, y le presentamos un borrador de lo que investigaremos a continuación."
+      },
+      {
+        "h3": "Investigamos los datos y el trabajo dentro del alcance acordado"
+      },
+      {
+        "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación."
+      },
+      {
+        "p": "Mediante entrevistas con las personas implicadas, entre otros medios, comprobamos quién usa qué registros, para qué y con qué frecuencia. Si es necesario, también hablamos con usted de hacer visitas presenciales."
+      },
+      {
+        "h3": "Comparamos planes de desarrollo y decidimos qué se implementa"
+      },
+      {
+        "p": "Si hay varias opciones, las proponemos de forma que sea fácil compararlas dentro del centro, desde la configuración mínima necesaria hasta una que lo cubra todo. Si algo es difícil de lograr, también se lo decimos con franqueza."
+      },
+      {
+        "p": "Si concluimos que se puede implementar en poco tiempo, tras confirmar el coste y el alcance, también se puede considerar un contrato que incluya la investigación y la creación de un MVP. Un MVP es un sistema con las funciones mínimas necesarias."
+      },
+      {
+        "p": "Para usos relacionados con el diagnóstico o el tratamiento, según su finalidad y sus riesgos, hay que comprobar, entre otras cosas, si se considera un dispositivo médico según la Ley de Productos Farmacéuticos y Dispositivos Médicos (Ley PMD). El principio de que los profesionales revisen y decidan y el tratamiento legal del sistema se comprueban por separado.",
+        "cite": [
+          6
+        ]
+      },
+      {
+        "h2": "En una época en que la IA es algo normal, ¿cuál es el papel de las personas?"
+      },
+      {
+        "p": "Decidir qué se automatiza es también decidir en qué ponen las personas su esfuerzo."
+      },
+      {
+        "p": "Médicos, enfermeros y farmacéuticos. Que cada uno pueda concentrarse en sus decisiones profesionales y en la relación con los pacientes. Para ello, ¿cómo podemos apoyar el trabajo de buscar registros, ordenarlos y convertirlos en documentos? En Cor. queremos empezar a pensarlo con usted desde ahí."
+      },
+      {
+        "p": "Ya que vamos a construir un sistema, queremos que se use durante mucho tiempo en el día a día. Por eso, permítanos escucharle desde la fase en que la idea aún no está definida."
+      }
+    ],
     "cta": {
-      "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
-      "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Consultar PoC de LLM local / IA segura",
-      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
-    }
+      "title": "Para empezar, cuéntenos lo que tiene en mente.",
+      "body": [
+        {
+          "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+        },
+        {
+          "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de pacientes, historias clínicas ni credenciales de acceso."
+        }
+      ],
+      "primary": "Ir al formulario de contacto"
+    },
+    "sourcesTitle": "Referencias",
+    "sources": [
+      {
+        "title": "Entrevista al director de Tatsumi Naika Clinic (publicada por medimo)",
+        "note": "Entrevista del proveedor a una sola clínica. Se cita la explicación sobre el traslado del contenido a la plantilla propia de la clínica."
+      },
+      {
+        "title": "Ministerio de Salud, Trabajo y Bienestar (MHLW): recopilación de casos de DX en enfermería",
+        "note": "Caso 10, Hospital Municipal de Nara (市立奈良病院), páginas 73–79 del folleto. Se cita la elaboración y revisión de resúmenes de enfermería y el reparto de funciones durante la implantación."
+      },
+      {
+        "title": "Sociedad Japonesa de Farmacéuticos Hospitalarios: formularios de registro relacionados con la labor farmacéutica, etc.",
+        "note": "Se cita el intercambio de información entre hospitales, y entre hospitales y farmacias comunitarias, mediante el resumen de gestión farmacéutica."
+      },
+      {
+        "title": "Sociedad Japonesa de Farmacéuticos Hospitalarios: guía para el uso de la IA generativa dirigida a farmacéuticos de hospital",
+        "note": "Se citan las explicaciones sobre los destinatarios, el uso para organizar información y la verificación con la información original."
+      },
+      {
+        "title": "Directrices para la gestión de la seguridad de los sistemas de información médica, versión 7.0 (Ministerio de Salud, Trabajo y Bienestar)",
+        "note": [
+          "En cuanto a permisos, actualizaciones, copias de seguridad, etc., se cita el ",
+          {
+            "link": "mhlwSystemOperation",
+            "text": "volumen de operación de sistemas"
+          },
+          "."
+        ]
+      },
+      {
+        "title": "Directrices sobre cuándo un programa informático se considera dispositivo médico (Ministerio de Salud, Trabajo y Bienestar)",
+        "note": "Esta página no determina si un sistema concreto se considera dispositivo médico."
+      },
+      {
+        "title": "Cor.Inc.: información de la empresa",
+        "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+      },
+      {
+        "title": "Cor.Inc.: seguridad de la información",
+        "note": "Política sobre la gestión de la información y el uso de la IA. No indica la certificación de ningún sistema médico concreto ni un historial de implantaciones."
+      }
+    ]
   },
   "industryShigyo": {
-    "hero": {
-      "eyebrow": "Professional Services",
-      "title": "En las profesiones colegiadas, ¿no inviertes demasiado «tiempo y energía mental»?",
-      "subtitle": "Revisión de contratos, reformas legales constantes, doble carga de datos en los trámites administrativos y un control de plazos que no admite retrasos. Cor. te acompaña a cambiar esos días de incesante trabajo manual y presión que rodean a la labor experta que de verdad aporta valor."
-    },
-    "challenges": {
-      "eyebrow": "01 / Desafíos frecuentes",
-      "title": "Los «motivos de atasco» que más se oyen en las profesiones colegiadas.",
-      "items": [
-        {
-          "title": "La carga crónica de revisar y corregir cláusulas de contratos y documentos legales",
-          "description": "Revisar palabra por palabra los contratos que llegan de los clientes a la vista. Como cualquier descuido se convierte de inmediato en un riesgo, exige una concentración extrema y mucho tiempo, y prolonga la revisión hasta la madrugada."
-        },
-        {
-          "title": "La ineficiencia de los cambios de formato y la doble entrada en trámites y registros",
-          "description": "Copiar y transcribir a mano los datos confiados por el cliente para adaptarlos a las peculiares interfaces de los sistemas administrativos y de registro. En temporada alta, se consume un esfuerzo enorme en la introducción de datos y en la doble verificación a la vista."
-        },
-        {
-          "title": "La presión de «no poder cometer ningún error» con plazos legales, prescripciones y vencimientos",
-          "description": "Tareas de control en las que un solo día de retraso puede causar un daño grave: solicitudes de patente, declaraciones fiscales, plazos procesales. Dependen del calendario y de comprobaciones cruzadas a la vista, y generan cada mañana una fuerte presión psicológica."
-        },
-        {
-          "title": "La verificación de requisitos de subvenciones y la enorme redacción de documentos",
-          "description": "Leer las bases de las convocatorias, que cambian con frecuencia, y construir a mano el relato del «plan de negocio» y demás contenidos del formulario. Un largo trabajo de escritorio para lograr la concesión que supone una gran carga."
+    "eyebrow": "Professional Services",
+    "title": "Integrar la IA en la práctica de los despachos profesionales colegiados, comprobando en qué se basa cada respuesta.",
+    "lead": [
+      {
+        "p": "Por ejemplo, cuando un cliente asesorado le plantea una consulta parecida a otra anterior."
+      },
+      {
+        "p": "Encuentra la respuesta que se dio entonces. Pero no sabe qué se comprobó para llegar a esa conclusión. Aunque le pida a la IA un borrador de respuesta, tendrá que volver a buscar desde cero los documentos en los que se basa."
+      },
+      {
+        "p": "Cor. investiga dónde están los documentos y cómo se hacen las comprobaciones, y diseña con usted una forma de preparar borradores de respuesta cuyo fundamento se pueda rastrear."
+      },
+      {
+        "p": "Descomponemos el trabajo habitual e incorporamos la IA poco a poco, empezando por las tareas en las que resulta útil. Construimos un sistema adecuado para el despacho, limitando la carga sobre el trabajo diario."
+      },
+      {
+        "p": "Pueden consultarnos los titulares, socios y responsables internos de implantación de despachos profesionales colegiados, como los de asesores fiscales (zeirishi), abogados y asesores laborales y de seguridad social (sharoshi)."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "Certificación ISMS obtenida",
+          "body": [
+            {
+              "p": "Cor.Inc. ha obtenido la certificación de la norma internacional ISO/IEC 27001:2022 para sistemas de gestión de la seguridad de la información (ISMS). El alcance del registro es «Desarrollo y operación de software por encargo»."
+            },
+            {
+              "p": "Fecha de registro inicial: 7 de noviembre de 2026. Número de registro: JP26/00000364.",
+              "cite": [
+                4
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / El acompañamiento de Cor.",
-      "title": "Así te acompañamos.",
-      "intro": "Para cada desafío avanzamos juntos combinando los servicios de Cor. Más que afirmaciones tajantes, valoramos un acompañamiento adaptado a los desafíos del terreno.",
-      "items": [
-        {
-          "title": "Avanzamos contigo en el cribado inicial de cláusulas estándar y rutinarias",
-          "service": "LLM local · IA segura",
-          "description": "A partir de tus propias plantillas y criterios de revisión, apoyamos la creación de un sistema que detecta con rapidez cláusulas de riesgo y condiciones especiales. Te ayudamos a aligerar la carga de esa primera revisión a la vista."
-        },
-        {
-          "title": "Ordenamos la integración de datos entre sistemas y la transcripción automática",
-          "service": "Desarrollo a medida con IA",
-          "description": "Apoyamos la automatización de transcripciones, como el volcado de los datos del cliente a los formatos de solicitud. Construimos contigo un flujo que evita errores de entrada y reduce el tiempo dedicado a la verificación."
-        },
-        {
-          "title": "Te llevamos hacia una gestión más tranquila con alertas y recordatorios automáticos",
-          "service": "Desarrollo a medida con IA",
-          "description": "Proponemos un mecanismo, conectado a tu calendario y tu gestión de tareas, que evita pasar por alto plazos importantes. Organizamos contigo varias barreras de protección que no dependen solo del ojo humano, buscando reducir la carga psicológica."
-        },
-        {
-          "title": "Apoyamos la eficiencia en la estructura de documentos y planes de negocio",
-          "service": "Asesoría y formación en IA",
-          "description": "Apoyamos la creación rápida del esqueleto y la estructura de los documentos teniendo en cuenta el cotejo de requisitos y las tendencias de concesión anteriores. Te ayudamos a reducir el tiempo de redactar desde cero y a concentrarte en el pulido propio del experto."
+      },
+      {
+        "h2": "Que, junto con el borrador de respuesta, se pueda volver a los documentos que hay que comprobar."
+      },
+      {
+        "p": "En qué documento se basa la respuesta y dónde se encuentra."
+      },
+      {
+        "p": "No basta con enumerar los nombres de los documentos: qué parte de la respuesta remite a qué pasaje del documento original. Incluimos en el diseño una forma de mostrarlo que permita al personal contrastarlo."
+      },
+      {
+        "ul": [
+          "Dónde están los documentos y cómo acceder al archivo original.",
+          "Los pasajes de las fuentes que corresponden al borrador de respuesta.",
+          "La información necesaria para comprobarlo, como el cliente asesorado o el asunto y la fecha a la que corresponde el documento."
+        ]
+      },
+      {
+        "p": "Si ese documento se puede aplicar a la consulta actual tiene que decidirlo el profesional. Que se muestre la fuente no es lo mismo que la respuesta sea correcta."
+      },
+      {
+        "p": "Precisamente por eso, pensamos también el flujo de volver al documento original, comprobar el contenido y darlo por definitivo."
+      },
+      {
+        "h3": "Despachos de asesores fiscales (zeirishi): reunir el borrador de respuesta al cliente asesorado y los documentos que hay que comprobar"
+      },
+      {
+        "p": "Buscar en registros de consultas anteriores y en documentos internos, y redactar un borrador de respuesta. A partir de tareas como estas, estudiamos hasta dónde podemos ayudar."
+      },
+      {
+        "p": "La política publicada por Tsuji & Hongo Tax & Consulting también menciona, como usos de la IA generativa, el apoyo en la elaboración de documentos y en las respuestas a preguntas habituales.",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "En la investigación con Cor., ordenamos qué clientes asesorados y ejercicios se incluyen, qué documentos se consultan y quién revisa el contenido. Las decisiones fiscales las toma el asesor fiscal; nosotros apoyamos el trabajo de reunir la información que necesita para tomarlas."
+      },
+      {
+        "h3": "Despachos de abogados: conectar la organización de los documentos del asunto con la comprobación del texto original"
+      },
+      {
+        "p": "Buscar los documentos recibidos del cliente y ordenar la secuencia de los hechos. Pensamos un flujo que permita volver desde ese borrador al texto original que se quiere comprobar."
+      },
+      {
+        "p": "Bengo Kakumei (弁護革命), una herramienta para la práctica jurídica, también presenta públicamente funciones para resumir documentos, elaborar cronologías y abrir el pasaje de referencia desde el resultado.",
+        "cite": [
+          2
+        ]
+      },
+      {
+        "p": "Cor. también comprueba qué partes se pueden resolver con herramientas existentes y estudia cómo conectarlas con los documentos y la práctica del despacho. La valoración jurídica y la forma de explicárselo al cliente corresponden al abogado."
+      },
+      {
+        "h3": "Despachos de asesores laborales y de seguridad social (sharoshi): ordenar las preguntas frecuentes internas y la información de cada cliente asesorado"
+      },
+      {
+        "p": "Buscar los manuales que se comparten en el despacho. Revisar las respuestas dadas a consultas laborales anteriores. Y después comprobar si encajan con la situación del cliente asesorado actual."
+      },
+      {
+        "p": "Fukuoka Social Insurance and Labor Consultants Corporation (福岡社会保険労務士法人) ha dado a conocer un sistema en el que acumula preguntas frecuentes y manuales que su personal puede consultar mediante búsquedas.",
+        "cite": [
+          3
+        ]
+      },
+      {
+        "p": "En Cor., distinguimos entre el conocimiento de uso común y los documentos propios de cada cliente asesorado, y pensamos una configuración que permita comprobar la información necesaria. Las decisiones laborales las toma el asesor laboral; también ordenamos con usted el flujo en el que el personal reúne la información y le pide que la revise."
+      },
+      {
+        "h2": "Que la preparación de la implantación no detenga el trabajo diario."
+      },
+      {
+        "founder": {
+          "h3": "La visión de Kousuke Terada",
+          "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
+          "bylineAt": "bottom",
+          "body": [
+            {
+              "p": "Pasar de golpe a la IA todo el trabajo que hoy hacen las personas. Si se intenta cambiar a la vez la organización de los documentos, su migración e incluso la forma de trabajar, la propia preparación puede convertirse en un gran trabajo."
+            },
+            {
+              "p": "Yo quiero empezar por descomponer el trabajo actual. Encontrar, tarea por tarea, dónde ayuda dejarlo en manos de la IA. Ahorrar trabajo poco a poco, añadiendo el menor esfuerzo posible al trabajo diario."
+            },
+            {
+              "p": "No cambiarlo todo de repente, sino ponerme en el lugar del cliente y de su día a día. Para eso, quiero empezar escuchando a cada empresa, una por una."
+            }
+          ]
         }
-      ]
-    },
+      },
+      {
+        "h3": "Decidimos los preparativos necesarios a partir de los documentos que se usarán primero"
+      },
+      {
+        "p": "No siempre es necesario trasladar de una vez todos los documentos que ya existen.",
+        "cite": [
+          6
+        ]
+      },
+      {
+        "p": "Primero comprobamos, en el trabajo en cuestión, quién usa qué documentos, para qué y en qué medida. También investigamos si se puede aprovechar el lugar donde están ahora, como una unidad compartida o un servidor del despacho."
+      },
+      {
+        "p": "Aunque no se trasladen los originales, comprobamos por separado dónde se leen y procesan los contenidos y dónde se guardan las copias. En cuanto a los documentos en papel, estudiamos digitalizarlos empezando por lo necesario para el primer trabajo que se aborde."
+      },
+      {
+        "h3": "También decidimos entre local y nube según la práctica del despacho"
+      },
+      {
+        "p": "Usar un servicio existente o crear algo a medida del despacho. Ejecutarlo en el entorno propio o usar la nube. Estudiamos cada opción."
+      },
+      {
+        "p": "Cor. cuenta con la tecnología para integrar un LLM local como sistema en PC de uso general. Un LLM local es una IA generativa que funciona en un PC propio, en servidores del despacho u otros equipos."
+      },
+      {
+        "p": "Los equipos necesarios se deciden según el volumen de documentos, el número de personas que lo usarán a la vez y la velocidad de respuesta que se busca. Antes de comprar equipos, comprobemos hasta dónde se puede llegar con el entorno actual."
+      },
+      {
+        "h3": "Lo comprobamos con una tarea antes de ampliar el alcance"
+      },
+      {
+        "p": "Primero, buscar documentos. Después, ordenar los pasajes necesarios o redactar borradores de respuesta. Dividirlo así también es una opción. Para transcribir a campos fijos o convertir formatos, también comparamos con un procesamiento basado en reglas."
+      },
+      {
+        "p": "En la fase de desarrollo también decidimos qué se va a comprobar. Si se ha reducido el esfuerzo de búsqueda. Si es fácil comprobar el documento original. Si no ha aumentado otra carga por la preparación o la revisión."
+      },
+      {
+        "p": "Si es necesario, acordamos cómo avanzar según el trabajo diario, incluido un plan anual. Nuestro objetivo es ir ampliando el alcance de uso manteniendo en lo posible el flujo de trabajo del personal."
+      },
+      {
+        "h2": "Quién trata, y dónde, la información de clientes asesorados y de clientes de asuntos concretos."
+      },
+      {
+        "p": "Antes de recibir datos reales, firmamos un acuerdo de confidencialidad y acordamos qué información se usará y dónde se trabajará."
+      },
+      {
+        "p": "Documentos que se comparten en todo el despacho y documentos cuyo acceso se restringe por responsable o por asunto. Ordenamos hasta dónde puede consultarlos la IA y quién puede ver las respuestas y los documentos originales.",
+        "cite": [
+          5
+        ]
+      },
+      {
+        "p": "También comprobamos dónde se guardan y dónde se procesan los datos, los registros de uso y cómo se gestionan la devolución y la eliminación. Si se ejecuta en local, también tenemos en cuenta la gestión de permisos, la actualización de los equipos y las copias de seguridad."
+      },
+      {
+        "h2": "De la primera reunión a la investigación y el desarrollo."
+      },
+      {
+        "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y por qué se ha detenido. Ordenamos lo imprescindible y lo que le gustaría conseguir si es posible, y le presentamos un borrador de lo que investigaremos a continuación."
+      },
+      {
+        "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Investigamos dónde están los documentos y cómo se usan y, si es necesario, hablamos con usted de hacer entrevistas al personal o visitas presenciales."
+      },
+      {
+        "p": "Tras la investigación, proponemos los preparativos necesarios y un plan de desarrollo. Si hay varias opciones, las presentamos de forma que se puedan comparar, desde la configuración mínima hasta una que lo cubra todo. Si algo es difícil de lograr, también se lo decimos con franqueza."
+      },
+      {
+        "p": "Si concluimos que se puede implementar en poco tiempo, tras confirmar el coste y el alcance, también se puede considerar un contrato que incluya la investigación y la creación de un MVP. Un MVP es un sistema con las funciones mínimas necesarias."
+      },
+      {
+        "p": "Cor. se encarga desde la infraestructura y la plataforma de datos hasta la definición de requisitos y el desarrollo. La terminología y los formatos del despacho, y la forma de llevar las decisiones profesionales, los aprendemos preguntando a quienes realizan ese trabajo."
+      },
+      {
+        "strong": "«Un sistema que de verdad se pueda usar» e «incorporar la IA con naturalidad al trabajo diario»."
+      },
+      {
+        "p": "Manteniendo ese equilibrio, queremos acompañarle hacia una meta compartida."
+      }
+    ],
     "cta": {
-      "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
-      "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Consultar PoC de LLM local / IA segura",
-      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
-    }
+      "title": "Para empezar, cuéntenos lo que tiene en mente.",
+      "body": [
+        {
+          "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+        },
+        {
+          "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de clientes asesorados ni de clientes de asuntos concretos, ni credenciales de acceso."
+        }
+      ],
+      "primary": "Ir al formulario de contacto"
+    },
+    "sourcesTitle": "Referencias",
+    "sources": [
+      {
+        "title": "Directrices para el uso de la IA generativa (Tsuji & Hongo Tax & Consulting)",
+        "note": "1 de septiembre de 2025. Se citan los fines de uso de apoyo en la elaboración de documentos y en las respuestas a preguntas habituales. Es la política de la propia firma, no un documento que mida el efecto de reducción."
+      },
+      {
+        "title": "Asistencia para el análisis de documentos (guía de Bengo Kakumei)",
+        "note": "Explicación oficial de las funciones de resumen, elaboración de cronologías y apertura del pasaje de origen desde el resultado. No indica ninguna implantación realizada por Cor."
+      },
+      {
+        "title": "Anuncio sobre el sistema para compartir las preguntas frecuentes y los manuales (Fukuoka Social Insurance and Labor Consultants Corporation)",
+        "note": "7 de octubre de 2025. Iniciativa de intercambio interno de conocimientos publicada por la propia firma. No es un documento que verifique sus efectos de forma independiente."
+      },
+      {
+        "title": "Información de la empresa (Cor.Inc.)",
+        "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+      },
+      {
+        "title": "Seguridad de la información (Cor.Inc.)",
+        "note": "Política sobre la gestión de la información y el uso de la IA. No constituye una certificación ni una garantía de seguridad de ningún sistema concreto."
+      },
+      {
+        "title": "Federated connectors overview (Microsoft Learn)",
+        "note": "Ejemplo de una arquitectura que obtiene la información necesaria manteniendo los originales en el sistema de origen. No significa que la misma arquitectura pueda usarse en todos los sistemas ni que no haya envío de datos al exterior."
+      }
+    ]
   },
   "industryConstruction": {
-    "hero": {
-      "eyebrow": "Construction",
-      "title": "En la obra, ¿la «organización» sigue atascada en papel y fax?",
-      "subtitle": "Gestión laboral, cambios de diseño, comprobaciones de seguridad, transmisión del know-how——cuando la organización del terreno queda atada al papel y al fax, la propia ejecución de la obra se detiene. Cor. te acompaña en el siguiente paso, adaptándose a los desafíos del terreno."
-    },
-    "challenges": {
-      "eyebrow": "01 / Desafíos frecuentes",
-      "title": "Los «motivos de atasco» que más se oyen en la obra.",
-      "labels": {
-        "reality": "La realidad del terreno",
-        "risk": "Si se deja pasar"
+    "eyebrow": "Construction",
+    "title": "Menos transcripción de los partes diarios de obra. Conectar la información que ya tiene con el formato de cada contratista principal.",
+    "lead": [
+      {
+        "p": "Por ejemplo, cuando el parte diario introducido en el smartphone en la obra llega a la oficina."
       },
-      "items": [
-        {
-          "title": "El límite de la gestión laboral y del mantenimiento del cronograma ante el tope de horas extra (el «problema 2024»)",
-          "reality": "Aunque desde abril de 2024 la normativa fija límites estrictos a las horas extra, la carga estructural del terreno —encargos de plazo corto, retrasos por el clima— no ha cambiado.",
-          "risk": "Los técnicos de gestión de obra se ven obligados a procesarlo todo llevándose trabajo a casa, lo que se traduce directamente en riesgo de fuga de personal exhausto y de retrasos en los plazos."
-        },
-        {
-          "title": "El desajuste en tiempo real entre planos, datos BIM y la obra ante los frecuentes cambios de diseño",
-          "reality": "Cada vez que cambia el diseño, los planos y los datos BIM más recientes no llegan con rapidez a operarios y empresas colaboradoras, con el riesgo de errores de ejecución basados en información desfasada.",
-          "risk": "Se producen «rehaceres» (volver a ejecutar) de millones a decenas de millones de yenes, que no solo presionan los costes, sino que también provocan grandes retrasos en los plazos."
-        },
-        {
-          "title": "La rutina vacía de la comprobación de seguridad diaria (actividad KY) y la falta de formación para una plantilla cada vez más internacional",
-          "reality": "La actividad diaria de previsión de riesgos (KY) tiende a volverse rutinaria y los documentos a quedar copiados sin más. Además, ante el aumento de trabajadores extranjeros, las normas de seguridad japonesas no siempre se transmiten con precisión hasta su contexto.",
-          "risk": "Aumenta el riesgo de accidentes laborales graves, lo que puede provocar la paralización de la obra o la pérdida de la confianza social de la empresa."
-        },
-        {
-          "title": "La ruptura de las técnicas y el know-how propios por el envejecimiento y la jubilación de los operarios veteranos",
-          "reality": "Con una gran proporción de operarios veteranos de más de 50 años, la técnica no está documentada ni convertida en manual, y su transmisión a los jóvenes sigue dependiendo del «míralo y apréndelo» personal.",
-          "risk": "Se pierden los oficios que la empresa puede abordar y sus fortalezas propias, lo que deriva en una menor competitividad para captar encargos en el futuro y en la desaparición de la propia técnica."
+      {
+        "p": "En el Excel que se entrega al contratista principal, se vuelve a escribir el mismo contenido. En la obra de otro contratista principal, hay que adaptarlo de nuevo a un formato distinto."
+      },
+      {
+        "p": "Ya se ha introducido todo en la aplicación. Aun así, el papeleo no se termina."
+      },
+      {
+        "p": "Cor. construye con usted, usando IA y programas, un sistema que reduce esa transcripción y esa adaptación de formatos. Recibir la información disponible de las aplicaciones existentes y preparar borradores de documentos adaptados a cada destinatario. Diseñamos, ajustándonos al trabajo de la obra, hasta el flujo en el que una persona revisa y aprueba el contenido."
+      },
+      {
+        "p": "Pueden consultarnos directores generales de constructoras y de empresas de obras especializadas que trabajan con varios contratistas principales, jefes del departamento de obras y personal administrativo o de implantación que da soporte a la obra."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "Certificación ISMS obtenida",
+          "body": [
+            {
+              "p": "Cor.Inc. ha obtenido la certificación de la norma internacional ISO/IEC 27001:2022 para sistemas de gestión de la seguridad de la información (ISMS). El alcance del registro es «Desarrollo y operación de software por encargo»."
+            },
+            {
+              "p": "Fecha de registro inicial: 7 de noviembre de 2026. Número de registro: JP26/00000364.",
+              "cite": [
+                4
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / El acompañamiento de Cor.",
-      "title": "Así te acompañamos.",
-      "intro": "Para cada desafío avanzamos juntos combinando los servicios de Cor. Más que afirmaciones tajantes, valoramos un acompañamiento adaptado a los desafíos del terreno.",
-      "items": [
-        {
-          "title": "Simulación de procesos y visualización de los registros de actividad",
-          "service": "Desarrollo a medida con IA",
-          "description": "Avanzamos juntos en mecanismos para una operación de obra con margen: reordenar cronogramas complejos o detectar de forma suave los cuellos de botella a partir de los registros de actividad de cada obra."
-        },
-        {
-          "title": "Extracción automática de cambios y sugerencia inmediata a los implicados",
-          "service": "Desarrollo a medida con IA",
-          "description": "Comparando los datos actualizados de planos y especificaciones, la IA resume y extrae de forma clara los puntos clave modificados. Te ayudamos a construir un entorno que los transmite y comparte con seguridad entre los implicados. Aprovechamos el conocimiento adquirido en el procesamiento de planos."
-        },
-        {
-          "title": "Sugerencia de riesgos según la situación y traducción multilingüe de alta precisión",
-          "service": "Desarrollo a medida con IA",
-          "description": "La IA propone pistas concretas de previsión de riesgos según el oficio y el clima del día, o realiza una traducción multilingüe de alta precisión que capta los matices del manual de seguridad: así acompañamos la construcción de equipos seguros en el terreno."
-        },
-        {
-          "title": "Estructuración del know-how del terreno y entorno de asistencia técnica",
-          "service": "LLM local · IA segura",
-          "description": "Ordenamos los vídeos de trabajo de los veteranos, los registros de obra anteriores y los historiales de incidencias en un formato fácil de aprender para la IA. Apoyamos la creación de un sistema del que los jóvenes puedan extraer el saber de la organización cuando surjan dudas en la obra."
+      },
+      {
+        "h2": "Reducir la carga de las personas que reciben lo que exportan las aplicaciones existentes."
+      },
+      {
+        "p": "Cada contratista principal usa un sistema diferente, y tener que introducir la misma información repetidas veces supone una carga. Este problema también figura en una directriz del Ministerio de Territorio, Infraestructura, Transporte y Turismo (MLIT).",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "En lo que Cor. se fija primero es en cómo tratan después las personas la información que sale de las aplicaciones."
+      },
+      {
+        "strong": "«No cambiar las aplicaciones existentes, sino reducir la carga de las personas que reciben lo que estas exportan»."
+      },
+      {
+        "p": "Volver a empezar modificando la propia aplicación cada vez que cambia el contratista principal o el proyecto. Con ese enfoque, los ajustes se alargan y se puede dar un gran rodeo hasta empezar a usarla de verdad. Queremos evitar la situación de repetir pruebas sin que la herramienta llegue a usarse en la obra."
+      },
+      {
+        "p": "Primero aprovechamos las funciones que ya ofrece el software actual. Algunos productos de gestión de obra incluyen la creación de formularios y la integración con sistemas externos.",
+        "cite": [
+          2,
+          3
+        ]
+      },
+      {
+        "p": "Después, qué información se copia a qué documentos. Comprobamos qué partes se resuelven con las funciones de exportación e integración existentes y en qué partes sigue haciendo falta trabajo manual. En esta fase también comprobamos el alcance de los datos que se pueden usar, los formatos de exportación, los permisos y las condiciones contractuales."
+      },
+      {
+        "p": "Buscamos una configuración que, cuando se añadan nuevos contratistas principales o formatos, permita distinguir lo que se puede reutilizar de lo que requiere un ajuste adicional."
+      },
+      {
+        "h2": "Poner en palabras, juntos, ese «solo en este formato, esto cambia»."
+      },
+      {
+        "p": "Quien sabe preparar los documentos también sabe cosas que no están escritas en el formato."
+      },
+      {
+        "p": "Por ejemplo, la misma información se escribe en casillas distintas o se resume de otra manera según el destinatario. Con el formato habitual se rellena sin dudar, pero con un formato excepcional hay que consultar otro documento."
+      },
+      {
+        "p": "Si ese criterio solo está en la cabeza de la persona encargada, igualar el aspecto de los formatos no basta para crear un sistema que se ajuste al trabajo diario."
+      },
+      {
+        "p": "Para empezar, permítanos poner en palabras con ustedes ese «conocimiento tácito» que solo conoce el personal de esa obra."
+      },
+      {
+        "table": {
+          "head": [
+            "Lo que ordenamos juntos",
+            "Lo que queremos comprobar"
+          ],
+          "rows": [
+            [
+              "Origen de la información",
+              "Qué información de qué aplicaciones o registros se usa"
+            ],
+            [
+              "Dispositivos y traspaso",
+              "Quién usa qué dispositivo y dónde, y cómo pasa la información a la siguiente persona o dispositivo"
+            ],
+            [
+              "Formatos habituales",
+              "Qué se escribe, en qué casilla y de qué forma"
+            ],
+            [
+              "Formatos excepcionales",
+              "En qué se diferencian del formato habitual y qué se comprueba además"
+            ],
+            [
+              "Revisión y aprobación",
+              "A quién se consulta cuando falta información y quién da por definitivo el contenido"
+            ]
+          ]
         }
-      ]
-    },
+      },
+      {
+        "p": "El personal de obra no necesita preparar un manual completo desde el principio. Le preguntamos por el orden de las tareas y los motivos de cada decisión mientras vemos los registros y documentos que usan habitualmente."
+      },
+      {
+        "h2": "Del smartphone en la obra a los documentos de la oficina."
+      },
+      {
+        "p": "Por ejemplo, las fotos tomadas con el smartphone o los registros de trabajo introducidos en la aplicación. Si en la oficina hay que volver a buscarlos en el PC y teclearlos de nuevo en otro formato, empezamos por revisar ese traspaso."
+      },
+      {
+        "p": "Que las tareas que se hacen en el smartphone sean fáciles de introducir y comprobar en el momento. Que la información obtenida pase automáticamente al PC de la oficina o a un espacio compartido y se use para preparar los borradores de los documentos necesarios. Estudiamos sistemas de este tipo comprobando las funciones de exportación e integración y las condiciones de uso de las aplicaciones actuales."
+      },
+      {
+        "p": "Algunos productos existentes también ofrecen funciones que envían la información registrada en el smartphone al software de gestión de obra y la usan para crear formularios.",
+        "cite": [
+          5
+        ]
+      },
+      {
+        "p": "Si es necesario, preparamos pantallas de revisión o de conversación con la IA que se pueden usar desde el smartphone o el PC. El objetivo es que la obra y la oficina sigan trabajando cada una con el dispositivo que le resulte más cómodo, reduciendo el esfuerzo de cambiar de dispositivo o de introducir los datos dos veces."
+      },
+      {
+        "h3": "Apoyar la transcripción y los borradores, y dejar la revisión y la aprobación a las personas."
+      },
+      {
+        "p": "En Cor., planteamos un diseño que mantiene la revisión y la aprobación por parte de la persona responsable que designe su empresa en el proceso de comprobar el contenido de los documentos, darlos por definitivos y presentarlos."
+      },
+      {
+        "p": "Lo que falta o no coincide en la información original se trata como un punto que hay que comprobar. Damos mucha importancia a no convertir directamente en registro definitivo lo que la IA ha deducido."
+      },
+      {
+        "p": "Además, para transcripciones y recuentos con campos fijos, también comparamos con procesarlos mediante programas convencionales. Separamos, según el trabajo real, lo que consiste en ordenar textos, lo que se procesa con reglas fijas y lo que decide una persona."
+      },
+      {
+        "h2": "Aprovechar los dispositivos y el software que ya tiene, y añadir lo menos posible."
+      },
+      {
+        "p": "Smartphones, teléfonos básicos (no smartphones), tabletas, PC. Empezamos por aprovechar, en la medida de lo posible, los equipos y el software que ya hay en la obra."
+      },
+      {
+        "p": "Si usan teléfonos básicos, también comprobamos el modelo, el entorno de comunicaciones y las condiciones para seguir usándolos con seguridad, y pensamos qué papel pueden mantener en la comunicación y los registros actuales."
+      },
+      {
+        "strong": "Buscar el máximo efecto con lo mínimo añadido."
+      },
+      {
+        "p": "Antes de añadir dispositivos o aplicaciones nuevos, comprobamos juntos qué se usa ahora y en qué punto las personas vuelven a pasar la información a mano."
+      },
+      {
+        "p": "El dispositivo que se maneja y el lugar donde funciona la IA se eligen, cada uno, según el trabajo. Por ejemplo, una configuración en la que en la obra se usa el smartphone y el procesamiento de la IA se hace en PC o servidores de la empresa. Cor. se ocupa desde la infraestructura y la plataforma de datos hasta la definición de requisitos y el desarrollo, incluida la integración de un LLM local en PC de uso general."
+      },
+      {
+        "p": "Los equipos y el tipo de conexión necesarios se deciden según la información que se trate, el número de usuarios, la velocidad de procesamiento que se busque y el entorno de comunicaciones de la obra."
+      },
+      {
+        "p": "Antes de trabajar con datos reales, firmamos un acuerdo de confidencialidad y acordamos qué información se usará y dónde se trabajará. También comprobamos hasta dónde se puede usar la información recibida de contratistas principales y empresas colaboradoras."
+      },
+      {
+        "p": "Ordenamos todo, incluido si se usa un entorno local o la nube: dónde se guarda y procesa la información, quién puede verla, los registros de uso y cómo se gestionan las copias de seguridad y la eliminación."
+      },
+      {
+        "h2": "Empezamos investigando los documentos que más se usan."
+      },
+      {
+        "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y por qué se ha detenido, y le presentamos un borrador de lo que investigaremos a continuación."
+      },
+      {
+        "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Primero revisamos los documentos más habituales y los formatos excepcionales, y decidimos por dónde empezar."
+      },
+      {
+        "p": "Tras la investigación, le proponemos los preparativos necesarios y un plan de desarrollo. Empezar con una configuración mínima o abarcar también las tareas relacionadas. Si hay opciones, las presentamos de forma que se puedan comparar y, si algo es difícil de lograr, también se lo decimos con franqueza."
+      },
+      {
+        "p": "Si concluimos que se puede implementar en poco tiempo, tras confirmar el coste y el alcance, también se puede considerar combinar la investigación con la creación de un sistema con las funciones mínimas necesarias."
+      },
+      {
+        "p": "No damos el trabajo por terminado al construirlo: comprobamos juntos si se ha reducido el esfuerzo de transcripción, si es fácil revisar y si no ha aumentado la carga de introducción de datos o de preparación en la obra."
+      },
+      {
+        "founder": {
+          "h2": "Mejoras que hagan decir: «Hemos terminado cinco minutos antes que el mes pasado».",
+          "h3": "La visión de Kousuke Terada",
+          "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
+          "bylineAt": "bottom",
+          "body": [
+            {
+              "p": "Lo que busco es una automatización que se use durante mucho tiempo en el trabajo diario."
+            },
+            {
+              "p": "Si se cambia de golpe la forma de trabajar, hay que volver a aprender el manejo y preparar manuales. El trabajo diario ya es duro, y encima aumenta el trabajo de preparación. Si por eso el personal de obra no da abasto y el sistema se queda sin usar, se pierde todo el sentido."
+            },
+            {
+              "p": "Por eso, poco a poco, cada semana, cada mes, sin forzar. Que las tareas se simplifiquen y el trabajo termine un poco antes. Quiero cuidar esa suma de pequeños avances."
+            },
+            {
+              "strong": "«Hemos terminado cinco minutos antes que el mes pasado»"
+            },
+            {
+              "strong": "«¿Qué parte podríamos cambiar el mes que viene para que sea aún más fácil?»"
+            },
+            {
+              "p": "Que el personal de obra llegue a decir cosas así."
+            },
+            {
+              "p": "Un avance discreto, pero seguro. Una mejora que llega sin hacer ruido, sin cambiar el día a día, en el buen sentido."
+            },
+            {
+              "p": "Quiero construir sistemas así junto con nuestros clientes."
+            }
+          ]
+        }
+      }
+    ],
     "cta": {
-      "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
-      "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Consultar PoC de LLM local / IA segura",
-      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
-    }
+      "title": "Para empezar, cuéntenos lo que tiene en mente.",
+      "body": [
+        {
+          "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+        },
+        {
+          "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la obra ni documentos confidenciales."
+        }
+      ],
+      "primary": "Ir al formulario de contacto"
+    },
+    "sourcesTitle": "Referencias",
+    "sources": [
+      {
+        "title": "Directriz básica para garantizar la correcta ejecución de las obras de construcción mediante el uso de las tecnologías de la información y la comunicación (Ministerio de Territorio, Infraestructura, Transporte y Turismo)",
+        "note": "Página 6 del texto principal. Recoge el problema de las diferencias de sistemas entre contratistas principales y de la introducción duplicada de datos."
+      },
+      {
+        "title": "Integración por API de ANDPAD (ANDPAD)",
+        "note": "Explicación de la integración con sistemas externos que ofrece un producto existente."
+      },
+      {
+        "title": "Funciones básicas (SPIDER+)",
+        "note": "Explicación oficial de la creación de formularios y la integración de datos."
+      },
+      {
+        "title": "Información de la empresa (Cor.Inc.)",
+        "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+      },
+      {
+        "title": "Funciones de SiteBox (KENTEM / Kensetsu System)",
+        "note": "Explicación oficial del registro y la toma de fotos con el smartphone, la integración con el software de gestión de obra y la creación de formularios."
+      }
+    ]
   },
   "industryManufacturing": {
-    "hero": {
-      "eyebrow": "Manufacturing",
-      "title": "En la fábrica, ¿el «saber y la organización» dependen de las personas?",
-      "subtitle": "Los criterios de inspección, la técnica del operario, el mantenimiento de los equipos, la lectura del inventario——cuando el saber del terreno se concentra en las personas, los motivos de atasco se multiplican. Cor. te acompaña en el siguiente paso, adaptándose a los desafíos del terreno."
-    },
-    "challenges": {
-      "eyebrow": "01 / Desafíos frecuentes",
-      "title": "Los «motivos de atasco» que más se oyen en la fábrica.",
-      "items": [
-        {
-          "title": "El riesgo de defectos por la dependencia personal en la inspección visual y la «variabilidad de los criterios de calidad» entre inspectores",
-          "description": "La realidad de que la valoración de arañazos o rebabas depende de la percepción individual y resulta difícil unificar en un manual"
-        },
-        {
-          "title": "La ruptura del «know-how de fabricación y la maestría artesanal» y el retraso en la formación de los jóvenes por el envejecimiento y la jubilación de los operarios expertos",
-          "description": "Una estructura en la que destrezas intuitivas como la soldadura o el mecanizado no se documentan y no queda tiempo para la formación en el puesto"
-        },
-        {
-          "title": "La «parada de línea» por averías imprevistas de los equipos y los enormes costes de reparación del mantenimiento correctivo",
-          "description": "El riesgo de operar reparando solo tras la avería y no captar las señales previas, como leves ruidos o vibraciones de la máquina"
-        },
-        {
-          "title": "La dificultad de leer el «inventario adecuado» atrapados entre el exceso de stock y el riesgo de rotura",
-          "description": "El conflicto entre el área comercial y la de gestión ante la subida de materiales y los retrasos de aprovisionamiento, y la dependencia personal en la previsión de la demanda"
+    "eyebrow": "Manufacturing",
+    "title": "Convertir el conocimiento tácito de la planta en conocimiento que pueda usar la siguiente persona.",
+    "lead": [
+      {
+        "p": "Por ejemplo, cuando un equipo no funciona como debería."
+      },
+      {
+        "p": "El veterano escucha el sonido, mira lo que tiene entre manos y comprueba qué está distinto de lo habitual. En el registro posterior solo queda una breve anotación: «cambio de pieza»."
+      },
+      {
+        "p": "Qué miró y cómo lo decidió. ¿Se están transmitiendo también esas pistas a la siguiente persona responsable?"
+      },
+      {
+        "p": "Cor. combina imágenes, vídeo, audio y los registros existentes para dar al conocimiento de la planta una forma que la IA pueda manejar. Diseñamos e implementamos con usted desde cómo reunir la información necesaria hasta un sistema que la siguiente persona pueda consultar mientras trabaja."
+      },
+      {
+        "p": "Pueden consultarnos directores generales de empresas manufactureras, directores de planta y responsables de ingeniería de producción o mantenimiento, entre otros, que quieran impulsar la transmisión de competencias o el uso de la IA en planta."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "Certificación ISMS obtenida",
+          "body": [
+            {
+              "p": "Cor.Inc. ha obtenido la certificación de la norma internacional ISO/IEC 27001:2022 para sistemas de gestión de la seguridad de la información (ISMS). El alcance del registro es «Desarrollo y operación de software por encargo»."
+            },
+            {
+              "p": "Fecha de registro inicial: 7 de noviembre de 2026. Número de registro: JP26/00000364.",
+              "cite": [
+                4
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / El acompañamiento de Cor.",
-      "title": "Así te acompañamos.",
-      "intro": "Para cada desafío avanzamos juntos combinando los servicios de Cor. Más que afirmaciones tajantes, valoramos un acompañamiento adaptado a los desafíos del terreno.",
-      "items": [
-        {
-          "title": "Te ayudamos a ordenar los criterios de inspección visual en un formato útil para el terreno",
-          "service": "Desarrollo a medida con IA",
-          "description": "Ordenamos los criterios de inspección y las imágenes de muestra para avanzar juntos en un mecanismo que reduzca la variabilidad de las valoraciones. Partiendo de que la decisión final la toma una persona, buscamos aligerar la carga del cribado inicial."
-        },
-        {
-          "title": "Documentación del know-how de fabricación y entorno del que los jóvenes puedan extraerlo",
-          "service": "LLM local · IA segura",
-          "description": "Ordenamos los registros de trabajo y los procedimientos de los operarios expertos en un formato fácil de aprender para la IA. Sin que la información sensible del terreno salga al exterior, apoyamos la construcción de un sistema del que los jóvenes puedan extraer el saber de la organización cuando surjan dudas."
-        },
-        {
-          "title": "Estudio de un mecanismo que capte señales previas a partir de los datos de los equipos",
-          "service": "Desarrollo a medida con IA",
-          "description": "Avanzamos juntos en un mecanismo que permita advertir pronto los indicios de anomalía a partir de los datos disponibles en el terreno, como ruidos, vibraciones o registros de actividad. Apoyamos de forma gradual la transición del mantenimiento correctivo al preventivo."
-        },
-        {
-          "title": "Sacar la lectura del inventario y la demanda de la dependencia personal",
-          "service": "Asesoría y formación en IA",
-          "description": "Ordenamos la información del área comercial, de gestión y del terreno y acompañamos la creación de un estado en el que se puedan compartir los criterios de un inventario adecuado. Pensamos contigo desde el ordenamiento de las premisas de la previsión de demanda hasta la forma de seleccionar y adoptar las herramientas."
+      },
+      {
+        "h2": "Hasta las pistas para decidir que no aparecen en el parte diario."
+      },
+      {
+        "p": "Aunque quede registrado el orden de las tareas, no quedan la diferencia en el sonido, el tacto, el momento de comprobar ni el motivo de esa decisión. Cómo transmitir ese conocimiento."
+      },
+      {
+        "p": "En la encuesta a empresas manufactureras del Japan Institute for Labour Policy and Training (JILPT), también se citan como motivos de que la transmisión de competencias no avance bien la falta de tiempo y la falta de comunicación entre quien enseña y quien aprende.",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "Para Cor., el punto de partida es descubrir, dentro del trabajo habitual, qué conviene dejar registrado para ayudar a la siguiente persona."
+      },
+      {
+        "p": "Por ejemplo, grabar una escena de inspección o de ajuste. Ver ese vídeo con la persona experimentada y preguntarle brevemente: «¿Qué estaba comprobando aquí?». Contrastarlo también con los partes diarios y los registros de los equipos existentes, e ir acotando las pistas que hay que conservar."
+      },
+      {
+        "h2": "Además de introducir datos en el PC o el smartphone, reunir información directamente en planta."
+      },
+      {
+        "p": "Tareas en las que se usan las dos manos. Situaciones en las que es difícil apartarse del equipo. Trabajos cuyos pequeños cambios cuesta explicar si se ponen por escrito después."
+      },
+      {
+        "p": "En esos casos, empezamos por pensar una forma de capturar la información que se adapte a la planta."
+      },
+      {
+        "p": "Cor. ha trabajado con fabricantes de dispositivos inteligentes de Japón y del extranjero en el desarrollo de software que captura información sobre el terreno. Además de PC y smartphones, contemplamos gafas inteligentes, cámaras inteligentes, relojes inteligentes y otros dispositivos como opciones según el uso."
+      },
+      {
+        "h3": "Seguimos desarrollando actualmente con un fabricante de gafas inteligentes."
+      },
+      {
+        "p": "Actualmente estamos desarrollando, en colaboración con el fabricante, unas gafas inteligentes para personas con discapacidad visual que leen texto y lo transmiten por voz."
+      },
+      {
+        "p": "También en este desarrollo trabajamos en la conexión que va desde recibir la información del entorno y procesarla con IA hasta devolverla a quien la usa. Aplicaremos esa experiencia también al diseño de sistemas que reúnan y aprovechen la información necesaria en la planta."
+      },
+      {
+        "h3": "Elegimos los equipos según la información que se quiere conservar."
+      },
+      {
+        "p": "Si se necesitan imágenes cercanas a la mirada del operario, gafas inteligentes. Para ver los movimientos de las manos o del entorno, una cámara. Para repasar el flujo del trabajo, vídeo o time-lapse. Estudiamos estos métodos junto con los equipos, dispositivos y software existentes."
+      },
+      {
+        "p": "Quién lo usará y dónde. Si estorba en el trabajo. Si capta los cambios necesarios. Lo comprobamos teniendo en cuenta también el ruido y el entorno de comunicaciones de la planta, y elegimos qué equipos añadir."
+      },
+      {
+        "p": "El caso de transmisión de competencias de Hitachi y Daikin también explica que medir con muchos dispositivos no bastaba para ver la diferencia con los trabajadores expertos y que, entrevistando a esos expertos, se fijaron los puntos que había que observar y se acotaron los métodos de medición.",
+        "cite": [
+          2
+        ]
+      },
+      {
+        "h2": "Entregar los datos a la IA «traducidos para que los entienda»."
+      },
+      {
+        "p": "Lo que Cor. quiere hacer es tender un puente entre la planta, la IA y la persona que asumirá el trabajo después."
+      },
+      {
+        "p": "Vincular las imágenes y los sonidos reunidos con el equipo, las condiciones y la tarea que muestran. Hacer que los motivos de cada decisión, explicados por la persona experimentada, también se puedan consultar desde la escena correspondiente."
+      },
+      {
+        "strong": "Reunir los datos que necesita la IA y entregárselos «traducidos para que la IA los entienda»."
+      },
+      {
+        "p": "NEDO también señala como problema para el uso de la IA que el significado de los datos internos de las empresas y sus relaciones mutuas no estén organizados, e investiga cómo dejarlos en condiciones de uso y cómo evaluarlos.",
+        "cite": [
+          3
+        ]
+      },
+      {
+        "table": {
+          "head": [
+            "Lo que ordenamos juntos",
+            "Lo que la siguiente persona responsable podrá comprobar"
+          ],
+          "rows": [
+            [
+              "Lo que ocurría en la planta",
+              "Las imágenes, el audio y los registros de trabajo correspondientes"
+            ],
+            [
+              "Las condiciones de ese momento",
+              "El contexto necesario para decidir, como el equipo, la tarea y la hora"
+            ],
+            [
+              "El punto de vista de la persona experimentada",
+              "Su propia explicación de qué comprobó y por qué eligió esa respuesta"
+            ],
+            [
+              "Lo que no se ha podido comprobar",
+              "Los puntos que no se entienden solo con los registros y que hay que consultar con alguien"
+            ]
+          ]
         }
-      ]
-    },
+      },
+      {
+        "p": "La sensación al tacto o por qué se comprobó en ese orden a veces no se entienden solo con el vídeo. Nos importa no dejar registrado un motivo que haya deducido la IA como si fuera un hecho que la persona decidió así."
+      },
+      {
+        "h2": "Hasta que la siguiente persona responsable pueda usarlo cuando lo necesite."
+      },
+      {
+        "p": "Por ejemplo, buscar registros relacionados a partir del nombre del equipo o del síntoma observado, y poder ver a la vez la explicación ya comprobada y la escena del vídeo en la que se basa. Podemos estudiar sistemas de este tipo."
+      },
+      {
+        "p": "Si se quiere ver en un dispositivo en planta o repasarlo con el formador después del trabajo. Decidimos las pantallas y la forma de devolver la información según dónde y con quién se use. El dispositivo que se maneja y el lugar donde se procesa la IA también se diseñan según las condiciones de cada caso."
+      },
+      {
+        "p": "Separamos lo que se resuelve con la búsqueda y la gestión de registros existentes, lo que la IA ordena y analiza, y lo que comprueba una persona. Cómo organizar la información grabada y si hace falta un entrenamiento adicional del modelo también se deciden a la vista del objetivo y de los datos."
+      },
+      {
+        "p": "Aunque haya registros parecidos del pasado, el equipo y las condiciones no tienen por qué ser los mismos que ahora. Diseñamos el sistema para que la respuesta real y el manejo de los equipos se decidan conforme a los procedimientos y la estructura de responsabilidades de su empresa."
+      },
+      {
+        "p": "Si la transmisión ha funcionado se comprueba viendo si la siguiente persona responsable llega a la información que necesita y entiende las pistas para decidir. Lo vamos corrigiendo hasta que sea sostenible, teniendo en cuenta también la carga de quien registra y el tiempo de revisión de quien forma."
+      },
+      {
+        "h2": "Empezamos por una tarea que se quiera conservar."
+      },
+      {
+        "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y por qué se ha detenido, y le presentamos un borrador de lo que investigaremos a continuación."
+      },
+      {
+        "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Elegimos una tarea que se quiera conservar o una situación que cause problemas, y ordenamos los registros existentes, los equipos que se usan en planta y lo que se quiere preguntar a las personas experimentadas."
+      },
+      {
+        "p": "Si se graba vídeo o audio, confirmamos con su empresa el objetivo y el alcance, la explicación a las personas afectadas, quién puede verlo, el periodo de conservación y el tratamiento de la información que se envíe al exterior."
+      },
+      {
+        "p": "Cor. se ocupa de la integración con los dispositivos, la infraestructura y la plataforma de datos, la definición de requisitos y el desarrollo, incluida la integración de un LLM local en PC de uso general. Si se procesa dentro de la empresa o se usa la nube también lo estudiamos según la información que se trate y las condiciones de la planta."
+      },
+      {
+        "p": "Tras la investigación, le proponemos opciones viables, como empezar con una configuración mínima o abarcar también las tareas relacionadas. Si concluimos que se puede implementar en poco tiempo, tras confirmar el coste y el alcance, también se puede considerar combinar la investigación con la creación de un sistema con las funciones mínimas necesarias."
+      },
+      {
+        "founder": {
+          "h2": "Sin perder de vista la estrella polar, devanarnos los sesos juntos.",
+          "h3": "La visión de Kousuke Terada",
+          "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
+          "bylineAt": "bottom",
+          "body": [
+            {
+              "p": "Quiero transmitir a la siguiente generación el conocimiento que hay en la planta, dejando escapar lo menos posible."
+            },
+            {
+              "p": "Los equipos de esa empresa. La forma de trabajar de esa planta. Las decisiones que han ido acumulando las personas que trabajan allí."
+            },
+            {
+              "p": "Qué registrar, cómo dárselo a la IA y de qué forma devolverlo para que sea útil en el trabajo. Hay que ir construyendo la respuesta comprobándolo en su propia planta."
+            },
+            {
+              "p": "«En el fondo, ¿qué era lo que queríamos hacer?»"
+            },
+            {
+              "p": "Aunque el método cambie por el camino, no perder de vista la estrella polar: la dirección a la que queremos llegar al final. Acumular el conocimiento obtenido en la planta y, compartiéndolo con quienes lo usan, convertirlo en la siguiente mejora."
+            },
+            {
+              "strong": "Devanarnos los sesos juntos para pensar cómo usar la IA en la planta."
+            },
+            {
+              "p": "Quiero que Cor. sea una empresa así."
+            }
+          ]
+        }
+      }
+    ],
     "cta": {
-      "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
-      "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Consultar PoC de LLM local / IA segura",
-      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
-    }
+      "title": "Para empezar, cuéntenos lo que tiene en mente.",
+      "body": [
+        {
+          "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+        },
+        {
+          "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la planta ni documentos confidenciales."
+        }
+      ],
+      "primary": "Ir al formulario de contacto"
+    },
+    "sourcesTitle": "Referencias",
+    "sources": [
+      {
+        "title": "Encuesta sobre la captación y retención de personal y la transmisión de competencias en la industria manufacturera (JILPT)",
+        "note": "Publicada el 27 de mayo de 2026. Páginas 1, 2 y 7 del texto principal. Recoge los problemas de la transmisión de competencias y el objeto de la encuesta."
+      },
+      {
+        "title": "Las iniciativas de Daikin y Hitachi para la transmisión de competencias, primera parte (Hitachi)",
+        "note": "30 de octubre de 2026. Caso en el que, a partir del diálogo con trabajadores expertos, se acotaron los puntos de observación y los métodos de medición."
+      },
+      {
+        "title": "I+D para preparar los datos de la industria manufacturera, entre otros, para la IA («AI-Ready») (NEDO)",
+        "note": "13 de mayo de 2026. Explica la organización del significado y las relaciones de los datos, y su evaluación en operaciones reales."
+      },
+      {
+        "title": "Información de la empresa (Cor.Inc.)",
+        "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+      }
+    ]
   },
   "industryEducation": {
-    "hero": {
-      "eyebrow": "Education",
-      "title": "En la educación, ¿alcanza el «tiempo del profesorado»?",
-      "subtitle": "Crear y corregir exámenes, comunicarse con las familias, elaborar informes, registrar listas en herramientas TIC——el tiempo que debería dedicarse a la verdadera educación se lo lleva fácilmente el trabajo administrativo y de datos. Cor. te acompaña en el siguiente paso, adaptándose a los desafíos del terreno."
-    },
-    "challenges": {
-      "eyebrow": "01 / Desafíos frecuentes",
-      "title": "Los «motivos de atasco» que más se oyen en la educación.",
-      "items": [
-        {
-          "title": "La maratón sin descanso de los periodos en que se concentran la «creación de exámenes, la corrección y el procesamiento de notas»",
-          "description": "En época de exámenes, desde crear las pruebas hasta corregirlas y elaborar los boletines se concentra en poco tiempo, lo que tiende a comprimir el tiempo que se querría dedicar a preparar las clases y a hablar con el alumnado."
-        },
-        {
-          "title": "La atención analógica a las familias y la normalización de la atención fuera de horario",
-          "description": "Los canales de comunicación se dispersan entre teléfono, circulares y chat, y la revisión y respuesta continúan por la tarde y los fines de semana——hay centros donde esa carga tiende a volverse habitual."
-        },
-        {
-          "title": "La recopilación de datos y la elaboración de los «numerosos informes y encuestas» que se entregan al ministerio y a las juntas de educación",
-          "description": "El trabajo de reunir los datos del terreno y completar los documentos conforme a los formatos absorbe periódicamente el esfuerzo del profesorado."
-        },
-        {
-          "title": "Los errores de registro manual de cuentas en distintas herramientas TIC con los «datos de las listas de alumnado» tras el nuevo curso y los cambios de clase",
-          "description": "Es necesario introducir y transcribir a mano las listas en varias herramientas TIC, lo que facilita omisiones y errores de entrada——la carga tiende a ser especialmente alta al inicio del curso."
+    "eyebrow": "Education",
+    "title": "Apoyo a la implantación de la IA en centros escolares y universidades, a partir de la integración de los datos administrativos y académicos.",
+    "lead": [
+      {
+        "p": "Faltaban seis meses para que el profesor se jubilara. Lo supimos en la primera visita al centro, después de firmar el contrato."
+      }
+    ],
+    "sections": [
+      {
+        "founder": {
+          "h2": "Yo mismo también pasé por alto la posibilidad de que faltara coordinación.",
+          "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
+          "bylineAt": "top",
+          "body": [
+            {
+              "p": "Esto ocurrió hace un tiempo, cuando Cor., por encargo de un contratista principal, participó en el desarrollo de un sistema para el personal docente y administrativo y los estudiantes de una escuela de formación profesional."
+            },
+            {
+              "p": "En la primera visita tras firmar el contrato, me dijeron que el profesor que gestionaba la base de datos interna se jubilaba en seis meses. No se había avanzado nada al respecto y, tal como estaban las cosas, podían surgir problemas incluso en el funcionamiento de la escuela."
+            },
+            {
+              "p": "La información de estudiantes, asignaturas, horarios y demás estaba en una base de datos interna que llevaba muchos años en uso. Ese profesor introducía los datos directamente en ella, mientras que, para suplir lo difícil que era de usar, los docentes y el personal administrativo los gestionaban cada uno por su cuenta en Access o FileMaker."
+            },
+            {
+              "p": "Entre el contratista principal y la escuela no se había avanzado lo suficiente en la definición de requisitos ni en la coordinación. Y yo mismo también había pasado por alto esa posibilidad."
+            },
+            {
+              "p": "A partir de ahí, el enfoque de la implementación cambió una y otra vez. Empezamos por preparar la infraestructura de datos y, en este proyecto, tardamos unos seis meses en consolidarlo todo en una base de datos en Google Cloud."
+            },
+            {
+              "p": "Puede que lo que se dice sobre el sistema que se quiere construir y lo que de verdad se necesita en el día a día no coincidan. No haberlo comprobado fue también un fallo mío."
+            },
+            {
+              "p": "Precisamente por esta experiencia, en Cor. queremos que, también en las consultas sobre IA que utilice datos internos del centro, empecemos juntos por investigar y ordenar la situación actual."
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / El acompañamiento de Cor.",
-      "title": "Así te acompañamos.",
-      "intro": "Para cada desafío avanzamos juntos combinando los servicios de Cor. Más que afirmaciones tajantes, valoramos un acompañamiento adaptado a los desafíos del terreno.",
-      "items": [
-        {
-          "title": "Revisar juntos la carga de trabajo de la época de exámenes, empezando por ordenarla",
-          "service": "Desarrollo a medida con IA",
-          "description": "Te ayudamos a crear un mecanismo —partiendo de que una persona hace la comprobación final— para el borrador de las pruebas, la ayuda a la corrección o el cálculo de los datos de notas."
-        },
-        {
-          "title": "Ordenar la dispersión de la comunicación con las familias en un flujo más claro",
-          "service": "Desarrollo a medida con IA",
-          "description": "Avanzamos juntos en el diseño de un flujo que alivie la carga de la atención fuera de horario, como la organización de los canales de comunicación o los borradores de respuesta."
-        },
-        {
-          "title": "Crear un sistema que apoye el cálculo y el borrador de encuestas e informes",
-          "service": "LLM local · IA segura",
-          "description": "Sin que la información del alumnado salga al exterior, te ayudamos a estudiar un entorno que facilite el cálculo de los datos y la creación del esqueleto de los informes."
-        },
-        {
-          "title": "Sacar del trabajo manual la integración de las listas con las herramientas TIC",
-          "service": "Desarrollo a medida con IA",
-          "description": "Organizamos contigo la automatización y la integración de la transcripción de listas y el registro de cuentas, avanzando en la dirección de reducir errores y omisiones de entrada. Aprovechamos el conocimiento adquirido en la migración de datos del ámbito educativo."
+      },
+      {
+        "note": {
+          "title": "Certificación ISMS obtenida",
+          "body": [
+            {
+              "p": "Cor.Inc. ha obtenido la certificación de la norma internacional ISO/IEC 27001:2022 para sistemas de gestión de la seguridad de la información (ISMS). El alcance del registro es «Desarrollo y operación de software por encargo»."
+            },
+            {
+              "p": "Fecha de registro inicial: 7 de noviembre de 2026. Número de registro: JP26/00000364."
+            }
+          ]
         }
-      ]
-    },
+      },
+      {
+        "h2": "Quiere usar la IA en el trabajo del centro. Pero ¿no se ha quedado parado en alguno de estos puntos?"
+      },
+      {
+        "h3": "Quiere poder buscar con IA los documentos internos del centro"
+      },
+      {
+        "p": "Los reglamentos y los documentos de procedimientos existen. Pero no está decidido cuáles se pueden usar con la IA ni a quién se le pueden mostrar."
+      },
+      {
+        "h3": "Quiere transcribir menos datos al sistema académico y a los formularios"
+      },
+      {
+        "p": "Se introduce la misma información una y otra vez. No se sabe hasta dónde se puede cambiar sin dejar de usar el sistema actual y los formularios propios del centro."
+      },
+      {
+        "h3": "Entre investigar equipos y configuraciones, se fue posponiendo"
+      },
+      {
+        "p": "Usted ya prueba la IA por su cuenta. Pero se ha quedado parado en si hace falta un equipo específico para usarla en el centro o en cómo preparar un entorno local."
+      },
+      {
+        "p": "Le escuchamos desde esta fase. Pensamos cómo avanzar, incluida la opción de aprovechar los datos que quiere usar sin moverlos de donde están ahora."
+      },
+      {
+        "h2": "Lo que pensamos juntos antes de decidir qué construir."
+      },
+      {
+        "h3": "«En el fondo, ¿qué era lo que queríamos hacer?»"
+      },
+      {
+        "p": "Qué tareas quiere cambiar con la IA y de qué manera. Separamos lo imprescindible de lo que le gustaría conseguir si es posible. Comprobamos, a la luz de los datos y de la forma de trabajar reales, si la idea inicial es viable."
+      },
+      {
+        "h3": "«Siendo sinceros, ¿de verdad hace falta hacer eso?»"
+      },
+      {
+        "p": "Lo que se puede hacer no siempre es lo que se necesita en el día a día. Añadimos funciones o las quitamos. Separamos lo que se deja a la IA de lo que se resuelve con reglas fijas o con funciones ya existentes."
+      },
+      {
+        "h3": "«Entonces, ¿por dónde empezamos y qué preparativos hacen falta?»"
+      },
+      {
+        "p": "Confirmamos el objetivo y los datos disponibles, y decidimos el alcance de la investigación y lo que se va a implementar. Prevemos que la primera reunión dure aproximadamente una hora, y en ella le presentamos un borrador de lo que investigaremos a continuación."
+      },
+      {
+        "h2": "Aunque se trate de implantar IA, lo que hay que comprobar cambia en cada caso."
+      },
+      {
+        "p": "A partir de nuestra experiencia en una escuela de formación profesional, también podemos atender consultas de colegios privados de secundaria, universidades, universidades de ciclo corto y otros centros, adaptándonos a sus tareas y sistemas actuales."
+      },
+      {
+        "h3": "Búsqueda de documentos internos"
+      },
+      {
+        "p": "Comprobamos dónde están los documentos, cómo se actualizan y quién puede consultarlos"
+      },
+      {
+        "p": "Quién actualiza los reglamentos y manuales de las unidades compartidas y del sitio web interno. Cuáles están vigentes y quién puede consultarlos. También pensamos juntos en un formato que permita comprobar en qué se basa cada respuesta."
+      },
+      {
+        "p": "El caso publicado del chatbot para el personal de la Universidad de Tohoku también describe cómo se ordenaron y concentraron los lugares donde estaban publicados los manuales y reglamentos dispersos, y cómo se registraron como datos de preguntas frecuentes (FAQ)."
+      },
+      {
+        "sourceLink": 1,
+        "text": "Caso publicado por la Universidad de Tohoku"
+      },
+      {
+        "h3": "Integración con el sistema académico de la universidad"
+      },
+      {
+        "p": "Comprobamos cómo se actualiza la información de matrícula en asignaturas y qué funciones de integración existen ya"
+      },
+      {
+        "p": "Qué datos se intercambian entre el sistema académico y el LMS (sistema de apoyo a la docencia), en qué formato y con qué frecuencia. También le preguntamos por los periodos de cambios de matrícula y de registro de calificaciones, y por las comprobaciones necesarias."
+      },
+      {
+        "p": "Por ejemplo, para manaba se explica un método en el que el sistema académico exporta los datos en un formato establecido y envía un archivo CSV todos los días a una hora determinada."
+      },
+      {
+        "sourceLink": 2,
+        "text": "Integración de manaba con los sistemas del centro"
+      },
+      {
+        "h3": "Gestión de calificaciones en colegios privados de secundaria"
+      },
+      {
+        "p": "Comprobamos qué tareas de transcripción hay y qué formularios se quieren conservar"
+      },
+      {
+        "p": "De dónde se extraen las calificaciones ya confirmadas por el profesorado y a qué tablas de resumen o formularios se trasladan. Pensamos qué alcance cambiar, incluida la opción de seguir usando los formatos actuales."
+      },
+      {
+        "p": "En el caso publicado de Edogawa Gakuen Toride Junior and Senior High School, se presentan como puntos clave para elegir el sistema el traspaso de la operación y la continuidad de los formularios propios."
+      },
+      {
+        "sourceLink": 3,
+        "text": "Caso de Edogawa Gakuen Toride (entrevista realizada por el proveedor)"
+      },
+      {
+        "h2": "Pensamos en los equipos después de confirmar qué trabajo se quiere hacer."
+      },
+      {
+        "p": "Cor. cuenta con la tecnología para integrar un LLM local (IA generativa que funciona en un PC propio u otro equipo a mano) en sistemas que funcionan en PC de uso general. Podemos encargarnos de todo de principio a fin, desde la infraestructura y la plataforma de datos hasta la definición de requisitos y el desarrollo."
+      },
+      {
+        "p": "Confirmamos las tareas, el volumen de datos y el número de personas que lo usarán a la vez, y estudiamos la configuración necesaria. En ese proceso también valoramos si se pueden usar los equipos actuales o si hace falta preparar algo más. Si se ejecuta dentro del centro, también contrastamos los permisos, las comunicaciones externas y el lugar de almacenamiento con las normas del centro."
+      },
+      {
+        "p": "Terada también tiene experiencia en ventas de publicidad en internet en Recruit. Escuchar deseos que aún no tienen forma y convertirlos en acciones concretas: esa experiencia también se refleja en cómo llevamos las consultas."
+      },
+      {
+        "p": "La terminología y la forma de trabajar propias de cada centro las aprendemos preguntando al profesorado y al personal. Quienes conocen el trabajo y Cor., que se ocupa de la tecnología y la plataforma de datos, perseguimos el mismo objetivo."
+      },
+      {
+        "h2": "De la investigación al plan de desarrollo y la implementación."
+      },
+      {
+        "h3": "Decidimos qué se comparte y dónde se trabaja"
+      },
+      {
+        "p": "Si en la primera reunión está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Los datos concretos se comparten una vez firmado el acuerdo de confidencialidad y acordados el alcance de lo que se puede compartir y utilizar y el lugar donde se tratarán."
+      },
+      {
+        "p": "Estudiamos el lugar de trabajo entre Google Drive, OneDrive o el entorno local del centro, o un entorno de Cor. que se haya acordado. También acordamos cómo proceder a partir de la segunda sesión, incluidas las visitas presenciales."
+      },
+      {
+        "h3": "Investigamos dónde están los datos y cómo se usan en la práctica"
+      },
+      {
+        "p": "Hacemos inventario de los datos que se pueden usar en este proyecto y, si es necesario, entrevistas o encuestas al personal y a otras personas implicadas. Quién los usa, cuándo, dónde, para qué y cómo. También comprobamos la frecuencia y el volumen de uso."
+      },
+      {
+        "p": "Comparamos opciones como trasladar los datos o usarlos donde están ahora."
+      },
+      {
+        "h3": "Proponemos un plan de desarrollo adaptado al centro"
+      },
+      {
+        "p": "Si hay varias opciones, las proponemos en niveles (por ejemplo, básico / intermedio / completo), desde la configuración completa hasta la mínima. Nos adaptamos al formato que le resulte más cómodo al centro, como Google Docs o un documento de Word. Si las opciones son limitadas o algo es difícil de lograr, también se lo decimos con franqueza."
+      },
+      {
+        "p": "Si en la primera reunión se concluye que es posible implementarlo en poco tiempo, tras confirmar el coste adicional y el alcance, también se puede considerar un contrato que incluya la investigación y la creación de un MVP (un sistema con las funciones mínimas necesarias). En ese caso, le plantearemos entregar un MVP que funcione en lugar del plan de configuración mínima."
+      },
+      {
+        "p": "El papel que Cor. quiere desempeñar es, por así decirlo, el de «planificador de vida» de un proyecto de IA y, al mismo tiempo, el de empresa de desarrollo. Ya que vamos a construir un sistema, queremos que se use durante mucho tiempo en el día a día. Por eso, permítanos pensar con usted desde que la idea todavía no tiene forma."
+      }
+    ],
     "cta": {
-      "title": "Empecemos ordenando cómo usar IA con datos confidenciales.",
-      "description": "Te ayudamos a decidir por dónde empezar según las restricciones del sector. También puedes consultarnos sobre una validación con un LLM local que no saca tu información al exterior.",
-      "primary": "Consultar diagnóstico de IA con datos confidenciales",
-      "secondary": "Consultar PoC de LLM local / IA segura",
-      "note": "El coste varía según el reto y el alcance. Presupuestamos de forma que queden claros los supuestos, los riesgos y el alcance del trabajo; el precio y el plazo formales se confirman tras revisar los requisitos."
-    }
+      "title": "Para empezar, cuéntenos lo que tiene en mente.",
+      "body": [
+        {
+          "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+        },
+        {
+          "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de estudiantes ni alumnos, documentos confidenciales ni credenciales de acceso."
+        }
+      ],
+      "primary": "Ir al formulario de contacto"
+    },
+    "sourcesTitle": "Referencias",
+    "sources": []
   },
   "works": {
     "title": "Hablamos con implementación: los proyectos de Cor.",

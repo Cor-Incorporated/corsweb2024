@@ -211,332 +211,1240 @@
     ]
   },
   "industryMedical": {
-    "hero": {
-      "eyebrow": "Medical & Healthcare",
-      "title": "Healthcare teams: do any of these \"stuck\" moments sound familiar?",
-      "subtitle": "Organizing clinical data, patient response, how information is handled — every site gets stuck for different reasons. Cor. helps you sort out requirements together and walks with you toward the next step."
-    },
-    "challenges": {
-      "eyebrow": "01 / Common Challenges",
-      "title": "The \"reasons things stall\" we often hear in healthcare.",
-      "items": [
-        {
-          "title": "Handling assessments and rejected medical-fee claims",
-          "description": "Monthly errors in fee claims and mismatches between diagnoses and procedures trigger assessments and rejections from review-and-payment bodies. The hours medical-affairs staff spend checking and fixing each case by eye become enormous."
-        },
-        {
-          "title": "The burden of electronic medical-record entry",
-          "description": "Writing up a chart after each consultation takes several minutes per patient, and on days with 100-plus outpatients the work slips into late at night. It's a direct hit from physicians' work-style reform (the \"2024 problem\")."
-        },
-        {
-          "title": "Responding to physicians' work-style reform (on-call shifts and task-shift records)",
-          "description": "To comply with the cap on physicians' overtime that took effect in April 2024, hospitals must apply for on-call permits, record task-shift results, and manage Article 36 agreements — yet they're being asked to do so before the operational flow is even in place."
-        },
-        {
-          "title": "Inefficient outpatient booking and cancellation management",
-          "description": "Bookings are mostly by phone and no-shows are frequent. Open slots can't be filled in real time, so clinical revenue leaks away."
+    "eyebrow": "Medical & Healthcare",
+    "title": "AI adoption for medical institutions, starting with organizing records and preparing documents.",
+    "lead": [
+      {
+        "p": "Say you want to try using AI to draft referral letters."
+      },
+      {
+        "p": "The information you need is in the electronic medical record. You have the format you always use. But where will patient information be handled, and how will it get into that format? Once you think it through to the point where a doctor checks the content, it is not something you can decide to adopt right away."
+      },
+      {
+        "p": "Nursing summaries at discharge or transfer, handled by the nursing department. Medication management summaries, prepared by the pharmacy department to hand over to other hospitals and pharmacies. For documents like these too, we work out with you a flow in which records are gathered, put into the format, and checked by the professional in charge."
+      },
+      {
+        "p": "Hospital directors and management are of course welcome to consult us, as are directors of nursing, nurse managers, directors of pharmacy, and staff in IT and administrative departments."
+      },
+      {
+        "p": "Cor. helps from the very first step: looking into your current data and the way work is done. Which tasks to reduce, and which judgments stay with people. From sorting that out to designing and implementing the setup, we move forward together."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "ISMS certified",
+          "body": [
+            {
+              "p": "Cor.Inc. is certified to ISO/IEC 27001:2022, the international standard for information security management systems (ISMS). The scope of registration is “Contract development and operation of software”."
+            },
+            {
+              "p": "Initial registration date: November 7, 2026. Registration number: JP26/00000364.",
+              "cite": [
+                7
+              ]
+            },
+            {
+              "p": [
+                "Our policies on handling information and using AI are published on our ",
+                {
+                  "link": "security",
+                  "text": "Information security page"
+                },
+                "."
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / How Cor. Walks With You",
-      "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
-      "items": [
-        {
-          "challenge": "Data organization and system renewal",
-          "service": "AI contract development",
-          "description": "From organizing data to cloud migration and connecting in-hospital systems, we move forward together from requirements definition through implementation and operation."
-        },
-        {
-          "challenge": "Inquiries and guidance",
-          "service": "AI contract development",
-          "description": "We help you design guidance experiences using voice-enabled AI, AI trained on internal documents, and autonomous workflows — drawing on our experience implementing multilingual AI reception."
-        },
-        {
-          "challenge": "Information security and confidential data",
-          "service": "Local LLM & secure AI",
-          "description": "We think through AI environments that keep your data in, plus tool selection and operational design matched to sensitivity, together with you."
-        },
-        {
-          "challenge": "AI strategy and bringing it in-house",
-          "service": "AI advisory & training",
-          "description": "For in-hospital teams, we walk alongside you on AI strategy, tool selection, rolling it into operations, and building in-house capability."
-        },
-        {
-          "challenge": "Organizing estimates and internal buy-in",
-          "service": "AI contract development",
-          "description": "We prepare estimates that make the requirements, assumptions, risks, and scope of work clear, and you can consult us from the stage of drafting a starting point for approval and budgeting. The formal price and timeline are confirmed after we review your requirements."
+      },
+      {
+        "founder": {
+          "h2": "Using AI to create an environment where people can focus on the decisions people should make.",
+          "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
+          "bylineAt": "top",
+          "body": [
+            {
+              "p": "Diagnosis affects patients' lives. I believe that glibly “making everything more efficient with AI” goes against what this is really meant to be about."
+            },
+            {
+              "strong": "Use AI to create an environment where people can focus on the decisions people should make."
+            },
+            {
+              "p": "That, I believe, is the essence of AI systems for healthcare."
+            },
+            {
+              "p": "Gathering and organizing the information recorded in past medical charts: using AI to assist with that work is something we can consider. Diagnosis, on the other hand, is the doctor's job. Nursing judgments and pharmaceutical assessments, too, belong to the respective professionals. I want to draw that line clearly."
+            },
+            {
+              "p": "We start with administrative and routine tasks. Systems that go into diagnosis or treatment are something I want to consider after that, based on the necessary checks of laws and regulations and of safety."
+            }
+          ]
         }
-      ]
-    },
+      },
+      {
+        "h2": "Referral letters, nursing summaries, medication management summaries. We start from the formats you actually use."
+      },
+      {
+        "h3": "Doctors and clinical departments: drafting referral letters in your own hospital's format"
+      },
+      {
+        "p": "Even when a summary for the referral letter can be produced, the work of transferring it into the usual format remains. An interview with a clinic director published by medimo, a provider of AI for healthcare, also describes this work.",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "Cor. checks where the necessary records are and how they can be extracted from the electronic medical record. We also look into the export and integration methods the vendor provides, and the extent to which they can be used."
+      },
+      {
+        "p": "Information is gathered and put into the format, and the doctor checks it against the original records, then corrects and finalizes it. We consider feasible ways to do this, including a system used through a browser on in-hospital terminals."
+      },
+      {
+        "h3": "Nursing department: preparing nursing summaries for discharge or transfer"
+      },
+      {
+        "p": "For example, looking back over the course of care so far and summarizing what to hand over to the next facility."
+      },
+      {
+        "p": "Even if AI can produce a draft, you still need to decide which records to use, how to check it against the original records, and who reviews and finalizes it."
+      },
+      {
+        "p": "Cor. talks with directors of nursing, nurse managers and the people who actually write the records, to understand your current formats and workflow. We consider the time spent writing together with the effort needed to check and correct."
+      },
+      {
+        "p": "A collection of nursing DX case studies from the Ministry of Health, Labour and Welfare (MHLW) also presents a case in which the director of nursing, ward nurse managers and others worked out the workflow, and nurses check AI drafts against the original records.",
+        "cite": [
+          2
+        ]
+      },
+      {
+        "h3": "Pharmacy department: preparing medication management summaries and in-hospital materials"
+      },
+      {
+        "p": "Handing over the necessary information to the next medical institution or community pharmacy: the Japanese Society of Hospital Pharmacists publishes the medication management summary as a form for that purpose.",
+        "cite": [
+          3
+        ]
+      },
+      {
+        "p": "Which records go into which form? Cor. looks into where we can support the work: gathering information, transcribing it, or drafting."
+      },
+      {
+        "p": "Researching drug information and preparing materials to share within the hospital can also be part of the investigation. We think about a form in which the source documents and update dates can be checked, while reviewing the content and making pharmaceutical judgments remain with pharmacists.",
+        "cite": [
+          4
+        ]
+      },
+      {
+        "p": "Who is in charge, which formats are used, who checks and finalizes. Once we understand how each department differs, we decide how much to leave to AI. For transcribing into fixed fields and formatting, we also compare existing functions and rule-based processing."
+      },
+      {
+        "h2": "Where patient information is handled, by whom, and how."
+      },
+      {
+        "p": "Before Cor. receives any real data, we sign a non-disclosure agreement (NDA) and agree on the information to be used and where the work will be done."
+      },
+      {
+        "p": "Who is given access? What work is it used for? Where is it stored, and when is it returned or deleted? We sort this out together with the hospital's own rules. The scope of AI processing, how records are handled, and the role of the people who check are also decided at the design stage.",
+        "cite": [
+          8
+        ]
+      },
+      {
+        "p": "For each individual build, we follow the MHLW's security management guidelines and the hospital's own operations, and check everything down to permissions, equipment updates, and backup and recovery methods.",
+        "cite": [
+          5
+        ]
+      },
+      {
+        "h3": "We first check whether your data really needs a “big move”"
+      },
+      {
+        "p": "Gathering your existing data into a new place so that you can use AI: that preparation could become the very reason adoption stalls."
+      },
+      {
+        "p": "Cor. also looks into options that make use of where the data is kept now. Will you use the existing shared drive, make use of an in-hospital server, or set up something new? We consider where data is stored separately from where AI processes it."
+      },
+      {
+        "p": "A setup that processes patient information without sending it outside the hospital can also be considered. The setup that can actually be built depends on how it connects to the electronic medical record, the functions needed and the hospital's operations."
+      },
+      {
+        "h3": "Before buying equipment, we check what will be used and how much"
+      },
+      {
+        "p": "Cor. has the technology to build a local LLM into systems on consumer PCs. A local LLM is generative AI that runs on your own PCs, in-hospital servers or similar hardware."
+      },
+      {
+        "p": "We check the amount of data, the number of people using it at the same time, and the response speed needed, and work out the setup. As part of that, we judge whether your current equipment can be used or whether more needs to be prepared."
+      },
+      {
+        "p": "We learn the terminology, formats and practices of clinical work by asking the people who actually do that work. Cor. takes charge of everything from infrastructure and data foundations to sorting out requirements and development, and gives the system shape together with the people who know the work."
+      },
+      {
+        "h2": "Turning even a single department's request into a build plan the hospital can evaluate."
+      },
+      {
+        "p": "Even when the nursing or pharmacy department starts the discussion, we identify who will actually use the system, who reviews systems and information management, and who decides on budget and contracts. We proceed with the people who need to be involved, in line with how your facility is organized."
+      },
+      {
+        "h3": "At the first meeting, we hear what you want to do and what is holding it up"
+      },
+      {
+        "p": "The meeting is planned to take about one hour. We ask what you want to do, what is already under way, and what difficulties you face in moving forward."
+      },
+      {
+        "p": "We sort out what is essential and what you would like to have if possible, and present a rough plan of what to look into next."
+      },
+      {
+        "h3": "We look into your data and work within the agreed scope"
+      },
+      {
+        "p": "If you are satisfied with the direction, we move on to an NDA and a contract for the investigation."
+      },
+      {
+        "p": "Through interviews with the people involved and other means, we find out who uses which records, for what purpose and how often. Where needed, we also discuss site visits."
+      },
+      {
+        "h3": "We compare build plans and decide what to implement"
+      },
+      {
+        "p": "When there are several options, we present them in a form that is easy to compare within the hospital, from a bare-minimum setup to one that covers the whole. If something is hard to achieve, we tell you frankly."
+      },
+      {
+        "p": "If we judge that it can be implemented in a short time, we can also consider a contract that covers both the investigation and building an MVP, after confirming cost and scope. An MVP is a system with the minimum features needed."
+      },
+      {
+        "p": "Uses involving diagnosis or treatment need to be checked, depending on their intended purpose and risk, for matters such as whether they count as a medical device under the Pharmaceuticals and Medical Devices Act (PMD Act). The policy that professionals check and decide, and the system's legal status, are confirmed separately.",
+        "cite": [
+          6
+        ]
+      },
+      {
+        "h2": "In an age when AI is a given, what is the role of people?"
+      },
+      {
+        "p": "Deciding what to automate is also deciding where people put their energy."
+      },
+      {
+        "p": "Doctors, nurses, pharmacists. Letting each of them focus on professional judgment and on their interactions with patients. To that end, how can we support the work of finding records, organizing them and turning them into documents? That is where Cor. wants to start thinking with you."
+      },
+      {
+        "p": "If we are going to build a system, we want it to be used on the ground for a long time. So please talk to us, even before your ideas have come together."
+      }
+    ],
     "cta": {
-      "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
-      "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "Discuss a local LLM / secure AI PoC",
-      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
-    }
+      "title": "To start, send us what you have in mind.",
+      "body": [
+        {
+          "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
+        },
+        {
+          "p": "An outline of your work is enough to start. Please do not include real patient data, medical charts or login credentials."
+        }
+      ],
+      "primary": "Go to the contact form"
+    },
+    "sourcesTitle": "References",
+    "sources": [
+      {
+        "title": "Interview with the director of Tatsumi Internal Medicine Clinic (published by medimo)",
+        "note": "An interview with a single clinic conducted by the provider. We refer to its explanation of transferring content into the clinic's own templates."
+      },
+      {
+        "title": "MHLW: Collection of Nursing DX Case Studies (看護DX事例集)",
+        "note": "Case 10, Nara City Hospital, pages 73–79 of the booklet. We refer to the preparation and checking of nursing summaries and the division of roles at introduction."
+      },
+      {
+        "title": "Japanese Society of Hospital Pharmacists: Record forms for pharmacy services, etc.",
+        "note": "We refer to information sharing between hospitals, and between hospitals and community pharmacies, through the medication management summary."
+      },
+      {
+        "title": "Japanese Society of Hospital Pharmacists: Guidance on the use of generative AI for hospital pharmacists",
+        "note": "We refer to its explanations of the intended readers, its use for organizing information, and checking against the original information."
+      },
+      {
+        "title": "Guidelines for the Security Management of Medical Information Systems, Version 7.0 (MHLW)",
+        "note": [
+          "For permissions, updates, backups and similar topics, we refer to the ",
+          {
+            "link": "mhlwSystemOperation",
+            "text": "System Operation volume"
+          },
+          "."
+        ]
+      },
+      {
+        "title": "Guidelines on Whether Software Programs Qualify as Medical Devices (MHLW)",
+        "note": "This page does not determine whether any individual system qualifies."
+      },
+      {
+        "title": "Cor.Inc.: Company information",
+        "note": "Summary of the ISMS certification registration, based on certificate of registration JP26/00000364 issued by SGS Japan Inc."
+      },
+      {
+        "title": "Cor.Inc.: Information security",
+        "note": "Our policies on information management and AI use. They do not indicate certification of, or a deployment record for, any individual medical system."
+      }
+    ]
   },
   "industryShigyo": {
-    "hero": {
-      "eyebrow": "Professional Services",
-      "title": "Professional-services work: are you spending too much time and nerve on it?",
-      "subtitle": "Reviewing contracts, one law change after another, double entry for government filings, and deadline management you can never afford to miss. Behind the expert work you're meant to focus on, the days are eaten up by endless manual tasks and mental pressure — and Cor. walks with you as you change that."
-    },
-    "challenges": {
-      "eyebrow": "01 / Common Challenges",
-      "title": "The \"reasons things stall\" we often hear in professional services.",
-      "items": [
-        {
-          "title": "The chronic load of reviewing and amending clauses in contracts and legal documents",
-          "description": "Checking every word of contracts that arrive from clients, by eye. Because a single oversight can immediately become a risk, it drains extreme concentration and time, and is a major reason review work runs into the night."
-        },
-        {
-          "title": "The inefficiency of spec changes and double entry in filings and registrations",
-          "description": "Manually copying and re-keying data entrusted by clients to fit the quirky UIs of government and registration systems. Peak-season data entry and visual double-checks burn through enormous hours."
-        },
-        {
-          "title": "The \"absolutely no mistakes allowed\" pressure of statutory deadlines, limitation periods, and filing cutoffs",
-          "description": "Managing things like patent filings, tax returns, and litigation deadlines, where being even a single day late can lead to catastrophic damage. Relying on calendars and multiple people checking by eye creates heavy mental strain every morning."
-        },
-        {
-          "title": "Checking eligibility for subsidies and grants, and drafting mountains of documentation",
-          "description": "Reading through frequently changing application guidelines and hand-typing the \"business plan\" narrative an application calls for. The long hours of desk work needed to win approval become a real burden."
+    "eyebrow": "Professional Services",
+    "title": "Building AI into the work of licensed professional firms, while checking the grounds for each answer.",
+    "lead": [
+      {
+        "p": "Say a client sends you a question similar to one you have handled before."
+      },
+      {
+        "p": "You found the past answer. But you can't tell what was checked to reach that conclusion. Even if you have AI draft an answer, you end up searching for the supporting documents all over again from scratch."
+      },
+      {
+        "p": "Cor. looks into where your documents are kept and how checks are done, and designs with you a way to produce draft answers whose grounds can be traced."
+      },
+      {
+        "p": "We break down your usual work and bring AI in little by little, starting with the tasks where it helps. While keeping the burden on day-to-day work low, we build a system that suits your firm."
+      },
+      {
+        "p": "Heads and partners of licensed professional firms (tax accountants, lawyers, labor and social security attorneys and others), as well as the staff in charge of adoption at those firms, are welcome to consult us."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "ISMS certified",
+          "body": [
+            {
+              "p": "Cor.Inc. is certified to ISO/IEC 27001:2022, the international standard for information security management systems (ISMS). The scope of registration is “Contract development and operation of software”."
+            },
+            {
+              "p": "Initial registration date: November 7, 2026. Registration number: JP26/00000364.",
+              "cite": [
+                4
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / How Cor. Walks With You",
-      "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
-      "items": [
-        {
-          "title": "We help you run an initial screening of standard, boilerplate clauses",
-          "service": "Local LLM & secure AI",
-          "description": "Building on your own templates and review criteria, we support a setup that quickly flags risk clauses and special terms — helping ease the burden of that first read-through by eye."
-        },
-        {
-          "title": "We set up the plumbing for data linkage and automatic transcription between systems",
-          "service": "AI contract development",
-          "description": "We support automating transcription work, such as mapping client data into application formats. Together we build a flow that prevents entry errors and cuts the time spent checking."
-        },
-        {
-          "title": "We guide you toward reassuring management through automated alerts and reminders",
-          "service": "AI contract development",
-          "description": "Linked to your calendar and task management, we propose a setup so important deadlines don't slip by. We build multiple guardrails together that don't rely solely on human eyes, aiming to ease the psychological load."
-        },
-        {
-          "title": "We support more efficient drafting of application documents and business plans",
-          "service": "AI advisory & training",
-          "description": "We support quickly drafting the skeleton and structure of documents, informed by requirement matching and past approval trends. We help create an environment where you spend less time writing from scratch and more time refining as the expert."
+      },
+      {
+        "h2": "Making it possible to go back to the documents to check, right alongside the draft answer."
+      },
+      {
+        "p": "Which document, kept where, is the answer based on?"
+      },
+      {
+        "p": "Not just a list of document names, but which part of the answer refers to which passage of the original document. The design includes presenting this in a way your staff can cross-check."
+      },
+      {
+        "ul": [
+          "Where the document is kept, and how to access the original file.",
+          "The passage in the source that corresponds to the draft answer.",
+          "Information needed for checking, such as the client or matter, and the point in time the document reflects."
+        ]
+      },
+      {
+        "p": "Whether that document can be applied to the question at hand is for a professional to judge. Showing a reference is not the same as the answer being correct."
+      },
+      {
+        "p": "That is exactly why we also design the flow of going back to the original documents, checking the content and finalizing it."
+      },
+      {
+        "h3": "Tax accountant firms: preparing draft answers for clients together with the documents to check them against"
+      },
+      {
+        "p": "Searching past consultation records and in-house materials, then drafting an answer: starting from tasks like these, we consider how far we can support you."
+      },
+      {
+        "p": "The published policy of Tsuji & Hongo Tax & Consulting (辻・本郷税理士法人) also lists preparing documents and assisting with answers to routine questions as uses of generative AI.",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "In the investigation with Cor., we sort out the clients and fiscal years in scope, the documents to refer to, and who checks the content. Tax judgments are made by tax accountants; we support the work of gathering the information those judgments need."
+      },
+      {
+        "h3": "Law firms: linking the organizing of case materials with checking the original text"
+      },
+      {
+        "p": "Finding the materials received from the client and organizing the sequence of events. We design a flow that lets you go from that draft back to the original text you want to check."
+      },
+      {
+        "p": "Bengo Kakumei (弁護革命), a tool for legal practice, has also published features for summarizing documents, building chronologies, and opening the referenced passage from the output.",
+        "cite": [
+          2
+        ]
+      },
+      {
+        "p": "Cor. also checks which parts existing tools can handle, and considers how to connect them to your firm's materials and practice. Legal assessment and how matters are explained to the client remain with the lawyers."
+      },
+      {
+        "h3": "Labor and social security attorney firms: organizing in-house FAQs and client-specific information"
+      },
+      {
+        "p": "Finding the manual shared within the firm. Checking the answer given to an earlier labor consultation. Then confirming whether it fits the current client's situation."
+      },
+      {
+        "p": "Fukuoka Social Insurance and Labor Consultants Corporation (福岡社会保険労務士法人) has published how it builds up FAQs and manuals into a system its staff can search.",
+        "cite": [
+          3
+        ]
+      },
+      {
+        "p": "Cor. distinguishes knowledge used in common from client-specific materials, and designs a setup in which the necessary information can be checked. Labor judgments are made by labor and social security attorneys; together with you, we also sort out the flow in which staff gather information and ask for it to be checked."
+      },
+      {
+        "h2": "So that preparing for adoption doesn't bring your everyday work to a halt."
+      },
+      {
+        "founder": {
+          "h3": "Kousuke Terada's view",
+          "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
+          "bylineAt": "bottom",
+          "body": [
+            {
+              "p": "Switching the work people do now to an AI-centered way of working all at once. If you try to change everything together, from organizing and migrating documents to the way work is done, the preparation itself can become a major job."
+            },
+            {
+              "p": "What I want to do first is break down the work as it is now. Find, task by small task, where handing it to AI would help. Keep the extra effort added to everyday work as low as possible, and save labor little by little."
+            },
+            {
+              "p": "Not changing everything in one go, but seeing things from the client's everyday point of view. That's why I want to start by listening to each firm, one at a time."
+            }
+          ]
         }
-      ]
-    },
+      },
+      {
+        "h3": "We decide the preparation needed based on the documents you will use first"
+      },
+      {
+        "p": "You don't necessarily need to move all your existing documents at once.",
+        "cite": [
+          6
+        ]
+      },
+      {
+        "p": "First, for the work in scope, we find out who uses which documents, for what purpose and how much. We also look into whether the places they are kept now, such as shared drives or in-office servers, can be put to use."
+      },
+      {
+        "p": "Even if the originals are not moved, we separately check where the content is read and processed and where copies are stored. For paper documents too, we consider digitizing them, starting with what the first piece of work needs."
+      },
+      {
+        "h3": "Local or cloud: we decide that based on your practice too"
+      },
+      {
+        "p": "Use an existing service, or build something to fit your firm? Run it in your own environment, or use the cloud? We consider each of these."
+      },
+      {
+        "p": "Cor. has the technology to build a local LLM into consumer PCs as a system. A local LLM is generative AI that runs on your own PCs, in-office servers or similar hardware."
+      },
+      {
+        "p": "The equipment you need depends on the volume of documents, the number of people using it at the same time, and the response speed you need. Before buying equipment first, let's check how much can be done with what you have now."
+      },
+      {
+        "h3": "We test it on one task before widening the scope"
+      },
+      {
+        "p": "First, finding documents. Next, organizing the relevant passages and drafting answers. Splitting the work this way is one option. For transcribing into fixed fields and converting formats, we also compare rule-based processing."
+      },
+      {
+        "p": "At the build stage, we also decide what to check. Has the effort of searching gone down? Are the original documents easy to check? Has preparation or checking added some other burden?"
+      },
+      {
+        "p": "If needed, we discuss how to proceed around your day-to-day work, including an annual plan. We aim to widen what the system can be used for while keeping your staff's workflow as intact as possible."
+      },
+      {
+        "h2": "Who handles client information, and where."
+      },
+      {
+        "p": "Before we receive any real data, we sign a non-disclosure agreement (NDA) and agree on the information to be used and where the work will be done."
+      },
+      {
+        "p": "Documents shared across the firm, and documents whose viewing is restricted by staff member or matter. We sort out how far AI may refer to them, and who may see the answers and the source documents.",
+        "cite": [
+          5
+        ]
+      },
+      {
+        "p": "We also confirm where data is stored and processed, how usage is logged, and how return and deletion are handled. Even when it runs locally, we take into account permission management, equipment updates and backups."
+      },
+      {
+        "h2": "From the first meeting to investigation and build."
+      },
+      {
+        "p": "The first meeting is planned to take about one hour. We ask what you want to do, what is already under way, and what is holding you back right now. We sort out what is essential and what you would like to have if possible, and present a rough plan of what to look into next."
+      },
+      {
+        "p": "If you are satisfied with the direction, we move on to an NDA and a contract for the investigation. We look into where documents are kept and how they are used, and where needed, discuss interviews with your staff and site visits."
+      },
+      {
+        "p": "After the investigation, we propose the preparation needed and a build plan. If there are several options, we lay them out so they can be compared, from a minimal setup to one that covers the whole. If something is hard to achieve, we tell you frankly."
+      },
+      {
+        "p": "If we judge that it can be implemented in a short time, we can also consider a contract that covers both the investigation and building an MVP, after confirming cost and scope. An MVP is a system with the minimum features needed."
+      },
+      {
+        "p": "Cor. takes charge of everything from infrastructure and data foundations to sorting out requirements and development. We learn your firm's terminology and formats, and how professional judgments are made, by asking the people who actually do the work."
+      },
+      {
+        "strong": "“A system you can really use” and “bringing AI naturally into everyday work.”"
+      },
+      {
+        "p": "Keeping those two in balance, we want to work alongside you toward a shared goal."
+      }
+    ],
     "cta": {
-      "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
-      "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "Discuss a local LLM / secure AI PoC",
-      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
-    }
+      "title": "To start, send us what you have in mind.",
+      "body": [
+        {
+          "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
+        },
+        {
+          "p": "An outline of your work is enough to start. Please do not include real client data or login credentials."
+        }
+      ],
+      "primary": "Go to the contact form"
+    },
+    "sourcesTitle": "References",
+    "sources": [
+      {
+        "title": "Guidelines for the Use of Generative AI (Tsuji & Hongo Tax & Consulting)",
+        "note": "September 1, 2025. Referred to for its stated purposes of use: preparing documents and assisting with answers to routine questions. This is the firm's own policy, not a document measuring any reduction effect."
+      },
+      {
+        "title": "Document analysis assistance (Bengo Kakumei guide)",
+        "note": "Official description of the summarizing and chronology features and the feature that opens the source passage from the output. It does not indicate any deployment by Cor."
+      },
+      {
+        "title": "Announcement on the system for sharing FAQs and manuals (Fukuoka Social Insurance and Labor Consultants Corporation)",
+        "note": "October 7, 2025. An in-house knowledge-sharing initiative published by the firm itself. Not a document that independently verifies its effects."
+      },
+      {
+        "title": "Company information (Cor.Inc.)",
+        "note": "Summary of the ISMS certification registration, based on certificate of registration JP26/00000364 issued by SGS Japan Inc."
+      },
+      {
+        "title": "Information security (Cor.Inc.)",
+        "note": "Our policies on information management and AI use. They do not indicate certification of any individual system or guarantee its security."
+      },
+      {
+        "title": "Federated connectors overview (Microsoft Learn)",
+        "note": "An example of a setup that retrieves the needed information while the originals stay in their source systems. It does not mean the same setup can be used with every system, or that nothing is sent externally."
+      }
+    ]
   },
   "industryConstruction": {
-    "hero": {
-      "eyebrow": "Construction",
-      "title": "On-site logistics in construction: still stuck on paper and fax?",
-      "subtitle": "Labor management, design changes, safety checks, passing on know-how — when on-site logistics are tied to paper and fax, the construction work itself grinds to a halt. Cor. walks with you toward the next step, matched to your on-the-ground challenges."
-    },
-    "challenges": {
-      "eyebrow": "01 / Common Challenges",
-      "title": "The \"reasons things stall\" we often hear on construction sites.",
-      "labels": {
-        "reality": "On-site reality",
-        "risk": "If left unaddressed"
+    "eyebrow": "Construction",
+    "title": "Less re-keying of daily construction reports. Connecting the information you already have to each prime contractor's formats.",
+    "lead": [
+      {
+        "p": "Say a daily report entered on a smartphone at the site has reached the office."
       },
-      "items": [
-        {
-          "title": "The limits of labor management and keeping projects on schedule under the overtime cap (the \"2024 problem\")",
-          "reality": "Although the regulation from April 2024 set strict caps on overtime, the structural pressures on site — short-deadline orders, weather delays, and more — haven't changed.",
-          "risk": "Site managers end up forced to absorb the work by taking paperwork home, leading directly to burned-out staff leaving and to project delays."
-        },
-        {
-          "title": "Real-time gaps between drawings/BIM data and the site caused by frequent design changes",
-          "reality": "Every time a design change happens on site, the latest drawings and BIM data don't reach craftspeople and partner firms quickly enough, raising the risk of construction errors based on outdated information.",
-          "risk": "\"Rework\" (rebuilding) on the scale of millions to tens of millions of yen occurs, which not only squeezes costs but also causes major schedule delays."
-        },
-        {
-          "title": "Daily safety checks (KY activities) becoming a formality, and insufficient safety training for an increasingly multinational workforce",
-          "reality": "Daily hazard-prediction (KY) activities tend to become routine, with paperwork reduced to copy-paste. And as the number of foreign workers grows, there's a challenge in getting Japan's safety rules across accurately, down to the context.",
-          "risk": "The risk of serious workplace accidents rises, which can lead to grave consequences such as halted operations on site and a loss of corporate social trust."
-        },
-        {
-          "title": "The break in proprietary construction techniques and know-how as veteran craftspeople age and retire",
-          "reality": "With veterans in their 50s and older making up a large share, the techniques aren't written down or turned into manuals, and passing them to younger workers still relies on the person-dependent \"watch and learn\" approach.",
-          "risk": "The trades and unique strengths you can handle in-house are lost, leading to weaker competitiveness in winning future work and even the disappearance of the techniques themselves."
+      {
+        "p": "The same content has to be written out again in the Excel file for the prime contractor. For another prime contractor's project, it has to fit yet another format."
+      },
+      {
+        "p": "The data has been entered into the app. Even so, the paperwork isn't finished."
+      },
+      {
+        "p": "Cor. works with you to build a system that uses AI and conventional programs to reduce that re-keying and reformatting. It takes the information available from your existing apps and drafts documents in the format each recipient needs. We design the whole flow around the work on site, through to a person checking and approving the content."
+      },
+      {
+        "p": "At construction companies and specialty contractors that work with several prime contractors, presidents, heads of construction departments, and the office and adoption staff who support the sites are welcome to consult us."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "ISMS certified",
+          "body": [
+            {
+              "p": "Cor.Inc. is certified to ISO/IEC 27001:2022, the international standard for information security management systems (ISMS). The scope of registration is “Contract development and operation of software”."
+            },
+            {
+              "p": "Initial registration date: November 7, 2026. Registration number: JP26/00000364.",
+              "cite": [
+                4
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / How Cor. Walks With You",
-      "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
-      "items": [
-        {
-          "title": "Schedule simulation and visualization of operation logs",
-          "service": "AI contract development",
-          "description": "We work with you to build setups for calmer site operations — reworking complex schedules and gently detecting bottlenecks from each site's operation logs."
-        },
-        {
-          "title": "Automatic extraction of changes and instant suggestions to stakeholders",
-          "service": "AI contract development",
-          "description": "We compare updated drawing and spec data and have AI summarize and extract the key changes in an easy-to-grasp way. We help build an environment to reliably relay and share them with stakeholders, drawing on our experience implementing drawing processing."
-        },
-        {
-          "title": "Context-aware hazard prediction and high-accuracy multilingual translation",
-          "service": "AI contract development",
-          "description": "We walk with you toward safe team-building on site — with AI suggesting concrete hazard-prediction hints for the day's trade and weather, and high-accuracy multilingual translation that captures the nuance of safety manuals."
-        },
-        {
-          "title": "Structuring on-site know-how and building a skill-assist environment",
-          "service": "Local LLM & secure AI",
-          "description": "We organize veterans' work videos, past construction records, and trouble-response logs into a form AI can learn from easily. We support a setup where younger workers, when they hit a question on site, can draw on the organization's knowledge base."
+      },
+      {
+        "h2": "Reducing the burden on the people who receive your existing apps' output."
+      },
+      {
+        "p": "Each prime contractor uses a different system, so entering the same information more than once becomes a burden. This problem is also described in guidelines from the Ministry of Land, Infrastructure, Transport and Tourism (MLIT).",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "What Cor. looks at first is how people handle the information after it comes out of the app."
+      },
+      {
+        "strong": "“Instead of changing the existing app, reduce the burden on the people who receive its output.”"
+      },
+      {
+        "p": "Starting over by modifying the app itself every time the prime contractor or project changes: with that approach, the adjustments keep going, and the road to actually using it can become a long detour. We want to avoid ending up with something that is tested over and over but not used on site."
+      },
+      {
+        "p": "First, we make use of the features your current software already offers. Some construction management products include form generation and integration with external systems.",
+        "cite": [
+          2,
+          3
+        ]
+      },
+      {
+        "p": "Then: which information is being copied into which documents? We check which parts existing export and integration features can cover, and which parts still need human work. This is also where we confirm the range of data available, the output formats, and the permissions and contract terms."
+      },
+      {
+        "p": "We aim for a setup that, even when new prime contractors or formats are added, lets you sort out what can be shared across them and what needs extra handling."
+      },
+      {
+        "h2": "Putting “this form is the only one that's different here” into words, together."
+      },
+      {
+        "p": "The people who can prepare these documents also know things that aren't written on the forms."
+      },
+      {
+        "p": "For example, the same information goes into different fields, or is summarized differently, depending on where it is submitted. On the usual form they can fill it in without hesitation, but for an exceptional form they check other documents."
+      },
+      {
+        "p": "If those judgments exist only in the head of the person in charge, just matching how the forms look won't produce a system that fits day-to-day work."
+      },
+      {
+        "p": "First, please let us work with you to put into words the “tacit knowledge” that only the staff at that site know."
+      },
+      {
+        "table": {
+          "head": [
+            "What we sort out together",
+            "What we want to confirm"
+          ],
+          "rows": [
+            [
+              "Where the information comes from",
+              "Which information from which apps or records is used"
+            ],
+            [
+              "Devices and hand-offs",
+              "Who uses which device, where, and how information is passed to the next person or device"
+            ],
+            [
+              "Frequently used forms",
+              "What is entered, in which field, and in what form"
+            ],
+            [
+              "Exceptional forms",
+              "How they differ from the usual forms, and what is additionally checked"
+            ],
+            [
+              "Checking and approval",
+              "Whom to ask when information is missing, and who finalizes the content"
+            ]
+          ]
         }
-      ]
-    },
+      },
+      {
+        "p": "Site staff do not need to prepare a finished manual at the start. We look at the records and documents you normally use and ask about the order of tasks and the reasons behind judgments."
+      },
+      {
+        "h2": "From the smartphone at the site to the documents at the office."
+      },
+      {
+        "p": "For example, photos taken on a smartphone, or work records entered into an app. If someone has to find them again on an office PC and retype them into another format, we start by reviewing that hand-off."
+      },
+      {
+        "p": "Tasks done on the smartphone are made easy to enter and check on the spot. The information captured there is passed automatically to the office PC or a shared location and used to draft the documents needed. We consider systems like this while checking your current apps' export and integration features and terms of use."
+      },
+      {
+        "p": "Features that link information recorded on a smartphone to construction management software and use it to generate forms are already offered by existing products.",
+        "cite": [
+          5
+        ]
+      },
+      {
+        "p": "Where needed, we provide review screens and AI chat screens that can be used from a smartphone or PC. We aim to let the site and the office each keep working on the devices that suit them, while reducing the hassle of switching devices and entering things twice."
+      },
+      {
+        "h3": "Support for transcription and drafting, with checking and approval left to people."
+      },
+      {
+        "p": "Cor. designs the system so that the steps of checking a document's content, finalizing it and submitting it keep a review and approval by the person your company designates."
+      },
+      {
+        "p": "Where the original information is missing or inconsistent, it is treated as an item that needs confirmation. We place importance on not turning what AI has guessed directly into a finalized record."
+      },
+      {
+        "p": "For transcription and tallying where the form's fields are fixed, we also compare handling them with ordinary programs. Following how the work is actually done, we divide it into parts where text is organized, parts handled by fixed rules, and parts where people decide."
+      },
+      {
+        "h2": "Making use of the devices and software you have, and adding as little as possible."
+      },
+      {
+        "p": "Smartphones, feature phones, tablets, PCs. We start by making as much use as possible of the equipment and software already at your sites."
+      },
+      {
+        "p": "If you use feature phones, we check the models, network conditions and the conditions under which they can safely stay in use, and consider what role they can keep in your current communication and record-keeping."
+      },
+      {
+        "strong": "Aim for the greatest effect with the smallest additions."
+      },
+      {
+        "p": "Before adding new devices or apps, we check with you what is in use now and where people are passing information on again by hand."
+      },
+      {
+        "p": "The devices people operate and the place where AI runs are each chosen to fit the work. For example, a setup in which smartphones are used on site and AI processing happens on PCs or servers in your office. Cor. handles everything from infrastructure and data foundations to sorting out requirements and development, including building a local LLM into consumer PCs."
+      },
+      {
+        "p": "The equipment and connection methods needed are decided based on the information handled, the number of users, the processing speed required, and network conditions at the site."
+      },
+      {
+        "p": "Before handling any real data, we sign a non-disclosure agreement (NDA) and agree on the information to be used and where the work will be done. For information received from prime contractors or partner companies too, we confirm how far it may be used."
+      },
+      {
+        "p": "Including whether to use local or cloud, we sort out where data is stored and processed, who can view it, how usage is logged, and how backups and deletion are handled."
+      },
+      {
+        "h2": "We start by looking at the documents you use most."
+      },
+      {
+        "p": "The first meeting is planned to take about one hour. We ask what you want to do, what is already under way and what is holding you back right now, and present a rough plan of what to look into next."
+      },
+      {
+        "p": "If you are satisfied with the direction, we move on to an NDA and a contract for the investigation. We first look at the documents you use most and the forms that are exceptions, and decide the scope to tackle first."
+      },
+      {
+        "p": "After the investigation, we propose the preparation needed and a build plan. Start with a minimal setup, or also cover related tasks? If there are options, we lay them out for comparison, and if something is hard to achieve, we tell you frankly."
+      },
+      {
+        "p": "If we judge that it can be implemented in a short time, we can also consider combining the investigation with building a system with the minimum features needed, after confirming cost and scope."
+      },
+      {
+        "p": "We don't stop once it is built. Together we check whether the re-keying effort has gone down, whether things are easy to check, and whether the input and preparation burden on site has grown."
+      },
+      {
+        "founder": {
+          "h2": "Improvements that get people saying, “We finished five minutes earlier than last month.”",
+          "h3": "Kousuke Terada's view",
+          "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
+          "bylineAt": "bottom",
+          "body": [
+            {
+              "p": "What I'm aiming for is automation that people keep using for a long time in their daily work."
+            },
+            {
+              "p": "If you suddenly change the workflow, people have to relearn how to operate things, and manuals have to be written. The everyday work is hard enough already, and now there's even more preparation on top. If the people on site can't keep up and the system ends up unused, that defeats the whole purpose."
+            },
+            {
+              "p": "So: little by little, every week, every month, at a pace that doesn't strain anyone. Tasks get simpler, and work finishes just a little earlier. I want to value that steady build-up."
+            },
+            {
+              "strong": "“We finished five minutes earlier than last month.”"
+            },
+            {
+              "strong": "“What should we change next month to make it even easier?”"
+            },
+            {
+              "p": "I want the staff on site to be saying things like that."
+            },
+            {
+              "p": "Unglamorous, but steadily moving forward. Leaving everyday routines unchanged, in a good way, while things quietly get better."
+            },
+            {
+              "p": "That's the kind of system I want to build together with our clients."
+            }
+          ]
+        }
+      }
+    ],
     "cta": {
-      "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
-      "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "Discuss a local LLM / secure AI PoC",
-      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
-    }
+      "title": "To start, send us what you have in mind.",
+      "body": [
+        {
+          "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
+        },
+        {
+          "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
+        }
+      ],
+      "primary": "Go to the contact form"
+    },
+    "sourcesTitle": "References",
+    "sources": [
+      {
+        "title": "Basic Guidelines for Ensuring Proper Execution of Construction Work Using Information and Communication Technology (MLIT)",
+        "note": "Page 6 of the main text. Describes the problem of different systems at each prime contractor and duplicate data entry."
+      },
+      {
+        "title": "ANDPAD API integration (ANDPAD Inc.)",
+        "note": "A description of the external system integration offered by an existing product."
+      },
+      {
+        "title": "Basic features (SPIDER+)",
+        "note": "Official description of form generation and data integration."
+      },
+      {
+        "title": "Company information (Cor.Inc.)",
+        "note": "Summary of the ISMS certification registration, based on certificate of registration JP26/00000364 issued by SGS Japan Inc."
+      },
+      {
+        "title": "SiteBox features (KENTEM / Kensetsu System)",
+        "note": "Official description of recording and taking photos on a smartphone, integration with construction management software, and form generation."
+      }
+    ]
   },
   "industryManufacturing": {
-    "hero": {
-      "eyebrow": "Manufacturing",
-      "title": "Manufacturing know-how and logistics: are they riding on individuals?",
-      "subtitle": "Inspection standards, the craftsperson's touch, equipment maintenance, reading inventory — when on-site know-how concentrates in individuals, the reasons things stall only multiply. Cor. walks with you toward the next step, matched to your on-the-ground challenges."
-    },
-    "challenges": {
-      "eyebrow": "01 / Common Challenges",
-      "title": "The \"reasons things stall\" we often hear in manufacturing.",
-      "items": [
-        {
-          "title": "Visual inspection riding on individuals, and the risk of defective products slipping through due to inconsistent quality standards between inspectors",
-          "description": "A reality where judging scratches and burrs relies on individual feel, and keeping manuals in sync is difficult"
-        },
-        {
-          "title": "The break in machining know-how and craftsmanship as skilled workers age and retire, and the resulting delay in training younger workers",
-          "description": "A structure where intuitive skills like welding and cutting go unspoken, with no time to spare for OJT"
-        },
-        {
-          "title": "Sudden equipment breakdowns causing \"line stoppages\" and the enormous repair costs of reactive maintenance",
-          "description": "A reactive fix-it-when-it-breaks approach, with the risk of missing early signs such as faint abnormal noises or vibration in machines"
-        },
-        {
-          "title": "The difficulty of reading \"optimal inventory\" while caught between excess stock and stockout risk",
-          "description": "Conflict between sales and management anticipating material price hikes and procurement delays, and demand forecasting riding on individuals"
+    "eyebrow": "Manufacturing",
+    "title": "Turning the tacit knowledge of the factory floor into knowledge the next person can use.",
+    "lead": [
+      {
+        "p": "Say a piece of equipment isn't running right."
+      },
+      {
+        "p": "A veteran listens to the sound, looks closely at the work in front of them, and checks the spot that is different from usual. What remains in the record afterward is a single phrase: “Part replaced.”"
+      },
+      {
+        "p": "What did they look at, and how did they decide? Are those clues being passed on to the next person in charge?"
+      },
+      {
+        "p": "Cor. combines images, video, audio and existing records to put shop-floor knowledge into a form AI can work with. From how to collect the information needed to a system the next person can refer to while working, we design and implement it with you."
+      },
+      {
+        "p": "Presidents of manufacturing companies, plant managers, and people in production engineering, maintenance and other roles who want to advance skills transfer or the use of AI on the shop floor are welcome to consult us."
+      }
+    ],
+    "sections": [
+      {
+        "note": {
+          "title": "ISMS certified",
+          "body": [
+            {
+              "p": "Cor.Inc. is certified to ISO/IEC 27001:2022, the international standard for information security management systems (ISMS). The scope of registration is “Contract development and operation of software”."
+            },
+            {
+              "p": "Initial registration date: November 7, 2026. Registration number: JP26/00000364.",
+              "cite": [
+                4
+              ]
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / How Cor. Walks With You",
-      "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
-      "items": [
-        {
-          "title": "Helping organize visual-inspection standards into a form usable on site",
-          "service": "AI contract development",
-          "description": "We work with you to organize inspection criteria and reference images and build a setup that curbs inconsistency in judgments. On the premise that a person makes the final call, we aim to ease the burden of initial screening."
-        },
-        {
-          "title": "Putting machining know-how into words and an environment younger workers can draw on",
-          "service": "Local LLM & secure AI",
-          "description": "We organize skilled workers' work records and procedures into a form AI can learn from easily. We support a setup that keeps on-site confidential information in, letting younger workers draw on the organization's knowledge when a question comes up."
-        },
-        {
-          "title": "Exploring a setup to catch early signs from equipment data",
-          "service": "AI contract development",
-          "description": "We work with you to build a setup that catches early signs of anomalies from data you can capture on site, such as abnormal noise, vibration, and operation logs. We support a gradual shift from reactive to preventive maintenance."
-        },
-        {
-          "title": "Pulling inventory and demand reading out of individual dependence",
-          "service": "AI advisory & training",
-          "description": "We walk with you to organize information from sales, management, and the site into a state where the basis for optimal-inventory judgments can be shared. From organizing the assumptions behind demand forecasting to how to select and roll out tools, we think it through together."
+      },
+      {
+        "h2": "Down to the clues behind judgments that never make it into the daily report."
+      },
+      {
+        "p": "The order of the steps may be recorded, but differences in sound, the feel of things, when to check, and the reason behind a judgment are not. How do you pass that kind of knowledge on?"
+      },
+      {
+        "p": "A survey of manufacturers by JILPT (the Japan Institute for Labour Policy and Training) also lists, among the reasons skills transfer does not go well, a lack of time to spare and a lack of communication between those who teach and those who learn.",
+        "cite": [
+          1
+        ]
+      },
+      {
+        "p": "The starting point, as Cor. sees it, is finding out what, if kept during everyday work, would help the next person."
+      },
+      {
+        "p": "For example, record a single inspection or adjustment. Watch the footage with an experienced worker and briefly ask, “What were you checking here?” Compare it with existing daily reports and equipment records, and narrow down the clues worth keeping."
+      },
+      {
+        "h2": "Gathering information from the shop floor, in addition to input on PCs and smartphones."
+      },
+      {
+        "p": "Work that takes both hands. Moments when you can't easily step away from the equipment. Tasks where subtle changes are hard to describe once you write them up afterward."
+      },
+      {
+        "p": "In situations like these, we start by thinking about a way of capturing information that suits the site."
+      },
+      {
+        "p": "Cor. has worked with manufacturers of smart devices in Japan and abroad to develop software that captures information from the field. Besides PCs and smartphones, we treat smart glasses, smart cameras, smartwatches and similar devices as options depending on the use."
+      },
+      {
+        "h3": "We are still developing together with a smart glasses manufacturer today."
+      },
+      {
+        "p": "We are currently working with the manufacturer to develop smart glasses that read text and convey it by voice for people with visual impairments."
+      },
+      {
+        "p": "What we deal with in this development, too, is the chain from receiving information from the field, to processing it with AI, to returning it to the user. We will apply that experience to designing systems that gather and make use of the information needed on the factory floor."
+      },
+      {
+        "h3": "We choose the equipment based on the information you want to keep."
+      },
+      {
+        "p": "Smart glasses if you need footage close to the worker's line of sight. A camera to watch hand movements and what is happening around them. Video or time-lapse to look back over the flow of work. We consider methods like these together with your existing equipment, devices and software."
+      },
+      {
+        "p": "Who will use it, and where? Will it get in the way of the work? Can it capture the changes that matter? We check all this, including noise and network conditions on site, and choose what equipment to add."
+      },
+      {
+        "p": "A skills-transfer case from Hitachi and Daikin also describes how measuring with many instruments alone did not reveal the difference from skilled workers, and how interviews with skilled workers were used to decide what to observe and to narrow down the measurement methods.",
+        "cite": [
+          2
+        ]
+      },
+      {
+        "h2": "Passing it to AI, “interpreted so it understands.”"
+      },
+      {
+        "p": "What Cor. wants to be is the bridge between the shop floor, AI, and the people who take on the work next."
+      },
+      {
+        "p": "Linking the footage and sound collected to which equipment, under what conditions, and what is being done in that scene. Making the reasons an experienced worker gave for a judgment checkable from the corresponding scene."
+      },
+      {
+        "strong": "Collect the data AI needs, and pass it to AI “interpreted so it understands.”"
+      },
+      {
+        "p": "NEDO, too, names the fact that the meaning of in-company data and the relationships among it are not organized as a challenge for using AI, and treats preparing such data into a usable state, and evaluating it, as a subject of research.",
+        "cite": [
+          3
+        ]
+      },
+      {
+        "table": {
+          "head": [
+            "What we sort out together",
+            "What the next person in charge should be able to check"
+          ],
+          "rows": [
+            [
+              "What was happening on the floor",
+              "The relevant video, audio and work records"
+            ],
+            [
+              "The conditions at the time",
+              "Background needed for the judgment, such as the equipment, the task and the time"
+            ],
+            [
+              "How the experienced worker saw it",
+              "Their own explanation of what they checked and why they chose that response"
+            ],
+            [
+              "What has not been confirmed",
+              "Points the records alone cannot answer, which need checking with a person"
+            ]
+          ]
         }
-      ]
-    },
+      },
+      {
+        "p": "How something felt to the touch, or why things were checked in that order, cannot always be understood from footage alone. We take care not to record a reason AI has guessed as if it were a fact about how the person judged."
+      },
+      {
+        "h2": "All the way to the next person being able to use it when it is needed."
+      },
+      {
+        "p": "For example, searching for related records by equipment name or by a symptom someone noticed, and being able to view the confirmed explanation together with the scene in the original footage. Systems like this are something we can consider."
+      },
+      {
+        "p": "Do people want to view it on a device on the floor, or review it with a mentor after the work? We decide the screens and how information is returned based on where it is used and by whom. The devices people operate and the place where AI processing happens are also designed to fit their respective conditions."
+      },
+      {
+        "p": "We separate the parts that existing search and record management can cover, the parts AI organizes and analyzes, and the parts people check. How to organize the recorded footage, and whether additional training of a model is needed, are also decided by looking at the goals and the data."
+      },
+      {
+        "p": "Even if similar records exist from the past, the equipment and conditions are not necessarily the same this time. We design it so that the actual response and the operation of equipment are decided according to your company's procedures and lines of responsibility."
+      },
+      {
+        "p": "Whether the knowledge has been passed on is checked by whether the next person can reach the information they need and understand the clues behind the judgment. Taking into account the burden on those who record and the time mentors spend checking, we keep adjusting it into a form that can be sustained."
+      },
+      {
+        "h2": "Start with one task you want to preserve."
+      },
+      {
+        "p": "The first meeting is planned to take about one hour. We ask what you want to do, what is currently under way and what is holding you back right now, and present a rough plan of what to look into next."
+      },
+      {
+        "p": "If you are satisfied with the direction, we move on to a non-disclosure agreement (NDA) and a contract for the investigation. We pick one task you want to preserve or one situation that is causing trouble, and sort out the existing records, the equipment used on the floor, and the points to confirm with experienced workers."
+      },
+      {
+        "p": "When filming or recording audio, we confirm with you the purpose and scope, how it is explained to those involved, who can view it, how long it is kept, and how any information sent outside is handled."
+      },
+      {
+        "p": "Cor. handles device integration, infrastructure and data foundations, sorting out requirements and development, including building a local LLM into consumer PCs. Whether to process in-house or use the cloud is also considered based on the information involved and the conditions on site."
+      },
+      {
+        "p": "After the investigation, we propose feasible options, such as starting with a minimal setup or also covering related tasks. If we judge that it can be implemented in a short time, we can also consider combining the investigation with building a system with the minimum features needed, after confirming cost and scope."
+      },
+      {
+        "founder": {
+          "h2": "Keeping sight of the North Star, and racking our brains together.",
+          "h3": "Kousuke Terada's view",
+          "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
+          "bylineAt": "bottom",
+          "body": [
+            {
+              "p": "I want to pass the knowledge on the shop floor to the next generation, letting as little of it slip through as possible."
+            },
+            {
+              "p": "That company's equipment. That site's way of doing things. The judgments built up by the people who work there."
+            },
+            {
+              "p": "What to record, how to hand it to AI, and in what form to return it so that it helps the work: we have to build those answers while testing them on your shop floor."
+            },
+            {
+              "p": "“Wait, what was it we wanted to do in the first place?”"
+            },
+            {
+              "p": "Even if the method changes along the way, we never lose sight of the North Star: the direction we ultimately want to reach. We build up the knowledge gained on the floor, share it with the people who use it, and turn it into the next improvement."
+            },
+            {
+              "strong": "Racking our brains together to work out how to use AI on the shop floor."
+            },
+            {
+              "p": "That's the kind of company I want Cor. to be."
+            }
+          ]
+        }
+      }
+    ],
     "cta": {
-      "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
-      "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "Discuss a local LLM / secure AI PoC",
-      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
-    }
+      "title": "To start, send us what you have in mind.",
+      "body": [
+        {
+          "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
+        },
+        {
+          "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
+        }
+      ],
+      "primary": "Go to the contact form"
+    },
+    "sourcesTitle": "References",
+    "sources": [
+      {
+        "title": "Survey on Securing and Retaining Personnel and Skills Transfer in the Manufacturing Industry (JILPT)",
+        "note": "Published May 27, 2026. Pages 1, 2 and 7 of the main text. Describes the challenges of skills transfer and who was surveyed."
+      },
+      {
+        "title": "Daikin and Hitachi's efforts on skills transfer, Part 1 (Hitachi)",
+        "note": "October 30, 2026. A case in which dialogue with skilled workers was used to narrow down what to observe and how to measure it."
+      },
+      {
+        "title": "Research and development on making manufacturing data and other data AI-ready (NEDO)",
+        "note": "May 13, 2026. Explains organizing the meaning of and relationships among data, and evaluation in actual operations."
+      },
+      {
+        "title": "Company information (Cor.Inc.)",
+        "note": "Summary of the ISMS certification registration, based on certificate of registration JP26/00000364 issued by SGS Japan Inc."
+      }
+    ]
   },
   "industryEducation": {
-    "hero": {
-      "eyebrow": "Education",
-      "title": "In education, is there enough \"teacher time\"?",
-      "subtitle": "Writing and grading tests, communicating with parents, surveys and reports, registering rosters in ICT tools — the time meant for actual teaching tends to get taken up by paperwork and data tasks. Cor. walks with you toward the next step, matched to your on-the-ground challenges."
-    },
-    "challenges": {
-      "eyebrow": "01 / Common Challenges",
-      "title": "The \"reasons things stall\" we often hear in education.",
-      "items": [
-        {
-          "title": "The sleepless death-march when test \"writing, grading, and grade processing\" all pile up at once",
-          "description": "During exam periods, everything from writing questions to grading and creating report cards is compressed into a short window, easily squeezing the time you'd rather spend on lesson prep and talking with students."
-        },
-        {
-          "title": "Analog parent communication and the normalization of after-hours responses",
-          "description": "Phone, printouts, chat — channels are scattered, and checking and replying spills into after-school hours and days off. That kind of burden tends to become the norm on many sites."
-        },
-        {
-          "title": "Compiling data and producing documents for the mountain of surveys and reports submitted to the ministry and boards of education",
-          "description": "Gathering on-site data and finishing documents to fit each format regularly siphons off teachers' working hours."
-        },
-        {
-          "title": "Manual account-registration errors when entering student roster data into various ICT tools right after a new term or class reshuffle",
-          "description": "Rosters have to be hand-entered or transcribed into multiple ICT tools, making missed registrations and entry errors likely — the burden tends to be especially heavy at the start of a term."
+    "eyebrow": "Education",
+    "title": "AI adoption support for schools and universities, starting with data integration for school administration and academic affairs.",
+    "lead": [
+      {
+        "p": "Six months left until the teacher's retirement. We did not learn this until our first visit to the school after the contract was signed."
+      }
+    ],
+    "sections": [
+      {
+        "founder": {
+          "h2": "I, too, had overlooked the possibility that things had not been properly aligned.",
+          "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
+          "bylineAt": "top",
+          "body": [
+            {
+              "p": "This happened some time ago, when Cor. was commissioned by a prime contractor and took part in developing a system for the teachers, staff and students of a vocational school."
+            },
+            {
+              "p": "On our first visit after the contract was signed, I heard that the teacher who ran the school's internal database would reach retirement age and retire in six months. Nothing had been done to prepare for it, and if things stayed as they were, the running of the school itself could run into problems."
+            },
+            {
+              "p": "Information such as students, courses and timetables was kept in an internal database that had been in use for many years. The teacher entered data into it directly, while other teachers and administrative staff, to make up for how hard it was to use, kept their own separate records in Access or FileMaker."
+            },
+            {
+              "p": "Between the prime contractor and the school, requirements definition and alignment had not progressed far enough. And I, too, had overlooked that possibility."
+            },
+            {
+              "p": "From there, the implementation plan changed again and again. We started by putting the data foundation in order, and on this project spent about six months consolidating the data into a database on Google Cloud."
+            },
+            {
+              "p": "The system people talk about wanting to build and what is really needed on the ground may not line up. Not checking that enough was also my own failing."
+            },
+            {
+              "p": "Because of this experience, at Cor. we want to start by looking into and sorting out the current situation together with you, even when the consultation is about AI that uses a school's internal data."
+            }
+          ]
         }
-      ]
-    },
-    "support": {
-      "eyebrow": "02 / How Cor. Walks With You",
-      "title": "Here's how Cor. walks with you.",
-      "intro": "We move forward together, combining Cor.'s services to fit each challenge. We don't deal in certainties — we value walking alongside you in a way that fits the realities on the ground.",
-      "items": [
-        {
-          "title": "Rethinking the exam-period workload with you, starting from organizing it",
-          "service": "AI contract development",
-          "description": "We help build setups — on the premise that a person makes the final check — for drafting test questions, assisting with grading, and compiling grade data."
-        },
-        {
-          "title": "Turning scattered parent communication into a clearer flow",
-          "service": "AI contract development",
-          "description": "We work with you to design a flow that eases the burden of after-hours responses, including communication channels and drafting reply templates."
-        },
-        {
-          "title": "Building support for compiling and drafting surveys and reports",
-          "service": "Local LLM & secure AI",
-          "description": "We help you explore an environment that keeps student information in while making it easier to compile data and draft the skeleton of reports."
-        },
-        {
-          "title": "Pulling roster-to-ICT-tool linkage out of manual work",
-          "service": "AI contract development",
-          "description": "We work with you to set up automation and linkage for roster transcription and account registration, moving toward fewer entry errors and omissions — drawing on our experience with education-sector data migration."
+      },
+      {
+        "note": {
+          "title": "ISMS certified",
+          "body": [
+            {
+              "p": "Cor.Inc. is certified to ISO/IEC 27001:2022, the international standard for information security management systems (ISMS). The scope of registration is “Contract development and operation of software”."
+            },
+            {
+              "p": "Initial registration date: November 7, 2026. Registration number: JP26/00000364."
+            }
+          ]
         }
-      ]
-    },
+      },
+      {
+        "h2": "You want to use AI in your school's work. But has it stalled at one of these points?"
+      },
+      {
+        "h3": "We want to be able to search our internal documents with AI"
+      },
+      {
+        "p": "The regulations and procedure documents exist. But no one has decided which of them may be used with AI, or who may see them."
+      },
+      {
+        "h3": "We want to re-enter less data into the academic affairs system and forms"
+      },
+      {
+        "p": "The same information is entered again and again. We don't know how much can be changed while we keep using the current system and the school's own forms."
+      },
+      {
+        "h3": "It got put off while we were looking into equipment and settings"
+      },
+      {
+        "p": "I've been trying AI myself. But I'm stuck on whether using it at school needs dedicated equipment, and how to prepare a local environment."
+      },
+      {
+        "p": "We can talk with you from this stage. We will think through how to proceed, including options that make use of the data you want to work with while leaving it where it is now."
+      },
+      {
+        "h2": "What we think through together before deciding what to build."
+      },
+      {
+        "h3": "“Wait, what was it we wanted to do in the first place?”"
+      },
+      {
+        "p": "Which work do you want AI to change, and how? We separate what is essential from what you would like to have if possible. We check whether the initial idea can be realized against your actual data and the way things are run."
+      },
+      {
+        "h3": "“Honestly, do we even need that?”"
+      },
+      {
+        "p": "What can be built is not always what the work on the ground calls for. We add features and take them away. We separate what to leave to AI from what to handle with fixed rules or existing functions."
+      },
+      {
+        "h3": "“Then what should we start with, and what do we need to prepare?”"
+      },
+      {
+        "p": "We confirm the goal and the data available, and decide the scope of the investigation and what to implement. The first meeting is planned to take about one hour, and we present a rough plan of what to look into next."
+      },
+      {
+        "h2": "AI adoption may sound the same, but what needs checking differs."
+      },
+      {
+        "p": "Building on our experience at a vocational school, we can also advise private junior and senior high schools, universities, junior colleges and others, in line with their current work and systems."
+      },
+      {
+        "h3": "Searching internal school documents"
+      },
+      {
+        "p": "We check where documents are kept, how they are updated and who can see them"
+      },
+      {
+        "p": "Who updates the regulations and manuals on shared drives and the school's internal site? Which are currently in force, and who can see them? Together we also work out a form in which the basis for each answer can be checked."
+      },
+      {
+        "p": "A published case on Tohoku University's chatbot for staff also describes how the scattered places where manuals and regulations were posted were sorted out and consolidated, and the content registered as FAQ data."
+      },
+      {
+        "sourceLink": 1,
+        "text": "Tohoku University's published case"
+      },
+      {
+        "h3": "Integration with a university's academic affairs system"
+      },
+      {
+        "p": "We check how course registration information is updated and what integration features already exist"
+      },
+      {
+        "p": "What is passed between the academic affairs system and the LMS (learning management system), in what format, and how often? We also ask when course changes and grade entry take place, and what cross-checks are needed."
+      },
+      {
+        "p": "For example, manaba describes a method in which data is exported from the academic affairs system in a set format and sent as a CSV file at a specified time every day."
+      },
+      {
+        "sourceLink": 2,
+        "text": "manaba's integration with campus systems"
+      },
+      {
+        "h3": "Grade processing at private junior and senior high schools"
+      },
+      {
+        "p": "We check what is copied over by hand and which forms you want to keep"
+      },
+      {
+        "p": "Where are the grades finalized by teachers taken from, and which summary sheets and forms do they go into? We think about how much to change, including options that keep your current formats."
+      },
+      {
+        "p": "A published case from Edogawa Gakuen Toride Junior and Senior High School presents the handover of day-to-day operation and keeping the school's own forms as points considered in choosing a system."
+      },
+      {
+        "sourceLink": 3,
+        "text": "The Edogawa Gakuen Toride case (interview by the vendor)"
+      },
+      {
+        "h2": "We think about equipment after confirming the work you want to do."
+      },
+      {
+        "p": "Cor. has the technology to build a local LLM (generative AI that runs on your own PC or similar hardware) into systems on consumer PCs. We can handle everything end to end, from infrastructure and data foundations to sorting out requirements and development."
+      },
+      {
+        "p": "We check the work involved, the amount of data and the number of people using it at the same time, and consider the setup you need. As part of that, we also consider whether your current equipment can be used or whether more needs to be prepared. Even when it runs on campus, we check permissions, external communication and storage locations against the school's rules."
+      },
+      {
+        "p": "Terada also has experience selling online advertising at Recruit. Listening to wishes that have not yet taken shape and turning them into concrete actions: that experience also feeds into how we run consultations."
+      },
+      {
+        "p": "We learn the terminology and practices specific to your school by asking your teachers and staff. The people who know the work and Cor., in charge of technology and data foundations, aim for the same goal."
+      },
+      {
+        "h2": "From investigation to a build plan and implementation."
+      },
+      {
+        "h3": "We decide what will be shared and where the work will be done"
+      },
+      {
+        "p": "If the first meeting leaves you satisfied with the direction, we move on to a non-disclosure agreement (NDA) and a contract for the investigation. Actual data is shared only after the NDA is signed and we have agreed on what may be shared and used, and where it will be handled."
+      },
+      {
+        "p": "We decide where to work from among the school's Google Drive, OneDrive or local environment, or an environment on Cor.'s side that we have agreed on. We also discuss how to proceed from the second meeting onward, including site visits."
+      },
+      {
+        "h3": "We look into where the data is and how it is actually used"
+      },
+      {
+        "p": "We take stock of the data that can be used this time and, where needed, interview or survey teachers, staff and others involved. Who uses it, when, where, for what and how? We also check how often and how much it is used."
+      },
+      {
+        "p": "We compare options such as moving the data and using it where it is now."
+      },
+      {
+        "h3": "We propose a build plan that suits your school"
+      },
+      {
+        "p": "When there are several options, we present them in tiers (for example, good / better / best), from a full setup to a minimal one. We use whatever format is easiest for the school, such as Google Docs or Word documents. If the options are limited, or something is hard to achieve, we tell you frankly."
+      },
+      {
+        "p": "If we can judge at the first meeting that a short implementation is feasible, we can also consider a contract that covers both the investigation and building an MVP (a system with the minimum features needed), after confirming the additional cost and scope. In that case, we discuss delivering a working MVP in place of a minimal-setup plan."
+      },
+      {
+        "p": "The role Cor. wants to play is something like a life planner and development company for your AI project, rolled into one. If we are going to build a system, we want it to be used on the ground for a long time. So please let us think it through with you, even before anything has taken shape."
+      }
+    ],
     "cta": {
-      "title": "Start by framing how to use AI on confidential data.",
-      "description": "We help you decide where to begin under industry constraints. You can also consult us about validation with a local LLM that keeps your data in-house.",
-      "primary": "Discuss a confidential-data AI assessment",
-      "secondary": "Discuss a local LLM / secure AI PoC",
-      "note": "Costs vary depending on the problem and scope. Our estimates make the assumptions, risks, and scope of work clear; the formal price and schedule are confirmed after requirements review."
-    }
+      "title": "To start, send us what you have in mind.",
+      "body": [
+        {
+          "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
+        },
+        {
+          "p": "An outline of your work is enough to start. Please do not include real data on students, confidential documents or login credentials."
+        }
+      ],
+      "primary": "Go to the contact form"
+    },
+    "sourcesTitle": "References",
+    "sources": []
   },
   "works": {
     "title": "Our work speaks for itself.",

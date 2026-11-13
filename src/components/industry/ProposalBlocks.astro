@@ -1,0 +1,115 @@
+---
+// 業種の提案ページの本文（proposal-schema.ts の Block）を描く。
+// - 署名の区画（founder）には署名のある語りだけを入れる。会社の提供の条件（note・CTA）は区画の外に置く。
+// - 本文の [n] は参考資料への小さなリンク。sourceLink は教育の、本文の近くに置く出典のリンク。
+// - note と founder の中身は同じ部品で描く（Astro.self）。
+import type { IndustrySlug } from '../../config/industry-context';
+import { getCurrentLocale } from '../../utils/i18n';
+import ProposalInline from './ProposalInline.astro';
+import { PROPOSAL_LINKS, isInternalHref, resolveProposalHref } from './proposal-links';
+import type { Block, ProposalPage } from './proposal-schema';
+
+interface Props {
+  blocks: Block[];
+  industry: IndustrySlug;
+  page: ProposalPage;
+}
+
+const { blocks, industry, page } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const sources = PROPOSAL_LINKS[industry].sources;
+const sourceHref = (n: number) => resolveProposalHref(sources[n - 1], locale);
+const newTab = (n: number) => (isInternalHref(sources[n - 1]) ? {} : { target: '_blank', rel: 'noopener noreferrer' });
+const citeLabel = (n: number) => {
+  const title = page.sources[n - 1]?.title;
+  return title ? `${page.sourcesTitle} ${n}: ${title}` : `${page.sourcesTitle} ${n}`;
+};
+
+const h2Class = 'type-heading mt-16 text-balance text-3xl font-medium tracking-tight first:mt-0 sm:text-4xl';
+const h3Class = 'type-heading mt-10 text-balance text-xl font-medium tracking-tight first:mt-0 sm:text-2xl';
+const pClass =
+  'type-copy mt-5 text-pretty text-lg leading-relaxed text-primary-950/80 first:mt-0 dark:text-primary-200/80';
+const linkClass =
+  'font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600';
+const bylineClass = 'mt-5 text-base font-medium text-primary-950 first:mt-0 dark:text-primary-200';
+---
+
+{
+  blocks.map((block) => {
+    if ('h2' in block) return <h2 class={h2Class}>{block.h2}</h2>;
+    if ('h3' in block) return <h3 class={h3Class}>{block.h3}</h3>;
+    if ('p' in block)
+      return (
+        <p class={pClass}>
+          <ProposalInline value={block.p} industry={industry} />
+          {(block.cite ?? []).map((n) => (
+            <sup class="ml-0.5 text-sm"><a href={sourceHref(n)} class={linkClass} aria-label={citeLabel(n)} {...newTab(n)} data-source-cite={n}>[{n}]</a></sup>
+          ))}
+        </p>
+      );
+    if ('strong' in block)
+      return (
+        <p class="mt-6 text-pretty text-xl font-semibold leading-relaxed text-primary-950 first:mt-0 dark:text-primary-50">
+          <strong>{block.strong}</strong>
+        </p>
+      );
+    if ('ul' in block)
+      return (
+        <ul class="type-copy mt-5 list-disc space-y-2 pl-6 text-lg leading-relaxed text-primary-950/80 first:mt-0 dark:text-primary-200/80">
+          {block.ul.map((item) => <li>{item}</li>)}
+        </ul>
+      );
+    if ('table' in block)
+      return (
+        <div class="mt-6 overflow-x-auto first:mt-0">
+          <table class="w-full border-collapse text-left text-base leading-relaxed">
+            <thead>
+              <tr class="border-b border-primary-900/20 dark:border-primary-300/20">
+                {block.table.head.map((cell) => <th scope="col" class="px-3 py-2 align-bottom font-medium">{cell}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {block.table.rows.map((row) => (
+                <tr class="border-b border-primary-900/10 dark:border-primary-300/10">
+                  {row.map((cell, i) =>
+                    i === 0 ? (
+                      <th scope="row" class="px-3 py-3 align-top font-medium">{cell}</th>
+                    ) : (
+                      <td class="px-3 py-3 align-top text-primary-950/80 dark:text-primary-200/80">{cell}</td>
+                    ),
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    if ('sourceLink' in block)
+      return (
+        <p class="mt-3 text-base first:mt-0">
+          <a href={sourceHref(block.sourceLink)} class={linkClass} {...newTab(block.sourceLink)} data-source-link={block.sourceLink}>{block.text}</a>
+        </p>
+      );
+    if ('note' in block)
+      return (
+        <aside class="mt-10 rounded-3xl bg-stone-500/10 p-6 first:mt-0 dark:bg-stone-400/10" data-company-note>
+          <p class="text-lg font-semibold text-primary-950 dark:text-primary-50">{block.note.title}</p>
+          <div class="mt-3">
+            <Astro.self blocks={block.note.body} industry={industry} page={page} />
+          </div>
+        </aside>
+      );
+    const founder = block.founder;
+    return (
+      <section class="mt-16 rounded-3xl bg-primary-500/10 p-6 first:mt-0 dark:bg-primary-400/10 sm:p-10" data-founder-voice>
+        {founder.h2 && <h2 class={h2Class}>{founder.h2}</h2>}
+        {founder.h3 && <h3 class={h3Class}>{founder.h3}</h3>}
+        {founder.bylineAt === 'top' && <p class={bylineClass} data-founder-byline>{founder.byline}</p>}
+        <div class="mt-5 first:mt-0">
+          <Astro.self blocks={founder.body} industry={industry} page={page} />
+        </div>
+        {founder.bylineAt === 'bottom' && <p class={bylineClass} data-founder-byline>{founder.byline}</p>}
+      </section>
+    );
+  })
+}

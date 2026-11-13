@@ -1,0 +1,79 @@
+---
+// 業種の提案ページ（#525 の本文）。5 業種 × 5 言語で同じ部品を使う。
+// 並び: 導入（H1 と導入の文）→ 本文 → サービスへの道（IndustryPaths, #509）→ 問い合わせ → 参考資料。
+// 文言は locale の industry<Name>、リンク先は proposal-links.ts。形は proposal-schema.ts で検証する。
+import type { IndustrySlug } from '../../config/industry-context';
+import { industryContactSource } from '../../config/industry-context';
+import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import IndustryPaths from './IndustryPaths.astro';
+import ProposalBlocks from './ProposalBlocks.astro';
+import ProposalInline from './ProposalInline.astro';
+import ProposalSources from './ProposalSources.astro';
+import { PROPOSAL_LINKS, industryInquiryHref } from './proposal-links';
+import { assertProposalLinks, proposalPageSchema } from './proposal-schema';
+
+interface Props {
+  industry: IndustrySlug;
+}
+
+const PAGE_KEYS = {
+  medical: 'industryMedical',
+  shigyo: 'industryShigyo',
+  construction: 'industryConstruction',
+  manufacturing: 'industryManufacturing',
+  education: 'industryEducation',
+} as const satisfies Record<IndustrySlug, string>;
+
+const { industry } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const t = getTranslations(locale);
+const page = proposalPageSchema.parse(t[PAGE_KEYS[industry]]);
+assertProposalLinks(page, PROPOSAL_LINKS[industry], `${locale}/${PAGE_KEYS[industry]}`);
+const inquiryHref = industryInquiryHref(locale, industry);
+const ctaParagraphs = page.cta.body.flatMap((block) => ('p' in block ? [block.p] : []));
+---
+
+<section class="relative isolate overflow-hidden pb-12 pt-16 sm:pb-16 sm:pt-24" data-proposal-hero>
+  <div class="motion-bg" aria-hidden="true"></div>
+  <div class="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
+      {page.eyebrow}
+    </p>
+    <h1 class="mt-6 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
+      {page.title}
+    </h1>
+    <div class="mt-8">
+      <ProposalBlocks blocks={page.lead} industry={industry} page={page} />
+    </div>
+  </div>
+</section>
+
+<div class="pb-16 sm:pb-24" data-proposal-body>
+  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <ProposalBlocks blocks={page.sections} industry={industry} page={page} />
+  </div>
+</div>
+
+<IndustryPaths industry={industry} />
+
+<section class="py-16 sm:py-24">
+  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col gap-6 rounded-3xl bg-[#2d4a6b] px-6 py-12 text-white sm:px-12 sm:py-16" data-proposal-cta>
+      <h2 class="text-balance text-3xl font-medium tracking-tight sm:text-4xl">{page.cta.title}</h2>
+      {
+        ctaParagraphs.map((paragraph) => (
+          <p class="text-pretty text-lg leading-relaxed text-white/80"><ProposalInline value={paragraph} industry={industry} /></p>
+        ))
+      }
+      <a
+        href={inquiryHref}
+        class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full border border-transparent bg-white px-6 py-4 text-center text-lg font-semibold text-[#2d4a6b] shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-auto sm:px-8"
+        data-industry-inquiry={industryContactSource(industry)}
+      >
+        {page.cta.primary}
+      </a>
+    </div>
+  </div>
+</section>
+
+<ProposalSources industry={industry} page={page} />
