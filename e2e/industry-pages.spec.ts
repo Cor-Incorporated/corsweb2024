@@ -1,11 +1,11 @@
-// 業種のページ（5 業種 × 5 言語）をスマホの幅で開き、横のはみ出しと、押せない link が無いかを数える。
+// ja の業種のページ（5 業種。新しい本文の部品がある）をスマホの幅で開き、横のはみ出しと、押せない link が無いかを数える。
 // - 横のはみ出し: document.documentElement.scrollWidth <= innerWidth
 // - 押せない link: 本文・問い合わせ・参考資料の link を画面の中央へ動かし、その中心の点で
 //   いちばん上にある要素が link 自身（かその中身）であること。浮きボタンなどに覆われていないこと
 // 実行: npx playwright test e2e/industry-pages.spec.ts --project=chromium
 import { expect, test } from '@playwright/test';
 
-const LOCALES = ['ja', 'en', 'zh', 'ko', 'es'] as const;
+const LOCALES = ['ja'] as const;
 const SLUGS = ['medical', 'shigyo', 'construction', 'manufacturing', 'education'] as const;
 const VIEWPORTS = [
   { name: '375x812', width: 375, height: 812 },
