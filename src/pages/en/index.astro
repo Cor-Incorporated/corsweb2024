@@ -1,5 +1,6 @@
 ---
 import ProblemHero from '../../components/home/ProblemHero.astro';
+import IndustryEntry from '../../components/home/IndustryEntry.astro';
 import ChallengeGrid from '../../components/home/ChallengeGrid.astro';
 import ProofHighlights from '../../components/home/ProofHighlights.astro';
 import ServicesReframed from '../../components/home/ServicesReframed.astro';
@@ -20,8 +21,10 @@ const t = getTranslations(currentLocale);
   title={t.meta.home.title}
 >
   {/* 並びは #414 で決めた「課題 → 実証 → 柱 → セキュリティ → 業種 → Grift」（docs/story-spine.md）。
+      IndustryEntry はヒーロー直下の既存業種ページへの入口で、h2 の並びは変えない。
       5 言語で同じ並びかは src/utils/__tests__/home-page.test.ts で照合する。 */}
   <ProblemHero />
+  <IndustryEntry />
   <ChallengeGrid />
   <ProofHighlights />
   <ServicesReframed />
