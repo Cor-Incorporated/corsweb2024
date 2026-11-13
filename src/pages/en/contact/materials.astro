@@ -1,0 +1,11 @@
+---
+import DocumentRequestForm from '../../../components/contact/DocumentRequestForm.astro';
+import Layout from '../../../layouts/Layout.astro';
+import { getCurrentLocale, getTranslations } from '../../../utils/i18n';
+
+const copy = getTranslations(getCurrentLocale(Astro.url)).documentRequest;
+---
+
+<Layout title={copy.metaTitle} description={copy.metaDescription}>
+  <DocumentRequestForm />
+</Layout>

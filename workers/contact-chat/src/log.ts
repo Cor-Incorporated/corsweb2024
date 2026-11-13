@@ -14,6 +14,7 @@ export const CONTACT_LOG_EVENTS = [
   'notification_failed',
   'body_too_large',
   'body_timeout',
+  'document_case_sync_failed',
 ] as const;
 
 export type ContactLogEvent = (typeof CONTACT_LOG_EVENTS)[number];

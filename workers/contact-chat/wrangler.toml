@@ -87,6 +87,13 @@ max_batch_timeout = 5
 max_retries = 5
 dead_letter_queue = "cor-contact-notifications-preview-dlq"
 
+# 未適用。資料請求を cor-os の専用入口へ同期する service binding。
+# 有効化、資格の作成、このブロックのコメント解除は別承認。ここを外してもコードは呼ばない。
+# [[services]]
+# binding = "DOCUMENT_REQUEST_CASE_SYNC"
+# service = "cor-os-workbench"
+# entrypoint = "DocumentRequestCaseSync"
+
 # シークレットは `wrangler secret put <NAME>` で登録（値はコードに出ない）:
 #   ANTHROPIC_API_KEY   ... Claude（LLM_PROVIDER=anthropic のとき必須。未設定なら fail closed）
 #   VERTEX_GATEWAY_URL  ... Cloud Run Gatewayの /generateContent URL

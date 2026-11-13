@@ -296,6 +296,7 @@ describe('worker.fetch — ハンドラレベル', () => {
     '/api/contact/chat',
     '/api/contact/chat/start',
     '/api/contact/submit',
+    '/api/contact/document-request',
   ])('Origin の無い POST %s は 403 で、上流を呼ばない（#362）', async (path) => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
