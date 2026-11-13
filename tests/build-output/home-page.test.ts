@@ -113,7 +113,50 @@ describe('最初の画面 (#414)', () => {
     const works = locale === 'ja' ? '/works' : `/${locale}/works`;
     expect(hero).toMatch(new RegExp(`href=["']?${works}/?["'\\s>]`));
   });
+
+  it.each(LOCALE_KEYS)('%s: 業種の入口の a が 5 つあり、a にも祖先にも、隠す class・属性・style が無い', (locale) => {
+    const entries = elementsWithAncestors(mainOf(readHome(locale)), /\bdata-industry-entry=/);
+    expect(entries.map((entry) => entry.attrs.match(/data-industry-entry=["']?([\w-]+)/)?.[1]), '入口の a の行き先').toEqual([...INDUSTRY_SLUGS]);
+    const hidden = entries.flatMap((entry) =>
+      [entry, ...entry.ancestors].filter((el) => hidesElement(el.attrs)).map((el) => `${entry.attrs.match(/data-industry-entry=["']?([\w-]+)/)?.[1]}: <${el.tag} ${el.attrs.trim().slice(0, 120)}>`),
+    );
+    expect(hidden, '入口を隠している要素').toEqual([]);
+  });
+
 });
+
+// 要素の開きタグと、その祖先の開きタグ（main の中だけ。script と style の中身は見ない）
+interface OpenTag {
+  tag: string;
+  attrs: string;
+}
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+function elementsWithAncestors(html: string, match: RegExp): (OpenTag & { ancestors: OpenTag[] })[] {
+  const body = html.replace(/<(script|style)\b[\s\S]*?<\/\1>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  const stack: OpenTag[] = [];
+  const found: (OpenTag & { ancestors: OpenTag[] })[] = [];
+  for (const m of body.matchAll(/<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g)) {
+    const [, closing, rawTag, attrs] = m;
+    const tag = rawTag.toLowerCase();
+    if (closing) {
+      const at = stack.map((el) => el.tag).lastIndexOf(tag);
+      if (at >= 0) stack.length = at;
+      continue;
+    }
+    if (match.test(attrs)) found.push({ tag, attrs, ancestors: [...stack].reverse() });
+    if (!VOID_TAGS.has(tag) && !attrs.trim().endsWith('/')) stack.push({ tag, attrs });
+  }
+  return found;
+}
+
+// 見えなくする印: Tailwind の hidden・invisible・sr-only（画面の幅の接頭辞つきを含む）、hidden 属性、x-cloak、x-show、display:none
+function hidesElement(attrs: string): boolean {
+  const cls = attrs.match(/\bclass=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/)?.slice(1).find((v) => v !== undefined) ?? '';
+  const classHides = cls.split(/\s+/).some((name) => /^(?:[\w-]+:)*(hidden|invisible|sr-only)$/.test(name));
+  const attrHides = /(^|\s)(hidden|x-cloak|x-show)(=|\s|$)/.test(attrs);
+  const styleHides = /style=["']?[^"'>]*display\s*:\s*none/i.test(attrs);
+  return classHides || attrHides || styleHides;
+}
 
 // 本文に描画されたサイト内リンク（クエリと # を除いたパス）
 function internalHrefs(html: string): string[] {
