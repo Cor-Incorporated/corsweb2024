@@ -81,7 +81,7 @@ function unavailableResponse(request: Request): Response {
     'content-security-policy',
     "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; default-src 'none'; style-src 'unsafe-inline'",
   );
-  const body = request.method === 'HEAD' ? null : renderUnavailablePage(unavailablePageLocale(url.searchParams.get('locale')));
+  const body = request.method === 'HEAD' ? null : renderUnavailablePage(unavailablePageLocale(url.searchParams.getAll('locale')));
   return new Response(body, { status: 503, headers });
 }
 

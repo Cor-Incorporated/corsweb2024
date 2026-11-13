@@ -34,8 +34,12 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
 }
 
-export function unavailablePageLocale(rawLocale: string | null): UnavailableLocale {
-  return unavailableLocale(rawLocale ?? '');
+/**
+ * locale の query の値（`getAll` の結果）から言語を選ぶ。値が 1 つのときだけ採り、0 個と 2 つ以上は ja。
+ * /contact/chat/ の代わりのページ（src/pages/contact/chat/index.astro）と同じ決め方にそろえる。
+ */
+export function unavailablePageLocale(rawLocales: readonly string[]): UnavailableLocale {
+  return rawLocales.length === 1 ? unavailableLocale(rawLocales[0]) : 'ja';
 }
 
 function heading(locale: UnavailableLocale): string | null {

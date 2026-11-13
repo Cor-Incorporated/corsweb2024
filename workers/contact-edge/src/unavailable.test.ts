@@ -50,6 +50,16 @@ describe('Cloudia の画面も代わりのページも配れないとき（文�
     expect(await response.text()).toBe(renderUnavailablePage('ja'));
   });
 
+  // 代わりのページ（/contact/chat/ の静的なページ）と同じく、locale が 1 つのときだけ採る。
+  // 2 つ以上なら、先頭が許可した言語でも ja（Cloudia が配れない段によって言語が変わらないように）。
+  it.each(['locale=en&locale=zh', 'locale=zh&locale=en', 'locale=en&locale=en', 'locale=ko&locale='])(
+    'locale が 2 つ以上（%s）は ja で返す',
+    async (query) => {
+      const response = await unavailable(`/contact/chat/?${query}`);
+      expect(await response.text()).toBe(renderUnavailablePage('ja'));
+    },
+  );
+
   it('ambassador の入口も同じ終わりのページを返す', async () => {
     const response = await unavailable('/contact/chat/ambassador/?locale=en');
     expect(response.status).toBe(503);
