@@ -4,6 +4,7 @@
 // 親まで掛けた opacity が 0.9 以上・要素の中の 9 点（縦横 25%・50%・75%）がどれもその要素に届く（浮きボタンなどに隠れていない）。
 // ヒーローの h1 と主ボタンも同じ条件で数える（入口を入れた代わりに、ヒーローが押し出されていないか）。
 // 各入口を押して、同じ言語の業種ページへ 1 回で進むことも確かめる。
+// ヒーローの中のリンクとボタンは、Tab の順（DOM の順）が見た目の順（上から、同じ行は左から）と同じであること。
 //
 // 動かし方（ビルド結果で測る）:
 //   npm run build
@@ -123,6 +124,23 @@ for (const viewport of VIEWPORTS) {
         const entries = await measure(page, ENTRY_SELECTOR);
         const [h1] = await measure(page, H1_SELECTOR);
         const [primaryCta] = await measure(page, PRIMARY_CTA_SELECTOR);
+        // ヒーローの中の、見えているリンクとボタンを DOM の順に並べ、見た目の順と比べる
+        const heroFocusOrder = await page.evaluate(() => {
+          const hero = document.querySelector('main section');
+          if (!hero) return [];
+          return [...hero.querySelectorAll<HTMLElement>('a[href], button')]
+            .filter((el) => getComputedStyle(el).display !== 'none' && el.getClientRects().length > 0)
+            .map((el) => {
+              const rect = el.getBoundingClientRect();
+              return { text: (el.textContent ?? '').trim().slice(0, 24), top: Math.round(rect.top), left: Math.round(rect.left) };
+            });
+        });
+        const outOfOrder = heroFocusOrder.filter((cur, i) => {
+          const prev = heroFocusOrder[i - 1];
+          if (!prev) return false;
+          const sameRow = Math.abs(cur.top - prev.top) < 12;
+          return sameRow ? cur.left < prev.left : cur.top < prev.top;
+        });
         const metrics = await page.evaluate(() => ({
           innerWidth: window.innerWidth,
           innerHeight: window.innerHeight,
@@ -160,6 +178,7 @@ for (const viewport of VIEWPORTS) {
           h1,
           primaryCta,
           clicks,
+          heroFocusOrder,
         };
         writeFileSync(path.join(OUT_DIR, `${base}.json`), `${JSON.stringify(result, null, 2)}\n`);
 
@@ -170,6 +189,7 @@ for (const viewport of VIEWPORTS) {
         expect.soft(h1?.inFold, `h1: ${JSON.stringify(h1)}`).toBe(true);
         expect.soft(primaryCta?.inFold, `主ボタン: ${JSON.stringify(primaryCta)}`).toBe(true);
         expect.soft(metrics.scrollWidth, '横にはみ出している').toBeLessThanOrEqual(metrics.innerWidth);
+        expect.soft(outOfOrder, `ヒーローの Tab の順が見た目の順と違う: ${JSON.stringify(heroFocusOrder)}`).toEqual([]);
         for (const click of clicks) {
           expect.soft(click.ok, `${click.id} を押した先: ${click.pathname}`).toBe(true);
         }

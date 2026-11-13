@@ -45,8 +45,8 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
 
 {/* 高さは中身で決める（以前の min-h-[88vh] は外した）。下の余白はペンギンが歩く場所。 */}
 {/* 5 業種の入口（IndustryEntry）は主ボタンのすぐ下。最初の画面に 5 つとも入ることを
-    e2e/first-view.spec.ts が測る。スマホでは「実績を見る」・3 つの短い文・エンブレムを入口の下へ回す
-    （CTA の枠を sm 未満で contents にして、order で並べ替える）。 */}
+    e2e/first-view.spec.ts が測る。スマホでは「実績を見る」を入口の下に出し、3 つの短い文とエンブレムが続く。
+    並べ替えに CSS の order を使わない（見た目と Tab の順がずれるため）。 */}
 <section class="relative isolate flex items-center overflow-hidden pt-4 pb-28 sm:pt-20 sm:pb-32">
   {/* 抽象モーション背景（装飾・読み上げ対象外）。prefers-reduced-motion で静止。 */}
   <div class="motion-bg" aria-hidden="true"></div>
@@ -70,27 +70,24 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
             後勝ちで leading-relaxed を打ち消す。sm:leading-relaxed で戻す。 */}
         <p class="max-w-3xl text-pretty text-[15px] leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl sm:leading-relaxed" set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
       </div>
-      <div class="contents sm:flex sm:w-auto sm:flex-row sm:items-center sm:justify-center sm:gap-4">
+      <div class="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center sm:gap-4" data-reveal style="--reveal-delay:0.3s">
         <a
           href={primaryHref}
           data-hero-primary-cta
-          data-reveal
-          style="--reveal-delay:0.3s"
           class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 py-3 text-center text-base font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
         >
           {t.homeHero.primaryCta}
         </a>
-        <a
-          href={secondaryHref}
-          data-reveal
-          style="--reveal-delay:0.3s"
-          class="order-1 inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto"
-        >
+        {/* パソコンでは主ボタンの横。スマホでは入口の下に同じリンクを出す（見た目と Tab の順をそろえる） */}
+        <a href={secondaryHref} class="hidden min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto sm:inline-flex">
           {t.homeHero.secondaryCta}<span aria-hidden="true">&nbsp;→</span>
         </a>
       </div>
       <IndustryEntry />
-      <ul class="order-1 flex flex-wrap items-center justify-center gap-2 sm:order-none sm:gap-3" data-reveal style="--reveal-delay:0.45s">
+      <a href={secondaryHref} class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto sm:hidden" data-reveal style="--reveal-delay:0.35s">
+        {t.homeHero.secondaryCta}<span aria-hidden="true">&nbsp;→</span>
+      </a>
+      <ul class="flex flex-wrap items-center justify-center gap-2 sm:gap-3" data-reveal style="--reveal-delay:0.45s">
         {
           t.homeHero.trustBadges.map((badge) => {
             const href = BADGE_HREFS[badge.id];
@@ -113,7 +110,7 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
       </ul>
       {/* 福岡を代表する企業100選 公式エンブレム（#276 / #304）。掲載条件（クリック遷移・掲載期限）は
           コンポーネント側で一括して担保しているため、ここでは配置とサイズだけ指定する。 */}
-      <Fukuoka100Emblem class="order-1 sm:order-none" imgClass="h-12 w-auto sm:h-16" data-reveal style="--reveal-delay:0.5s" />
+      <Fukuoka100Emblem imgClass="h-12 w-auto sm:h-16" data-reveal style="--reveal-delay:0.5s" />
     </div>
   </div>
   {/* ロゴのペンギンがヒーロー下部を歩く演出（装飾）。クリックで飛び立ち、下から再登場。 */}
