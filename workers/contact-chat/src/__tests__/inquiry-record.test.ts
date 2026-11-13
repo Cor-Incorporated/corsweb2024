@@ -381,7 +381,7 @@ describe('保存した行の読み戻しは、壊れた値を写しに入れな�
   it.each([
     ['業種と合わない path', { entry_path: '/evil/' }, { industry: 'medical', entryPath: '' }],
     ['知らない業種', { industry: 'evil', entry_path: '/industries/evil/' }, { industry: '', entryPath: '' }],
-    ['版の違う分類', { classification_version: 'inquiry-classification-v0' }, { classification: 'unknown' }],
+    ['版の違う分類', { classification_version: 'inquiry-classification-v0' }, { classification: 'unknown', classificationVersion: INQUIRY_CLASSIFICATION_VERSION }],
     ['知らない分類', { machine_classification: 'vip' }, { classification: 'unknown' }],
   ] as const)('%s', async (_label, broken, expected) => {
     const db = openDatabase();

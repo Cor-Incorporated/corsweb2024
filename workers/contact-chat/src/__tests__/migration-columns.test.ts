@@ -11,13 +11,19 @@ interface AddedColumn {
   file: string;
 }
 
-const ADD_COLUMN = /ALTER\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s+ADD\s+COLUMN\s+([A-Za-z_][A-Za-z0-9_]*)/gi;
+// SQLite の識別子は、そのまま・"…"・`…`・[…] のどれでも書ける。ADD の後の COLUMN は省ける。
+const IDENT = '("[^"]+"|`[^`]+`|\\[[^\\]]+\\]|[A-Za-z_][A-Za-z0-9_]*)';
+const ADD_COLUMN = new RegExp(`ALTER\\s+TABLE\\s+${IDENT}\\s+ADD\\s+(?:COLUMN\\s+)?${IDENT}`, 'gi');
+
+function unquote(identifier: string): string {
+  return identifier.replace(/^["`\[]|["`\]]$/g, '').toLowerCase();
+}
 
 function addedColumns(file: string, sql: string): AddedColumn[] {
   const withoutComments = sql.replace(/--[^\n]*/g, '');
   return Array.from(withoutComments.matchAll(ADD_COLUMN), (match) => ({
-    table: match[1].toLowerCase(),
-    column: match[2].toLowerCase(),
+    table: unquote(match[1]),
+    column: unquote(match[2]),
     file,
   }));
 }
@@ -46,6 +52,16 @@ function migrationFiles(): Array<{ file: string; sql: string }> {
 describe('migration の列', () => {
   it('同じ表に同じ列を足す migration が 2 つ無い', () => {
     expect(duplicateColumns(migrationFiles())).toEqual([]);
+  });
+
+  it.each([
+    ['COLUMN を省く', 'ALTER TABLE submission_intake ADD industry TEXT;'],
+    ['列名を引用符で囲む', 'ALTER TABLE submission_intake ADD COLUMN "industry" TEXT;'],
+    ['表名を引用符で囲む', 'ALTER TABLE `submission_intake` ADD COLUMN [industry] TEXT;'],
+  ])('反証: 正しい SQL の別の書き方（%s）でも、同じ列の重なりを検出する', (_label, sql) => {
+    expect(duplicateColumns([...migrationFiles(), { file: '0006_other.sql', sql }])).toEqual([
+      'submission_intake.industry は 0005_inquiry_context.sql と 0006_other.sql の両方が足す',
+    ]);
   });
 
   it('反証: 資料請求の migration と同じ形（submission_intake に industry を足す）を足すと、表・列・2 つの file の名前を挙げて落ちる', () => {
