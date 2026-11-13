@@ -258,14 +258,19 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
     const nextFrame = window.requestAnimationFrame
       ? (callback) => window.requestAnimationFrame(callback)
       : (callback) => window.setTimeout(callback, 0);
+    // 入れ直すのは、逃げ道とパネルの両方が見えているときだけ。パネルが閉じている間（時間切れの timer は閉じても
+    // 止まらない）に入れ直しても読まれないので、開いたときに入れ直す（openPanel）。
+    const reinsertFallbackMessage = () => {
+      nextFrame(() => {
+        if (!fallbackMessage || fallback.classList.contains('hidden') || panel.classList.contains('hidden')) return;
+        fallbackMessage.replaceChildren(document.createTextNode(fallbackMessage.textContent ?? ''));
+      });
+    };
     const revealFallback = () => {
       // 既に見えているなら何もしない。入れ直すのは、見えない状態から見せる 1 回だけ。
       if (!fallback.classList.contains('hidden')) return;
       fallback.classList.remove('hidden');
-      nextFrame(() => {
-        if (!fallbackMessage || fallback.classList.contains('hidden')) return;
-        fallbackMessage.replaceChildren(document.createTextNode(fallbackMessage.textContent ?? ''));
-      });
+      reinsertFallbackMessage();
     };
     const showUnavailable = () => {
       if (frameReady) return;
@@ -347,6 +352,8 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
       openButton.setAttribute('aria-expanded', 'true');
       setOpenButtonLabel(true);
       closeButton.focus();
+      // 閉じている間に逃げ道が出ていたら、開いた次の描画で 1 回だけ入れ直して読ませる。
+      if (!fallback.classList.contains('hidden')) reinsertFallbackMessage();
       window.clearTimeout(fallbackTimer);
       fallbackTimer = window.setTimeout(onFallbackTimeout, 8000);
       inspectFrame();
