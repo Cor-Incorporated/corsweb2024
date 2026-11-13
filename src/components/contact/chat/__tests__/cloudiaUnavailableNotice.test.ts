@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CALL_CENTER_TEL_HREF } from '../../../../config/contact';
+import { CALL_CENTER_PHONE_VISIBLE, CALL_CENTER_TEL_HREF } from '../../../../config/contact';
 import { getTranslations } from '../../../../utils/i18n';
 import {
   CLOUDIA_UNAVAILABLE_COPY,
@@ -16,8 +16,12 @@ function sitePhone(locale: (typeof UNAVAILABLE_LOCALES)[number]) {
 const PHONE_WORDS = /電話|phone|电话|전화|teléfono|tel:/i;
 
 describe('Cloudia が開けないときの案内', () => {
-  it('電話の行は既定では出さない', () => {
-    expect(CLOUDIA_UNAVAILABLE_PHONE_VISIBLE).toBe(false);
+  // 2 つを別々に切り替える決めは無い。片方だけを変えると、両方の名前と値を挙げて落ちる。
+  it('電話の行を出すかどうかは、サイトの電話の旗（CALL_CENTER_PHONE_VISIBLE）と同じ値', () => {
+    expect(
+      CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+      `CLOUDIA_UNAVAILABLE_PHONE_VISIBLE=${CLOUDIA_UNAVAILABLE_PHONE_VISIBLE} CALL_CENTER_PHONE_VISIBLE=${CALL_CENTER_PHONE_VISIBLE}`,
+    ).toBe(CALL_CENTER_PHONE_VISIBLE);
   });
 
   it.each(UNAVAILABLE_LOCALES)('定数が false のとき、%s の案内に番号・tel・電話の語が 1 つも無い', (locale) => {
