@@ -986,7 +986,7 @@
     },
     "security": {
       "title": "Seguridad | Cor.Inc.",
-      "description": "La política de seguridad de Cor.Inc. como socio que trabaja con IA para datos confidenciales y LLM locales: diseño de los datos de entrada y los permisos, procesos de aprobación humana, reglas de conservación y eliminación, y la auditoría de etapa 2 de la ISO/IEC 27001 (ISMS) ya completada, con el registro de la certificación previsto."
+      "description": "La política de seguridad de Cor.Inc. como socio que trabaja con IA para datos confidenciales y LLM locales: diseño de los datos de entrada y los permisos, procesos de aprobación humana, reglas de conservación y eliminación, y la certificación ISO/IEC 27001:2022 (ISMS) obtenida."
     },
     "news": {
       "title": "Noticias | Cor.Inc.",
@@ -1311,7 +1311,7 @@
     "statusTitle": "Desarrollo del marco",
     "status": {
       "legal": "Desde junio de 2026, en colaboración con nuestro asesor legal, estamos desarrollando un marco de revisión legal que abarca contratos, información personal, uso de IA y operación de la seguridad de la información.",
-      "isms": "Operamos un Sistema de Gestión de Seguridad de la Información (ISMS) y estamos en proceso de auditoría de certificación según la norma internacional ISO/IEC 27001. En octubre de 2026 completamos la auditoría de etapa 2 y prevemos el registro de la certificación hacia diciembre de 2026. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes."
+      "isms": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes."
     },
     "aiTitle": "Política de uso de IA",
     "aiDescription": "Cor. aprovecha activamente las herramientas de IA para su trabajo. Al mismo tiempo, al manejar datos confidenciales de clientes, información personal, código fuente, datos de entrenamiento y similares, utilizamos herramientas de IA con contratos y configuraciones que impiden su uso para entrenamiento, cuentas de empresa o entornos aprobados. Los resultados de la IA son verificados por personas y se utilizan solo tras confirmar derechos, exactitud y seguridad.",
@@ -1330,7 +1330,7 @@
       {
         "area": "ISMS",
         "effort": "Gestión de riesgos, formación, políticas y auditorías internas en funcionamiento conforme a la ISO/IEC 27001",
-        "state": "Auditoría de etapa 2 completada (octubre de 2026) · registro previsto hacia diciembre"
+        "state": "Certificación ISMS obtenida (noviembre de 2026)"
       },
       {
         "area": "Gestión de dispositivos",
@@ -1359,7 +1359,7 @@
     "privacySuffix": ".",
     "privacyLead": "* Para los detalles legales sobre el tratamiento de la información personal y los datos de clientes, consulta nuestra Política de privacidad.",
     "governanceTitle": "Desarrollo del marco",
-    "governanceDescription": "Operamos un Sistema de Gestión de Seguridad de la Información (ISMS) y estamos en proceso de auditoría de certificación según la norma internacional ISO/IEC 27001. En octubre de 2026 completamos la auditoría de etapa 2 y prevemos el registro de la certificación hacia diciembre de 2026. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes.",
+    "governanceDescription": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes.",
     "ctas": {
       "primary": "Consulta gratuita",
       "secondary": "Contáctanos",
