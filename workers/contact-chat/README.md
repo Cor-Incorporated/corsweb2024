@@ -106,6 +106,11 @@ npx wrangler secret put RESEND_API_KEY      # Resend のAPIキー
 # Cloudia の画面がトークンを送るようになるまで、この秘密情報は入れない（ADR-0025）。
 # 入れると、トークンの無い正規の /submit が 400 になる。必須フラグは置かない。
 
+# D1 の migration（本番の D1 を変えるので、配備の権限を持つ人が流す）。必ず Worker の配備より先に当てる。
+# 新しい版の Worker は新しい列に書くため、列が無いと会話の保存で失敗し、/chat が 503 になる。
+npx wrangler d1 migrations list cor-contact-chat-prod --remote    # 当たっていない migration を確かめる
+npx wrangler d1 migrations apply cor-contact-chat-prod --remote   # 当てる
+
 # デプロイ（cor-jp.com/api/contact/* ルートに載る）。--env="" は最上位の環境（本番）を明示する。
 # 付けなくても本番に出るが、wrangler 4 は [env.preview] があると --env の無い deploy に警告を出す。
 npx wrangler deploy --env=""
@@ -130,6 +135,7 @@ npx wrangler deploy --dry-run
       POST など状態を変えるリクエストは `Origin` が無いと 403 になる（#362）。ブラウザの fetch は
       そのリクエストに `Origin` を付けるので、cor-jp.com 上のウィジェットは通る。`Origin` を
       `https://cor-jp.com` と書いた非ブラウザの呼び出しは、この検査だけでは止まらない。
+- [ ] **D1 の migration を、Worker の配備より先に当てた**（`wrangler d1 migrations apply`。本番の D1 を変えるので、配備の権限を持つ人が流す）。戻すときは Worker の版だけを戻し、足した列は残す。足した列は `NOT NULL DEFAULT ''` で、古い版の SQL は列を名前で書いているため、列が残っていても動く。
 - [ ] `ANTHROPIC_API_KEY` / `RESEND_API_KEY` を設定済み（未設定だと該当エンドポイントは 503）。
 - [ ] `CONTACT_TO_EMAIL` の宛先、`CONTACT_FROM_EMAIL` のドメインが Resend で検証済み。
 - [ ] **フロントエンド ウィジェットは chat の `reply` を必ず PLAIN TEXT（`textContent`）で描画する。**
