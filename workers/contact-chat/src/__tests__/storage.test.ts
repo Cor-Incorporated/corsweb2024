@@ -13,6 +13,8 @@ import {
 } from '../storage';
 import type { Env, NormalizedInquiry } from '../types';
 import type { SessionState } from '../storage';
+import { unclassified } from '../inquiry-classification';
+import { EMPTY_ENTRY_CONTEXT } from '../inquiry-context';
 
 interface DbCall {
   sql: string;
@@ -91,6 +93,8 @@ describe('encrypted contact storage primitives', () => {
         discoverySource: '検索',
         contactReason: '業務改善の相談',
       },
+      entry: EMPTY_ENTRY_CONTEXT,
+      machineClassification: unclassified('no_model_turn'),
     };
     await upsertContactSession({ DB: db, PII_ENCRYPTION_KEY: 'secret' } as unknown as Env, state);
     const call = db.calls[0];
@@ -125,7 +129,11 @@ describe('encrypted contact storage primitives', () => {
     await createSubmission(
       { DB: db, PII_ENCRYPTION_KEY: 'secret', PII_HMAC_KEY: 'hmac' } as unknown as Env,
       inquiry,
-      { idempotencyKey: 'idempotency-1', sessionId: 'session-1' },
+      {
+        idempotencyKey: 'idempotency-1',
+        sessionId: 'session-1',
+        context: { entry: EMPTY_ENTRY_CONTEXT, classification: unclassified('no_session') },
+      },
     );
     const call = db.calls.find((entry) => entry.sql.includes('INSERT INTO submission_intake'));
     expect(call).toBeDefined();
