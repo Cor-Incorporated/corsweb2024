@@ -96,7 +96,9 @@ jobs:
     name: Deploy to cor-jp-cms-admin (candidate → live)
     needs: build
     if: vars.CMS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    # ubuntu-latest（26.04）では、candidate の URL への curl が 404 を返し続けて「Check the candidate serves the CSP and COOP」が落ちた（run 43265314458）。
+    # 最後に成功した run 41620879416 と同じ 24.04 に固定する。原因を特定して 26.04 で通ることを確かめたら ubuntu-latest に戻す。
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: cms-production
     permissions:
@@ -226,7 +228,8 @@ jobs:
   disabled-notice:
     name: Notice when the CMS admin is not deployed
     if: vars.CMS_DEPLOY_ENABLED != 'true' || github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
+    # この workflow の job は、同じ runner image にそろえる（build・deploy と同じ 24.04）。
+    runs-on: ubuntu-24.04
     permissions: {}
 
     steps:
