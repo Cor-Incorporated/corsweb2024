@@ -41,6 +41,39 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - **PII（name/email/company/message）はメール本文にのみ載り、LLM には一切渡さない。** 会話抜粋はinternal通知だけに載せ、receiptには載せない。
 - `RESEND_API_KEY` 未設定なら **503（fail closed）**。本物の問い合わせをサイレントに握り潰さない。
 
+### 業種の source
+
+`/api/contact/chat/start` と `/api/contact/chat` は、`source` が次のどれかのときだけ業種として読む。
+
+`industry-medical` / `industry-shigyo` / `industry-construction` / `industry-manufacturing` / `industry-education`
+
+最初の返事は、業種と intent の組み合わせで変わる。患者の記録、依頼者名、図面、生徒の名前は聞かない。診断、法律・税務の結論、効果の保証はしない。文の状態は言語ごとに `INDUSTRY_COPY_STATUS` に持つ。ja は `page-body-checked-2026-11-13`（5 業種のページの掲載用本文と 1 文ずつ照らした）、en は `provisional-2026-11-08`（ja にそろえた訳で、まだ確かめていない）。
+
+`corsweb-contact-primary`、`corsweb-launcher`、`corsweb-launcher-fallback`、`cloudia` は業種ではない既知のタグ。それ以外の source は保存用のタグとしては残し、モデルへの文には入れない。不明、無効、営業の分類でも、その理由だけでは受付を終わらせない。
+
+### 受付の記録の文脈（migration `0005_inquiry_context.sql`）
+
+`contact_sessions` と `submission_intake` に、次の 6 列を足す。個人情報の列は増やさない。
+
+- `industry` と `entry_path`: 業種の source のときだけ、サーバーが決める（`industry` は 5 つの値のどれか、`entry_path` は `/industries/<業種>/`）。会話で最初に来た空でない業種の値を採り、その後は変えない（業種でない入口から始めて、途中で業種のページから開き直した会話も拾う）。業種でない入口だけの会話は空文字。
+- `source` の列は最後の要求の入口、`industry`・`entry_path` は会話で最初に来た業種の入口を表す。同じ行で値が食い違うことがある。
+- `entry_path` は、業種の source からサーバーが決めた、言語に依らない入口のページ。ブラウザが居た URL ではない。
+- `machine_classification`: `consult` / `sales` / `unknown`。会話の応答の `genuine` は `consult`、`sales` は `sales`、`spam` は `unknown` に写す。応答を解析できない・未知の値・会話が無いときは `unknown`。
+- `classification_reason`・`classification_origin`・`classification_version`: 写した理由（`model_genuine` など）、元（`model` か `fallback`）、写し方の版（`inquiry-classification-v1`）。
+- 会話の行の分類は、次の決まりで更新する（旧い `classification` の列も同じ）。
+  - start（モデルの判断なし、`no_model_turn`）は、既にモデルの判定が在る会話の分類を上書きしない。
+  - 解析できない応答・未知の値（`model_unparsed`）も、既に在るモデルの判定を消さない。
+  - モデルの有効な判定どうしは、後の値を使う。
+- `mode: ambassador` の会話でも、業種の source なら業種と path を記録する（返事は雑談の文で、業種の案内は出さない）。
+
+submit では、分類・業種・path をサーバー側の会話の状態から写す。ブラウザが送った `classification` や `source` では変わらない。会話が見つからない submit は、業種なし・`unknown`（`no_session`）で受け付ける。
+
+`submission_intake.industry` は、資料請求の受付でも同じ意味（5 業種の値か空文字）で使う。資料請求の migration（#510）を載せ直すときは、番号の付け直しに加えて `submission_intake.industry` の追加を外し、この列を使う。同じ表に同じ列を足す migration が 2 つ在ると、`migration-columns.test.ts` が表・列・2 つの file の名前を挙げて落ちる。
+
+失敗の形: migration を当てる前の D1 で新しい版の Worker を動かすと、start・chat・submit は 503 になる（会話の状態を読む・書く所で新しい列が無いため）。
+
+案件の側へ渡す写しは `buildInquiryCaseCopy`（`src/case-copy.ts`）が作る。欄は受付の番号・業種・path・分類・分類の版・作った時刻の 6 つだけで、送る口は無い。
+
 ## 環境変数・シークレット
 
 ### vars（`wrangler.toml` の `[vars]`・非シークレット）
@@ -83,6 +116,11 @@ npx wrangler secret put RESEND_API_KEY      # Resend のAPIキー
 # Cloudia の画面がトークンを送るようになるまで、この秘密情報は入れない（ADR-0025）。
 # 入れると、トークンの無い正規の /submit が 400 になる。必須フラグは置かない。
 
+# D1 の migration（本番の D1 を変えるので、配備の権限を持つ人が流す）。必ず Worker の配備より先に当てる。
+# 新しい版の Worker は新しい列に書くため、列が無いと会話の保存で失敗し、/chat が 503 になる。
+npx wrangler d1 migrations list cor-contact-chat-prod --remote    # 当たっていない migration を確かめる
+npx wrangler d1 migrations apply cor-contact-chat-prod --remote   # 当てる
+
 # デプロイ（cor-jp.com/api/contact/* ルートに載る）。--env="" は最上位の環境（本番）を明示する。
 # 付けなくても本番に出るが、wrangler 4 は [env.preview] があると --env の無い deploy に警告を出す。
 npx wrangler deploy --env=""
@@ -107,6 +145,7 @@ npx wrangler deploy --dry-run
       POST など状態を変えるリクエストは `Origin` が無いと 403 になる（#362）。ブラウザの fetch は
       そのリクエストに `Origin` を付けるので、cor-jp.com 上のウィジェットは通る。`Origin` を
       `https://cor-jp.com` と書いた非ブラウザの呼び出しは、この検査だけでは止まらない。
+- [ ] **D1 の migration を、Worker の配備より先に当てた**（`wrangler d1 migrations apply`。本番の D1 を変えるので、配備の権限を持つ人が流す）。戻すときは Worker の版だけを戻し、足した列は残す。足した列は `NOT NULL DEFAULT ''` で、古い版の SQL は列を名前で書いているため、列が残っていても動く。
 - [ ] `ANTHROPIC_API_KEY` / `RESEND_API_KEY` を設定済み（未設定だと該当エンドポイントは 503）。
 - [ ] `CONTACT_TO_EMAIL` の宛先、`CONTACT_FROM_EMAIL` のドメインが Resend で検証済み。
 - [ ] **フロントエンド ウィジェットは chat の `reply` を必ず PLAIN TEXT（`textContent`）で描画する。**
