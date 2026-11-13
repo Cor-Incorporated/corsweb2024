@@ -1,0 +1,35 @@
+{
+  "contract": "industry-reception-v1",
+  "copyStatus": "provisional-2026-11-08",
+  "sources": [
+    "industry-medical",
+    "industry-shigyo",
+    "industry-construction",
+    "industry-manufacturing",
+    "industry-education"
+  ],
+  "genericSources": [
+    "corsweb-contact-primary",
+    "corsweb-launcher",
+    "corsweb-launcher-fallback"
+  ],
+  "localeFallback": {
+    "ja": "ja",
+    "en": "en",
+    "zh": "en",
+    "ko": "en",
+    "es": "en"
+  },
+  "markers": [
+    { "source": "industry-medical", "locale": "ja", "marker": "医療のページから開いています。" },
+    { "source": "industry-medical", "locale": "en", "marker": "You opened this from the healthcare page." },
+    { "source": "industry-shigyo", "locale": "ja", "marker": "士業のページから開いています。" },
+    { "source": "industry-shigyo", "locale": "en", "marker": "You opened this from the professional-services page." },
+    { "source": "industry-construction", "locale": "ja", "marker": "建設のページから開いています。" },
+    { "source": "industry-construction", "locale": "en", "marker": "You opened this from the construction page." },
+    { "source": "industry-manufacturing", "locale": "ja", "marker": "製造のページから開いています。" },
+    { "source": "industry-manufacturing", "locale": "en", "marker": "You opened this from the manufacturing page." },
+    { "source": "industry-education", "locale": "ja", "marker": "教育のページから開いています。" },
+    { "source": "industry-education", "locale": "en", "marker": "You opened this from the education page." }
+  ]
+}
