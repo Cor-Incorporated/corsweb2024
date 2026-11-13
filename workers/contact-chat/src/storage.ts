@@ -183,14 +183,25 @@ export async function upsertContactSession(env: Env, state: SessionState): Promi
       -- omits them from a later partial structuredLead response.
       structured_lead_json=json_patch(contact_sessions.structured_lead_json, excluded.structured_lead_json),
       missing_fields_json=excluded.missing_fields_json,
-      classification=excluded.classification, summary_text=excluded.summary_text,
+      summary_text=excluded.summary_text,
       conversation_excerpt_ciphertext=excluded.conversation_excerpt_ciphertext,
+      -- 業種と path: 会話で最初に来た「空でない」業種の値を採り、その後は変えない
+      -- （業種でない入口から始めて、途中で業種のページから開き直した会話も拾う）。
       industry=CASE WHEN contact_sessions.industry <> '' THEN contact_sessions.industry ELSE excluded.industry END,
       entry_path=CASE WHEN contact_sessions.industry <> '' THEN contact_sessions.entry_path ELSE excluded.entry_path END,
-      machine_classification=excluded.machine_classification,
-      classification_reason=excluded.classification_reason,
-      classification_origin=excluded.classification_origin,
-      classification_version=excluded.classification_version,
+      -- 分類: モデルの判定が既に在るとき、モデルの判定でない値（start の no_model_turn、
+      -- 解析できない応答の model_unparsed）では上書きしない。モデルの判定どうしは後の値を使う。
+      -- 旧い classification の列も同じ条件で守る。
+      classification=CASE WHEN contact_sessions.classification_origin = 'model' AND excluded.classification_origin <> 'model'
+        THEN contact_sessions.classification ELSE excluded.classification END,
+      machine_classification=CASE WHEN contact_sessions.classification_origin = 'model' AND excluded.classification_origin <> 'model'
+        THEN contact_sessions.machine_classification ELSE excluded.machine_classification END,
+      classification_reason=CASE WHEN contact_sessions.classification_origin = 'model' AND excluded.classification_origin <> 'model'
+        THEN contact_sessions.classification_reason ELSE excluded.classification_reason END,
+      classification_version=CASE WHEN contact_sessions.classification_origin = 'model' AND excluded.classification_origin <> 'model'
+        THEN contact_sessions.classification_version ELSE excluded.classification_version END,
+      classification_origin=CASE WHEN contact_sessions.classification_origin = 'model' AND excluded.classification_origin <> 'model'
+        THEN contact_sessions.classification_origin ELSE excluded.classification_origin END,
       status='active', updated_at=excluded.updated_at, expires_at=excluded.expires_at
   `).bind(
     state.sessionId,

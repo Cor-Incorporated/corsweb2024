@@ -55,12 +55,22 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 
 `contact_sessions` と `submission_intake` に、次の 6 列を足す。個人情報の列は増やさない。
 
-- `industry` と `entry_path`: 業種の source のときだけ、サーバーが決める（`industry` は 5 つの値のどれか、`entry_path` は `/industries/<業種>/`）。最初に決まった値を保ち、後の要求の source では変えない。業種でない入口は空文字。
+- `industry` と `entry_path`: 業種の source のときだけ、サーバーが決める（`industry` は 5 つの値のどれか、`entry_path` は `/industries/<業種>/`）。会話で最初に来た空でない業種の値を採り、その後は変えない（業種でない入口から始めて、途中で業種のページから開き直した会話も拾う）。業種でない入口だけの会話は空文字。
+- `source` の列は最後の要求の入口、`industry`・`entry_path` は会話で最初に来た業種の入口を表す。同じ行で値が食い違うことがある。
 - `entry_path` は、業種の source からサーバーが決めた、言語に依らない入口のページ。ブラウザが居た URL ではない。
 - `machine_classification`: `consult` / `sales` / `unknown`。会話の応答の `genuine` は `consult`、`sales` は `sales`、`spam` は `unknown` に写す。応答を解析できない・未知の値・会話が無いときは `unknown`。
 - `classification_reason`・`classification_origin`・`classification_version`: 写した理由（`model_genuine` など）、元（`model` か `fallback`）、写し方の版（`inquiry-classification-v1`）。
+- 会話の行の分類は、次の決まりで更新する（旧い `classification` の列も同じ）。
+  - start（モデルの判断なし、`no_model_turn`）は、既にモデルの判定が在る会話の分類を上書きしない。
+  - 解析できない応答・未知の値（`model_unparsed`）も、既に在るモデルの判定を消さない。
+  - モデルの有効な判定どうしは、後の値を使う。
+- `mode: ambassador` の会話でも、業種の source なら業種と path を記録する（返事は雑談の文で、業種の案内は出さない）。
 
 submit では、分類・業種・path をサーバー側の会話の状態から写す。ブラウザが送った `classification` や `source` では変わらない。会話が見つからない submit は、業種なし・`unknown`（`no_session`）で受け付ける。
+
+`submission_intake.industry` は、資料請求の受付でも同じ意味（5 業種の値か空文字）で使う。資料請求の migration（#510）を載せ直すときは、番号の付け直しに加えて `submission_intake.industry` の追加を外し、この列を使う。同じ表に同じ列を足す migration が 2 つ在ると、`migration-columns.test.ts` が表・列・2 つの file の名前を挙げて落ちる。
+
+失敗の形: migration を当てる前の D1 で新しい版の Worker を動かすと、start・chat・submit は 503 になる（会話の状態を読む・書く所で新しい列が無いため）。
 
 案件の側へ渡す写しは `buildInquiryCaseCopy`（`src/case-copy.ts`）が作る。欄は受付の番号・業種・path・分類・分類の版・作った時刻の 6 つだけで、送る口は無い。
 

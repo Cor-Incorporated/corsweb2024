@@ -267,3 +267,155 @@ describe('案件へ渡す写し', () => {
     expect(code).not.toMatch(/\bfetch\s*\(|\.send\s*\(|env\.|Queue|binding/);
   });
 });
+
+async function startSession(env: Env, source: string, sessionId?: string): Promise<string> {
+  const started = await worker.fetch(post('/api/contact/chat/start', {
+    start: true, intent: 'contract-dev', source, locale: 'ja', ...(sessionId ? { sessionId } : {}),
+  }), env);
+  expect(started.status).toBe(200);
+  return (await started.json() as { sessionId: string }).sessionId;
+}
+
+async function chatOnce(env: Env, sessionId: string, source: string, modelText: string): Promise<void> {
+  stubModel(modelText);
+  const chatted = await worker.fetch(post('/api/contact/chat', {
+    sessionId, intent: 'contract-dev', source, locale: 'ja',
+    messages: [{ role: 'user', content: '相談です' }],
+  }), env);
+  expect(chatted.status).toBe(200);
+}
+
+async function submitOnce(env: Env, sessionId: string, source: string, extra: Record<string, unknown> = {}) {
+  const submitted = await worker.fetch(post('/api/contact/submit', {
+    sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です', intent: 'contract-dev', source, ...extra,
+  }), env);
+  return submitted;
+}
+
+function submissionRow(db: DatabaseSync): InquiryRow & { source: string } {
+  return db.prepare(`SELECT receipt_id, source, industry, entry_path, machine_classification, classification_reason,
+    classification_origin, classification_version, classification FROM submission_intake`).get() as unknown as InquiryRow & { source: string };
+}
+
+describe('会話の分類は、モデルの判定でない値で上書きしない', () => {
+  it('start → chat(sales) → start → submit で sales が残る（旧い列も）', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'industry-medical');
+    await chatOnce(env, sessionId, 'industry-medical', modelJson('sales'));
+    await startSession(env, 'industry-medical', sessionId);
+    expect((await submitOnce(env, sessionId, 'industry-medical', { classification: 'genuine' })).status).toBe(200);
+    const row = submissionRow(db);
+    expect(row).toMatchObject({ machine_classification: 'sales', classification_reason: 'model_sales', classification_origin: 'model', classification: 'sales' });
+  });
+
+  it('chat(sales) → chat(解析できない応答) → submit で sales が残る', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'industry-shigyo');
+    await chatOnce(env, sessionId, 'industry-shigyo', modelJson('sales'));
+    await chatOnce(env, sessionId, 'industry-shigyo', 'not json at all');
+    expect((await submitOnce(env, sessionId, 'industry-shigyo')).status).toBe(200);
+    expect(submissionRow(db)).toMatchObject({ machine_classification: 'sales', classification_reason: 'model_sales', classification: 'sales' });
+  });
+
+  it('モデルの有効な判定どうしは後の値を使う（sales → genuine）', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'industry-education');
+    await chatOnce(env, sessionId, 'industry-education', modelJson('sales'));
+    await chatOnce(env, sessionId, 'industry-education', modelJson('genuine'));
+    expect((await submitOnce(env, sessionId, 'industry-education')).status).toBe(200);
+    expect(submissionRow(db)).toMatchObject({ machine_classification: 'consult', classification_reason: 'model_genuine', classification: 'genuine' });
+  });
+
+  it('start だけの会話の submit は unknown（no_model_turn）で受け付ける', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'industry-construction');
+    expect((await submitOnce(env, sessionId, 'industry-construction', { classification: 'genuine' })).status).toBe(200);
+    expect(submissionRow(db)).toMatchObject({
+      industry: 'construction', machine_classification: 'unknown', classification_reason: 'no_model_turn', classification_origin: 'fallback',
+    });
+  });
+});
+
+describe('業種は、会話で最初に来た空でない業種の値を採り、その後は変えない', () => {
+  it('業種でない入口で始めた会話は、後の業種の source で業種を採り、その後に別の業種を送っても変わらない', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'corsweb-launcher');
+    const session = () => db.prepare('SELECT industry, entry_path FROM contact_sessions WHERE session_id = ?').get(sessionId);
+    expect(session()).toEqual({ industry: '', entry_path: '' });
+    await chatOnce(env, sessionId, 'industry-education', modelJson('genuine'));
+    expect(session()).toEqual({ industry: 'education', entry_path: '/industries/education/' });
+    await chatOnce(env, sessionId, 'industry-medical', modelJson('genuine'));
+    expect(session()).toEqual({ industry: 'education', entry_path: '/industries/education/' });
+    expect((await submitOnce(env, sessionId, 'corsweb-launcher')).status).toBe(200);
+    // source の列は最後の要求の入口、industry と entry_path は最初の業種の入口。
+    expect(submissionRow(db)).toMatchObject({ source: 'corsweb-launcher', industry: 'education', entry_path: '/industries/education/' });
+  });
+
+  it.each(['corsweb-launcher', 'corsweb-contact-primary', 'corsweb-launcher-fallback', 'cloudia'])(
+    '業種でない入口（%s）だけの会話は、業種も path も空',
+    async (source) => {
+      const db = openDatabase();
+      const env = testEnv(db);
+      const sessionId = await startSession(env, source);
+      await chatOnce(env, sessionId, source, modelJson('genuine'));
+      expect((await submitOnce(env, sessionId, source)).status).toBe(200);
+      expect(submissionRow(db)).toMatchObject({ industry: '', entry_path: '' });
+    },
+  );
+});
+
+describe('保存した行の読み戻しは、壊れた値を写しに入れない', () => {
+  async function storedReceipt(db: DatabaseSync, env: Env): Promise<string> {
+    const { receiptId } = await runInquiry(env, db, { source: 'industry-medical', modelText: modelJson('sales') });
+    return receiptId;
+  }
+
+  it.each([
+    ['業種と合わない path', { entry_path: '/evil/' }, { industry: 'medical', entryPath: '' }],
+    ['知らない業種', { industry: 'evil', entry_path: '/industries/evil/' }, { industry: '', entryPath: '' }],
+    ['版の違う分類', { classification_version: 'inquiry-classification-v0' }, { classification: 'unknown' }],
+    ['知らない分類', { machine_classification: 'vip' }, { classification: 'unknown' }],
+  ] as const)('%s', async (_label, broken, expected) => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const receiptId = await storedReceipt(db, env);
+    const [column, value] = Object.entries(broken)[0];
+    for (const [key, val] of Object.entries(broken)) {
+      db.prepare(`UPDATE submission_intake SET ${key} = ? WHERE receipt_id = ?`).run(val, receiptId);
+    }
+    expect(column).toBeTruthy();
+    expect(value).toBeTruthy();
+    const copy = buildInquiryCaseCopy((await getInquiryCaseCopySource(env, receiptId))!);
+    expect(copy).toMatchObject(expected);
+  });
+
+  it('写しの元は、決めた 8 列だけを読む（ブラウザ由来の列も個人情報の列も読まない）', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const receiptId = await storedReceipt(db, env);
+    const source = await getInquiryCaseCopySource(env, receiptId);
+    expect(Object.keys(source ?? {})).toEqual([
+      'receipt_id', 'industry', 'entry_path', 'machine_classification',
+      'classification_reason', 'classification_origin', 'classification_version', 'created_at',
+    ]);
+  });
+});
+
+describe('migration を当てる前の D1 では、submit も 503 にそろえる', () => {
+  it('会話の行が在っても、新しい列が無ければ 503', async () => {
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA foreign_keys = ON');
+    const dir = resolve(__dirname, '../../migrations');
+    for (const file of readdirSync(dir).filter((name) => name.endsWith('.sql') && name < '0005').sort()) {
+      db.exec(readFileSync(resolve(dir, file), 'utf8'));
+    }
+    db.prepare(`INSERT INTO contact_sessions (session_id, created_at, updated_at, expires_at) VALUES ('s-old', 0, 0, 9999999999)`).run();
+    const response = await submitOnce(testEnv(db), 's-old', 'industry-medical');
+    expect(response.status).toBe(503);
+  });
+});
