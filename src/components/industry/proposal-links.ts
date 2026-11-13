@@ -89,7 +89,8 @@ export const DOCUMENT_DOWNLOAD_HREF: string | null = null;
 
 /**
  * 業種のページの「問い合わせ」の入口。Cloudia の画面（浮きボタンと同じ /contact/chat/）へ、業種の source を付けて進む。
- * 問い合わせページ（/contact）は経由しない。入口の部品が別に用意されたら、この関数ごと差し替える。
+ * 問い合わせページ（/contact）は経由しない。link の形は浮きボタン（CloudiaLauncher）と同じ（iframe 用の embed は付けない）。
+ * 暫定。問い合わせの入口の部品ができたら、この関数ごと差し替える。
  */
 export function industryInquiryHref(locale: Locale, industry: IndustrySlug): string {
   const params = new URLSearchParams({ source: industryContactSource(industry), locale });
