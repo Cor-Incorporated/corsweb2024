@@ -318,21 +318,32 @@ const INDUSTRY_SLUGS = ['medical', 'shigyo', 'construction', 'manufacturing', 'e
 const FRAME_FAILED_JA = 'この枠ではチャットを開けませんでした。別の画面で開き直してください。';
 const UNAVAILABLE_JA = '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。';
 
-type ChatStub = 'abort' | 'redirect-contact' | 'empty-root' | 'drawn-root' | 'ready-message';
+type ChatStub = 'frame-denied' | 'redirect-contact' | 'empty-root' | 'drawn-root' | 'ready-message';
+
+// cloudia:ready を送らない版の Cloudia（今の本番）。描けば #root に子の要素ができる。
+const DRAWN_CLOUDIA = '<!doctype html><html><body><div id="root"><main>Cloudia</main></div></body></html>';
 
 async function stubChat(page: import('@playwright/test').Page, stub: ChatStub) {
   await page.route(
     (url) => url.pathname.startsWith('/contact/chat'),
     async (route) => {
-      if (stub === 'abort') return route.abort('failed');
+      if (stub === 'frame-denied') {
+        // 枠の中（embed=1）だけを、埋め込みを拒む応答にする。単独で開けば Cloudia が描かれる。
+        const embedded = new URL(route.request().url()).searchParams.get('embed') === '1';
+        return route.fulfill({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          headers: embedded ? { 'x-frame-options': 'DENY' } : {},
+          body: DRAWN_CLOUDIA,
+        });
+      }
       if (stub === 'redirect-contact') {
         return route.fulfill({ status: 302, headers: { location: '/contact/' } });
       }
       const body = {
         // Cloudia の HTML は来たが、script が落ちて何も描かれない。
         'empty-root': '<!doctype html><html><body><div id="root"></div></body></html>',
-        // cloudia:ready を送らない版の Cloudia（今の本番）。描けば #root に子の要素ができる。
-        'drawn-root': '<!doctype html><html><body><div id="root"><main>Cloudia</main></div></body></html>',
+        'drawn-root': DRAWN_CLOUDIA,
         // 描いた後に cloudia:ready を送る版の Cloudia。
         'ready-message':
           '<!doctype html><html><body><div id="root"></div><script>parent.postMessage("cloudia:ready", location.origin)</script></body></html>',
@@ -358,8 +369,10 @@ async function expectStopped(page: import('@playwright/test').Page) {
 
 test.describe('Cloudia が開けないときの終わり方（業種のページの浮きボタン）', () => {
   for (const slug of INDUSTRY_SLUGS) {
-    test(`(a) 枠の中だけ開けない: 単独のチャットへの link で受付が成立する (${slug})`, async ({ page }) => {
-      await stubChat(page, 'abort');
+    // 通信そのものが途絶えているときも、枠は同じく読めない。そのときは link の先も開けず、ブラウザの誤りの画面で
+    // 終わる（ブラウザの戻るで戻れる）。この試験は、枠だけが拒まれる形で、link の先で受付が成立することを見る。
+    test(`(a) 枠の中だけ開けない: 単独のチャットへの link を押すと Cloudia が描かれる (${slug})`, async ({ page }) => {
+      await stubChat(page, 'frame-denied');
       await openLauncher(page, slug);
       await page.clock.runFor(8000);
       const fallback = page.locator('#cloudia-launcher-fallback');
@@ -372,6 +385,11 @@ test.describe('Cloudia が開けないときの終わり方（業種のページ
       expect(url.searchParams.get('locale')).toBe('ja');
       expect(url.searchParams.get('embed')).toBeNull();
       await expect(fallback.locator('a[href^="tel:"]')).toHaveCount(0);
+
+      await fallback.locator('[data-cloudia-fallback-link]').click();
+      await expect(page).toHaveURL((current) => current.pathname === '/contact/chat/');
+      expect(new URL(page.url()).searchParams.get('source')).toBe(`industry-${slug}`);
+      await expect(page.locator('#root > main')).toHaveText('Cloudia');
     });
 
     test(`(b1) Cloudia が配られない（代わりのページ）: 受け付けられないと分かる形で止まる (${slug})`, async ({
