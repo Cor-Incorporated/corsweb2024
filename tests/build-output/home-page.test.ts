@@ -123,6 +123,18 @@ describe('最初の画面 (#414)', () => {
     expect(hidden, '入口を隠している要素').toEqual([]);
   });
 
+  it.each(LOCALE_KEYS)('%s: 入口の nav の名前、ヒーローの実績へのリンク 2 本（パソコン用とスマホ用）、信頼の印', (locale) => {
+    const t = LOCALES[locale];
+    const hero = mainOf(readHome(locale)).match(/<section\b[\s\S]*?<\/section>/)?.[0] ?? '';
+    const nav = hero.match(/<nav\b[^>]*data-home-industry-entry[^>]*>/)?.[0] ?? '';
+    expect(decode(nav.match(/aria-label=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/)?.slice(1).find((v) => v !== undefined) ?? ''), '入口の nav の aria-label').toBe(
+      t.homeIndustries.eyebrow,
+    );
+    const works = locale === 'ja' ? '/works' : `/${locale}/works`;
+    expect([...hero.matchAll(new RegExp(`href=["']?${works}/?["'\\s>]`, 'g'))], 'ヒーローの実績へのリンク').toHaveLength(2);
+    const text = textOf(hero);
+    expect(t.homeHero.trustBadges.filter((badge) => !text.includes(badge.label)), 'ヒーローに無い信頼の印').toEqual([]);
+  });
 });
 
 // 要素の開きタグと、その祖先の開きタグ（main の中だけ。script と style の中身は見ない）
