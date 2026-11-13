@@ -123,7 +123,7 @@ describe('industry source on the contact worker', () => {
     const medicalBody = await medical.json() as { reply: string; classification: string; readyForContact: boolean };
     expect(medicalBody.reply).toContain('患者さんの実データやカルテ');
     expect(medicalBody.reply).toContain('診断も、結果の保証もしません');
-    expect(medicalBody.reply).toContain('作業の名前だけ');
+    expect(medicalBody.reply).toContain('外に出せない情報を扱う作業の名前を教えてください');
     expect(medicalBody.reply).not.toContain('病歴を教えて');
     expect(medicalBody.classification).toBe('genuine');
     expect(medicalBody.readyForContact).toBe(false);
@@ -195,7 +195,7 @@ describe('industry source on the contact worker', () => {
     }, '198.51.100.70'), env);
     expect(started.status).toBe(200);
     const startBody = await started.json() as { sessionId: string; reply: string };
-    expect(startBody.reply).toContain('外に出せない情報の種類');
+    expect(startBody.reply).toContain('外に出せない情報を扱う作業の名前');
 
     const chatted = await worker.fetch(post('/api/contact/chat', {
       sessionId: startBody.sessionId,

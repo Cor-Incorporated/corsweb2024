@@ -31,5 +31,17 @@
     { "source": "industry-manufacturing", "locale": "en", "marker": "You opened this from the manufacturing page." },
     { "source": "industry-education", "locale": "ja", "marker": "教育のページから開いています。" },
     { "source": "industry-education", "locale": "en", "marker": "You opened this from the education page." }
+  ],
+  "firstReplies": [
+    { "source": "industry-medical", "locale": "ja", "reply": "医療のページから開いています。最初は業務の概要だけで構いません。患者さんの実データやカルテ、認証情報は書かないでください。ここでは診断も、結果の保証もしません。\n紹介状の下書きや看護サマリーの整理など、まず、どんなことをしたいとお考えですか。" },
+    { "source": "industry-medical", "locale": "en", "reply": "You opened this from the healthcare page. An outline of the work is enough to start. Do not write real patient data, medical records, or login credentials. This chat does not make a diagnosis or promise a result.\nTo start, what would you like to do, for example drafting referral letters or organizing nursing summaries?" },
+    { "source": "industry-shigyo", "locale": "ja", "reply": "士業のページから開いています。最初は業務の概要だけで構いません。顧問先・依頼者の実データや認証情報は書かないでください。法律や税務の結論は出しません。\n顧問先への回答案づくりや案件資料の整理など、まず、どんなことをしたいとお考えですか。" },
+    { "source": "industry-shigyo", "locale": "en", "reply": "You opened this from the professional-services page. An outline of the work is enough to start. Do not write real data about your clients or login credentials. This chat does not give a legal or tax conclusion.\nTo start, what would you like to do, for example drafting answers for client companies or organizing case documents?" },
+    { "source": "industry-construction", "locale": "ja", "reply": "建設のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料を書く必要はありません。工期や安全の適合は、ここでは断定しません。\n現場から届く報告の転記や書類の下書きなど、まず、どんなことをしたいとお考えですか。" },
+    { "source": "industry-construction", "locale": "en", "reply": "You opened this from the construction page. An outline of the work is enough to start. There is no need to write real site data or confidential documents. This chat does not confirm a schedule or a safety approval.\nTo start, what would you like to do, for example transcribing reports from the site or drafting documents?" },
+    { "source": "industry-manufacturing", "locale": "ja", "reply": "製造のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料を書く必要はありません。品質や歩留まりの改善は、ここでは断定しません。\n日報や、次の担当者へ残したい作業の手がかりなど、まず、どんなことをしたいとお考えですか。" },
+    { "source": "industry-manufacturing", "locale": "en", "reply": "You opened this from the manufacturing page. An outline of the work is enough to start. There is no need to write real shop-floor data or confidential documents. This chat does not promise a quality or yield result.\nTo start, what would you like to do, for example daily reports or the clues you want to leave for the next person on a task?" },
+    { "source": "industry-education", "locale": "ja", "reply": "教育のページから開いています。最初は業務の概要だけで構いません。学生・生徒の実データ、機密資料、認証情報は書かないでください。学習効果は、ここでは断定しません。\n学内の資料の検索や教務システムへの転記など、まず、どんなことをしたいとお考えですか。" },
+    { "source": "industry-education", "locale": "en", "reply": "You opened this from the education page. An outline of the work is enough to start. Do not write real student data, confidential documents, or login credentials. This chat does not promise a learning outcome.\nTo start, what would you like to do, for example searching school documents or transcribing into the academic system?" }
   ]
 }

@@ -102,12 +102,12 @@ const BOUNDARY: Record<IndustrySlug, Record<ChatLocale, string>> = {
     en: 'You opened this from the professional-services page. An outline of the work is enough to start. Do not write real data about your clients or login credentials. This chat does not give a legal or tax conclusion.',
   },
   construction: {
-    ja: '建設のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料は書かないでください。工期や安全の適合は、ここでは断定しません。',
-    en: 'You opened this from the construction page. An outline of the work is enough to start. Do not write real site data or confidential documents. This chat does not confirm a schedule or a safety approval.',
+    ja: '建設のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料を書く必要はありません。工期や安全の適合は、ここでは断定しません。',
+    en: 'You opened this from the construction page. An outline of the work is enough to start. There is no need to write real site data or confidential documents. This chat does not confirm a schedule or a safety approval.',
   },
   manufacturing: {
-    ja: '製造のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料は書かないでください。品質や歩留まりの改善は、ここでは断定しません。',
-    en: 'You opened this from the manufacturing page. An outline of the work is enough to start. Do not write real shop-floor data or confidential documents. This chat does not promise a quality or yield result.',
+    ja: '製造のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料を書く必要はありません。品質や歩留まりの改善は、ここでは断定しません。',
+    en: 'You opened this from the manufacturing page. An outline of the work is enough to start. There is no need to write real shop-floor data or confidential documents. This chat does not promise a quality or yield result.',
   },
   education: {
     ja: '教育のページから開いています。最初は業務の概要だけで構いません。学生・生徒の実データ、機密資料、認証情報は書かないでください。学習効果は、ここでは断定しません。',
@@ -118,8 +118,8 @@ const BOUNDARY: Record<IndustrySlug, Record<ChatLocale, string>> = {
 const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, string>>> = {
   medical: {
     assessment: {
-      ja: '機密として扱う範囲を確かめる相談として、外に出せない情報の種類を、作業の名前だけで教えてください。',
-      en: 'For a confidential-data assessment, name only the kind of work whose information must stay inside.',
+      ja: '機密として扱う範囲を確かめる相談として、外に出せない情報を扱う作業の名前を教えてください。',
+      en: 'For a confidential-data assessment, name the work that handles information that must stay inside.',
     },
     local: {
       ja: '手元の機械で試す相談として、試したい作業を、作業の名前だけで教えてください。',
@@ -138,7 +138,7 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'For an estimate, name only the kind of material that cannot leave the organization.',
     },
     press: {
-      ja: '取材や登壇のテーマを教えてください。患者の実例は不要です。',
+      ja: '取材や登壇のテーマを教えてください。患者さんの実例は不要です。',
       en: 'What is the press or speaking topic? A patient example is not needed.',
     },
     general: {
@@ -148,8 +148,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
   },
   shigyo: {
     assessment: {
-      ja: '機密として扱う範囲を確かめる相談として、書類の種類を、業務の名前だけで教えてください。',
-      en: 'For a confidential-data assessment, name only the kind of professional work.',
+      ja: '機密として扱う範囲を確かめる相談として、外に出せない書類を扱う業務の名前を教えてください。',
+      en: 'For a confidential-data assessment, name the work that handles documents that must stay inside.',
     },
     local: {
       ja: '手元の機械で試す相談として、試したい業務を、業務の名前だけで教えてください。',
