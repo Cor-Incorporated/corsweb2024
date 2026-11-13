@@ -1,28 +1,55 @@
 ---
-import { CLOUDIA_UNAVAILABLE_PHONE_VISIBLE } from '../../../components/contact/chat/cloudiaUnavailableCopy';
+import {
+  CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+  UNAVAILABLE_LOCALES,
+  type UnavailableLocale,
+} from '../../../components/contact/chat/cloudiaUnavailableCopy';
 import { buildUnavailableNotice } from '../../../components/contact/chat/cloudiaUnavailableNotice';
 import { CALL_CENTER_TEL_HREF } from '../../../config/contact';
 import Layout from '../../../layouts/Layout.astro';
-import { getCurrentLocale, getTranslations } from '../../../utils/i18n';
+import { getTranslations } from '../../../utils/i18n';
 
-const queryLocale = Astro.url.searchParams.get('locale');
-const currentLocale = queryLocale === 'en' ? 'en' : getCurrentLocale(Astro.url);
 // このページは Cloudia SPA が配信されていないときだけ出る。ここから /contact/ へ戻すと
 // 「/contact/ の CTA → /contact/chat/ → /contact/ → …」の無限ループになるため、導線を張らずに
 // 終端させる（ランチャー内で開かれた場合は CloudiaLauncher 側のフォールバックが別途出る）。
 // 問い合わせは Cloudia に一本化している（ADR-0005 §6 撤回・2026-09-13）。電話の行は、定数で出すときだけ添える（既定は出さない）。
 // ヘッダー/フッターの通常ナビは Layout が出すので、利用者は行き止まりにはならない。
 // 終わりの文と電話の行は、浮きボタンと contact-edge と同じ定義から作る（電話の行は定数の後ろで、既定は出さない）。
-const noticeLocale = currentLocale === 'ja' ? 'ja' : 'en';
-const notice = buildUnavailableNotice({
-  kind: 'unavailable',
-  locale: noticeLocale,
-  phoneVisible: CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
-  phone: { display: getTranslations(noticeLocale).contactInfo.phone.value, href: CALL_CENTER_TEL_HREF },
-});
-const copy = noticeLocale === 'ja'
-  ? { title: 'AIチャットを準備しています', body: notice.message }
-  : { title: 'The AI chat is unavailable', body: notice.message };
+//
+// 静的な build では query を読めない（Astro.url の query は空）。ja で書き出し、浮きボタンの逃げ道が付ける
+// locale の query が許可した言語のときだけ、下の script が文を替える（5 言語の文はここで data 属性に埋める）。
+// 見出しは ja と en だけ（合成監視が判定に使う文と同じ。src/config/contact-guards.ts）。zh・ko・es は見出しを置かず、
+// contact-edge の終わりのページと同じく、終わりの文だけを出す。
+// 見出しの文は src/config/__tests__/contact-guards.test.ts が `title: '…'` の形でこの file と照らす。
+const HEADINGS: ReadonlyArray<{ locale: UnavailableLocale; title: string }> = [
+  { locale: 'ja', title: 'AIチャットを準備しています' },
+  { locale: 'en', title: 'The AI chat is unavailable' },
+];
+const headingFor = (locale: UnavailableLocale) => HEADINGS.find((heading) => heading.locale === locale)?.title ?? null;
+const noticeFor = (locale: UnavailableLocale) =>
+  buildUnavailableNotice({
+    kind: 'unavailable',
+    locale,
+    phoneVisible: CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+    phone: { display: getTranslations(locale).contactInfo.phone.value, href: CALL_CENTER_TEL_HREF },
+  });
+const notice = noticeFor('ja');
+const copy = { title: headingFor('ja') ?? '', body: notice.message };
+const localizedCopies = Object.fromEntries(
+  UNAVAILABLE_LOCALES.filter((locale) => locale !== 'ja').map((locale) => {
+    const localized = noticeFor(locale);
+    return [
+      locale,
+      {
+        title: headingFor(locale),
+        message: localized.message,
+        ...(localized.phone
+          ? { phoneLead: localized.phone.lead, phoneLabel: localized.phone.label, phoneDisplay: localized.phone.display }
+          : {}),
+      },
+    ];
+  })
+);
 ---
 
 {/* analytics=false: このページは Cloudia ランチャーから iframe 読み込みされるため、
@@ -35,18 +62,58 @@ const copy = noticeLocale === 'ja'
   cloudiaLauncher={false}
   analytics={false}
 >
-  <main class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6">
-    <h1 class="text-3xl font-medium tracking-tight sm:text-4xl">{copy.title}</h1>
-    <p class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">{copy.body}</p>
+  <main
+    data-cloudia-unavailable-page
+    data-unavailable-copies={JSON.stringify(localizedCopies)}
+    class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6"
+  >
+    <h1 data-cloudia-unavailable-title class="text-3xl font-medium tracking-tight sm:text-4xl">{copy.title}</h1>
+    <p data-cloudia-unavailable-message class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">{copy.body}</p>
     {
       notice.phone && (
         <p data-cloudia-unavailable-phone class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-          {notice.phone.lead}
+          <span data-cloudia-unavailable-phone-lead>{notice.phone.lead}</span>
           <br />
-          {notice.phone.label}:{' '}
-          <a href={notice.phone.href} class="font-semibold underline underline-offset-2">{notice.phone.display}</a>
+          <span data-cloudia-unavailable-phone-label>{notice.phone.label}</span>:{' '}
+          <a href={notice.phone.href} data-cloudia-unavailable-phone-display class="font-semibold underline underline-offset-2">{notice.phone.display}</a>
         </p>
       )
     }
   </main>
+  {/* locale の query は 1 つだけ、埋めた文の鍵（en・zh・ko・es）のときだけ受ける。ほかの値・2 つ以上・ja は ja のまま。
+      query の値そのものは文に写さない（lang に入れるのは鍵と一致した値だけ）。 */}
+  <script is:inline data-astro-rerun>
+    (() => {
+      const page = document.querySelector('[data-cloudia-unavailable-page]');
+      if (!page) return;
+      const locales = new URLSearchParams(window.location.search).getAll('locale');
+      if (locales.length !== 1) return;
+      let copies;
+      try {
+        copies = JSON.parse(page.getAttribute('data-unavailable-copies') || '{}');
+      } catch {
+        return;
+      }
+      if (!Object.prototype.hasOwnProperty.call(copies, locales[0])) return;
+      const copy = copies[locales[0]];
+      document.documentElement.lang = locales[0];
+      const title = page.querySelector('[data-cloudia-unavailable-title]');
+      if (copy.title) {
+        if (title) title.textContent = copy.title;
+        document.title = copy.title;
+      } else {
+        title?.remove();
+        document.title = copy.message;
+      }
+      const message = page.querySelector('[data-cloudia-unavailable-message]');
+      if (message) message.textContent = copy.message;
+      const setText = (selector, text) => {
+        const element = page.querySelector(selector);
+        if (element && text) element.textContent = text;
+      };
+      setText('[data-cloudia-unavailable-phone-lead]', copy.phoneLead);
+      setText('[data-cloudia-unavailable-phone-label]', copy.phoneLabel);
+      setText('[data-cloudia-unavailable-phone-display]', copy.phoneDisplay);
+    })();
+  </script>
 </Layout>

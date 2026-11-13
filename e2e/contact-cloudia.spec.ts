@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { CLOUDIA_UNAVAILABLE_COPY } from '../src/components/contact/chat/cloudiaUnavailableCopy';
 
 const query = '?intent=grift-team-beta&source=grift-lp-hero&utm_source=grift&utm_medium=cta';
 
@@ -318,21 +319,32 @@ const INDUSTRY_SLUGS = ['medical', 'shigyo', 'construction', 'manufacturing', 'e
 const FRAME_FAILED_JA = 'この枠ではチャットを開けませんでした。別の画面で開き直してください。';
 const UNAVAILABLE_JA = '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。';
 
-type ChatStub = 'abort' | 'redirect-contact' | 'empty-root' | 'drawn-root' | 'ready-message';
+type ChatStub = 'frame-denied' | 'redirect-contact' | 'empty-root' | 'drawn-root' | 'ready-message';
+
+// cloudia:ready を送らない版の Cloudia（今の本番）。描けば #root に子の要素ができる。
+const DRAWN_CLOUDIA = '<!doctype html><html><body><div id="root"><main>Cloudia</main></div></body></html>';
 
 async function stubChat(page: import('@playwright/test').Page, stub: ChatStub) {
   await page.route(
     (url) => url.pathname.startsWith('/contact/chat'),
     async (route) => {
-      if (stub === 'abort') return route.abort('failed');
+      if (stub === 'frame-denied') {
+        // 枠の中（embed=1）だけを、埋め込みを拒む応答にする。単独で開けば Cloudia が描かれる。
+        const embedded = new URL(route.request().url()).searchParams.get('embed') === '1';
+        return route.fulfill({
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+          headers: embedded ? { 'x-frame-options': 'DENY' } : {},
+          body: DRAWN_CLOUDIA,
+        });
+      }
       if (stub === 'redirect-contact') {
         return route.fulfill({ status: 302, headers: { location: '/contact/' } });
       }
       const body = {
         // Cloudia の HTML は来たが、script が落ちて何も描かれない。
         'empty-root': '<!doctype html><html><body><div id="root"></div></body></html>',
-        // cloudia:ready を送らない版の Cloudia（今の本番）。描けば #root に子の要素ができる。
-        'drawn-root': '<!doctype html><html><body><div id="root"><main>Cloudia</main></div></body></html>',
+        'drawn-root': DRAWN_CLOUDIA,
         // 描いた後に cloudia:ready を送る版の Cloudia。
         'ready-message':
           '<!doctype html><html><body><div id="root"></div><script>parent.postMessage("cloudia:ready", location.origin)</script></body></html>',
@@ -358,8 +370,10 @@ async function expectStopped(page: import('@playwright/test').Page) {
 
 test.describe('Cloudia が開けないときの終わり方（業種のページの浮きボタン）', () => {
   for (const slug of INDUSTRY_SLUGS) {
-    test(`(a) 枠の中だけ開けない: 単独のチャットへの link で受付が成立する (${slug})`, async ({ page }) => {
-      await stubChat(page, 'abort');
+    // 通信そのものが途絶えているときも、枠は同じく読めない。そのときは link の先も開けず、ブラウザの誤りの画面で
+    // 終わる（ブラウザの戻るで戻れる）。この試験は、枠だけが拒まれる形で、link の先で受付が成立することを見る。
+    test(`(a) 枠の中だけ開けない: 単独のチャットへの link を押すと Cloudia が描かれる (${slug})`, async ({ page }) => {
+      await stubChat(page, 'frame-denied');
       await openLauncher(page, slug);
       await page.clock.runFor(8000);
       const fallback = page.locator('#cloudia-launcher-fallback');
@@ -372,6 +386,11 @@ test.describe('Cloudia が開けないときの終わり方（業種のページ
       expect(url.searchParams.get('locale')).toBe('ja');
       expect(url.searchParams.get('embed')).toBeNull();
       await expect(fallback.locator('a[href^="tel:"]')).toHaveCount(0);
+
+      await fallback.locator('[data-cloudia-fallback-link]').click();
+      await expect(page).toHaveURL((current) => current.pathname === '/contact/chat/');
+      expect(new URL(page.url()).searchParams.get('source')).toBe(`industry-${slug}`);
+      await expect(page.locator('#root > main')).toHaveText('Cloudia');
     });
 
     test(`(b1) Cloudia が配られない（代わりのページ）: 受け付けられないと分かる形で止まる (${slug})`, async ({
@@ -406,6 +425,104 @@ test.describe('Cloudia が開けないときの終わり方（業種のページ
       await openLauncher(page, 'medical');
       await page.clock.runFor(8000);
       await expect(page.locator('#cloudia-launcher-fallback')).toBeHidden();
+    });
+  }
+});
+
+// 逃げ道は初め display:none で、見えない間に入った文は、画面読み上げによっては読まれない。
+// 見せた後に文を入れ直していることを、文の変化が「逃げ道が見えている間」に起きたかで確かめる。
+// MutationObserver の知らせは後でまとめて届くので、届いた時の class ではなく、記録の順に class の変化を追って、
+// 文が変わった時点で見えていたかを決める。class の記録は変わる前の値だけを持つので、変わった後の値は、
+// 次の class の記録の前の値（最後の記録なら今の値）から読む（hidden を外さない書き直しでも記録は出る）。
+async function recordFallbackMessageChanges(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    const fallback = document.getElementById('cloudia-launcher-fallback');
+    const message = fallback?.querySelector('[data-cloudia-fallback-message]');
+    const seen: boolean[] = [];
+    (window as unknown as { __fallbackChanges?: boolean[] }).__fallbackChanges = seen;
+    if (!fallback || !message) return;
+    const isVisible = (classValue: string | null) => !(classValue ?? '').split(/\s+/).includes('hidden');
+    let visible = isVisible(fallback.getAttribute('class'));
+    new MutationObserver((records) => {
+      records.forEach((record, index) => {
+        if (record.type === 'attributes' && record.target === fallback) {
+          const next = records
+            .slice(index + 1)
+            .find((later) => later.type === 'attributes' && later.target === fallback);
+          visible = isVisible(next ? next.oldValue : fallback.getAttribute('class'));
+        } else if (message.contains(record.target)) {
+          seen.push(visible);
+        }
+      });
+    }).observe(fallback, {
+      attributes: true,
+      attributeFilter: ['class'],
+      attributeOldValue: true,
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  });
+}
+
+test.describe('Cloudia が開けないときの文を読み上げに届ける', () => {
+  // 枠を読めないときは 8 秒の時間切れで、Cloudia でないと分かったときはすぐに見せる。
+  // 後者は 8 秒を進めない（時間切れでもう一度文を差し込む道を通ると、入れ直しの有無を見分けられない）。
+  for (const [stub, text, waitMs] of [
+    ['frame-denied', FRAME_FAILED_JA, 8000],
+    ['redirect-contact', UNAVAILABLE_JA, 0],
+  ] as const) {
+    test(`逃げ道を見せた後に文を入れ直す（${stub}）`, async ({ page }) => {
+      await stubChat(page, stub);
+      await page.clock.install();
+      await page.goto('/industries/medical/');
+      await recordFallbackMessageChanges(page);
+      await page.locator('#cloudia-launcher-open').click();
+      if (waitMs > 0) await page.clock.runFor(waitMs);
+      const fallback = page.locator('#cloudia-launcher-fallback');
+      await expect(fallback).toBeVisible();
+      await expect(fallback).toHaveAttribute('role', 'status');
+      await expect(fallback).toHaveAttribute('aria-live', 'polite');
+      await page.clock.runFor(100);
+      await expect(fallback.locator('[data-cloudia-fallback-message]')).toHaveText(text);
+      const visibleChanges = () =>
+        page.evaluate(
+          () =>
+            ((window as unknown as { __fallbackChanges?: boolean[] }).__fallbackChanges ?? []).filter(Boolean).length
+        );
+      await expect.poll(visibleChanges).toBe(1);
+      // その後の確かめ（250ms ごと）や時間切れで、同じ文を見えている間に書き直さない（読み上げをくり返さない）。
+      await page.clock.runFor(8000);
+      await page.clock.runFor(100);
+      expect(await visibleChanges()).toBe(1);
+    });
+  }
+});
+
+// 浮きボタンの逃げ道は locale の query を付けて、単独の /contact/chat/ を開く。Cloudia が配られていないときに出る
+// 代わりのページも、その言語の終わりの文を出す（静的な build では query を読めないので、ページの script が替える）。
+test.describe('/contact/chat/ の代わりのページの言語', () => {
+  for (const locale of ['en', 'zh', 'ko', 'es'] as const) {
+    test(`locale=${locale} で、その言語の終わりの文を出す`, async ({ page }) => {
+      await page.goto(`/contact/chat/?source=industry-medical&locale=${locale}`);
+      const unavailablePage = page.locator('[data-cloudia-unavailable-page]');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      await expect(unavailablePage.locator('[data-cloudia-unavailable-message]')).toHaveText(
+        CLOUDIA_UNAVAILABLE_COPY[locale].unavailable
+      );
+      // 見出しは ja と en だけ（合成監視の判定と同じ文）。zh・ko・es は終わりの文だけ。
+      await expect(unavailablePage.locator('h1')).toHaveCount(locale === 'en' ? 1 : 0);
+      await expect(unavailablePage.locator('a')).toHaveCount(0);
+    });
+  }
+
+  for (const search of ['?locale=fr', '?locale=en&locale=zh', `?locale=${encodeURIComponent('zh"><img src=x>')}`]) {
+    test(`知らない・重なった locale（${search}）は ja のまま`, async ({ page }) => {
+      await page.goto(`/contact/chat/${search}`);
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+      await expect(page.locator('[data-cloudia-unavailable-page] h1')).toHaveText('AIチャットを準備しています');
+      await expect(page.locator('[data-cloudia-unavailable-message]')).toHaveText(UNAVAILABLE_JA);
+      await expect(page.locator('[data-cloudia-unavailable-page] img')).toHaveCount(0);
     });
   }
 });

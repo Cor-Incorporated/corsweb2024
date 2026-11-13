@@ -133,6 +133,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
         id="cloudia-launcher-fallback"
         class="absolute inset-0 flex hidden flex-col items-center justify-center gap-3 bg-primary-50 px-6 text-center dark:bg-primary-950"
         role="status"
+        aria-live="polite"
       >
         <p data-cloudia-fallback-message class="text-sm leading-relaxed text-primary-950/75 dark:text-primary-200/75">
           {frameFailedNotice.message}
@@ -249,12 +250,27 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
       fallbackLink?.remove();
       fallbackLink = null;
       const text = launcher.dataset.unavailableMessage;
-      if (fallbackMessage && text) fallbackMessage.textContent = text;
+      // 同じ文を書き直さない（見えている間に書くと、読み上げが同じ文をくり返す）。
+      if (fallbackMessage && text && fallbackMessage.textContent !== text) fallbackMessage.textContent = text;
+    };
+    // 見えない（display:none）間に入った文は、画面読み上げによっては読まれない。見せた後、次の描画で文を入れ直し、
+    // 変化として読ませる。jsdom（build の出力の試験）には requestAnimationFrame が無いので、setTimeout で代える。
+    const nextFrame = window.requestAnimationFrame
+      ? (callback) => window.requestAnimationFrame(callback)
+      : (callback) => window.setTimeout(callback, 0);
+    const revealFallback = () => {
+      // 既に見えているなら何もしない。入れ直すのは、見えない状態から見せる 1 回だけ。
+      if (!fallback.classList.contains('hidden')) return;
+      fallback.classList.remove('hidden');
+      nextFrame(() => {
+        if (!fallbackMessage || fallback.classList.contains('hidden')) return;
+        fallbackMessage.replaceChildren(document.createTextNode(fallbackMessage.textContent ?? ''));
+      });
     };
     const showUnavailable = () => {
       if (frameReady) return;
       switchToUnavailable();
-      fallback.classList.remove('hidden');
+      revealFallback();
     };
 
     // 逃げ道の link が今のページを指すなら、従えない指示になる。始めから終わりの文にしておく。
@@ -314,7 +330,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
         showUnavailable();
         return;
       }
-      fallback.classList.remove('hidden');
+      revealFallback();
     };
 
     // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押したら何が起きるか分からない
