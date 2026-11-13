@@ -25,10 +25,9 @@ test.describe('Cloudia contact routing', () => {
     expect(frameUrl.searchParams.get('embed')).toBe('1');
   });
 
-  // fallback リンクの intent/source 引き回しは /contact 以外でこそ効く仕様。
-  // /contact では自己リンクになるため導線を消している（CloudiaLauncher の同一ページ判定）ので、
-  // 検証は別ページで行う。ロケール別ルートも同時に確認する。
-  test('carries LP intent and source into the launcher fallback link off /contact', async ({
+  // 枠の中だけ開けないときの逃げ道は、単独の /contact/chat/（embed なし）。/contact/ へは戻さない
+  // （/contact/ の主ボタンも同じチャットを開くので、戻すと同じ所を回る。#352）。intent と source は引き回す。
+  test('carries LP intent and source into the launcher fallback link to the separate chat page', async ({
     page,
   }) => {
     await page.goto(`/about/${query}`);
@@ -36,66 +35,60 @@ test.describe('Cloudia contact routing', () => {
       (await page.locator('[data-cloudia-fallback-link]').getAttribute('href')) ?? '',
       page.url()
     );
-    expect(fallbackUrl.pathname).toBe('/contact/');
+    expect(fallbackUrl.pathname).toBe('/contact/chat/');
     expect(fallbackUrl.searchParams.get('intent')).toBe('grift-team-beta');
     expect(fallbackUrl.searchParams.get('source')).toBe('grift-lp-hero');
     expect(fallbackUrl.searchParams.get('locale')).toBe('ja');
+    expect(fallbackUrl.searchParams.get('embed')).toBeNull();
 
     await page.goto(`/en/about/${query}`);
     const localizedUrl = new URL(
       (await page.locator('[data-cloudia-fallback-link]').getAttribute('href')) ?? '',
       page.url()
     );
-    expect(localizedUrl.pathname).toBe('/en/contact/');
+    expect(localizedUrl.pathname).toBe('/contact/chat/');
+    expect(localizedUrl.searchParams.get('locale')).toBe('en');
   });
 
-  // 「お問い合わせページから開き直して」は、すでにそのページにいる利用者には従えない指示。
-  // 導線を消して終端文言に切り替える挙動を固定する（黙って自己リンクに戻らないように）。
+  // お問い合わせページの上でも、逃げ道は自分のページ（/contact/）を指さない。
   // 直接 /contact/ を開くケースだけだと偽 green になる。サイト内リンクの大半は末尾スラッシュ無しの
   // /contact で、ViewTransitions 遷移では location.pathname も /contact になるため、その経路も固定する。
   for (const path of ['/contact/', '/contact']) {
-    test(`terminates instead of self-linking when already on the contact page (${path})`, async ({
-      page,
-    }) => {
+    test(`does not link back to the contact page from the contact page (${path})`, async ({ page }) => {
       await page.goto(path);
-      await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(0);
-      await expect(page.locator('#cloudia-launcher-fallback p')).toContainText(
-        '時間をおいて再度お試しください'
-      );
+      const link = page.locator('[data-cloudia-fallback-link]');
+      await expect(link).toHaveCount(1);
+      expect(new URL((await link.getAttribute('href')) ?? '', page.url()).pathname).toBe('/contact/chat/');
+      await expect(page.locator('#cloudia-launcher-fallback a[href^="/contact/?"], #cloudia-launcher-fallback a[href="/contact/"]')).toHaveCount(0);
     });
   }
 
-  test('terminates on /contact after a ViewTransitions navigation from another page', async ({
+  test('keeps the separate chat link on /contact after a ViewTransitions navigation from another page', async ({
     page,
   }) => {
     await page.goto('/about/');
-    // 遷移前（/about）では通常の案内とリンクがある。
     await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(1);
     // クライアント遷移だったことを証明する目印。フルリロードなら window が作り直されて消える。
-    // これが無いと、将来 data-astro-reload が付くなどして通常遷移になってもテストは緑のままになる。
     const sentinel = `vt-${Date.now()}-${Math.random()}`;
     await page.evaluate((value) => {
       (window as unknown as { __vtSentinel?: string }).__vtSentinel = value;
     }, sentinel);
-    // サイト内の実リンク（末尾スラッシュ無し /contact）をクリックしてクライアント遷移させる。
     await page.locator('footer a[href="/contact"]').first().click();
     await expect(page).toHaveURL(/\/contact\/?$/);
     expect(
       await page.evaluate(() => (window as unknown as { __vtSentinel?: string }).__vtSentinel)
     ).toBe(sentinel);
-    // astro:page-load で再初期化され、/contact では導線が消えていること。
-    await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(0);
-    await expect(page.locator('#cloudia-launcher-fallback p')).toContainText(
-      '時間をおいて再度お試しください'
-    );
+    // astro:page-load で再初期化され、/contact でも逃げ道は単独のチャットを指す。
+    const link = page.locator('[data-cloudia-fallback-link]');
+    await expect(link).toHaveCount(1);
+    expect(new URL((await link.getAttribute('href')) ?? '', page.url()).pathname).toBe('/contact/chat/');
   });
 
-  test('terminates in English on the localized contact page', async ({ page }) => {
+  test('uses the localized copy for the separate chat link on the localized contact page', async ({ page }) => {
     await page.goto('/en/contact/');
-    await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(0);
-    await expect(page.locator('#cloudia-launcher-fallback p')).toContainText(
-      'try again in a little while'
-    );
+    const link = page.locator('[data-cloudia-fallback-link]');
+    await expect(link).toHaveText('Open the chat on a separate page');
+    expect(new URL((await link.getAttribute('href')) ?? '', page.url()).searchParams.get('locale')).toBe('en');
   });
 
   test('opens and closes accessibly and restores focus', async ({ page }) => {
@@ -315,4 +308,104 @@ test.describe('Cloudia contact routing', () => {
 
     await expect(fallback).toHaveClass(/hidden/);
   });
+});
+
+// Cloudia が開けないときに、業種のページから来た人が行き止まりにならないこと（#352）。
+// 型ごとに終わり方を数える。合格は「別の経路で受付が成立する（単独のチャットへの link）」か
+// 「受け付けられないと分かる形で止まる（link を出さない終わりの文）」。黙って何も起きない・
+// 同じ壊れた画面へ戻るだけ、は不合格。電話の行は定数の後ろで、既定では出さない。
+const INDUSTRY_SLUGS = ['medical', 'shigyo', 'construction', 'manufacturing', 'education'] as const;
+const FRAME_FAILED_JA = 'この枠ではチャットを開けませんでした。別の画面で開き直してください。';
+const UNAVAILABLE_JA = '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。';
+
+type ChatStub = 'abort' | 'redirect-contact' | 'empty-root' | 'drawn-root' | 'ready-message';
+
+async function stubChat(page: import('@playwright/test').Page, stub: ChatStub) {
+  await page.route(
+    (url) => url.pathname.startsWith('/contact/chat'),
+    async (route) => {
+      if (stub === 'abort') return route.abort('failed');
+      if (stub === 'redirect-contact') {
+        return route.fulfill({ status: 302, headers: { location: '/contact/' } });
+      }
+      const body = {
+        // Cloudia の HTML は来たが、script が落ちて何も描かれない。
+        'empty-root': '<!doctype html><html><body><div id="root"></div></body></html>',
+        // cloudia:ready を送らない版の Cloudia（今の本番）。描けば #root に子の要素ができる。
+        'drawn-root': '<!doctype html><html><body><div id="root"><main>Cloudia</main></div></body></html>',
+        // 描いた後に cloudia:ready を送る版の Cloudia。
+        'ready-message':
+          '<!doctype html><html><body><div id="root"></div><script>parent.postMessage("cloudia:ready", location.origin)</script></body></html>',
+      }[stub];
+      return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body });
+    }
+  );
+}
+
+async function openLauncher(page: import('@playwright/test').Page, slug: string) {
+  await page.clock.install();
+  await page.goto(`/industries/${slug}/`);
+  await page.locator('#cloudia-launcher-open').click();
+}
+
+async function expectStopped(page: import('@playwright/test').Page) {
+  const fallback = page.locator('#cloudia-launcher-fallback');
+  await expect(fallback).toBeVisible();
+  await expect(fallback.locator('[data-cloudia-fallback-message]')).toHaveText(UNAVAILABLE_JA);
+  await expect(fallback.locator('a')).toHaveCount(0);
+  await expect(fallback.locator('a[href^="tel:"]')).toHaveCount(0);
+}
+
+test.describe('Cloudia が開けないときの終わり方（業種のページの浮きボタン）', () => {
+  for (const slug of INDUSTRY_SLUGS) {
+    test(`(a) 枠の中だけ開けない: 単独のチャットへの link で受付が成立する (${slug})`, async ({ page }) => {
+      await stubChat(page, 'abort');
+      await openLauncher(page, slug);
+      await page.clock.runFor(8000);
+      const fallback = page.locator('#cloudia-launcher-fallback');
+      await expect(fallback).toBeVisible();
+      await expect(fallback.locator('[data-cloudia-fallback-message]')).toHaveText(FRAME_FAILED_JA);
+      const href = (await fallback.locator('[data-cloudia-fallback-link]').getAttribute('href')) ?? '';
+      const url = new URL(href, page.url());
+      expect(url.pathname).toBe('/contact/chat/');
+      expect(url.searchParams.get('source')).toBe(`industry-${slug}`);
+      expect(url.searchParams.get('locale')).toBe('ja');
+      expect(url.searchParams.get('embed')).toBeNull();
+      await expect(fallback.locator('a[href^="tel:"]')).toHaveCount(0);
+    });
+
+    test(`(b1) Cloudia が配られない（代わりのページ）: 受け付けられないと分かる形で止まる (${slug})`, async ({
+      page,
+    }) => {
+      await openLauncher(page, slug);
+      await expectStopped(page);
+    });
+
+    test(`(b2) 代わりのページも配れず /contact/ へ戻される: 止まり、/contact/ へは戻さない (${slug})`, async ({
+      page,
+    }) => {
+      await stubChat(page, 'redirect-contact');
+      await openLauncher(page, slug);
+      await expectStopped(page);
+    });
+
+    test(`(b3) HTML は来たが描かれない: 時間切れで止まる (${slug})`, async ({ page }) => {
+      await stubChat(page, 'empty-root');
+      await openLauncher(page, slug);
+      await expect(page.locator('#cloudia-launcher-fallback')).toBeHidden();
+      await page.clock.runFor(8000);
+      await expectStopped(page);
+    });
+  }
+
+  for (const stub of ['drawn-root', 'ready-message'] as const) {
+    test(`Cloudia が描けたら逃げ道を出さない（${stub === 'drawn-root' ? '合図を送らない版' : '合図を送る版'}）`, async ({
+      page,
+    }) => {
+      await stubChat(page, stub);
+      await openLauncher(page, 'medical');
+      await page.clock.runFor(8000);
+      await expect(page.locator('#cloudia-launcher-fallback')).toBeHidden();
+    });
+  }
 });

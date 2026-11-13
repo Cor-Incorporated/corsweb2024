@@ -1,10 +1,13 @@
 ---
-import { getCurrentLocale, getLocalizedUrl, type Locale } from '../../utils/i18n';
+import { getCurrentLocale, getTranslations, type Locale } from '../../utils/i18n';
 import {
+  CALL_CENTER_TEL_HREF,
   CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS,
   CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS,
 } from '../../config/contact';
 import { industryContactSource, industrySlugFromPath } from '../../config/industry-context';
+import { CLOUDIA_UNAVAILABLE_PHONE_VISIBLE } from './chat/cloudiaUnavailableCopy';
+import { buildUnavailableNotice } from './chat/cloudiaUnavailableNotice';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const industrySlug = industrySlugFromPath(Astro.url.pathname);
@@ -16,16 +19,36 @@ if (incomingIntent) chatUrl.searchParams.set('intent', incomingIntent);
 const embedChatUrl = new URL(chatUrl);
 embedChatUrl.searchParams.set('embed', '1');
 const embedChatPath = `${embedChatUrl.pathname}${embedChatUrl.search}`;
-const fallbackContactPath = getLocalizedUrl('/contact/', currentLocale);
-const fallbackContactUrl = new URL(fallbackContactPath, Astro.url);
-fallbackContactUrl.searchParams.set('locale', currentLocale);
-fallbackContactUrl.searchParams.set(
+// 枠の中だけ開けないときの逃げ道は、/contact/ ではなく単独の /contact/chat/（embed なし）。
+// /contact/ の主ボタンも同じ /contact/chat/ を開くので、/contact/ へ戻すと 2 回押させるうえ、
+// Cloudia 自体が配られないときは同じ所を回る（#352）。単独のページには浮きボタンが出ないので、自分への link にもならない。
+const separateChatUrl = new URL('/contact/chat/', Astro.url);
+separateChatUrl.searchParams.set(
   'source',
   Astro.url.searchParams.get('source') ||
     (industrySlug ? industryContactSource(industrySlug) : 'corsweb-launcher-fallback')
 );
-if (incomingIntent) fallbackContactUrl.searchParams.set('intent', incomingIntent);
-const fallbackContactHref = `${fallbackContactUrl.pathname}${fallbackContactUrl.search}`;
+separateChatUrl.searchParams.set('locale', currentLocale);
+if (incomingIntent) separateChatUrl.searchParams.set('intent', incomingIntent);
+const separateChatHref = `${separateChatUrl.pathname}${separateChatUrl.search}`;
+// 電話の行は定数の後ろ（既定は出さない）。番号は既存の定義から読み、ここに書かない。
+const unavailablePhone = {
+  display: getTranslations(currentLocale).contactInfo.phone.value,
+  href: CALL_CENTER_TEL_HREF,
+};
+const frameFailedNotice = buildUnavailableNotice({
+  kind: 'frame-failed',
+  locale: currentLocale,
+  phoneVisible: CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+  phone: unavailablePhone,
+  separateHref: separateChatHref,
+});
+const unavailableNotice = buildUnavailableNotice({
+  kind: 'unavailable',
+  locale: currentLocale,
+  phoneVisible: CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+  phone: unavailablePhone,
+});
 // 以前は ja/非ja の 2 分岐で、zh・ko・es のページでは英語のボタンが出ていた。
 // satisfies により、6 言語目を足したときに翻訳漏れが型エラーになる。
 type LauncherCopy = {
@@ -34,9 +57,6 @@ type LauncherCopy = {
   close: string;
   // 開いている間の右下のボタンの文言。× ボタン（close）と同じ名前にすると、読み上げで 2 つの「閉じる」が並ぶ。
   closeLauncher: string;
-  fallback: string;
-  fallbackLink: string;
-  fallbackSamePage: string;
 };
 const LAUNCHER_COPY = {
   ja: {
@@ -44,51 +64,31 @@ const LAUNCHER_COPY = {
     title: 'Cloudiaに相談する',
     close: '閉じる',
     closeLauncher: 'Cloudiaを閉じる',
-    // Cloudia が開けないときに出る唯一の導線。ここが実在しない手段を案内すると
-    // 「全部壊れている状況」で行き止まりになる（#290 の再演）。問い合わせは Cloudia に
-    // 一本化した（電話は CALL_CENTER_PHONE_VISIBLE=false で取り下げ、カレンダーは閲覧専用）。
-    // よってここでは別の手段ではなく、iframe ではなく単独ページで開き直す道を案内する。
-    fallback: 'この枠でチャットを開けない場合は、お問い合わせページから開き直してください。',
-    fallbackLink: 'お問い合わせページを開く',
-    // すでにお問い合わせページを見ている場合、上の案内は従えない指示になる（自分自身へのリンク）。
-    // その時だけ導線を消してこの文言に差し替え、/contact/chat/ と同じく終端させる。
-    fallbackSamePage: '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。',
+    // Cloudia が開けないときの文は ./chat/cloudiaUnavailableCopy.ts に置く（代わりのページと contact-edge と共通）。
   },
   en: {
     label: 'Chat with Cloudia',
     title: 'Chat with Cloudia',
     close: 'Close',
     closeLauncher: 'Close Cloudia',
-    fallback: 'If the chat will not open here, please reopen it from the contact page.',
-    fallbackLink: 'Open the contact page',
-    fallbackSamePage: 'The AI chat cannot be reached right now. Please try again in a little while.',
   },
   zh: {
     label: '咨询 Cloudia',
     title: '咨询 Cloudia',
     close: '关闭',
     closeLauncher: '关闭 Cloudia',
-    fallback: '如果无法在此窗口中打开聊天，请从联系页面重新打开。',
-    fallbackLink: '打开联系页面',
-    fallbackSamePage: '目前无法使用 AI 聊天。请稍后再试。',
   },
   ko: {
     label: 'Cloudia에게 상담하기',
     title: 'Cloudia에게 상담하기',
     close: '닫기',
     closeLauncher: 'Cloudia 닫기',
-    fallback: '이 창에서 채팅이 열리지 않으면 문의 페이지에서 다시 열어 주세요.',
-    fallbackLink: '문의 페이지 열기',
-    fallbackSamePage: '현재 AI 채팅을 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.',
   },
   es: {
     label: 'Consultar con Cloudia',
     title: 'Consultar con Cloudia',
     close: 'Cerrar',
     closeLauncher: 'Cerrar Cloudia',
-    fallback: 'Si el chat no se abre aquí, vuelva a abrirlo desde la página de contacto.',
-    fallbackLink: 'Abrir la página de contacto',
-    fallbackSamePage: 'El chat con IA no está disponible en este momento. Vuelva a intentarlo en un rato.',
   },
 } as const satisfies Record<Locale, LauncherCopy>;
 
@@ -101,7 +101,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
   data-chat-path={embedChatPath}
   data-grift-handoff-origins={JSON.stringify(CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS)}
   data-grift-handoff-max-ttl-ms={CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS}
-  data-fallback-same-page={copy.fallbackSamePage}
+  data-unavailable-message={unavailableNotice.message}
 >
   <div
     id="cloudia-launcher-panel"
@@ -134,15 +134,32 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
         class="absolute inset-0 flex hidden flex-col items-center justify-center gap-3 bg-primary-50 px-6 text-center dark:bg-primary-950"
         role="status"
       >
-        <p class="text-sm leading-relaxed text-primary-950/75 dark:text-primary-200/75">
-          {copy.fallback}
+        <p data-cloudia-fallback-message class="text-sm leading-relaxed text-primary-950/75 dark:text-primary-200/75">
+          {frameFailedNotice.message}
         </p>
-        <a
-          href={fallbackContactHref}
-          data-cloudia-fallback-link
-          class="min-h-11 inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300"
-          >{copy.fallbackLink}</a
-        >
+        {
+          frameFailedNotice.separate && (
+            <a
+              href={frameFailedNotice.separate.href}
+              data-cloudia-fallback-link
+              class="min-h-11 inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300"
+            >
+              {frameFailedNotice.separate.label}
+            </a>
+          )
+        }
+        {
+          frameFailedNotice.phone && (
+            <p data-cloudia-fallback-phone class="text-sm leading-relaxed text-primary-950/75 dark:text-primary-200/75">
+              {frameFailedNotice.phone.lead}
+              <br />
+              {frameFailedNotice.phone.label}:{' '}
+              <a href={frameFailedNotice.phone.href} class="font-semibold underline underline-offset-2">
+                {frameFailedNotice.phone.display}
+              </a>
+            </p>
+          )
+        }
       </div>
     </div>
   </div>
@@ -170,17 +187,9 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
     const panel = document.getElementById('cloudia-launcher-panel');
     const frame = document.getElementById('cloudia-launcher-frame');
     const fallback = document.getElementById('cloudia-launcher-fallback');
-    const fallbackLink = launcher?.querySelector('[data-cloudia-fallback-link]');
-    if (
-      !launcher ||
-      !openButton ||
-      !closeButton ||
-      !panel ||
-      !frame ||
-      !fallback ||
-      !(fallbackLink instanceof HTMLAnchorElement)
-    )
-      return;
+    const linkElement = launcher?.querySelector('[data-cloudia-fallback-link]');
+    if (!launcher || !openButton || !closeButton || !panel || !frame || !fallback) return;
+    let fallbackLink = linkElement instanceof HTMLAnchorElement ? linkElement : null;
 
     // 初期化は 1 つの要素につき 1 回だけ。/contact/chat/ のプレースホルダ（ランチャーなし）を経て戻ると、
     // ViewTransitions がこのスクリプトをもう一度実行し、astro:page-load の受け手が 2 つになる。
@@ -212,53 +221,100 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
       const source = incoming.get('source');
       if (!intent && !source) return;
       const target = new URL(frame.src, window.location.href);
-      const fallbackTarget = new URL(fallbackLink.href, window.location.href);
       if (intent) target.searchParams.set('intent', intent);
       if (source) target.searchParams.set('source', source);
-      if (intent) fallbackTarget.searchParams.set('intent', intent);
-      if (source) fallbackTarget.searchParams.set('source', source);
       frame.src = target.toString();
       launcher.dataset.chatPath = `${target.pathname}${target.search}`;
+      if (!fallbackLink) return;
+      const fallbackTarget = new URL(fallbackLink.href, window.location.href);
+      if (intent) fallbackTarget.searchParams.set('intent', intent);
+      if (source) fallbackTarget.searchParams.set('source', source);
       fallbackLink.href = `${fallbackTarget.pathname}${fallbackTarget.search}${fallbackTarget.hash}`;
     };
 
     applyIncomingContext();
 
-    // 「お問い合わせページから開き直して」は、すでにそのページにいる利用者には従えない指示。
-    // リロードしても同じ状態に戻るだけで、実質たらい回しになる（/contact/chat/ の H-A と同型）。
-    // リンク先が現在ページと同じなら導線を消し、終端の文言に差し替える。
-    const fallbackMessage = fallback.querySelector('p');
+    const fallbackMessage = fallback.querySelector('[data-cloudia-fallback-message]');
     // 末尾スラッシュを揃えて比較する。サイト内のリンクは /contact（スラッシュ無し）が大半で、
-    // ViewTransitions で遷移すると location.pathname も /contact になる。一方リンク先は /contact/
-    // のため、素の完全一致だと最も通りやすい経路で自己リンクが残ってしまう。
+    // ViewTransitions で遷移すると location.pathname も /contact になる。
     // /contact/index.html のような明示的なインデックス表記も同じページとして扱う。
     const normalizePath = (path) => {
       const withoutIndex = path.replace(/\/index\.html$/, '/');
       return withoutIndex.length > 1 ? withoutIndex.replace(/\/+$/, '') : withoutIndex;
     };
-    const fallbackPath = normalizePath(new URL(fallbackLink.href, window.location.href).pathname);
-    if (fallbackPath === normalizePath(window.location.pathname)) {
-      fallbackLink.remove();
-      const samePageText = launcher.dataset.fallbackSamePage;
-      if (fallbackMessage && samePageText) fallbackMessage.textContent = samePageText;
-    }
 
-    const showFallback = () => {
-      if (!frameReady) fallback.classList.remove('hidden');
+    // 受け付けられないと分かったら、別の画面への link を消し、終わりの文に替える。
+    // 電話の行（定数で出すときだけ在る）は残す。同じ壊れた画面へ戻す link を残さない。
+    const switchToUnavailable = () => {
+      fallbackLink?.remove();
+      fallbackLink = null;
+      const text = launcher.dataset.unavailableMessage;
+      if (fallbackMessage && text) fallbackMessage.textContent = text;
+    };
+    const showUnavailable = () => {
+      if (frameReady) return;
+      switchToUnavailable();
+      fallback.classList.remove('hidden');
     };
 
-    const inspectFrame = () => {
+    // 逃げ道の link が今のページを指すなら、従えない指示になる。始めから終わりの文にしておく。
+    if (
+      fallbackLink &&
+      normalizePath(new URL(fallbackLink.href, window.location.href).pathname) ===
+        normalizePath(window.location.pathname)
+    ) {
+      switchToUnavailable();
+    }
+
+    // 「開けた」は、Cloudia が描いたこと（#root に子の要素が在る）か、cloudia:ready の合図で決める。
+    // #root が在るだけでは決めない（HTML は来たが script が落ちると、空の枠のまま止まる）。
+    // 合図を送らない版の Cloudia でも、描かれれば #root に子の要素ができるので、配備の前でも後でも動く。
+    let notCloudia = false; // 読み込まれたが Cloudia ではない（代わりのページ・別のページへの戻し・止める応答）
+    let rootEmpty = false; // Cloudia の HTML は来たが、まだ描かれていない
+    const markReady = () => {
+      frameReady = true;
+      window.clearTimeout(fallbackTimer);
+      fallback.classList.add('hidden');
+    };
+    const readFrame = () => {
       try {
-        const documentRoot = frame.contentDocument?.getElementById('root');
-        if (documentRoot) {
-          frameReady = true;
-          fallback.classList.add('hidden');
-          return;
+        const frameWindow = frame.contentWindow;
+        const frameDocument = frame.contentDocument;
+        if (!frameWindow || !frameDocument || frameWindow.location.href === 'about:blank') return 'pending';
+        const root = frameDocument.getElementById('root');
+        if (root && root.firstElementChild) return 'ready';
+        if (frameDocument.readyState !== 'complete') return 'pending';
+        if (!root || !normalizePath(frameWindow.location.pathname).startsWith('/contact/chat')) {
+          return 'not-cloudia';
         }
+        return 'empty';
       } catch {
-        // A cross-origin response cannot be inspected; the load event remains the signal.
+        // 別の origin やエラーのページは読めない。時間切れで「枠だけ開けない」と判定する。
+        return 'opaque';
       }
+    };
+    const inspectFrame = () => {
+      if (frameReady) return;
+      const state = readFrame();
+      if (state === 'ready') {
+        markReady();
+        return;
+      }
+      if (state === 'not-cloudia') {
+        notCloudia = true;
+        showUnavailable();
+        return;
+      }
+      rootEmpty = state === 'empty';
       if (opened) window.setTimeout(inspectFrame, 250);
+    };
+    const onFallbackTimeout = () => {
+      if (frameReady) return;
+      if (notCloudia || rootEmpty) {
+        showUnavailable();
+        return;
+      }
+      fallback.classList.remove('hidden');
     };
 
     // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押したら何が起きるか分からない
@@ -276,7 +332,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
       setOpenButtonLabel(true);
       closeButton.focus();
       window.clearTimeout(fallbackTimer);
-      fallbackTimer = window.setTimeout(showFallback, 8000);
+      fallbackTimer = window.setTimeout(onFallbackTimeout, 8000);
       inspectFrame();
     };
 
@@ -334,8 +390,7 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
     window.__cloudiaMessageHandler = (event) => {
       if (event.source !== frame.contentWindow || event.origin !== window.location.origin) return;
       if (event.data === 'cloudia:ready') {
-        frameReady = true;
-        fallback.classList.add('hidden');
+        markReady();
         return;
       }
       if (

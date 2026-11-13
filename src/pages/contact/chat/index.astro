@@ -1,23 +1,28 @@
 ---
+import { CLOUDIA_UNAVAILABLE_PHONE_VISIBLE } from '../../../components/contact/chat/cloudiaUnavailableCopy';
+import { buildUnavailableNotice } from '../../../components/contact/chat/cloudiaUnavailableNotice';
+import { CALL_CENTER_TEL_HREF } from '../../../config/contact';
 import Layout from '../../../layouts/Layout.astro';
-import { getCurrentLocale } from '../../../utils/i18n';
+import { getCurrentLocale, getTranslations } from '../../../utils/i18n';
 
 const queryLocale = Astro.url.searchParams.get('locale');
 const currentLocale = queryLocale === 'en' ? 'en' : getCurrentLocale(Astro.url);
 // このページは Cloudia SPA が配信されていないときだけ出る。ここから /contact/ へ戻すと
 // 「/contact/ の CTA → /contact/chat/ → /contact/ → …」の無限ループになるため、導線を張らずに
 // 終端させる（ランチャー内で開かれた場合は CloudiaLauncher 側のフォールバックが別途出る）。
-// 問い合わせは Cloudia に一本化しており（ADR-0005 §6 撤回・2026-09-13）、案内できる代替手段は無い。
+// 問い合わせは Cloudia に一本化している（ADR-0005 §6 撤回・2026-09-13）。電話の行は、定数で出すときだけ添える（既定は出さない）。
 // ヘッダー/フッターの通常ナビは Layout が出すので、利用者は行き止まりにはならない。
-const copy = currentLocale === 'ja'
-  ? {
-      title: 'AIチャットを準備しています',
-      body: '現在AIチャットをご利用いただけません。お手数ですが、時間をおいて再度お試しください。',
-    }
-  : {
-      title: 'The AI chat is unavailable',
-      body: 'The AI chat cannot be reached right now. Please try again in a little while.',
-    };
+// 終わりの文と電話の行は、浮きボタンと contact-edge と同じ定義から作る（電話の行は定数の後ろで、既定は出さない）。
+const noticeLocale = currentLocale === 'ja' ? 'ja' : 'en';
+const notice = buildUnavailableNotice({
+  kind: 'unavailable',
+  locale: noticeLocale,
+  phoneVisible: CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+  phone: { display: getTranslations(noticeLocale).contactInfo.phone.value, href: CALL_CENTER_TEL_HREF },
+});
+const copy = noticeLocale === 'ja'
+  ? { title: 'AIチャットを準備しています', body: notice.message }
+  : { title: 'The AI chat is unavailable', body: notice.message };
 ---
 
 {/* analytics=false: このページは Cloudia ランチャーから iframe 読み込みされるため、
@@ -33,5 +38,15 @@ const copy = currentLocale === 'ja'
   <main class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6">
     <h1 class="text-3xl font-medium tracking-tight sm:text-4xl">{copy.title}</h1>
     <p class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">{copy.body}</p>
+    {
+      notice.phone && (
+        <p data-cloudia-unavailable-phone class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+          {notice.phone.lead}
+          <br />
+          {notice.phone.label}:{' '}
+          <a href={notice.phone.href} class="font-semibold underline underline-offset-2">{notice.phone.display}</a>
+        </p>
+      )
+    }
   </main>
 </Layout>

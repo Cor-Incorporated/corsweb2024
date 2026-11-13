@@ -111,6 +111,19 @@ function closeLauncherRun(run: LauncherRun): void {
   run.document.defaultView?.close();
 }
 
+// ランチャーが「受け付けられない」と分かった後の DOM を作る。jsdom では iframe の中身が読み込まれないので、
+// 初期化スクリプト自身の守り（逃げ道の link が今のページを指すときは link を消し、終わりの文に替える）を通して、
+// data-unavailable-message の文を差し込ませる。
+function runLauncherUnavailable(page: DistPage): LauncherRun {
+  const link = page.document.querySelector(LAUNCHER_FALLBACK_LINK_SELECTOR);
+  if (!link) throw new Error(`${page.pageUrl.pathname}: ランチャーの逃げ道の link が無い`);
+  return runLauncher(page, new URL(link.getAttribute('href') ?? '', page.pageUrl));
+}
+
+function shownFallbackMessage(run: LauncherRun): string | undefined {
+  return run.document.querySelector('#cloudia-launcher-fallback [data-cloudia-fallback-message]')?.textContent?.trim();
+}
+
 function lastMain(document: Document): Element {
   const mains = Array.from(document.querySelectorAll('main'));
   if (mains.length === 0) throw new Error('<main> が無い');
@@ -124,8 +137,8 @@ describe('B-1 5 言語の /contact に電話導線が無い（語レベル）', 
   });
 });
 
-// スクリプトが表示する文言は実行後の DOM で見る（ADR-0021 §1）。CloudiaLauncher は /contact 上で、チャットを
-// 開けないときの文言を data-fallback-same-page から差し込む。静的な照合では data-* は対象外なので、ここで見る。
+// スクリプトが表示する文言は実行後の DOM で見る（ADR-0021 §1）。CloudiaLauncher は、Cloudia が受け付けられないと
+// 分かったときの文言を data-unavailable-message から差し込む。静的な照合では data-* は対象外なので、ここで見る。
 describe('B-1 5 言語の /contact: ランチャー実行後に表示される文言にも電話導線が無い', () => {
   it.each(LOCALES)('%s', (locale) => {
     const page = loadDistPage(CONTACT_PAGE_PATHS[locale]);
@@ -136,6 +149,13 @@ describe('B-1 5 言語の /contact: ランチャー実行後に表示される�
     clickLauncherButton(run);
     expect(findPhoneLeads(run.document)).toEqual([]);
     closeLauncherRun(run);
+    // 受け付けられないと分かったときに差し込む文言（data-unavailable-message）も、差し込んだ後の DOM で見る。
+    const unavailable = runLauncherUnavailable(page);
+    expect(unavailable.errors).toEqual([]);
+    expect(shownFallbackMessage(unavailable)).toBe(
+      unavailable.document.getElementById('cloudia-launcher')?.getAttribute('data-unavailable-message')
+    );
+    expect(findPhoneLeads(unavailable.document)).toEqual([]);
   });
 });
 
@@ -251,7 +271,9 @@ describe('B-3 /contact/chat/ の <main> から /contact/ へ送り返さない',
   });
 });
 
-describe('B-3 /contact 上のランチャーのフォールバックが自分自身へのリンクにならない', () => {
+// 枠の中だけ開けないときの逃げ道は、単独の /contact/chat/（embed なし）。/contact へ戻すと、/contact の主ボタンも
+// 同じチャットを開くので、Cloudia 自体が配られないときに同じ所を回る（#323 背景 2・3）。
+describe('B-3 ランチャーのフォールバックは /contact へ戻さず、単独のチャットを指す', () => {
   // ViewTransitions 後の /contact（末尾スラッシュ無し）と /contact/index.html も同じページとして扱う。
   const cases = LOCALES.flatMap((locale) => {
     const canonicalPath = CONTACT_PAGE_PATHS[locale];
@@ -266,20 +288,25 @@ describe('B-3 /contact 上のランチャーのフォールバックが自分自
     const run = runLauncher(page, visitedUrl);
     expect(run.errors).toEqual([]);
     expect(findLauncherFallbackSelfLinks(run.document, visitedUrl)).toEqual([]);
-    // 導線を消しただけで「お問い合わせページから開き直して」の案内が残ると、従えない指示になる。
-    const samePageText = run.document.getElementById('cloudia-launcher')?.getAttribute('data-fallback-same-page');
-    expect(samePageText).toBeTruthy();
-    expect(run.document.querySelector('#cloudia-launcher-fallback p')?.textContent).toBe(samePageText);
+    const links = Array.from(run.document.querySelectorAll(LAUNCHER_FALLBACK_LINK_SELECTOR));
+    expect(links).toHaveLength(1);
+    const target = new URL(links[0].getAttribute('href') ?? '', page.pageUrl);
+    expect(target.pathname).toBe(CLOUDIA_CHAT_PATH);
+    expect(isContactPagePath(target.pathname)).toBe(false);
+    expect(target.searchParams.get('locale')).toBe(locale);
+    expect(target.searchParams.get('embed')).toBeNull();
   });
 
-  // 陽性対照: 別ページではフォールバックが /contact/ への正しい導線として残る（判定が常に空でないこと）。
-  it.each(['/', '/en/'])('別ページ %s ではフォールバックが /contact/ へ残る', (homePath) => {
+  // 陽性対照: 別ページでも逃げ道は 1 本だけ在り、単独のチャットを指す（判定が常に空でないこと）。
+  it.each(['/', '/en/'])('別ページ %s でもフォールバックは単独のチャットを指す', (homePath) => {
     const page = loadDistPage(homePath);
     const run = runLauncher(page, page.pageUrl);
     const links = Array.from(run.document.querySelectorAll(LAUNCHER_FALLBACK_LINK_SELECTOR));
     expect(run.errors).toEqual([]);
     expect(links).toHaveLength(1);
-    expect(isContactPagePath(new URL(links[0].getAttribute('href') ?? '', page.pageUrl).pathname)).toBe(true);
+    const target = new URL(links[0].getAttribute('href') ?? '', page.pageUrl);
+    expect(target.pathname).toBe(CLOUDIA_CHAT_PATH);
+    expect(isContactPagePath(target.pathname)).toBe(false);
     expect(findLauncherFallbackSelfLinks(run.document, page.pageUrl)).toEqual([]);
   });
 });
@@ -304,13 +331,14 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
 
   // #331 再レビュー MEDIUM-1: 「チャットが落ちたら電話を案内する」は #323 の回帰として最も起きやすい形。
   // 静的な照合では読めない（data-* は対象外）が、ランチャー実行後の DOM で検出する。
-  it('/contact のランチャーの data-fallback-same-page に電話の案内が入る（実行後に表示される）', () => {
+  it('/contact のランチャーの data-unavailable-message に電話の案内が入る（受け付けられないときに表示される）', () => {
     const page = loadDistPage(CONTACT_PAGE_PATHS.ja);
     page.document
       .getElementById('cloudia-launcher')
-      ?.setAttribute('data-fallback-same-page', 'お急ぎの方はお電話（092-000-0000）でご連絡ください');
+      ?.setAttribute('data-unavailable-message', 'お急ぎの方はお電話（092-000-0000）でご連絡ください');
     expect(findPhoneLeads(page.document)).toEqual([]);
-    const kinds = findPhoneLeads(runLauncher(page, page.pageUrl).document).map((finding) => finding.kind);
+    expect(findPhoneLeads(runLauncher(page, page.pageUrl).document)).toEqual([]);
+    const kinds = findPhoneLeads(runLauncherUnavailable(page).document).map((finding) => finding.kind);
     expect(kinds).toEqual(expect.arrayContaining(['text', 'number']));
   });
 
@@ -401,9 +429,16 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     expect(findContactSelfLoops(document, pageUrl)).toHaveLength(before + 1);
   });
 
-  it.each(LOCALES)('%s: 初期化スクリプトが動かなければ自己リンクが残る（#323 背景 3）', (locale) => {
+  it.each(LOCALES)('%s: 逃げ道が /contact へ戻ると自己リンクとして検出し、初期化スクリプトが終わりの文に替える（#323 背景 3）', (locale) => {
     const page = loadDistPage(CONTACT_PAGE_PATHS[locale]);
+    expect(findLauncherFallbackSelfLinks(page.document, page.pageUrl)).toEqual([]);
+    page.document.querySelector(LAUNCHER_FALLBACK_LINK_SELECTOR)?.setAttribute('href', CONTACT_PAGE_PATHS[locale]);
     expect(findLauncherFallbackSelfLinks(page.document, page.pageUrl)).toHaveLength(1);
+    const run = runLauncher(page, page.pageUrl);
+    expect(findLauncherFallbackSelfLinks(run.document, page.pageUrl)).toEqual([]);
+    expect(shownFallbackMessage(run)).toBe(
+      run.document.getElementById('cloudia-launcher')?.getAttribute('data-unavailable-message')
+    );
   });
 });
 
