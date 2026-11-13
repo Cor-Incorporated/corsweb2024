@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { CLOUDIA_UNAVAILABLE_COPY } from '../src/components/contact/chat/cloudiaUnavailableCopy';
 
 const query = '?intent=grift-team-beta&source=grift-lp-hero&utm_source=grift&utm_medium=cta';
 
@@ -494,6 +495,34 @@ test.describe('Cloudia が開けないときの文を読み上げに届ける', 
       await page.clock.runFor(8000);
       await page.clock.runFor(100);
       expect(await visibleChanges()).toBe(1);
+    });
+  }
+});
+
+// 浮きボタンの逃げ道は locale の query を付けて、単独の /contact/chat/ を開く。Cloudia が配られていないときに出る
+// 代わりのページも、その言語の終わりの文を出す（静的な build では query を読めないので、ページの script が替える）。
+test.describe('/contact/chat/ の代わりのページの言語', () => {
+  for (const locale of ['en', 'zh', 'ko', 'es'] as const) {
+    test(`locale=${locale} で、その言語の終わりの文を出す`, async ({ page }) => {
+      await page.goto(`/contact/chat/?source=industry-medical&locale=${locale}`);
+      const unavailablePage = page.locator('[data-cloudia-unavailable-page]');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      await expect(unavailablePage.locator('[data-cloudia-unavailable-message]')).toHaveText(
+        CLOUDIA_UNAVAILABLE_COPY[locale].unavailable
+      );
+      // 見出しは ja と en だけ（合成監視の判定と同じ文）。zh・ko・es は終わりの文だけ。
+      await expect(unavailablePage.locator('h1')).toHaveCount(locale === 'en' ? 1 : 0);
+      await expect(unavailablePage.locator('a')).toHaveCount(0);
+    });
+  }
+
+  for (const search of ['?locale=fr', '?locale=en&locale=zh', `?locale=${encodeURIComponent('zh"><img src=x>')}`]) {
+    test(`知らない・重なった locale（${search}）は ja のまま`, async ({ page }) => {
+      await page.goto(`/contact/chat/${search}`);
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+      await expect(page.locator('[data-cloudia-unavailable-page] h1')).toHaveText('AIチャットを準備しています');
+      await expect(page.locator('[data-cloudia-unavailable-message]')).toHaveText(UNAVAILABLE_JA);
+      await expect(page.locator('[data-cloudia-unavailable-page] img')).toHaveCount(0);
     });
   }
 });

@@ -12,6 +12,7 @@ import { JSDOM, VirtualConsole } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import {
   CLOUDIA_CHAT_PATH,
+  CLOUDIA_CHAT_PLACEHOLDER_TITLES,
   CLOUDIA_SPA_ROOT_ID,
   CONTACT_PAGE_PATHS,
   LAUNCHER_FALLBACK_LINK_SELECTOR,
@@ -27,6 +28,11 @@ import {
   isCloudiaChatHtmlServed,
   isContactPagePath,
 } from '../../src/config/contact-guards';
+import {
+  CLOUDIA_UNAVAILABLE_COPY,
+  CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
+  UNAVAILABLE_LOCALES,
+} from '../../src/components/contact/chat/cloudiaUnavailableCopy';
 import { buildUnavailableNotice } from '../../src/components/contact/chat/cloudiaUnavailableNotice';
 import { PHONE_INQUIRY_ACCIDENTS } from '../fixtures/phone-inquiry-accidents';
 
@@ -123,6 +129,38 @@ function runLauncherUnavailable(page: DistPage): LauncherRun {
 
 function shownFallbackMessage(run: LauncherRun): string | undefined {
   return run.document.querySelector('#cloudia-launcher-fallback [data-cloudia-fallback-message]')?.textContent?.trim();
+}
+
+// /contact/chat/ の代わりのページの文を locale の query で替える script を、build の出力の上で、指定した query で動かす。
+// beforeScripts: 反証で、script が読む data 属性を壊してから動かすとき。
+function runUnavailablePage(search: string, beforeScripts?: (document: Document) => void): LauncherRun {
+  const page = loadDistPage(CLOUDIA_CHAT_PATH);
+  const scripts = Array.from(page.document.querySelectorAll('script:not([src])'), (script) => script.textContent ?? '')
+    .filter((text) => text.includes('data-cloudia-unavailable-page'));
+  if (scripts.length !== 1) {
+    throw new Error(`${CLOUDIA_CHAT_PATH}: 言語を替える script を特定できない（${scripts.length} 本）`);
+  }
+  beforeScripts?.(page.document);
+  const errors: string[] = [];
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', (error: Error) => errors.push(error.message));
+  const dom = new JSDOM(`<!doctype html>${page.document.documentElement.outerHTML}`, {
+    url: new URL(`${CLOUDIA_CHAT_PATH}${search}`, page.pageUrl).href,
+    runScripts: 'outside-only',
+    virtualConsole,
+  });
+  dom.window.eval(scripts[0]);
+  return { document: dom.window.document, errors };
+}
+
+function unavailablePageText(run: LauncherRun) {
+  const page = run.document.querySelector('[data-cloudia-unavailable-page]');
+  return {
+    lang: run.document.documentElement.lang,
+    title: run.document.title,
+    heading: page?.querySelector('h1')?.textContent ?? null,
+    message: page?.querySelector('[data-cloudia-unavailable-message]')?.textContent ?? null,
+  };
 }
 
 function lastMain(document: Document): Element {
@@ -274,6 +312,49 @@ describe('B-1 /contact/chat/ の代わりのページに電話導線が無い', 
   });
 });
 
+// 浮きボタンの逃げ道は locale の query を付けて代わりのページを開く。静的な build では query を読めないので、
+// ページの script が文を替える。替えた後の DOM で、言語ごとの文と電話の導線の無さを見る。
+describe('/contact/chat/ の代わりのページは、locale の query の言語で終わりの文を出す', () => {
+  const others = UNAVAILABLE_LOCALES.filter((locale) => locale !== 'ja');
+
+  it.each(others)('%s', (locale) => {
+    const run = runUnavailablePage(`?source=industry-medical&locale=${locale}`);
+    expect(run.errors).toEqual([]);
+    const message = CLOUDIA_UNAVAILABLE_COPY[locale].unavailable;
+    const heading = locale === 'en' ? CLOUDIA_CHAT_PLACEHOLDER_TITLES.en : null;
+    expect(unavailablePageText(run)).toEqual({ lang: locale, title: heading ?? message, heading, message });
+    expect(findPhoneLeads(run.document)).toEqual([]);
+  });
+
+  it('埋めた文は ja 以外の 4 言語で、電話の行の定数が false のあいだは電話の欄を持たない', () => {
+    const page = loadDistPage(CLOUDIA_CHAT_PATH).document.querySelector('[data-cloudia-unavailable-page]');
+    const copies = JSON.parse(page?.getAttribute('data-unavailable-copies') ?? '{}') as Record<string, object>;
+    expect(Object.keys(copies).sort()).toEqual([...others].sort());
+    expect(CLOUDIA_UNAVAILABLE_PHONE_VISIBLE).toBe(false);
+    for (const copy of Object.values(copies)) expect(Object.keys(copy).sort()).toEqual(['message', 'title']);
+  });
+
+  it.each([
+    '',
+    '?locale=ja',
+    '?locale=fr',
+    '?locale=EN',
+    '?locale=en&locale=zh',
+    '?locale=__proto__',
+    '?locale=constructor',
+    `?locale=${encodeURIComponent('zh"><script>alert(1)</script>')}`,
+  ])('%j は ja のまま', (search) => {
+    const run = runUnavailablePage(search);
+    expect(run.errors).toEqual([]);
+    expect(unavailablePageText(run)).toEqual({
+      lang: 'ja',
+      title: CLOUDIA_CHAT_PLACEHOLDER_TITLES.ja,
+      heading: CLOUDIA_CHAT_PLACEHOLDER_TITLES.ja,
+      message: CLOUDIA_UNAVAILABLE_COPY.ja.unavailable,
+    });
+  });
+});
+
 describe('B-3 /contact/chat/ の <main> から /contact/ へ送り返さない', () => {
   it('プレースホルダページ', () => {
     const { document, pageUrl } = loadDistPage(CLOUDIA_CHAT_PATH);
@@ -394,6 +475,21 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     expect(findPhoneLeads(document).map((finding) => finding.kind)).toEqual(
       expect.arrayContaining(['text', 'tel-link'])
     );
+  });
+
+  // 静的な照合は data 属性を読まない。言語を替えた後の DOM で検出する。
+  it('/contact/chat/ の代わりのページの zh の文に電話の案内が入る（locale=zh で表示される）', () => {
+    const inject = (document: Document) => {
+      const page = document.querySelector('[data-cloudia-unavailable-page]');
+      const copies = JSON.parse(page?.getAttribute('data-unavailable-copies') ?? '{}') as Record<string, { message: string }>;
+      copies.zh = { ...copies.zh, message: `${copies.zh.message}也可以通过电话联系我们。` };
+      page?.setAttribute('data-unavailable-copies', JSON.stringify(copies));
+    };
+    const injected = loadDistPage(CLOUDIA_CHAT_PATH).document;
+    inject(injected);
+    expect(findPhoneLeads(injected)).toEqual([]);
+    const run = runUnavailablePage('?locale=zh', inject);
+    expect(findPhoneLeads(run.document).map((finding) => finding.match)).toContain('电话');
   });
 
   it('en の /contact に tel: リンクが戻る', () => {
