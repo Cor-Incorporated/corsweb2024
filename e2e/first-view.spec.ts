@@ -211,3 +211,34 @@ for (const viewport of VIEWPORTS) {
     });
   }
 }
+
+// ヘッダーのプルダウン（サービス・業種別・Cor.について・言語）を、キーボードで開いて中へ入り、Escape で閉じると、
+// focus が開いたボタンへ戻ること（body へ落ちない）。
+test('ヘッダーのプルダウンを Escape で閉じると、focus が開いたボタンへ戻る', async ({ browser }, testInfo) => {
+  const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
+  expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(new URL('/', baseURL!).toString(), { waitUntil: 'load' });
+    const desktopMenus = ['services', 'industries', 'about'].map((menu) => {
+      const list = page.locator(`nav[aria-label="主要ページ"] ul[data-menu="${menu}"]`);
+      return { name: menu, list, button: list.locator('xpath=preceding-sibling::button') };
+    });
+    const langButton = page.locator('button', { has: page.locator('span.sr-only', { hasText: '言語を切り替え' }) });
+    const menus = [...desktopMenus, { name: 'lang', list: langButton.locator('xpath=following-sibling::ul'), button: langButton }];
+    for (const menu of menus) {
+      await menu.button.focus();
+      await page.keyboard.press('Enter');
+      await expect(menu.button, `${menu.name}: Enter で開く`).toHaveAttribute('aria-expanded', 'true');
+      await expect(menu.list.locator('a').first(), `${menu.name}: 最初のリンクが見える`).toBeVisible();
+      await page.keyboard.press('Tab');
+      await expect(menu.list.locator('a').first(), `${menu.name}: Tab でメニューの中へ入る`).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(menu.button, `${menu.name}: Escape で閉じる`).toHaveAttribute('aria-expanded', 'false');
+      await expect(menu.button, `${menu.name}: focus が開いたボタンへ戻る`).toBeFocused();
+    }
+  } finally {
+    await context.close();
+  }
+});
