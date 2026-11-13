@@ -1,7 +1,8 @@
 // 最初の画面（scroll 0）に、5 業種の入口が 5 つとも見えるかを、14 の画面の大きさ × 5 言語で測る。
 //
 // 見える = 要素の上端が 0 以上・下端が画面の高さ以下・左右が画面の幅の中・display が none でない・visibility が hidden でない・
-// 親まで掛けた opacity が 0.9 以上・要素の中の 9 点（縦横 25%・50%・75%）がどれもその要素に届く（浮きボタンなどに隠れていない）。
+// 親まで掛けた opacity が 0.9 以上・要素の中の 9 点（横 25%・50%・75% × 縦 上の端から 2px・真ん中・下の端から 2px）が
+// どれもその要素に届く（浮きボタンなどに、一部でも隠れていない）。
 // ヒーローの h1 と主ボタンも同じ条件で数える（入口を入れた代わりに、ヒーローが押し出されていないか）。
 // 各入口を押して、同じ言語の業種ページへ 1 回で進むことも確かめる。
 // ヒーローの中のリンクとボタンは、Tab の順（DOM の順）が見た目の順（上から、同じ行は左から）と同じであること。
@@ -72,10 +73,12 @@ async function measure(page: Page, selector: string): Promise<Box[]> {
       for (let node: HTMLElement | null = el; node; node = node.parentElement) {
         opacity *= Number(getComputedStyle(node).opacity);
       }
-      const fractions = [0.25, 0.5, 0.75];
-      const hitSelf = fractions.every((fx) =>
-        fractions.every((fy) => {
-          const hit = document.elementFromPoint(rect.left + rect.width * fx, rect.top + rect.height * fy);
+      // 横は 25%・50%・75%、縦は上の端から 2px・真ん中・下の端から 2px（下の端だけが浮きボタンに隠れるのも落とす）
+      const xs = [0.25, 0.5, 0.75].map((fx) => rect.left + rect.width * fx);
+      const ys = [rect.top + 2, rect.top + rect.height / 2, rect.bottom - 2];
+      const hitSelf = xs.every((x) =>
+        ys.every((y) => {
+          const hit = document.elementFromPoint(x, y);
           return !!hit && (hit === el || el.contains(hit));
         }),
       );
