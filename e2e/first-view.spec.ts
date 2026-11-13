@@ -1,4 +1,4 @@
-// 最初の画面（scroll 0）に、5 業種の入口が 5 つとも見えるかを測る。
+// 最初の画面（scroll 0）に、5 業種の入口が 5 つとも見えるかを、14 の画面の大きさ × 5 言語で測る。
 //
 // 見える = 要素の上端が 0 以上・下端が画面の高さ以下・左右が画面の幅の中・display が none でない・visibility が hidden でない・
 // 親まで掛けた opacity が 0.9 以上・要素の中の 9 点（縦横 25%・50%・75%）がどれもその要素に届く（浮きボタンなどに隠れていない）。
@@ -17,11 +17,23 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { INDUSTRY_SLUGS } from '../src/config/industry-context';
 
+// よくある画面の大きさ。スマホの 664・667・635・640 は、ブラウザの上下の枠を引いた表示の高さ。
+// 320×568 は対象にしない（ja でも 5 つは入らない）。
 const VIEWPORTS = [
-  { name: 'pc-1280x800', width: 1280, height: 800, mobile: false },
+  { name: 'pc-1920x1080', width: 1920, height: 1080, mobile: false },
   { name: 'pc-1440x900', width: 1440, height: 900, mobile: false },
-  { name: 'sp-375x812', width: 375, height: 812, mobile: true },
+  { name: 'pc-1366x768', width: 1366, height: 768, mobile: false },
+  { name: 'pc-1280x800', width: 1280, height: 800, mobile: false },
+  { name: 'pc-1280x720', width: 1280, height: 720, mobile: false },
+  { name: 'pc-1024x768', width: 1024, height: 768, mobile: false },
+  { name: 'tab-768x1024', width: 768, height: 1024, mobile: false },
+  { name: 'sp-414x896', width: 414, height: 896, mobile: true },
   { name: 'sp-390x844', width: 390, height: 844, mobile: true },
+  { name: 'sp-390x664', width: 390, height: 664, mobile: true },
+  { name: 'sp-375x812', width: 375, height: 812, mobile: true },
+  { name: 'sp-375x667', width: 375, height: 667, mobile: true },
+  { name: 'sp-375x635', width: 375, height: 635, mobile: true },
+  { name: 'sp-360x640', width: 360, height: 640, mobile: true },
 ] as const;
 const LOCALES = ['ja', 'en', 'zh', 'ko', 'es'] as const;
 type Locale = (typeof LOCALES)[number];
@@ -53,7 +65,7 @@ interface Box {
 
 async function measure(page: Page, selector: string): Promise<Box[]> {
   return page.evaluate((sel) => {
-    return [...document.querySelectorAll<HTMLElement>(sel)].map((el) => {
+    return Array.from(document.querySelectorAll<HTMLElement>(sel)).map((el) => {
       const rect = el.getBoundingClientRect();
       const style = getComputedStyle(el);
       let opacity = 1;
@@ -128,7 +140,7 @@ for (const viewport of VIEWPORTS) {
         const heroFocusOrder = await page.evaluate(() => {
           const hero = document.querySelector('main section');
           if (!hero) return [];
-          return [...hero.querySelectorAll<HTMLElement>('a[href], button')]
+          return Array.from(hero.querySelectorAll<HTMLElement>('a[href], button'))
             .filter((el) => getComputedStyle(el).display !== 'none' && el.getClientRects().length > 0)
             .map((el) => {
               const rect = el.getBoundingClientRect();
