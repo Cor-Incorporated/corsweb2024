@@ -439,10 +439,14 @@
           "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
         },
         {
+          "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+        },
+        {
           "p": "An outline of your work is enough to start. Please do not include real patient data, medical charts or login credentials."
         }
       ],
-      "primary": "Go to the contact form"
+      "primary": "Go to the contact form",
+      "downloadButton": "Download materials"
     },
     "sourcesTitle": "References",
     "sources": [
@@ -698,10 +702,14 @@
           "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
         },
         {
+          "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+        },
+        {
           "p": "An outline of your work is enough to start. Please do not include real client data or login credentials."
         }
       ],
-      "primary": "Go to the contact form"
+      "primary": "Go to the contact form",
+      "downloadButton": "Download materials"
     },
     "sourcesTitle": "References",
     "sources": [
@@ -964,10 +972,14 @@
           "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
         },
         {
+          "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+        },
+        {
           "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
         }
       ],
-      "primary": "Go to the contact form"
+      "primary": "Go to the contact form",
+      "downloadButton": "Download materials"
     },
     "sourcesTitle": "References",
     "sources": [
@@ -1206,10 +1218,14 @@
           "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
         },
         {
+          "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+        },
+        {
           "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
         }
       ],
-      "primary": "Go to the contact form"
+      "primary": "Go to the contact form",
+      "downloadButton": "Download materials"
     },
     "sourcesTitle": "References",
     "sources": [
@@ -1438,10 +1454,14 @@
           "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
         },
         {
+          "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+        },
+        {
           "p": "An outline of your work is enough to start. Please do not include real data on students, confidential documents or login credentials."
         }
       ],
-      "primary": "Go to the contact form"
+      "primary": "Go to the contact form",
+      "downloadButton": "Download materials"
     },
     "sourcesTitle": "References",
     "sources": []

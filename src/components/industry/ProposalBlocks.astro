@@ -99,6 +99,8 @@ const bylineClass = 'mt-5 text-base font-medium text-primary-950 first:mt-0 dark
           </div>
         </aside>
       );
+    // 資料ダウンロードの段落は問い合わせの欄（ProposalPage）だけが、入口があるときに出す
+    if ('downloadNote' in block) return null;
     const founder = block.founder;
     return (
       <section class="mt-16 rounded-3xl bg-primary-500/10 p-6 first:mt-0 dark:bg-primary-400/10 sm:p-10" data-founder-voice>

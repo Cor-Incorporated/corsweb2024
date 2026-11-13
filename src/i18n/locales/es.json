@@ -439,10 +439,14 @@
           "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
         },
         {
+          "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+        },
+        {
           "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de pacientes, historias clínicas ni credenciales de acceso."
         }
       ],
-      "primary": "Ir al formulario de contacto"
+      "primary": "Ir al formulario de contacto",
+      "downloadButton": "Descargar materiales"
     },
     "sourcesTitle": "Referencias",
     "sources": [
@@ -698,10 +702,14 @@
           "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
         },
         {
+          "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+        },
+        {
           "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de clientes asesorados ni de clientes de asuntos concretos, ni credenciales de acceso."
         }
       ],
-      "primary": "Ir al formulario de contacto"
+      "primary": "Ir al formulario de contacto",
+      "downloadButton": "Descargar materiales"
     },
     "sourcesTitle": "Referencias",
     "sources": [
@@ -964,10 +972,14 @@
           "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
         },
         {
+          "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+        },
+        {
           "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la obra ni documentos confidenciales."
         }
       ],
-      "primary": "Ir al formulario de contacto"
+      "primary": "Ir al formulario de contacto",
+      "downloadButton": "Descargar materiales"
     },
     "sourcesTitle": "Referencias",
     "sources": [
@@ -1206,10 +1218,14 @@
           "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
         },
         {
+          "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+        },
+        {
           "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la planta ni documentos confidenciales."
         }
       ],
-      "primary": "Ir al formulario de contacto"
+      "primary": "Ir al formulario de contacto",
+      "downloadButton": "Descargar materiales"
     },
     "sourcesTitle": "Referencias",
     "sources": [
@@ -1438,10 +1454,14 @@
           "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
         },
         {
+          "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+        },
+        {
           "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de estudiantes ni alumnos, documentos confidenciales ni credenciales de acceso."
         }
       ],
-      "primary": "Ir al formulario de contacto"
+      "primary": "Ir al formulario de contacto",
+      "downloadButton": "Descargar materiales"
     },
     "sourcesTitle": "Referencias",
     "sources": []

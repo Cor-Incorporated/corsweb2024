@@ -21,6 +21,7 @@ export type Block =
   | { ul: string[] }
   | { table: { head: string[]; rows: string[][] } }
   | { sourceLink: number; text: string }
+  | { downloadNote: Rich }
   | { note: { title: string; body: Block[] } }
   | {
       founder: {
@@ -47,6 +48,7 @@ export const blockSchema = z.lazy((): z.ZodTypeAny =>
       .object({ table: z.object({ head: z.array(text).min(2), rows: z.array(z.array(text)).min(1) }).strict() })
       .strict(),
     z.object({ sourceLink: z.number().int().positive(), text }).strict(),
+    z.object({ downloadNote: richSchema }).strict(),
     z.object({ note: z.object({ title: text, body: z.array(blockSchema).min(1) }).strict() }).strict(),
     z
       .object({
@@ -70,7 +72,9 @@ export const proposalPageSchema = z
     title: text,
     lead: z.array(blockSchema).min(1),
     sections: z.array(blockSchema).min(1),
-    cta: z.object({ title: text, body: z.array(blockSchema).min(1), primary: text }).strict(),
+    cta: z
+      .object({ title: text, body: z.array(blockSchema).min(1), primary: text, downloadButton: text })
+      .strict(),
     sourcesTitle: text,
     sources: z.array(z.object({ title: text, note: richSchema }).strict()),
   })

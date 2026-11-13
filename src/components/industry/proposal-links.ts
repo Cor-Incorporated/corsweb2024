@@ -81,6 +81,13 @@ export function isPdfHref(href: string): boolean {
 }
 
 /**
+ * 資料の受け取りの入口（問い合わせの欄の、資料ダウンロードの段落と副ボタン）。
+ * 入口ができるまでは null で、5 業種 × 5 言語とも段落とボタンを出さない（文言は locale の
+ * industry<Name>.cta に在る: downloadNote と downloadButton）。入口ができたら、この値に URL を入れる。
+ */
+export const DOCUMENT_DOWNLOAD_HREF: string | null = null;
+
+/**
  * 業種のページの「問い合わせ」の入口。Cloudia の画面（浮きボタンと同じ /contact/chat/）へ、業種の source を付けて進む。
  * 問い合わせページ（/contact）は経由しない。入口の部品が別に用意されたら、この関数ごと差し替える。
  */

@@ -8,11 +8,12 @@
 // - 問い合わせの入口が業種の source を持つ。本文の中に問い合わせページ（/contact）への link が無い
 // - Markdown の記号やコメントが本文に出ていない。業種のページから Grift へ誘っていない
 // - サイト内の link はその言語のページを指し、dist に在る
+// - 資料ダウンロードの段落と副ボタンは、資料の受け取りの入口（DOCUMENT_DOWNLOAD_HREF）があるときだけ出る
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
-import { PROPOSAL_LINKS } from '../../src/components/industry/proposal-links';
+import { DOCUMENT_DOWNLOAD_HREF, PROPOSAL_LINKS } from '../../src/components/industry/proposal-links';
 import en from '../../src/i18n/locales/en.json';
 import es from '../../src/i18n/locales/es.json';
 import ja from '../../src/i18n/locales/ja.json';
@@ -113,6 +114,23 @@ describe.each(CASES)('業種のページ $name', ({ locale, slug }) => {
       .map((a) => a.getAttribute('href') ?? '')
       .filter((href) => contactPage.test(href));
     expect(viaContact).toEqual([]);
+  });
+
+  it('資料ダウンロードの段落と副ボタンは、資料の受け取りの入口があるときだけ出る', () => {
+    const cta = load(locale, slug).querySelector('[data-proposal-cta]');
+    expect(cta).not.toBeNull();
+    const note = page.cta.body.find((block) => 'downloadNote' in block) as { downloadNote: string } | undefined;
+    expect(note, 'locale に資料ダウンロードの段落が無い').toBeDefined();
+    const buttons = [...(cta as Element).querySelectorAll('[data-document-download]')];
+    const text = squash(cta?.textContent);
+    if (DOCUMENT_DOWNLOAD_HREF === null) {
+      expect(buttons.length).toBe(0);
+      expect(text).not.toContain(squash(note?.downloadNote));
+      expect(text).not.toContain(page.cta.downloadButton);
+    } else {
+      expect(buttons.map((a) => a.getAttribute('href'))).toEqual([DOCUMENT_DOWNLOAD_HREF]);
+      expect(text).toContain(squash(note?.downloadNote));
+    }
   });
 
   it('本文に Markdown の記号・コメントが出ず、Grift へ誘わない', () => {
