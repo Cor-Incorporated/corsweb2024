@@ -427,3 +427,73 @@ test.describe('Cloudia が開けないときの終わり方（業種のページ
     });
   }
 });
+
+// 逃げ道は初め display:none で、見えない間に入った文は、画面読み上げによっては読まれない。
+// 見せた後に文を入れ直していることを、文の変化が「逃げ道が見えている間」に起きたかで確かめる。
+// MutationObserver の知らせは後でまとめて届くので、届いた時の class ではなく、記録の順に class の変化を追って、
+// 文が変わった時点で見えていたかを決める。class の記録は変わる前の値だけを持つので、変わった後の値は、
+// 次の class の記録の前の値（最後の記録なら今の値）から読む（hidden を外さない書き直しでも記録は出る）。
+async function recordFallbackMessageChanges(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    const fallback = document.getElementById('cloudia-launcher-fallback');
+    const message = fallback?.querySelector('[data-cloudia-fallback-message]');
+    const seen: boolean[] = [];
+    (window as unknown as { __fallbackChanges?: boolean[] }).__fallbackChanges = seen;
+    if (!fallback || !message) return;
+    const isVisible = (classValue: string | null) => !(classValue ?? '').split(/\s+/).includes('hidden');
+    let visible = isVisible(fallback.getAttribute('class'));
+    new MutationObserver((records) => {
+      records.forEach((record, index) => {
+        if (record.type === 'attributes' && record.target === fallback) {
+          const next = records
+            .slice(index + 1)
+            .find((later) => later.type === 'attributes' && later.target === fallback);
+          visible = isVisible(next ? next.oldValue : fallback.getAttribute('class'));
+        } else if (message.contains(record.target)) {
+          seen.push(visible);
+        }
+      });
+    }).observe(fallback, {
+      attributes: true,
+      attributeFilter: ['class'],
+      attributeOldValue: true,
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  });
+}
+
+test.describe('Cloudia が開けないときの文を読み上げに届ける', () => {
+  // 枠を読めないときは 8 秒の時間切れで、Cloudia でないと分かったときはすぐに見せる。
+  // 後者は 8 秒を進めない（時間切れでもう一度文を差し込む道を通ると、入れ直しの有無を見分けられない）。
+  for (const [stub, text, waitMs] of [
+    ['frame-denied', FRAME_FAILED_JA, 8000],
+    ['redirect-contact', UNAVAILABLE_JA, 0],
+  ] as const) {
+    test(`逃げ道を見せた後に文を入れ直す（${stub}）`, async ({ page }) => {
+      await stubChat(page, stub);
+      await page.clock.install();
+      await page.goto('/industries/medical/');
+      await recordFallbackMessageChanges(page);
+      await page.locator('#cloudia-launcher-open').click();
+      if (waitMs > 0) await page.clock.runFor(waitMs);
+      const fallback = page.locator('#cloudia-launcher-fallback');
+      await expect(fallback).toBeVisible();
+      await expect(fallback).toHaveAttribute('role', 'status');
+      await expect(fallback).toHaveAttribute('aria-live', 'polite');
+      await page.clock.runFor(100);
+      await expect(fallback.locator('[data-cloudia-fallback-message]')).toHaveText(text);
+      const visibleChanges = () =>
+        page.evaluate(
+          () =>
+            ((window as unknown as { __fallbackChanges?: boolean[] }).__fallbackChanges ?? []).filter(Boolean).length
+        );
+      await expect.poll(visibleChanges).toBe(1);
+      // その後の確かめ（250ms ごと）や時間切れで、同じ文を見えている間に書き直さない（読み上げをくり返さない）。
+      await page.clock.runFor(8000);
+      await page.clock.runFor(100);
+      expect(await visibleChanges()).toBe(1);
+    });
+  }
+});
