@@ -45,23 +45,24 @@ const aboutLinks = [
   { name: nav.press || 'プレスリリース', href: getLocalizedUrl('/news/press', currentLocale), isExternal: false },
 ];
 
-// スマホのメニュー（全ページ）。パソコンのヘッダーと同じ順に並べ、そのあとに業種別を置く。
+// スマホのメニュー（全ページ）。パソコンのヘッダーと同じ順。業種5件は別の一覧（industryLinks）。
 const baseLinks = [
   { name: t.nav.home, href: getLocalizedUrl('/', currentLocale), isExternal: false },
   { name: t.nav.works, href: getLocalizedUrl('/works', currentLocale), isExternal: false },
   { name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isExternal: false },
   ...aboutLinks,
   {
-    name: nav.industries || '業種別',
-    href: getLocalizedUrl('/industries/medical', currentLocale),
-    isExternal: false,
-  },
-  {
     name: nav.consult || t.nav.contact,
     href: getContactUrl(currentLocale, { source: 'header' }),
     isExternal: false,
   },
 ];
+// 既存の homeIndustries の名前とパス。5言語とも業種ページがある（[lang]/industries）。
+const industryLinks = t.homeIndustries.rows.map((row) => ({
+  name: row.industry,
+  href: getLocalizedUrl(row.link, currentLocale),
+  isExternal: false,
+}));
 // 現在地ハイライト判定: Astro.url.pathname と各リンクの href を比較。
 // 末尾スラッシュの揺れを吸収するため正規化してから比較する。トップ(/)も対象。
 // ロジックは全言語共通。外部リンク(Grift 等)は判定対象外。
@@ -87,17 +88,18 @@ const isCurrentSection = (href: string) => {
 
 const servicesLabel = nav.services || 'サービス';
 
-// パソコンのヘッダーの並び（ADR-0011 の改訂、2026-10-24）: サービス ▾ / 実績 / ブログ / Cor.について ▾ / お問い合わせ。
-// それまではブログと About がスマホのメニューにしかなかった（代表の指摘）。
+// パソコンのヘッダーの並び: サービス ▾ / 業種別 ▾ / 実績 / ブログ / Cor.について ▾ / お問い合わせ。
+// 業種別は 2026-11-08 の本人指示で足した。中身は既存の5業種ページ。
 type DesktopEntry =
   // highlight: 中のページを開いているとき、プルダウンのボタンを現在地として光らせるか。
   // サービスは以前は相談の種類つきのお問い合わせへ直行していたので光らせなかった（お問い合わせのページで二重に光るため）。
   // 説明のページができたので光らせる（ADR-0024）。外部の Grift は判定の対象外。
   // menu: プルダウンの目印（data-menu）。ビルド結果の検査（tests/build-output/service-pages.test.ts）がサービスのメニューを見分けるのに使う
-  | { kind: 'menu'; menu: 'services' | 'about'; label: string; items: typeof serviceLinks; highlight: boolean; isActive: boolean }
+  | { kind: 'menu'; menu: 'services' | 'about' | 'industries'; label: string; items: typeof serviceLinks; highlight: boolean; isActive: boolean }
   | { kind: 'link'; name: string; href: string; isActive: boolean };
 const desktopEntries: DesktopEntry[] = [
   { kind: 'menu', menu: 'services', label: servicesLabel, items: serviceLinks, highlight: true, isActive: false },
+  { kind: 'menu', menu: 'industries', label: t.nav.industries, items: industryLinks, highlight: true, isActive: false },
   { kind: 'link', name: t.nav.works, href: getLocalizedUrl('/works', currentLocale), isActive: false },
   { kind: 'link', name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isActive: false },
   { kind: 'menu', menu: 'about', label: t.nav.aboutMenu, items: aboutLinks, highlight: true, isActive: false },
@@ -207,7 +209,7 @@ const langOptions = localeOrder.map((loc) => ({
                       target={link.isExternal ? '_blank' : undefined}
                       rel={link.isExternal ? 'noopener noreferrer' : undefined}
                       aria-current={entry.highlight && !link.isExternal && isCurrentSection(link.href) ? 'page' : undefined}
-                      class="flex items-center px-4 py-3 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
+                      class="flex min-h-[48px] items-center px-4 py-3 text-sm font-medium text-primary-950 transition hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-950 dark:text-primary-200 dark:hover:bg-primary-400/10 dark:focus-visible:outline-primary-200"
                     >
                       {link.name}
                     </a>
@@ -415,6 +417,31 @@ const langOptions = localeOrder.map((loc) => ({
 
       <!-- Navigation -->
       <nav class="flex flex-col gap-1 divide-y divide-primary-900/10 dark:divide-primary-300/10">
+        <div class="py-4">
+          <p class="mb-2 text-xs font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
+            {t.nav.industries}
+          </p>
+          <ul data-menu="industries-mobile" class="flex flex-col">
+            {
+              industryLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    aria-current={isCurrentSection(link.href) ? 'page' : undefined}
+                    class:list={[
+                      'flex min-h-[48px] items-center text-lg tracking-tight underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-950 dark:focus-visible:outline-primary-200',
+                      isCurrentSection(link.href)
+                        ? 'font-semibold text-[#2d4a6b] dark:text-primary-100'
+                        : 'font-medium text-primary-950 dark:text-primary-200',
+                    ]}
+                  >
+                    {link.name}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
         {
           links.map((link) => (
             <a
