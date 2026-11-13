@@ -429,32 +429,36 @@ test.describe('Cloudia が開けないときの終わり方（業種のページ
   }
 });
 
-// 逃げ道は初め display:none で、見えない間に入った文は、画面読み上げによっては読まれない。
-// 見せた後に文を入れ直していることを、文の変化が「逃げ道が見えている間」に起きたかで確かめる。
-// MutationObserver の知らせは後でまとめて届くので、届いた時の class ではなく、記録の順に class の変化を追って、
-// 文が変わった時点で見えていたかを決める。class の記録は変わる前の値だけを持つので、変わった後の値は、
-// 次の class の記録の前の値（最後の記録なら今の値）から読む（hidden を外さない書き直しでも記録は出る）。
+// 逃げ道は初め display:none で、見えない間に入った文は、画面読み上げによっては読まれない。パネルが閉じている間も同じ。
+// 見せた後に文を入れ直していることを、文の変化が「逃げ道とパネルの両方が見えている間」に起きたかで確かめる。
+// MutationObserver の知らせは後でまとめて届くので、届いた時の class ではなく、記録の順にパネルと逃げ道の class の
+// 変化を追って、文が変わった時点で見えていたかを決める。class の記録は変わる前の値だけを持つので、変わった後の値は、
+// 同じ要素の次の class の記録の前の値（最後の記録なら今の値）から読む（hidden を外さない書き直しでも記録は出る）。
 async function recordFallbackMessageChanges(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
+    const panel = document.getElementById('cloudia-launcher-panel');
     const fallback = document.getElementById('cloudia-launcher-fallback');
     const message = fallback?.querySelector('[data-cloudia-fallback-message]');
     const seen: boolean[] = [];
     (window as unknown as { __fallbackChanges?: boolean[] }).__fallbackChanges = seen;
-    if (!fallback || !message) return;
-    const isVisible = (classValue: string | null) => !(classValue ?? '').split(/\s+/).includes('hidden');
-    let visible = isVisible(fallback.getAttribute('class'));
+    if (!panel || !fallback || !message || !panel.contains(fallback)) return;
+    const isHidden = (classValue: string | null) => (classValue ?? '').split(/\s+/).includes('hidden');
+    const hidden = new Map<Node, boolean>([
+      [panel, isHidden(panel.getAttribute('class'))],
+      [fallback, isHidden(fallback.getAttribute('class'))],
+    ]);
     new MutationObserver((records) => {
       records.forEach((record, index) => {
-        if (record.type === 'attributes' && record.target === fallback) {
+        if (record.type === 'attributes' && hidden.has(record.target)) {
           const next = records
             .slice(index + 1)
-            .find((later) => later.type === 'attributes' && later.target === fallback);
-          visible = isVisible(next ? next.oldValue : fallback.getAttribute('class'));
+            .find((later) => later.type === 'attributes' && later.target === record.target);
+          hidden.set(record.target, isHidden(next ? next.oldValue : (record.target as Element).getAttribute('class')));
         } else if (message.contains(record.target)) {
-          seen.push(visible);
+          seen.push(!hidden.get(panel) && !hidden.get(fallback));
         }
       });
-    }).observe(fallback, {
+    }).observe(panel, {
       attributes: true,
       attributeFilter: ['class'],
       attributeOldValue: true,
@@ -463,6 +467,10 @@ async function recordFallbackMessageChanges(page: import('@playwright/test').Pag
       subtree: true,
     });
   });
+}
+
+function fallbackMessageChanges(page: import('@playwright/test').Page) {
+  return page.evaluate(() => [...((window as unknown as { __fallbackChanges?: boolean[] }).__fallbackChanges ?? [])]);
 }
 
 test.describe('Cloudia が開けないときの文を読み上げに届ける', () => {
@@ -497,6 +505,32 @@ test.describe('Cloudia が開けないときの文を読み上げに届ける', 
       expect(await visibleChanges()).toBe(1);
     });
   }
+
+  // 時間切れの timer はパネルを閉じても止まらない。閉じている間に逃げ道が出ても、そのときは入れ直さず
+  // （読まれない）、開いた次の描画で 1 回だけ入れ直す。
+  test('閉じている間に時間切れが来ても、開いたときに文を入れ直す（枠だけ開けない）', async ({ page }) => {
+    await stubChat(page, 'frame-denied');
+    await page.clock.install();
+    await page.goto('/industries/medical/');
+    await recordFallbackMessageChanges(page);
+    await page.locator('#cloudia-launcher-open').click();
+    await page.clock.runFor(2000);
+    await page.locator('#cloudia-launcher-close').click();
+    await expect(page.locator('#cloudia-launcher-panel')).toBeHidden();
+    await page.clock.runFor(6500);
+    await page.clock.runFor(100);
+    expect(await fallbackMessageChanges(page)).toEqual([]);
+
+    await page.locator('#cloudia-launcher-open').click();
+    const fallback = page.locator('#cloudia-launcher-fallback');
+    await expect(fallback).toBeVisible();
+    await expect(fallback.locator('[data-cloudia-fallback-message]')).toHaveText(FRAME_FAILED_JA);
+    await page.clock.runFor(100);
+    await expect.poll(() => fallbackMessageChanges(page)).toEqual([true]);
+    await page.clock.runFor(8000);
+    await page.clock.runFor(100);
+    expect(await fallbackMessageChanges(page)).toEqual([true]);
+  });
 });
 
 // 浮きボタンの逃げ道は locale の query を付けて、単独の /contact/chat/ を開く。Cloudia が配られていないときに出る

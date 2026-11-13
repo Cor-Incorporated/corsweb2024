@@ -334,6 +334,23 @@ describe('/contact/chat/ の代わりのページは、locale の query の言�
     for (const copy of Object.values(copies)) expect(Object.keys(copy).sort()).toEqual(['message', 'title']);
   });
 
+  // 今の埋める文は build の時の定数だが、後で値の出どころが変わっても、文は文字として入る（要素にならない）ことを守る。
+  it('埋めた文に HTML の形が入っても、要素にならず文字のまま出る', () => {
+    const markup = '<img src="x" data-injected><b data-injected>x</b>';
+    const run = runUnavailablePage('?locale=zh', (document) => {
+      const page = document.querySelector('[data-cloudia-unavailable-page]');
+      const copies = JSON.parse(page?.getAttribute('data-unavailable-copies') ?? '{}') as Record<string, { message: string }>;
+      copies.zh = { ...copies.zh, message: `${copies.zh.message}${markup}` };
+      page?.setAttribute('data-unavailable-copies', JSON.stringify(copies));
+    });
+    expect(run.errors).toEqual([]);
+    const page = run.document.querySelector('[data-cloudia-unavailable-page]');
+    expect(page?.querySelectorAll('[data-injected]').length).toBe(0);
+    expect(page?.querySelector('[data-cloudia-unavailable-message]')?.textContent).toBe(
+      `${CLOUDIA_UNAVAILABLE_COPY.zh.unavailable}${markup}`
+    );
+  });
+
   it.each([
     '',
     '?locale=ja',
