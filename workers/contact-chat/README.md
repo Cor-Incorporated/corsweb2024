@@ -56,6 +56,7 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 `contact_sessions` と `submission_intake` に、次の 6 列を足す。個人情報の列は増やさない。
 
 - `industry` と `entry_path`: 業種の source のときだけ、サーバーが決める（`industry` は 5 つの値のどれか、`entry_path` は `/industries/<業種>/`）。最初に決まった値を保ち、後の要求の source では変えない。業種でない入口は空文字。
+- `entry_path` は、業種の source からサーバーが決めた、言語に依らない入口のページ。ブラウザが居た URL ではない。
 - `machine_classification`: `consult` / `sales` / `unknown`。会話の応答の `genuine` は `consult`、`sales` は `sales`、`spam` は `unknown` に写す。応答を解析できない・未知の値・会話が無いときは `unknown`。
 - `classification_reason`・`classification_origin`・`classification_version`: 写した理由（`model_genuine` など）、元（`model` か `fallback`）、写し方の版（`inquiry-classification-v1`）。
 

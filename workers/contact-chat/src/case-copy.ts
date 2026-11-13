@@ -13,6 +13,7 @@ import { readStoredEntryContext } from './inquiry-context';
 export interface InquiryCaseCopy {
   receiptId: string;
   industry: IndustrySlug | '';
+  /** 業種の source からサーバーが決めた、言語に依らない入口のページ。ブラウザが居た URL ではない。 */
   entryPath: string;
   classification: MachineClassification;
   classificationVersion: string;
