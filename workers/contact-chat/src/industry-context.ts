@@ -2,11 +2,12 @@ import type { ChatLocale, ContactIntent } from './types';
 import { normalizeSource } from './validate';
 
 /**
- * 業種の最初の案内。文案は暫定（INDUSTRY_COPY_STATUS）。
- * 本人の壁打ち後の文が来るまで、この文を最終稿と呼ばない。
- * 診断、法律・税務の結論、効果の保証はしない。秘密の中身は聞かない。
+ * 業種の最初の案内。5 業種の掲載用本文（issue #525）の締めの言い回しに合わせた
+ * （最初は業務の概要だけで足りること、業種ごとに書かないもの、最初に聞くこと）。
+ * 本文に無い実績・料金・効果は足さない。診断、法律・税務の結論、効果の保証はしない。
+ * 秘密の中身は聞かない。最初の一文（〇〇のページから開いています。）は画面との照合の目印なので変えない。
  */
-export const INDUSTRY_COPY_STATUS = 'provisional-2026-11-08' as const;
+export const INDUSTRY_COPY_STATUS = 'aligned-2026-11-13' as const;
 
 export const INDUSTRY_ENTRY_SOURCES = [
   'industry-medical',
@@ -86,24 +87,24 @@ function intentGroup(intent: ContactIntent | ''): IntentGroup {
 
 const BOUNDARY: Record<IndustrySlug, Record<ChatLocale, string>> = {
   medical: {
-    ja: '医療のページから開いています。患者さんの記録、症状、個人名は書かないでください。ここでは診断も、結果の保証もしません。',
-    en: 'You opened this from the healthcare page. Do not write patient records, symptoms, or anyone\'s name. This chat does not make a diagnosis or promise a result.',
+    ja: '医療のページから開いています。最初は業務の概要だけで構いません。患者さんの実データやカルテ、認証情報は書かないでください。ここでは診断も、結果の保証もしません。',
+    en: 'You opened this from the healthcare page. An outline of the work is enough to start. Do not write real patient data, medical records, or login credentials. This chat does not make a diagnosis or promise a result.',
   },
   shigyo: {
-    ja: '士業のページから開いています。依頼者名や案件の中身は書かないでください。法律や税務の結論は出しません。',
-    en: 'You opened this from the professional-services page. Do not write a client\'s name or the contents of a matter. This chat does not give a legal or tax conclusion.',
+    ja: '士業のページから開いています。最初は業務の概要だけで構いません。顧問先・依頼者の実データや認証情報は書かないでください。法律や税務の結論は出しません。',
+    en: 'You opened this from the professional-services page. An outline of the work is enough to start. Do not write real data about your clients or login credentials. This chat does not give a legal or tax conclusion.',
   },
   construction: {
-    ja: '建設のページから開いています。図面、施主名、契約書は書かないでください。工期や安全の適合は、ここでは断定しません。',
-    en: 'You opened this from the construction page. Do not send drawings, a client\'s name, or a contract. This chat does not confirm a schedule or a safety approval.',
+    ja: '建設のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料は書かないでください。工期や安全の適合は、ここでは断定しません。',
+    en: 'You opened this from the construction page. An outline of the work is enough to start. Do not write real site data or confidential documents. This chat does not confirm a schedule or a safety approval.',
   },
   manufacturing: {
-    ja: '製造のページから開いています。図面、顧客の仕様、個人名は書かないでください。品質や歩留まりの改善は、ここでは断定しません。',
-    en: 'You opened this from the manufacturing page. Do not paste drawings, a customer\'s specifications, or personal names. This chat does not promise a quality or yield result.',
+    ja: '製造のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料は書かないでください。品質や歩留まりの改善は、ここでは断定しません。',
+    en: 'You opened this from the manufacturing page. An outline of the work is enough to start. Do not write real shop-floor data or confidential documents. This chat does not promise a quality or yield result.',
   },
   education: {
-    ja: '教育のページから開いています。生徒の名前や成績は書かないでください。学習効果は、ここでは断定しません。',
-    en: 'You opened this from the education page. Do not write a student\'s name or grades. This chat does not promise a learning outcome.',
+    ja: '教育のページから開いています。最初は業務の概要だけで構いません。学生・生徒の実データ、機密資料、認証情報は書かないでください。学習効果は、ここでは断定しません。',
+    en: 'You opened this from the education page. An outline of the work is enough to start. Do not write real student data, confidential documents, or login credentials. This chat does not promise a learning outcome.',
   },
 };
 
@@ -134,8 +135,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? A patient example is not needed.',
     },
     general: {
-      ja: '受付、記録の下書き、院内の調べもののどれに近いご相談ですか。',
-      en: 'Is this closer to reception, drafting notes, or an internal lookup?',
+      ja: '紹介状の下書きや看護サマリーの整理など、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example drafting referral letters or organizing nursing summaries?',
     },
   },
   shigyo: {
@@ -164,8 +165,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? A client example is not needed.',
     },
     general: {
-      ja: '契約書の確認、申請、期日の管理のどれに近いご相談ですか。',
-      en: 'Is this closer to reviewing agreements, filings, or deadline tracking?',
+      ja: '顧問先への回答案づくりや案件資料の整理など、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example drafting answers for client companies or organizing case documents?',
     },
   },
   construction: {
@@ -194,8 +195,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? Site drawings are not needed.',
     },
     general: {
-      ja: '現場の記録、見積りの整理、社内の調べもののどれに近いご相談ですか。',
-      en: 'Is this closer to site notes, organizing an estimate, or an internal lookup?',
+      ja: '現場から届く報告の転記や書類の下書きなど、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example transcribing reports from the site or drafting documents?',
     },
   },
   manufacturing: {
@@ -224,8 +225,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? Drawings and a customer\'s specifications are not needed.',
     },
     general: {
-      ja: '現場のメモ、品質の記録、社内の調べもののどれに近いご相談ですか。',
-      en: 'Is this closer to shop-floor notes, quality records, or an internal lookup?',
+      ja: '日報や、次の担当者へ残したい作業の手がかりなど、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example daily reports or the clues you want to leave for the next person on a task?',
     },
   },
   education: {
@@ -254,15 +255,15 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? Student names and grades are not needed.',
     },
     general: {
-      ja: '職員の事務、教材の下書き、問い合わせ対応のどれに近いご相談ですか。',
-      en: 'Is this closer to staff administration, drafting teaching material, or handling inquiries?',
+      ja: '学内の資料の検索や教務システムへの転記など、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example searching school documents or transcribing into the academic system?',
     },
   },
 };
 
 export function industryStartReply(industry: IndustrySlug, intent: ContactIntent | '', locale: ChatLocale): string {
   const group = intentGroup(intent);
-  return `${BOUNDARY[industry][locale]}${QUESTION[industry][group][locale]}`;
+  return `${BOUNDARY[industry][locale]}\n${QUESTION[industry][group][locale]}`;
 }
 
 export function industrySystemPolicy(token: IndustryEntrySource): string {

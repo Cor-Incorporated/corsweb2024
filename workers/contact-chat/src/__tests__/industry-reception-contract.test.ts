@@ -1,4 +1,4 @@
-// 業種ページ → Cloudia → Worker の受付の契約。Cloudia 側の試験が同じバイト列の fixture を読む（O2a 5.4）。
+// 業種ページ → Cloudia → Worker の受付の契約。Cloudia 側の試験が同じバイト列の fixture を読む。
 // 片側だけ文や列挙を変えると、期待値と観測値の両方を挙げて落ちる。
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -32,8 +32,8 @@ function firstSentence(text: string, locale: 'ja' | 'en'): string {
   return found ? found[0] : text;
 }
 
-/** この PR の fixture の実測値。Cloudia 側の写しとの一致は、別の束が両 head の sha256 を並べて照合する（O2a 5.4-5）。 */
-const FIXTURE_SHA256 = 'd961812efba1b6bd8afac0ae37fb0024e698b8e60c8f78c427c55f28c75ac9aa';
+/** この fixture の実測値。Cloudia の repo の同じ fixture とは、両方の sha256 を並べて照合する。 */
+const FIXTURE_SHA256 = '7a5fb2f9e77ffec6cad4ce169d994f67d21cb3da78178d30fd4ad8cdd6d87499';
 
 describe('industry-reception-v1 の fixture', () => {
   it('file の生バイトの sha256 が、この PR の fixture の実測値と一致する（書式の 1 バイトでも落ちる）', () => {
@@ -68,7 +68,7 @@ describe('industry-reception-v1 の fixture', () => {
     ).toEqual([...contract.genericSources, 'cloudia'].sort());
   });
 
-  it('文案の状態が一致する（暫定のまま最終稿と呼ばない）', () => {
+  it('文案の状態が、Worker の定数と一致する', () => {
     expect(INDUSTRY_COPY_STATUS, `copyStatus fixture="${contract.copyStatus}"`).toBe(contract.copyStatus);
   });
 

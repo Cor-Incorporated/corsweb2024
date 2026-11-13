@@ -1,6 +1,6 @@
 # 業種ごとの最初の相談（2026-11-08）
 
-文案は暫定です。定数は `INDUSTRY_COPY_STATUS = provisional-2026-11-08`。最終の文は、本人の壁打ちが来るまで置きません。
+文の状態は `INDUSTRY_COPY_STATUS = aligned-2026-11-13` です。5 業種の掲載用本文（issue #525）の締めの言い回し（最初は業務の概要だけで足りること、業種ごとに書かないもの、最初に聞くこと）に合わせました。最初の一文（「〇〇のページから開いています。」）は、画面との照合の目印なので変えません。
 
 ## Worker が読む source
 
@@ -16,10 +16,8 @@
 
 最初の返事は業種と intent で変わります。続報の system prompt も、同じ固定文だけを足します。患者の記録、症状、依頼者名、案件の中身、図面、契約書、顧客の仕様、生徒の名前と成績は聞かない、と書いてあります。診断、法律・税務の結論、工期や安全の適合、品質・歩留まり・学習効果の保証はしない、とも書いてあります。営業と判定されても、業種が空でも、その理由だけでは会話を終わらせません。
 
-## Cloudia（7d969c1）との差
+## Cloudia との照合
 
-Cloudia は変えていません。読んだ範囲では、許可した source だけを Worker に送り、それ以外は `cloudia` に置き換えます。許可リストは上の5業種と `corsweb-contact-primary`、`corsweb-launcher` です。
+Cloudia は、許可した source（上の 5 業種と、`corsweb-contact-primary`・`corsweb-launcher`・`corsweb-launcher-fallback`）だけを Worker に送り、それ以外は `cloudia` に置き換えます。
 
-Worker は、それに加えて `cloudia` と `corsweb-launcher-fallback` を既知のタグとして扱います。`corsweb-launcher-fallback` は、このサイトのランチャーが既に付けています。Cloudia の許可リストには無いので、Cloudia を経由すると `cloudia` になります。Worker を直接呼ぶ場合だけ、fallback の文字が残ります。
-
-Cloudia の画面は、業種の案内を別の文として持っています。Worker の最初の返事も、同じ境界（書かないもの、断定しないこと）を言うようにしました。両方が画面に出ると、案内が2回見えることがあります。どちらかを画面から外すかは Cloudia 側の判断です。このリポジトリでは Cloudia を変えていません。
+業種の一覧、一般のタグ、受付の言語の落とし先、最初の一文は、`workers/contact-chat/src/__tests__/fixtures/industry-reception-contract.v1.json` に固定しています。Cloudia の repo も同じ fixture を持ち、両方の試験がそれぞれの値と照らします。片方だけを変えると、どちらかの試験が落ちます。
