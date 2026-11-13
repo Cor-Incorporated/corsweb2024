@@ -16,9 +16,11 @@ const LOCALES = { ja: jaJson, en: enJson, zh: zhJson, ko: koJson, es: esJson } a
 type LocaleKey = keyof typeof LOCALES;
 const LOCALE_KEYS = Object.keys(LOCALES) as LocaleKey[];
 
-// 課題 → 実証 → 柱 → セキュリティ → 業種 → Grift のあとに FAQ と締め（docs/story-spine.md）
+// 課題 → 実証 → 柱 → セキュリティ → 業種 → Grift のあとに FAQ と締め（docs/story-spine.md）。
+// IndustryEntry はヒーロー直下の既存業種ページへの入口。h2 の物語の並びは変えない。
 const SECTION_ORDER = [
   'ProblemHero',
+  'IndustryEntry',
   'ChallengeGrid',
   'ProofHighlights',
   'ServicesReframed',
@@ -113,6 +115,18 @@ describe('5 言語で同じ並び・同じリンク (#414)', () => {
   it('業種の一覧のリンク先が実在する', () => {
     const missing = jaJson.homeIndustries.rows.map((row) => row.link).filter((link) => !sourceExists(link));
     expect(missing).toEqual([]);
+  });
+
+  it('早い業種の入口は h2 を足さず、homeIndustries のラベルとリンクをそのまま使う', () => {
+    const source = readFileSync(path.join(ROOT, 'src/components/home/IndustryEntry.astro'), 'utf8');
+    expect(source).not.toMatch(/<h[12]\b/);
+    expect(source).toContain('t.homeIndustries.eyebrow');
+    expect(source).toContain('t.homeIndustries.title');
+    expect(source).toContain('t.homeIndustries.rows');
+    expect(source).toContain('row.industry');
+    expect(source).toContain('row.theme');
+    expect(source).toContain('getLocalizedUrl(row.link, currentLocale)');
+    expect(source).not.toMatch(/href=["']\/industries\//);
   });
 
   it('締めの入口は ADR-0011 の有料入口 3 本で、intent が契約の 7 キーに入っている', () => {
