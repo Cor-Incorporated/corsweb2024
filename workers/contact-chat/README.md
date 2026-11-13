@@ -41,6 +41,16 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - **PII（name/email/company/message）はメール本文にのみ載り、LLM には一切渡さない。** 会話抜粋はinternal通知だけに載せ、receiptには載せない。
 - `RESEND_API_KEY` 未設定なら **503（fail closed）**。本物の問い合わせをサイレントに握り潰さない。
 
+### 業種の source（暫定文案）
+
+`/api/contact/chat/start` と `/api/contact/chat` は、`source` が次のどれかのときだけ業種として読む。
+
+`industry-medical` / `industry-shigyo` / `industry-construction` / `industry-manufacturing` / `industry-education`
+
+最初の返事は、業種と intent の組み合わせで変わる。患者の記録、依頼者名、図面、生徒の名前は聞かない。診断、法律・税務の結論、効果の保証はしない。文案は `INDUSTRY_COPY_STATUS = provisional-2026-11-08`。最終の文は未着。
+
+`corsweb-contact-primary`、`corsweb-launcher`、`corsweb-launcher-fallback`、`cloudia` は業種ではない既知のタグ。それ以外の source は保存用のタグとしては残し、モデルへの文には入れない。不明、無効、営業の分類でも、その理由だけでは受付を終わらせない。
+
 ## 環境変数・シークレット
 
 ### vars（`wrangler.toml` の `[vars]`・非シークレット）

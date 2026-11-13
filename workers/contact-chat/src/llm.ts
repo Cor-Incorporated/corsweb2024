@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { TrafficReading } from './industry-context';
+import { trafficPromptLine } from './industry-context';
 import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env } from './types';
 import { CONTACT_INTENTS } from './types';
 import { COMPANY_KNOWLEDGE } from './company-knowledge';
@@ -158,7 +160,8 @@ export const SYSTEM_PROMPT = [
  */
 export function buildSystemPrompt(opts: {
   intent?: ContactIntent | '';
-  source?: string;
+  /** 正規化済みの読み。生の source 文字列は渡さない。 */
+  traffic?: TrafficReading;
   mode?: ChatMode;
   locale?: ChatLocale;
 } = {}): string {
@@ -213,8 +216,6 @@ export function buildSystemPrompt(opts: {
       'Do not invent keys outside the official list.',
     );
   }
-  if (opts.source) {
-    parts.push(`Traffic source tag (for internal routing only, do not read aloud unless asked): "${opts.source}".`);
-  }
+  parts.push('', '# Source tag (server-provided, trusted)', trafficPromptLine(opts.traffic ?? { kind: 'other', stored: '' }));
   return parts.join('\n');
 }
