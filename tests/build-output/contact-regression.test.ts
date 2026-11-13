@@ -27,6 +27,7 @@ import {
   isCloudiaChatHtmlServed,
   isContactPagePath,
 } from '../../src/config/contact-guards';
+import { buildUnavailableNotice } from '../../src/components/contact/chat/cloudiaUnavailableNotice';
 import { PHONE_INQUIRY_ACCIDENTS } from '../fixtures/phone-inquiry-accidents';
 
 // 反証の実測では、壊した dist の複製を CONTACT_GUARD_DIST_DIR で渡す（既定は ./dist）。
@@ -263,6 +264,16 @@ describe.runIf(EXPECT_CALENDAR !== undefined)('ビルド条件どおりのカレ
   });
 });
 
+// /contact/chat/ の代わりのページも、電話の行は定数（CLOUDIA_UNAVAILABLE_PHONE_VISIBLE、既定 false）の後ろにある。
+// ページが定数でなく true を渡す事故は、関数の単体の試験では見えないので、build の出力で見る。
+// ランチャーの無いページなので、静的な HTML が表示される文と同じ。
+describe('B-1 /contact/chat/ の代わりのページに電話導線が無い', () => {
+  it('プレースホルダページ', () => {
+    const { document } = loadDistPage(CLOUDIA_CHAT_PATH);
+    expect(findPhoneLeads(document)).toEqual([]);
+  });
+});
+
 describe('B-3 /contact/chat/ の <main> から /contact/ へ送り返さない', () => {
   it('プレースホルダページ', () => {
     const { document, pageUrl } = loadDistPage(CLOUDIA_CHAT_PATH);
@@ -364,6 +375,25 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
     const after = findPhoneInquiryLeads(document);
     expect(after).toHaveLength(before + 1);
     expect(after.map((finding) => finding.kind)).toContain('number');
+  });
+
+  // 代わりのページが電話の行を出したときと同じ形（文は定数を true にしたときの組み立て。番号は架空）を足すと検出する。
+  it('/contact/chat/ の代わりのページに、電話の行（定数を true にしたときの組み立て）が出る', () => {
+    const { document } = loadDistPage(CLOUDIA_CHAT_PATH);
+    const notice = buildUnavailableNotice({
+      kind: 'unavailable',
+      locale: 'ja',
+      phoneVisible: true,
+      phone: { display: '000-0000-0000', href: 'tel:+810000000000' },
+    });
+    if (!notice.phone) throw new Error('電話の行が組み立てられない（番号の形を見直す）');
+    lastMain(document).insertAdjacentHTML(
+      'beforeend',
+      `<p data-cloudia-unavailable-phone>${notice.phone.lead}<br />${notice.phone.label}: <a href="${notice.phone.href}">${notice.phone.display}</a></p>`
+    );
+    expect(findPhoneLeads(document).map((finding) => finding.kind)).toEqual(
+      expect.arrayContaining(['text', 'tel-link'])
+    );
   });
 
   it('en の /contact に tel: リンクが戻る', () => {
