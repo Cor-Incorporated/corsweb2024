@@ -1,6 +1,208 @@
 ---
-// 本文は ProposalPage（#525 の本文。文言は locale の industryShigyo）。
-import ProposalPage from './ProposalPage.astro';
+import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import { getContactUrl } from '../../config/site';
+import IndustryPaths from './IndustryPaths.astro';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+const page = t.industryShigyo;
+
+// 業種CTA: 第一=診断 / 第二=ローカルLLM PoC（ADR-0010/0011、2026-10 に Grift から変更: ADR-0022）
+const primaryHref = getContactUrl(currentLocale, {
+  intent: 'confidential-ai-assessment',
+  source: 'industry-shigyo',
+});
+const secondaryHref = getContactUrl(currentLocale, {
+  intent: 'local-llm-poc',
+  source: 'industry-shigyo',
+});
 ---
 
-<ProposalPage industry="shigyo" />
+  <!-- 1. Hero -->
+  <section class="relative isolate flex min-h-[70vh] items-center overflow-hidden py-20 sm:py-28">
+    <div class="motion-bg" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+      <div class="flex flex-col items-start gap-8 text-left sm:gap-10">
+        <p
+          class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
+          data-reveal
+          style="--reveal-delay:0.05s"
+        >
+          {page.hero.eyebrow}
+        </p>
+        <div class="flex max-w-4xl flex-col items-start gap-6 sm:gap-8">
+          <h1
+            class="text-balance text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl"
+            data-reveal
+            style="--reveal-delay:0.1s"
+          >
+            {page.hero.title}
+          </h1>
+          <p
+            class="max-w-3xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl"
+            data-reveal
+            style="--reveal-delay:0.2s"
+          >
+            {page.hero.subtitle}
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Challenges -->
+  <section class="py-24 sm:py-32">
+    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+      <div class="flex flex-col gap-10 sm:gap-12">
+        <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+          <p
+            class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
+          >
+            {page.challenges.eyebrow}
+          </p>
+          <h2 class="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
+            {page.challenges.title}
+          </h2>
+        </div>
+        <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {
+            page.challenges.items.map((item, i) => (
+              <li
+                class="flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10"
+                data-reveal
+                style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
+              >
+                <div class="flex items-start gap-3">
+                  <span
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-500/15 dark:bg-primary-400/15"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      class="h-5 w-5 text-primary-700 dark:text-primary-300"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                      />
+                    </svg>
+                  </span>
+                  <div class="flex flex-col gap-3">
+                    <h3 class="text-balance text-lg font-medium tracking-tight">{item.title}</h3>
+                    <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Support -->
+  <section class="bg-[#1b2c40] py-24 sm:py-32">
+    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+      <div class="flex flex-col gap-10 sm:gap-12">
+        <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+          <p class="text-sm font-medium uppercase tracking-widest text-[#7ba3cc]">
+            {page.support.eyebrow}
+          </p>
+          <h2 class="text-balance text-3xl font-medium tracking-tight text-white sm:text-4xl">
+            {page.support.title}
+          </h2>
+          <p class="text-pretty text-lg leading-relaxed text-white/80">
+            {page.support.intro}
+          </p>
+        </div>
+        <ul class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {
+            page.support.items.map((item, i) => (
+              <li
+                class="flex flex-col gap-4 rounded-3xl bg-white p-6"
+                data-reveal
+                style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
+              >
+                <div class="flex items-start gap-3">
+                  <span
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#2d4a6b]/10"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      class="h-5 w-5 text-[#2d4a6b]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+                      />
+                    </svg>
+                  </span>
+                  <div class="flex flex-col gap-3">
+                    <span class="inline-flex w-fit rounded-full bg-[#2d4a6b] px-3 py-1 text-xs font-medium text-white">
+                      {item.service}
+                    </span>
+                    <h3 class="text-balance text-lg font-medium tracking-tight text-primary-950">
+                      {item.title}
+                    </h3>
+                    <p class="text-pretty text-base leading-relaxed text-primary-950/70">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <IndustryPaths industry="shigyo" />
+
+  <!-- 4. CTA（診断 / ローカルLLM PoC） -->
+  <section class="py-24 sm:py-32">
+    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+      <div
+        class="flex flex-col items-center gap-8 rounded-3xl bg-[#2d4a6b] px-6 py-16 text-center text-white sm:px-12 sm:py-20"
+        data-reveal
+      >
+        <div class="flex max-w-2xl flex-col gap-4">
+          <h2 class="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
+            {page.cta.title}
+          </h2>
+          <p class="text-pretty text-lg leading-relaxed text-white/80">
+            {page.cta.description}
+          </p>
+        </div>
+        <!-- 2つの文言が長い言語（zh など）ではタブレット幅で横並びにすると主ボタンの末尾が1文字だけ折り返すため、lg から横並び -->
+        <div class="flex w-full flex-col items-center gap-4 lg:w-auto lg:flex-row lg:justify-center">
+          <a
+            href={primaryHref}
+            class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full border border-transparent bg-white px-6 py-4 text-center text-lg font-semibold text-[#2d4a6b] shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:w-auto sm:px-8"
+          >
+            {page.cta.primary}
+          </a>
+          <a
+            href={secondaryHref}
+            class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full border border-white/30 px-5 py-3 text-center text-base font-medium text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:w-auto"
+          >
+            {page.cta.secondary}
+          </a>
+        </div>
+        <p class="max-w-xl text-pretty text-sm leading-relaxed text-white/70">
+          {page.cta.note}
+        </p>
+      </div>
+    </div>
+  </section>

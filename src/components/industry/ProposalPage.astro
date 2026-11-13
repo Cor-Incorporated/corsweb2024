@@ -1,10 +1,12 @@
 ---
-// 業種の提案ページ（#525 の本文）。5 業種 × 5 言語で同じ部品を使う。
+// 業種の提案ページ（#525 の本文）。今は ja の 5 ページ（src/pages/industries/*.astro）だけが使う。
+// en・zh・ko・es のページは、旧い本文の *Body.astro のまま（[lang]/industries/[industry].astro）。
 // 並び: 導入（H1 と導入の文）→ 本文 → サービスへの道（IndustryPaths, #509）→ 問い合わせ → 参考資料。
-// 文言は locale の industry<Name>、リンク先は proposal-links.ts。形は proposal-schema.ts で検証する。
+// 文言は ja.json の industry<Name>.proposal（ja だけの入れ子の key）、リンク先は proposal-links.ts。
+// 形は proposal-schema.ts で検証する。
 import type { IndustrySlug } from '../../config/industry-context';
 import { industryContactSource } from '../../config/industry-context';
-import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import { getCurrentLocale, getJaTranslations } from '../../utils/i18n';
 import IndustryPaths from './IndustryPaths.astro';
 import ProposalBlocks from './ProposalBlocks.astro';
 import ProposalInline from './ProposalInline.astro';
@@ -26,8 +28,10 @@ const PAGE_KEYS = {
 
 const { industry } = Astro.props;
 const locale = getCurrentLocale(Astro.url);
-const t = getTranslations(locale);
-const page = proposalPageSchema.parse(t[PAGE_KEYS[industry]]);
+if (locale !== 'ja') {
+  throw new Error(`ProposalPage は ja のページだけで使う（${locale} の ${industry} で呼ばれた）`);
+}
+const page = proposalPageSchema.parse(getJaTranslations()[PAGE_KEYS[industry]].proposal);
 assertProposalLinks(page, PROPOSAL_LINKS[industry], `${locale}/${PAGE_KEYS[industry]}`);
 const inquiryHref = industryInquiryHref(locale, industry);
 // 資料ダウンロードの段落と副ボタンは、資料の受け取りの入口（DOCUMENT_DOWNLOAD_HREF）ができるまで出さない。
