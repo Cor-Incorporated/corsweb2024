@@ -2,6 +2,7 @@
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
 import { getContactUrl, ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
 import PenguinWalker from './PenguinWalker.astro';
+import IndustryEntry from './IndustryEntry.astro';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
@@ -43,11 +44,14 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
 ---
 
 {/* 高さは中身で決める（以前の min-h-[88vh] は外した）。下の余白はペンギンが歩く場所。 */}
-<section class="relative isolate flex items-center overflow-hidden pt-12 pb-28 sm:pt-20 sm:pb-32">
+{/* 5 業種の入口（IndustryEntry）は主ボタンのすぐ下。最初の画面に 5 つとも入ることを
+    e2e/first-view.spec.ts が測る。スマホでは「実績を見る」・3 つの短い文・エンブレムを入口の下へ回す
+    （CTA の枠を sm 未満で contents にして、order で並べ替える）。 */}
+<section class="relative isolate flex items-center overflow-hidden pt-4 pb-28 sm:pt-20 sm:pb-32">
   {/* 抽象モーション背景（装飾・読み上げ対象外）。prefers-reduced-motion で静止。 */}
   <div class="motion-bg" aria-hidden="true"></div>
   <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 2xl:max-w-[90rem]">
-    <div class="flex flex-col items-center gap-6 text-center sm:gap-8" data-hero-content>
+    <div class="flex flex-col items-center gap-4 text-center sm:gap-8" data-hero-content>
       <p
         class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
         data-reveal
@@ -64,23 +68,29 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
         />
         {/* theme.fontSize が [size, lineHeight] のタプル指定のため text-xl は line-height も出し、
             後勝ちで leading-relaxed を打ち消す。sm:leading-relaxed で戻す。 */}
-        <p class="max-w-3xl text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl sm:leading-relaxed" set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
+        <p class="max-w-3xl text-pretty text-[15px] leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl sm:leading-relaxed" set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
       </div>
-      <div class="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center sm:gap-4" data-reveal style="--reveal-delay:0.3s">
+      <div class="contents sm:flex sm:w-auto sm:flex-row sm:items-center sm:justify-center sm:gap-4">
         <a
           href={primaryHref}
-          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 py-4 text-center text-lg font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8"
+          data-hero-primary-cta
+          data-reveal
+          style="--reveal-delay:0.3s"
+          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 py-3 text-center text-base font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
         >
           {t.homeHero.primaryCta}
         </a>
         <a
           href={secondaryHref}
-          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto"
+          data-reveal
+          style="--reveal-delay:0.3s"
+          class="order-1 inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto"
         >
           {t.homeHero.secondaryCta}<span aria-hidden="true">&nbsp;→</span>
         </a>
       </div>
-      <ul class="flex flex-wrap items-center justify-center gap-2 sm:gap-3" data-reveal style="--reveal-delay:0.45s">
+      <IndustryEntry />
+      <ul class="order-1 flex flex-wrap items-center justify-center gap-2 sm:order-none sm:gap-3" data-reveal style="--reveal-delay:0.45s">
         {
           t.homeHero.trustBadges.map((badge) => {
             const href = BADGE_HREFS[badge.id];
@@ -103,7 +113,7 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
       </ul>
       {/* 福岡を代表する企業100選 公式エンブレム（#276 / #304）。掲載条件（クリック遷移・掲載期限）は
           コンポーネント側で一括して担保しているため、ここでは配置とサイズだけ指定する。 */}
-      <Fukuoka100Emblem imgClass="h-12 w-auto sm:h-16" data-reveal style="--reveal-delay:0.5s" />
+      <Fukuoka100Emblem class="order-1 sm:order-none" imgClass="h-12 w-auto sm:h-16" data-reveal style="--reveal-delay:0.5s" />
     </div>
   </div>
   {/* ロゴのペンギンがヒーロー下部を歩く演出（装飾）。クリックで飛び立ち、下から再登場。 */}

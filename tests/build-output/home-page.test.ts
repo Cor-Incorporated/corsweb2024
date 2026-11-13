@@ -10,6 +10,7 @@ import enJson from '../../src/i18n/locales/en.json';
 import zhJson from '../../src/i18n/locales/zh.json';
 import koJson from '../../src/i18n/locales/ko.json';
 import esJson from '../../src/i18n/locales/es.json';
+import { INDUSTRY_SLUGS, industryPagePath } from '../../src/config/industry-context';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
 const LOCALES = { ja: jaJson, en: enJson, zh: zhJson, ko: koJson, es: esJson } as const;
@@ -83,14 +84,23 @@ describe('トップの見出しの並び (#414)', () => {
 
     const text = textOf(entry);
     expect(text).toContain(t.homeIndustries.eyebrow);
-    expect(text).toContain(t.homeIndustries.title);
+    // 見出しの文は業種の欄の h2 にだけ出す（トップに同じ文を 2 回出さない）
+    expect(text).not.toContain(t.homeIndustries.title);
+    const hrefs = [...entry.matchAll(/\bhref=["']?([^"'\s>]+)/g)].map((m) => decode(m[1]).split(/[?#]/)[0].replace(/\/+$/, ''));
+    expect(hrefs).toEqual(INDUSTRY_SLUGS.map((slug) => `${locale === 'ja' ? '' : `/${locale}`}${industryPagePath(slug)}`));
+    const marks = [...entry.matchAll(/\bdata-industry-entry=["']?([\w-]+)/g)].map((m) => m[1]);
+    expect(marks).toEqual([...INDUSTRY_SLUGS]);
     for (const row of t.homeIndustries.rows) {
       expect(text).toContain(row.industry);
-      expect(text).toContain(row.theme);
-      const href = (locale === 'ja' ? row.link : `/${locale}${row.link}`).replace(/\/+$/, '');
-      const hrefs = [...entry.matchAll(/\bhref=["']?([^"'\s>]+)/g)].map((m) => decode(m[1]).split(/[?#]/)[0].replace(/\/+$/, ''));
-      expect(hrefs).toContain(href);
     }
+  });
+
+  it.each(LOCALE_KEYS)('%s: 業種の入口はヒーローの中、診断の主ボタンより後にある', (locale) => {
+    const hero = mainOf(readHome(locale)).match(/<section\b[\s\S]*?<\/section>/)?.[0] ?? '';
+    expect(hero, 'ヒーローの section が無い').not.toBe('');
+    const entryAt = hero.indexOf('data-home-industry-entry');
+    expect(entryAt, 'ヒーローの中に業種の入口が無い').toBeGreaterThanOrEqual(0);
+    expect(hero.search(/intent=confidential-ai-assessment/)).toBeLessThan(entryAt);
   });
 });
 
