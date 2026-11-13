@@ -7,8 +7,9 @@
  */
 
 /**
- * 終わりの文に電話の行を添えるか。既定は出さない（`CALL_CENTER_PHONE_VISIBLE` と同じ値）。
- * 浮きボタン・代わりのページ・contact-edge の 3 か所とも、この値だけで切り替える。
+ * 終わりの文に電話の行を添えるか。既定は出さない（`CALL_CENTER_PHONE_VISIBLE` と同じ値。試験が結ぶ）。
+ * 浮きボタンと代わりのページは、この値だけで切り替える。contact-edge は電話の行をまだ描かない
+ * （出すなら、edge の描き方を先に決めて足す）。
  */
 export const CLOUDIA_UNAVAILABLE_PHONE_VISIBLE: boolean = false;
 
