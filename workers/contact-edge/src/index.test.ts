@@ -76,7 +76,7 @@ describe('cor-contact-edge', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ url: 'https://cor-jp-main.web.app/contact/chat/' }));
   });
 
-  it('redirects the chat entry to the existing form when both origins miss it', async () => {
+  it('answers the chat entry in place with 503 when both origins miss it (no redirect back to /contact/)', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response('pages down', { status: 503 }))
@@ -85,8 +85,9 @@ describe('cor-contact-edge', () => {
 
     const response = await fetchContactEdge(request('/contact/chat/'), { CONTACT_ORIGIN: 'pages' });
 
-    expect(response.status).toBe(302);
-    expect(response.headers.get('location')).toBe('https://cor-jp.com/contact/');
+    expect(response.status).toBe(503);
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
   });
 
   it('does not intercept other paths', async () => {
