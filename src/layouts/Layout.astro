@@ -360,13 +360,45 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
           targets.forEach((el) => el.classList.add('is-visible'));
           return;
         }
+        // 読み込んだ時に窓の中に（一部でも）在る要素は、下 12% のマージンの中に在っても表示する。
+        // マージンだけで決めると、窓が低いときにヒーローの主ボタンなどが透明のまま残り、スクロールしないと出ない。
+        // 位置は offsetTop で読む（reveal-ready の 40px のずれ＝transform を含まない）。字体の読み込みで配置が
+        // 変わるので、初回と document.fonts.ready の後の 2 回確かめる。表示にするのは observer の通知の時だけにし、
+        // 最初にふわっと出る動き（transition）を残す。窓に入ったのを observer が見たら、以後は通常どおり。
+        const pinnedOnLoad = new Set<Element>();
+        const notified = new Set<Element>();
+        const inViewport = (el: HTMLElement) => {
+          let top = 0;
+          for (let node: HTMLElement | null = el; node; node = node.offsetParent as HTMLElement | null) top += node.offsetTop;
+          const viewTop = top - window.scrollY;
+          return viewTop < window.innerHeight && viewTop + el.offsetHeight > 0;
+        };
+        const pinInViewport = () => {
+          targets.forEach((el) => {
+            if (!inViewport(el as HTMLElement)) return;
+            pinnedOnLoad.add(el);
+            // observer がもう通知した要素（字体の後に窓へ入った要素）は、ここで表示にする。
+            // 読み込みから時間がたっているので、演出の遅れ（--reveal-delay）は付けずにすぐ出す
+            if (notified.has(el) && !el.classList.contains('is-visible')) {
+              (el as HTMLElement).style.setProperty('--reveal-delay', '0s');
+              el.classList.add('is-visible');
+            }
+          });
+        };
+        pinInViewport();
         let nextObserver: IntersectionObserver | null = null;
+        document.fonts?.ready.then(() => {
+          if (revealObserver && revealObserver === nextObserver) pinInViewport();
+        });
         try {
           nextObserver = new IntersectionObserver(
             (entries) => {
               entries.forEach((entry) => {
-                // 双方向: viewport に入れば表示、出れば元に戻す（上下どちらのスクロールでも毎回アニメ）
-                entry.target.classList.toggle('is-visible', entry.isIntersecting);
+                // 双方向: viewport に入れば表示、出れば元に戻す（上下どちらのスクロールでも毎回アニメ）。
+                // 読み込んだ時に窓の中に在った要素は、窓に入ったのを見るまで表示のままにする。
+                notified.add(entry.target);
+                if (entry.isIntersecting) pinnedOnLoad.delete(entry.target);
+                entry.target.classList.toggle('is-visible', entry.isIntersecting || pinnedOnLoad.has(entry.target));
               });
             },
             // threshold 0 + 下 12% マージンで、上端が入った時点で発火（早すぎ防止）
