@@ -8,16 +8,16 @@ source: "Grift"
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "ed5a3adbdd57154b1cbb7ab4f8318fb3e0b08de7c0d8a8e3a1084e6b7179df2e"
-translatedAt: "2026-10-26T13:33:26.518Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "212b639c64ecc34de6dab7f45e1a53da368609ce7e719b0e7f83922d6e663b8a"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
 
 ## Release of Grift CLI
 
 Cor.Inc. has released Grift CLI, the command-line tool for its proprietary product Grift, as open-source software under the MIT license. On September 8, 2026, we released v0.7.2 on PyPI.
 
-Grift CLI is a tool that extracts "verifiable facts (observed values)" from an engineer's Git history. Its tagline is: "Resumes can be embellished. Evidence cannot."
+Grift CLI is a tool that extracts "verifiable facts (observed values)" from an engineer's Git history.
 
 ## Our Three Promises
 

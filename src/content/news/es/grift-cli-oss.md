@@ -8,16 +8,16 @@ source: "Grift"
 isDraft: false
 featured: true
 lang: "es"
-translationSourceHash: "ed5a3adbdd57154b1cbb7ab4f8318fb3e0b08de7c0d8a8e3a1084e6b7179df2e"
-translatedAt: "2026-10-26T13:34:01.695Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "212b639c64ecc34de6dab7f45e1a53da368609ce7e719b0e7f83922d6e663b8a"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
 
 ## Publicación de Grift CLI
 
 Cor.Inc. ha publicado «Grift CLI», la herramienta de línea de comandos de su producto propio «Grift», como software de código abierto (OSS) bajo la licencia MIT. El 8 de septiembre de 2026 se publicó la versión v0.7.2 en PyPI.
 
-Grift CLI es una herramienta para extraer «hechos verificables (valores de inspección)» a partir del historial de git de los ingenieros. El lema es «La trayectoria profesional se puede exagerar. Las evidencias no.»
+Grift CLI es una herramienta para extraer «hechos verificables (valores de inspección)» a partir del historial de git de los ingenieros.
 
 ## Nuestros 3 compromisos
 

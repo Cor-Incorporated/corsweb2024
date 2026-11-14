@@ -97,9 +97,23 @@ def rule_ids(text: str, scene: str = "company") -> list[str]:
 
 class LintTest(unittest.TestCase):
     def test_site_rules_are_errors(self):
-        hits = lint.check_text("まずは試行してください。ISMS 認証取得済みです。生産性が7倍になりました。証拠は盛れない。Cor株式会社です。", "company")
+        hits = lint.check_text("まずは試行してください。ISMS は認証登録を見込んでいます。生産性が7倍になりました。証拠は盛れない。Cor株式会社です。", "company")
         self.assertNotIn("trial_word", [h.rule_id for h in lint.check_text("試行錯誤しました。", "company")])
-        self.assertEqual({h.rule_id for h in hits if h.level == "error"}, {"trial_word", "isms_obtained", "seven_x_metric", "evidence_copy", "company_name"})
+        self.assertEqual({h.rule_id for h in hits if h.level == "error"}, {"trial_word", "isms_stale", "seven_x_metric", "evidence_copy", "company_name"})
+
+    def test_isms_certified_with_scope_has_no_errors(self):
+        text = "Cor.株式会社は ISO/IEC 27001:2022（ISMS）認証を取得しました。対象範囲は「ソフトウエアの受託開発および運用」です。"
+        hits = lint.check_text(text, "company")
+        self.assertEqual([h for h in hits if h.level == "error"], [])
+        self.assertEqual([(h.rule_id, h.level) for h in hits], [("isms_obtained_scope", "warn")])
+
+    def test_isms_stale_and_overclaims_are_errors(self):
+        for text in ("2026年12月ごろの認証登録です。", "認証登録を見込んでいます。", "取得に向けて整備中です。"):
+            with self.subTest(text=text):
+                self.assertIn(("isms_stale", "error"), [(h.rule_id, h.level) for h in lint.check_text(text, "company")])
+        for text in ("ISMS で万全です。", "ISO/IEC 27001 で完全です。", "ISMS は全社の認証です。", "ISMS は製品認証です。", "Grift は ISMS 認証取得済みです。", "スマートグラスは ISO/IEC 27001 認証を取得しました。"):
+            with self.subTest(text=text):
+                self.assertIn(("isms_overclaim", "error"), [(h.rule_id, h.level) for h in lint.check_text(text, "company")])
 
     def test_style_rules(self):
         text = "## Grift とは？\n\nすごいです！\n\n- **特徴**: 点数を出さない\n\nそうなんよね（笑）。\n\nシームレスに使えます。\n"
@@ -112,14 +126,14 @@ class LintTest(unittest.TestCase):
     def test_mentions_of_banned_words_are_not_hits(self):
         self.assertEqual(rule_ids("「取得済み」とは書きません。「試行」は使わない。\n"), [])
         # 肯定の動詞は言及にしない（「『取得済み』と書きます」は主張のまま）
-        self.assertIn("isms_obtained", rule_ids("ISMS 認証は「取得済み」と書きます。\n"))
+        self.assertIn("isms_obtained_scope", rule_ids("ISMS 認証は「取得済み」と書きます。\n"))
 
     def test_error_rules_see_links_tables_quotes_and_odd_fences(self):
         # レビューで見つかった素通り（2026-10-30）: URL の後ろ、表、引用、閉じないコードの囲み
         self.assertIn("trial_word", rule_ids("[記事](https://x.com/a)で試行を始めました。\n"))
-        self.assertIn("isms_obtained", rule_ids("[こちら](https://cor-jp.com/)にあるとおり、ISMS 認証取得済みです。\n"))
-        self.assertIn("isms_obtained", rule_ids("| ISMS | 認証取得済み |\n"))
-        self.assertIn("isms_obtained", rule_ids("> ISMS 認証取得済みです。\n"))
+        self.assertIn("isms_stale", rule_ids("[こちら](https://cor-jp.com/)にあるとおり、ISMS は認証登録を見込んでいます。\n"))
+        self.assertIn("isms_stale", rule_ids("| ISMS | 認証登録を見込んでいます |\n"))
+        self.assertIn("isms_stale", rule_ids("> ISMS は認証登録を見込んでいます。\n"))
         self.assertIn("trial_word", rule_ids("```\n~~~\n```\n試行します。\n"))
         self.assertNotIn("exclamation", rule_ids("| 列 | すごい！ |\n"))  # 文体の規則は表を見ない
 

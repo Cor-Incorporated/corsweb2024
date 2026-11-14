@@ -63,7 +63,9 @@ const relatedLinks = [
         c.business.map((item) => (
           <li class="rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10">
             <h3 class="text-lg font-medium tracking-tight">{item.name}</h3>
-            <p class="mt-1 text-base font-medium text-primary-700 dark:text-primary-300">{item.tagline}</p>
+            {item.tagline && (
+              <p class="mt-1 text-base font-medium text-primary-700 dark:text-primary-300">{item.tagline}</p>
+            )}
             <p class="mt-3 text-base leading-relaxed">{item.description}</p>
             <p class="mt-3 text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70">{item.status}</p>
           </li>

@@ -8,16 +8,16 @@ source: "Grift"
 isDraft: false
 featured: true
 lang: "zh"
-translationSourceHash: "ed5a3adbdd57154b1cbb7ab4f8318fb3e0b08de7c0d8a8e3a1084e6b7179df2e"
-translatedAt: "2026-10-26T13:33:44.329Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "212b639c64ecc34de6dab7f45e1a53da368609ce7e719b0e7f83922d6e663b8a"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
 
 ## Grift CLI 发布
 
 Cor.株式会社已将旗下自研产品“Grift”的命令行工具“Grift CLI”作为 MIT 许可证的开源软件（OSS）发布。2026年9月8日已在 PyPI 上发布了 v0.7.2。
 
-Grift CLI 是一款从工程师的 git 历史中提取“可核验的事实（检查值）”的工具。宣传标语为“履历可以夸大，证据无法造假。”
+Grift CLI 是一款从工程师的 git 历史中提取“可核验的事实（检查值）”的工具。
 
 ## 三项承诺
 
