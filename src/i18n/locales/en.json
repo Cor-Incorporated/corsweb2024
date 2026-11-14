@@ -986,7 +986,7 @@
     },
     "security": {
       "title": "Security | Cor.Inc.",
-      "description": "Cor.Inc.'s security policy as a partner handling confidential-data AI and local LLMs: designing input data and permissions, human approval processes, retention and deletion rules, and our completed Stage 2 audit for ISO/IEC 27001 (ISMS) with certification registration expected."
+      "description": "Cor.Inc.'s security policy as a partner handling confidential-data AI and local LLMs: designing input data and permissions, human approval processes, retention and deletion rules, and the ISO/IEC 27001:2022 (ISMS) certification we obtained."
     },
     "news": {
       "title": "News | Cor.Inc.",
@@ -1311,7 +1311,7 @@
     "statusTitle": "Building Our Framework",
     "status": {
       "legal": "Since June 2026, in collaboration with our retained legal counsel, we have been building a legal review framework covering contracts, personal information, AI use, and information security operations.",
-      "isms": "We operate an Information Security Management System (ISMS) and are undergoing certification audits for the international standard ISO/IEC 27001. We completed the Stage 2 audit in October 2026 and expect certification registration around December 2026. Through continuous strengthening of our framework, we fulfill our responsibility to protect our customers' information."
+      "isms": "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029. Through continuous strengthening of our framework, we fulfill our responsibility to protect our customers' information."
     },
     "aiTitle": "AI Usage Policy",
     "aiDescription": "Cor. actively leverages AI tools for our work. At the same time, when handling customer confidential data, personal information, source code, training data, and the like, we use AI tools under contracts and configurations that prevent training use, company accounts, or approved environments. AI outputs are verified by people and used only after confirming rights, accuracy, and safety.",
@@ -1330,7 +1330,7 @@
       {
         "area": "ISMS",
         "effort": "Operating risk management, training, policies, and internal audits based on ISO/IEC 27001",
-        "state": "Stage 2 audit completed (October 2026); registration expected around December"
+        "state": "ISMS certification obtained (November 2026)"
       },
       {
         "area": "Device Management",
@@ -1359,7 +1359,7 @@
     "privacySuffix": ".",
     "privacyLead": "* For legal details on how we handle personal information and customer data, please see our Privacy Policy.",
     "governanceTitle": "Building Our Framework",
-    "governanceDescription": "We operate an Information Security Management System (ISMS) and are undergoing certification audits for the international standard ISO/IEC 27001. We completed the Stage 2 audit in October 2026 and expect certification registration around December 2026. Through continuous strengthening of our framework, we fulfill our responsibility to protect our customers' information.",
+    "governanceDescription": "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029. Through continuous strengthening of our framework, we fulfill our responsibility to protect our customers' information.",
     "ctas": {
       "primary": "Discuss a confidential-data AI assessment",
       "secondary": "Talk to us",
