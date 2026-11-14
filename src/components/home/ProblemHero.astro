@@ -2,6 +2,7 @@
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
 import { getContactUrl, ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
 import PenguinWalker from './PenguinWalker.astro';
+import IndustryEntry from './IndustryEntry.astro';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
@@ -32,7 +33,30 @@ const BADGE_HREFS: Record<string, string> = {
 const isCjkLocale = ['ja', 'zh', 'ko'].includes(currentLocale);
 const heroTitleSizeClass = isCjkLocale
   ? 'text-[clamp(2.15rem,5vw,15rem)]'
-  : 'text-[clamp(2.15rem,4.5vw,5.5rem)]';
+  : 'text-[clamp(1.5rem,4.5vw,5.5rem)]';
+
+// 5 業種の入口を最初の画面に入れるための、言語ごとの余白と文字の大きさ。
+// en・es は説明の文と主ボタンの文が長く、ja・zh・ko と同じ大きさだと入口が画面の外へ出る
+// （1366×768・1280×720 と、ブラウザの枠を引いたスマホの高さ）。en・es だけを詰め、ja・zh・ko は変えない。
+// 測るのは e2e/first-view.spec.ts（14 の画面の大きさ × 5 言語）。
+const heroSpacing = isCjkLocale
+  ? {
+      section: 'pt-4 sm:pt-20',
+      column: 'gap-4 sm:gap-8',
+      kicker: 'text-sm tracking-widest',
+      titleBlock: 'gap-5 sm:gap-6',
+      subtitle: 'text-[15px] leading-relaxed sm:text-xl sm:leading-relaxed',
+      primaryCta: 'py-3 text-base sm:py-4 sm:text-lg',
+    }
+  : {
+      section: 'pt-1 sm:pt-12',
+      column: 'gap-2 sm:gap-6',
+      kicker: 'text-xs leading-tight tracking-wide sm:text-sm sm:tracking-widest',
+      titleBlock: 'gap-2 sm:gap-5',
+      // パソコンの文字は ja・zh・ko と同じ大きさのまま（折り返しの位置を変えない）
+      subtitle: 'text-[13px] leading-normal sm:text-xl sm:leading-relaxed',
+      primaryCta: 'py-2.5 text-sm sm:py-4 sm:text-lg',
+    };
 
 // 主CTA: 機密データAI活用診断（ADR-0011）。副は実績（信頼の材料を上へ寄せる。PoC の入口は締めに置く）
 const primaryHref = getContactUrl(currentLocale, {
@@ -43,19 +67,22 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
 ---
 
 {/* 高さは中身で決める（以前の min-h-[88vh] は外した）。下の余白はペンギンが歩く場所。 */}
-<section class="relative isolate flex items-center overflow-hidden pt-12 pb-28 sm:pt-20 sm:pb-32">
+{/* 5 業種の入口（IndustryEntry）は主ボタンのすぐ下。最初の画面に 5 つとも入ることを
+    e2e/first-view.spec.ts が測る。スマホでは「実績を見る」を入口の下に出し、3 つの短い文とエンブレムが続く。
+    並べ替えに CSS の order を使わない（見た目と Tab の順がずれるため）。 */}
+<section class={`relative isolate flex items-center overflow-hidden pb-28 sm:pb-32 ${heroSpacing.section}`}>
   {/* 抽象モーション背景（装飾・読み上げ対象外）。prefers-reduced-motion で静止。 */}
   <div class="motion-bg" aria-hidden="true"></div>
   <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 2xl:max-w-[90rem]">
-    <div class="flex flex-col items-center gap-6 text-center sm:gap-8" data-hero-content>
+    <div class={`flex flex-col items-center text-center ${heroSpacing.column}`} data-hero-content>
       <p
-        class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
+        class={`font-medium uppercase text-primary-600 dark:text-primary-400 ${heroSpacing.kicker}`}
         data-reveal
         style="--reveal-delay:0.05s"
       >
         {t.homeHero.kicker}
       </p>
-      <div class="flex max-w-5xl flex-col items-center gap-5 sm:gap-6 2xl:max-w-7xl">
+      <div class={`flex max-w-5xl flex-col items-center 2xl:max-w-7xl ${heroSpacing.titleBlock}`}>
         {/* 即描画(LCP死守)のため演出は付けない。サイズは heroTitleSizeClass が全て持つ（ベタ書きの
             text-[...] を足すと、後勝ちがクラス属性の順ではなく CSS の出力順で決まるため、無言で競合する）。 */}
         <h1
@@ -64,22 +91,28 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
         />
         {/* theme.fontSize が [size, lineHeight] のタプル指定のため text-xl は line-height も出し、
             後勝ちで leading-relaxed を打ち消す。sm:leading-relaxed で戻す。 */}
-        <p class="max-w-3xl text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl sm:leading-relaxed" set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
+        <p class={`max-w-3xl text-pretty text-primary-950/70 dark:text-primary-200/70 ${heroSpacing.subtitle}`} set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
       </div>
       <div class="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:justify-center sm:gap-4" data-reveal style="--reveal-delay:0.3s">
         <a
           href={primaryHref}
-          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 py-4 text-center text-lg font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8"
+          data-hero-primary-cta
+          class={`inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full border border-transparent bg-[#2d4a6b] px-6 text-center font-semibold text-white shadow-sm transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] sm:w-auto sm:px-8 ${heroSpacing.primaryCta}`}
         >
           {t.homeHero.primaryCta}
         </a>
-        <a
-          href={secondaryHref}
-          class="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto"
-        >
+        {/* パソコンでは主ボタンの横。スマホでは入口の下に同じリンクを出す（見た目と Tab の順をそろえる）。
+            スマホ用は max-sm: で出す。「sm 以上で隠す」の class をこのサイトの source に書くと、その CSS ができ、
+            locale の説明の文の改行（同じ class を付けた br）がパソコンで消えて、空白も無くなる（「documents.Cor.Inc.」）。
+            Tailwind は comment の中の文字も拾うので、ここにもその class 名を書かない。 */}
+        <a href={secondaryHref} class="hidden min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto sm:inline-flex">
           {t.homeHero.secondaryCta}<span aria-hidden="true">&nbsp;→</span>
         </a>
       </div>
+      <IndustryEntry />
+      <a href={secondaryHref} class="hidden min-h-[48px] w-full max-w-sm items-center justify-center rounded-full px-5 py-3 text-center text-base font-medium text-primary-950 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200 sm:w-auto max-sm:inline-flex" data-reveal style="--reveal-delay:0.35s">
+        {t.homeHero.secondaryCta}<span aria-hidden="true">&nbsp;→</span>
+      </a>
       <ul class="flex flex-wrap items-center justify-center gap-2 sm:gap-3" data-reveal style="--reveal-delay:0.45s">
         {
           t.homeHero.trustBadges.map((badge) => {

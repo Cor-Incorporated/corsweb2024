@@ -2,6 +2,7 @@
 import { getCurrentLocale, getTranslations, getLocalizedUrl, type Locale } from '../../utils/i18n';
 import { getContactUrl, getGriftUrl } from '../../config/site';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
+import { industryRowsInOrder } from '../../config/industry-context';
 
 // このページが存在するロケール。言語切替が「同一ページの翻訳版」へ飛ぶか、翻訳が無い言語で
 // ホームへフォールバックするかの判定に使う。未指定なら全言語ありとみなす（従来の暗黙の挙動）。
@@ -58,7 +59,8 @@ const baseLinks = [
   },
 ];
 // 既存の homeIndustries の名前とパス。5言語とも業種ページがある（[lang]/industries）。
-const industryLinks = t.homeIndustries.rows.map((row) => ({
+// 並びは INDUSTRY_SLUGS（src/config/industry-context.ts）。locale の行と食い違うと build を止める。
+const industryLinks = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIndustries`).map((row) => ({
   name: row.industry,
   href: getLocalizedUrl(row.link, currentLocale),
   isExternal: false,
@@ -164,9 +166,10 @@ const langOptions = localeOrder.map((loc) => ({
       {
         desktopNav.map((entry) =>
           entry.kind === 'menu' ? (
-            <div class="relative" x-data="{ menuOpen: false }" @keydown.escape="menuOpen = false" @click.outside="menuOpen = false">
+            <div class="relative" x-data="{ menuOpen: false }" @keydown.escape="menuOpen && $refs.trigger.focus(); menuOpen = false" @click.outside="menuOpen = false">
               <button
                 type="button"
+                x-ref="trigger"
                 @click="menuOpen = !menuOpen"
                 aria-expanded="false"
                 :aria-expanded="menuOpen.toString()"
@@ -285,11 +288,12 @@ const langOptions = localeOrder.map((loc) => ({
       <div
         class="relative"
         x-data="{ langOpen: false }"
-        @keydown.escape="langOpen = false"
+        @keydown.escape="langOpen && $refs.trigger.focus(); langOpen = false"
         @click.outside="langOpen = false"
       >
         <button
           type="button"
+          x-ref="trigger"
           @click="langOpen = !langOpen"
           aria-expanded="false"
           :aria-expanded="langOpen.toString()"
