@@ -18,8 +18,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { INDUSTRY_SLUGS } from '../src/config/industry-context';
 
-// よくある画面の大きさ。スマホの 664・667・635・640 は、ブラウザの上下の枠を引いた表示の高さ。
-// 320×568 は対象にしない（ja でも 5 つは入らない）。
+// よくある画面の大きさ。パソコンとタブレットは画面の解像度そのままで、ブラウザの枠とタスクバーを引いていない。
+// 実際の窓はこれより 111〜135px ほど低く、1536×864・1366×768・1280×800・1280×720 の画面の窓では、入口は 5 つとも入らない。
+// スマホの 664・667・635・640 は、ブラウザの上下の枠を引いた表示の高さ。320×568 は対象にしない（ja でも 5 つは入らない）。
 const VIEWPORTS = [
   { name: 'pc-1920x1080', width: 1920, height: 1080, mobile: false },
   { name: 'pc-1440x900', width: 1440, height: 900, mobile: false },
