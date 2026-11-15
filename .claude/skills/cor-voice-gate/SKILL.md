@@ -96,7 +96,7 @@ Check every outbound medium, including email and formal documents:
     - ISMS: as recorded in `cor-voice/references/facts.json` (scope-limited, valid within the recorded period), separated from what each system verified; never use it as proof that a product or system is secure. The 2026-10 stage-2 state appears only as a dated past record (lint `--archive START-END`).
     - 技術・安全系記事全般（続稿①に限らない）には item 21 も適用する。
 
-19. □ **note 編集UI反映（when reflecting into editor.note.com）— hard stop（寺田承認 2026-10-29）:** 出典 `<agent-server>/reports/20261029_note_embed_header_loss_rca.md`・運用メモ `note-editor-formatting.md`。
+19. □ **note 編集UI反映（when reflecting into editor.note.com）— hard stop（2026-10-29 に決定）:** 出典 `<agent-server>/reports/20261029_note_embed_header_loss_rca.md`・運用メモ `note-editor-formatting.md`。
     - **Markdown／HTML 全文ペースト禁止**（一時 http.server の HTML 全文コピー→貼付、全文選択→置換を含む）。段落本文の貼付は可。見出し・リストはツールバーまたは行頭ショートカットの**入力変換**。
     - 反映前に退避: カバー画像（Header／eyecatch）の有無、画像・埋込カードの一覧（位置・URL）を `note_preedit_<id>.md` に記録。無い場合は「未設定」と書く。
     - 反映後照合（タイトル・冒頭だけでは不十分）: **埋込カード数**、**カバー画像**、**素URL残存ゼロ**（`https://x.com/` / `https://twitter.com/` の素リンク行がカード化されず残っていない）、見出し数・画像数。不一致 → 保存完了／ready にしない。
@@ -105,13 +105,13 @@ Check every outbound medium, including email and formal documents:
     - 詳細手順は [note-edit-safe](../note-edit-safe/SKILL.md) に従う。
 
 
-20. □ **公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（寺田承認 2026-10-29）:** 出典 `<agent-server>/reports/20261029_note_new_key_publish_rca.md`・運用メモ `note-editor-formatting.md`（「更新／リライト」節）。
+20. □ **公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（2026-10-29 に決定）:** 出典 `<agent-server>/reports/20261029_note_new_key_publish_rca.md`・運用メモ `note-editor-formatting.md`（「更新／リライト」節）。
     - 編集URLの noteId（`editor.note.com/notes/<id>/edit/`）は、旧公開URLの noteId（`note.com/.../n/<id>`）と **一致必須**。報告に `targetPublicKey` / `editorNoteId` / `key一致: yes|no` を必ず書く。不一致、または旧公開URLの書き漏れ → FAIL。ready／ワンタップ公開導線に載せない。
     - 本文・タイトル・完了報告に「更新しました」等の更新フレーミングがあるのに key が新規 → FAIL。
     - 新規 key で作ってよいのは **続稿・新シリーズ**、または寺田が「別記事」と明示した場合のみ。その場合は更新フレーミングを使わない。
     - 詳細手順は [note-edit-safe](../note-edit-safe/SKILL.md) Hard stops §5–6。
 
-21. □ **技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（寺田承認 2026-10-29）:** 出典: 2026-10-29 P0-S1 外部レビュー（「設計思想として良いが調査／検証記事として不足」; 原文保管先は未確認）＋`<agent-server>/reports/20261029_tech_safety_article_gate_draft.md`。item12／13／14／18 を置換せず補強する。
+21. □ **技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（2026-10-29 に決定）:** 出典: 2026-10-29 P0-S1 外部レビュー（「設計思想として良いが調査／検証記事として不足」; 原文保管先は未確認）＋`<agent-server>/reports/20261029_tech_safety_article_gate_draft.md`。item12／13／14／18 を置換せず補強する。
     - **(1 hard) 危険源から安全側状態を定義:** 停止・静止・帰還・待機を無条件に「安全」と呼ばない。何の危険源に対して、どの状態が安全側かを書く。書けない → 「安全側状態は未定義」と明記するか escalate。Fail = hard stop.
     - **(2 hard) AI推論と安全制御の分離:** 停止判断の主体が AI 自身だけになっていないか。独立した制御（ハードインターロック・ウォッチドッグ・人の停止権限など）の有無と状態（方針／実装／検証）を書く。無いなら無いと書く。Fail = hard stop.
     - **(3 Full必須) 確信度≠安全性:** 確信度・スコアを安全性の指標として使わない。高確信度での誤判断とキャリブレーションの問題に触れずに「確信度が低ければ止まるので安全」と書かない。
