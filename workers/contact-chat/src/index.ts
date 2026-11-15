@@ -378,6 +378,9 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
       logContactFailure('daily_cap_reached');
       return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください' }, 503);
     }
+  } else {
+    // D1 の binding が無い env（手元・試験の道）では上限を掛けられない。呼んだことだけを記録に残す。
+    logContactFailure('daily_cap_without_db');
   }
 
   const system = buildSystemPrompt({ intent: initialIntent, traffic, mode, locale });

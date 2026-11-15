@@ -76,16 +76,16 @@ submit では、分類・業種・path をサーバー側の会話の状態か�
 
 ### 1 日の呼び出しの上限（migration `0006_chat_daily_usage.sql`）
 
-チャットの API が model を呼ぶ回数に、1 日（JST の日付）の上限を付ける。上限は vars の `CHAT_DAILY_MODEL_CALL_LIMIT`（既定 300）。
+チャットの API が model を呼ぶ回数に、1 日（JST の日付）の上限を付ける。上限は vars の `CHAT_DAILY_MODEL_CALL_LIMIT`（既定 300）。`0` は、その日は model を呼ばないための値（チャットを止めたいときに使う）。
 
 - 数は D1 の `chat_daily_usage`（1 日 1 行。`day`・`model_calls`・`updated_at`。個人の情報は持たない）に置く。
 - model を呼ぶ前に、その日の数を 1 文で 1 つ足す（`src/daily-cap.ts`）。上限に達していれば足さずに、model を呼ばず 503（「AIが一時的に利用できません…」）を返す。数は model を呼んだ回数だけを表す（止めた要求は数えない）。model の呼び出しが失敗しても、足した 1 は残る。
 - start（会話の始まり）は model を呼ばないので数えない。
 - 数を読めない・書けない（D1 の誤り、0006 を当てる前の D1）ときも、model を呼ばず同じ 503 を返す。
 - 上限に当たると記録に `contact-chat:daily_cap_reached`、数を扱えないと `contact-chat:daily_cap_unavailable` を出す。本文・IP・メールは出さない。
-- D1 の binding（`DB`）が無い env では上限を掛けない（会話の保存と同じ扱い）。本番と preview の `wrangler.toml` には `DB` が在る（`src/__tests__/chat-daily-cap.test.ts` が固定する）。
+- D1 の binding（`DB`）が無い env（手元・試験の道）では、上限は働かない（会話の保存と同じ扱い）。そのときは model を呼ぶたびに記録 `contact-chat:daily_cap_without_db` を出す。本番と preview の `wrangler.toml` には `DB` が在る（`src/__tests__/chat-daily-cap.test.ts` が file を読んで固定する）。
 
-失敗の形: 0006 を当てる前の D1 で新しい版の Worker を動かすと、チャット（2 往復目から）は 503 になる。0005 と同じく、migration を Worker の配備より先に当てる。
+失敗の形: 0006 を当てる前の D1 で新しい版の Worker を動かすと、model を呼ぶチャットの要求（2 往復目から）は全部 503 になる（会話の始まりは通る）。0005 と同じく、migration を Worker の配備より先に当てる。
 
 その日の数を読む（個人の情報は出ない）:
 

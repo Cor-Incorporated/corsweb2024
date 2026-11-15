@@ -81,7 +81,8 @@ describe('ログは固定コードだけ', () => {
     }, '198.51.100.41'), ENV);
     expect(res.status).toBe(503);
     expectFixedLog(logs.lines());
-    expect(logs.lines()).toBe('contact-chat:llm_failed');
+    // この ENV には D1 の binding が無いので、1 日の上限を掛けずに呼んだことの記録が先に 1 行出る。
+    expect(logs.lines()).toBe('contact-chat:daily_cap_without_db\ncontact-chat:llm_failed');
   });
 
   it('メール送信失敗のログに本文を含めない', async () => {

@@ -16,6 +16,7 @@ export const CONTACT_LOG_EVENTS = [
   'body_timeout',
   'daily_cap_reached',
   'daily_cap_unavailable',
+  'daily_cap_without_db',
 ] as const;
 
 export type ContactLogEvent = (typeof CONTACT_LOG_EVENTS)[number];

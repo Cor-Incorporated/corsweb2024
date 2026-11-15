@@ -302,6 +302,32 @@ describe('1 日の model の呼び出しの上限', () => {
     expect(model.calls()).toBe(0);
   });
 
+  it('model の呼び出しが失敗しても、予約した 1 は数に残る（呼んだ回数として数える）', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('upstream error', { status: 500 })));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = await chatTurn(testEnv(db, '3'));
+    expect(response.status).toBe(503);
+    expect(storedCalls(db, '2026-11-17')).toBe(1);
+  });
+
+  it('D1 の binding が無い env では上限を掛けずに呼び、そのことを記録に 1 行残す（本文・IP・メールは出さない）', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    const model = stubModel();
+    const lines: string[] = [];
+    vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    const { DB: _db, ...withoutDb } = testEnv(db, '0') as Env & { DB?: D1Database };
+    const response = await chatTurn(withoutDb as Env);
+    expect(response.status).toBe(200);
+    expect(model.calls()).toBe(1);
+    expect(lines).toEqual(['contact-chat:daily_cap_without_db']);
+    expect(lines.join('\n')).not.toMatch(/業務の整理|198\.51\.100|@/);
+  });
+
   it('上限に当たったことを記録に残す。記録に本文・IP・メールを出さない', async () => {
     fixClock('2026-11-17T03:00:00.000Z');
     const db = openDatabase();
@@ -331,9 +357,12 @@ describe('wrangler.toml の上限の設定', () => {
     return next < 0 ? rest : rest.slice(0, next);
   };
 
-  it('本番と preview の両方に、D1 の binding DB が在る', () => {
-    expect(section('[[d1_databases]]')).toMatch(/^binding = "DB"$/m);
-    expect(section('[[env.preview.d1_databases]]')).toMatch(/^binding = "DB"$/m);
+  it.each([
+    ['本番（最上位）', '[[d1_databases]]'],
+    ['preview', '[[env.preview.d1_databases]]'],
+  ])('%s に D1 の binding DB が在る', (env, header) => {
+    const found = toml.includes(`${header}\n`) && /^binding = "DB"$/m.test(section(header));
+    expect(found, `wrangler.toml の ${env}（${header}）に binding = "DB" が無い`).toBe(true);
   });
 
   it('本番の vars の上限の値は、上限として読める数', () => {
