@@ -7,6 +7,7 @@
 // - 署名の区画は 1 つ。肩書と名前の行が 1 つあり、会社の提供の条件（ISMS の欄・問い合わせ）を含まない
 // - 出典の表示が、参考資料の数だけある（本文の [n] と、CTA の後の参考資料の欄。教育は本文の近くのリンク）
 // - 問い合わせの入口が業種の source を持つ。本文の中に問い合わせページ（/contact）への link が無い
+// - 問い合わせのボタンの文は、同じ Cloudia の画面へ進む浮きボタンの文（CloudiaLauncher）と同じ
 // - 資料ダウンロードの段落と副ボタンは、資料の受け取りの入口（DOCUMENT_DOWNLOAD_HREF）があるときだけ出る
 // - Markdown の記号やコメントが本文に出ていない。サイト内の link はその言語のページを指し、dist に在る
 // 25 ページで確かめること:
@@ -123,6 +124,15 @@ describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
       .map((a) => a.getAttribute('href') ?? '')
       .filter((href) => /^\/contact\/?(?:[?#]|$)/.test(href));
     expect(viaContact).toEqual([]);
+  });
+
+  it('問い合わせのボタンの文は、同じ Cloudia の画面へ進む浮きボタンの文と同じ', () => {
+    const doc = load('ja', slug);
+    const button = squash(doc.querySelector(`[data-industry-inquiry="industry-${slug}"]`)?.textContent);
+    const launcher = doc.querySelector('#cloudia-launcher-open')?.getAttribute('data-label-open') ?? '';
+    expect(launcher, '浮きボタンの文が無い').not.toBe('');
+    expect({ button, launcher }).toEqual({ button: launcher, launcher });
+    expect(button).toBe(page.cta.primary);
   });
 
   it('資料ダウンロードの段落と副ボタンは、資料の受け取りの入口があるときだけ出る', () => {
