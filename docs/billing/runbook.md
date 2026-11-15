@@ -18,7 +18,7 @@
 |---|---|---|---|
 | 1 | P1・P5: Stripe と Clerk のアカウントを確かめる（画面） | 10 分 | なし |
 | 2 | T1: テストモードの鍵を用意する（画面） | 5 分 | 1 |
-| 3 | T2〜T4: テストモードに商品・価格・税率を作り、冪等を確かめる | 5 分 | 2、この PR の merge（または P3 の worktree） |
+| 3 | T2〜T4: テストモードに商品・価格・税率を作り、冪等を確かめる | 5 分 | 2、P3（develop を取り出した worktree） |
 | 4 | T5〜T8: テストモードで顧客 1 社 → 契約 → カードの保存（ブラウザでテスト用カード）→ 請求書 | 20 分 | 3 |
 | 5 | T9: テスト用カードで払う（テストモードだけ `--early-test` で期限前に払う） | 5 分 | 4 |
 | 6 | T10: テストモードで解約を書く | 5 分 | 4 |
@@ -37,26 +37,36 @@
 |---|---|---|---|
 | P1 | Stripe のアカウント（本人確認・入金先の口座を含む） | 寺田（画面の作業） | **未確認**。corsweb の特商法ページに「クレジットカード決済（Stripe）」の記載があり、アカウントはある見込み |
 | P2 | 手元の Mac に `jq` と `curl` がある | — | 実測済み（2026-11-06 14:01）: `/usr/bin/jq`（jq-1.7.1-apple）、`/usr/bin/curl`（8.7.1） |
-| P3 | 作業する場所 | 寺田 | PR の merge 前は下のコマンドで PR のブランチを取り出した worktree、merge 後は `~/Developer/corsweb`（develop） |
+| P3 | 作業する場所 | 実行する人 | develop を取り出した worktree（下の 3 行）。この手順書の `clerk-sync`・`hold`・`unhold`・`resync`・`set-payment` が develop に入ってから使う。merge の前の branch は取り出さない（古い branch には `clerk-sync` などが無い） |
 | P4 | 非公開の台帳の置き場所 | 寺田 | **未決**。列は C1 の表 |
 | P5 | Clerk のアカウントとアプリケーション（組織の機能を有効にする） | 寺田（画面の作業） | **未確認**。Clerk Billing は使わない（README 1A 章）。Clerk の鍵はこのレーンが触らない |
 | P6 | Clerk のアプリケーション（本番のインスタンス、Organizations、独自 claim `cor_svc`、Pro への変更） | 寺田（画面の作業） | **未確認**。ADR-0028 の決定 11（新しく作る。本番のドメインは `cor-jp.com`。Hobby から **Pro** にする。2 要素は Pro の機能で、決定 6 のため）。手順と値は非公開の報告（contract-billing レーン）の 2 章。画面の文言は未確認 |
 
-P3 の場所を作って移る（merge 前。3 行を順に打つ）:
+P3 の場所を作って移る（初めてのとき。3 行を順に打つ）:
 
 ```bash
-git -C ~/Developer/corsweb fetch origin feat/billing-invoice-model-20261107
+git -C ~/Developer/corsweb fetch origin develop
 ```
 
 ```bash
-git -C ~/Developer/corsweb worktree add ~/Developer/corsweb/.worktrees/claude/billing-invoice-20261107 FETCH_HEAD
+git -C ~/Developer/corsweb worktree add --detach ~/Developer/corsweb/.worktrees/claude/billing-develop FETCH_HEAD
 ```
 
 ```bash
-cd ~/Developer/corsweb/.worktrees/claude/billing-invoice-20261107
+cd ~/Developer/corsweb/.worktrees/claude/billing-develop
 ```
 
-鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`235 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること:
+2 回目からは、場所に移って develop の最新に合わせる（2 行を順に打つ）:
+
+```bash
+cd ~/Developer/corsweb/.worktrees/claude/billing-develop
+```
+
+```bash
+git fetch origin develop && git checkout --detach FETCH_HEAD
+```
+
+鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`390 passed, 0 failed`、`103 passed, 0 failed`、`25 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること。`test-verify-sample.sh` は `node` が要る（無ければ `FAIL node が要る` で止まる）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -64,6 +74,14 @@ bash docs/billing/tests/test-apply-plans.sh | tail -1
 
 ```bash
 bash docs/billing/tests/test-subscribe.sh | tail -1
+```
+
+```bash
+bash docs/billing/tests/test-entitlement-vectors.sh | tail -1
+```
+
+```bash
+bash docs/billing/tests/test-verify-sample.sh | tail -1
 ```
 
 ```bash
