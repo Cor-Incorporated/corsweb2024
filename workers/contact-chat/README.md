@@ -95,6 +95,12 @@ npx wrangler d1 execute cor-contact-chat-prod --remote --json --command "SELECT 
 
 戻すときは Worker の版だけを戻す。前の版はこの表を読まないので、表は残してよい。
 
+上限に当たった回数は、記録の印 `contact-chat:daily_cap_reached` の行を数えて見る。この Worker の `wrangler.toml` には記録を保存する設定（`[observability]`）が無いので、見えるのは流している間の記録だけ:
+
+```bash
+npx wrangler tail cor-contact-chat --format pretty | grep --line-buffered daily_cap_reached
+```
+
 ## 環境変数・シークレット
 
 ### vars（`wrangler.toml` の `[vars]`・非シークレット）
