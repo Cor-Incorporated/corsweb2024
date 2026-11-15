@@ -357,11 +357,12 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
   const norm = normalizeMessages(body.messages);
   if (!norm.ok) return json({ error: norm.error }, norm.status);
 
-  // fail closed: LLM 未設定なら 503（getProvider が投げる）。
+  // fail closed: LLM 未設定なら 503（getProvider が投げる）。1 日の上限の数を予約する前なので、数は増えない。
   let provider;
   try {
     provider = getProvider(env);
   } catch {
+    logContactFailure('llm_not_configured');
     return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください' }, 503);
   }
 
