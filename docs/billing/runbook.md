@@ -682,9 +682,10 @@ bash docs/billing/subscribe.sh resync --mode live --apply
 
 `RESYNC 顧客 N 件を見る` のあと、顧客ごとに `RESYNC cus_…: Clerk の組織 org_… に services と resync_at を送った`、最後に `RESYNC 完了: 顧客 N 件、hold を書き直した顧客 M 件、Clerk へ送った顧客 K 件（resync_at …）` が出る。
 
-- hold の判定: 請求書の支払いの期限の 14 日後を過ぎても open のものがあれば、そのサービスに hold を書く。無ければ外す。**期限の 14 日後ちょうどの日は、まだ過ぎていない**（その日の翌日から hold）。
-- 顧客の一覧と請求書の一覧は 100 件ずつページを送る（`starting_after`）。
+- hold の判定: 請求書の支払いの期限の 14 日後を過ぎても払われていないもの（status が `open` か `uncollectible`。回収できないとした請求書も、払われていないものとして数える）があれば、そのサービスに hold を書く。無ければ外す。`void`（取り消した）と `paid` は数えない。**期限の 14 日後ちょうどの日は、まだ過ぎていない**（その日の翌日から hold）。
+- 顧客の一覧と請求書の一覧は 100 件ずつページを送る（`starting_after`。請求書は `open` と `uncollectible` を別々に読む）。
 - `clerk_org_id` の無い顧客は Clerk へ送らない（`NOTE … clerk_org_id が無い（Clerk へは送らない）`）。
+- 同じ Clerk の組織を 2 人以上の顧客が持っていれば、下見のあと 1 つも書かずに止まる（`NG 同じ Clerk の組織 org_… を 2 人以上の顧客が持っている: cus_…, cus_…` のあと exit 3）。後の顧客の `services` が前の顧客の分を上書きし、どちらの契約で開け閉めするかが決まらないため。
 
 ### E5. 支払い方法を変える（`set-payment`。段階 5）
 
@@ -764,6 +765,8 @@ bash docs/billing/subscribe.sh set-payment --customer "${CUS:?空。先に CUS �
 | `STOP: 鍵が無い`（exit 64） | 端末でない場所から、鍵の環境変数なしで実行した | 端末から実行する |
 | `STOP: … に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に送らない`（exit 3） | Clerk の組織と結んでいない顧客 | C0・C2 で `--clerk-org org_…` を付けて顧客を作る。既存の顧客に足すかは寺田（画面） |
 | `STOP: clerk_org_id の形が違う`（exit 3） | 組織の id の打ち間違い | 台帳の `org_…` を確かめる。何も送っていない |
+| `STOP: clerk_org_id=org_… は既に顧客 cus_…（customer_code=…） が使っている。…作らない`（exit 3、customer） | 同じ組織の id を、別の顧客に結ぼうとした | 作っていない。台帳で、その組織がどちらの顧客のものかを決める。違う組織の id を写していたなら、正しい id で打ち直す |
+| `NG 同じ Clerk の組織 org_… を 2 人以上の顧客が持っている: cus_…, cus_…` のあと `STOP: 同じ Clerk の組織を 2 人以上の顧客が持っている`（exit 3、resync） | 2 人の顧客の metadata に、同じ `clerk_org_id` が在る（作った直後で検索をすり抜けた、画面で書き換えた など） | 1 つも書いていない（Stripe にも Clerk にも）。台帳で正しい顧客を決め、もう一方の顧客の `clerk_org_id` を画面で外して（画面の文言は未確認）から、もう一度 `resync` を流す |
 | `STOP: contract_<サービス>_start が空（形が違う）。Clerk に送らない` / `… が実在する日付ではない`（exit 3） | Customer の metadata の契約の日付が壊れている | 送っていない。`status` で metadata を確かめ、寺田が直す方法を決める |
 | `STOP: … に保存したカードが無い（…）。card にしない（期限の日に払えない）`（exit 3、set-payment） | カードを保存していない | C4 でカードを保存してもらってから、もう一度 |
 | `STOP: Clerk の応答の services が送った値と違う（観測: …）。送ったあとなので戻せない`（exit 3） | Clerk が送った値と違うものを返した | 送ったあとは戻せない。`clerk-sync` の dry-run か Clerk の画面で今の metadata を確かめ、ログを統括へ渡す |
