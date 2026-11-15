@@ -41,6 +41,12 @@ case " $* " in
       prev="$a"
     done
     printf 'CALL %s %s\n' "$clerk_method" "$clerk_path" >>"$FAKE_LOG"
+    # FAKE_NO_WRITE=1: 読むだけの形の試験。書く呼び出しを 1 回でも受けたら、記録して断る（試験が落ちる）
+    if [ "${FAKE_NO_WRITE:-}" = "1" ] && [ "$clerk_method" != "GET" ]; then
+      printf 'WRITE_REFUSED %s %s\n' "$clerk_method" "$clerk_path" >>"$FAKE_LOG"
+      printf '{"error":{"message":"fake-curl: write refused"}}\n\n500'
+      exit 0
+    fi
     clerk_org="${clerk_path#/organizations/}"
     clerk_org="${clerk_org%%/*}"
     # 本文（curl の設定の data = "..."）を戻す
@@ -127,6 +133,12 @@ for a in "$@"; do
 done
 path="${url#https://api.stripe.com}"
 printf 'CALL %s %s\n' "$method" "$path" >>"$FAKE_LOG"
+# FAKE_NO_WRITE=1: 読むだけの形の試験。書く呼び出しを 1 回でも受けたら、記録して断る（試験が落ちる）
+if [ "${FAKE_NO_WRITE:-}" = "1" ] && [ "$method" != "GET" ]; then
+  printf 'WRITE_REFUSED %s %s\n' "$method" "$path" >>"$FAKE_LOG"
+  printf '%s\n%s\n%s' '{"error":{"type":"api_error","message":"fake-curl: write refused"}}' "" "500"
+  exit 0
+fi
 
 # 本文 + 改行 + Idempotent-Replayed の値 + 改行 + HTTP 状態（curl の --write-out と同じ形）。
 # FAKE_REPLAY=1 なら POST の応答を「前回の結果」として返す。
