@@ -213,6 +213,45 @@ describe('1 日の model の呼び出しの上限', () => {
     expect(model.calls()).toBe(0);
   });
 
+  it('その日の数が上限より大きい日（途中で上限を下げた日）は、model を呼ばず 503 で、数も増えない', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    setStoredCalls(db, '2026-11-17', 5);
+    const model = stubModel();
+    const response = await chatTurn(testEnv(db, '3'));
+    expect(response.status).toBe(503);
+    expect(model.calls()).toBe(0);
+    expect(storedCalls(db, '2026-11-17')).toBe(5);
+  });
+
+  it('形の悪い要求（400）と、回数の制限（429）で止まった要求は、その日の数を増やさない', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    const model = stubModel();
+    const env = testEnv(db, '100');
+    const bad = await (worker as FetchWorker).fetch(post('/api/contact/chat', {
+      intent: 'contract-dev', source: 'cloudia', locale: 'ja', messages: [],
+    }), env);
+    expect(bad.status).toBe(400);
+    const sameIp = (path: string, body: unknown) => new Request(`https://cor-jp.com${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'https://cor-jp.com', 'cf-connecting-ip': '203.0.113.9' },
+      body: JSON.stringify(body),
+    });
+    for (let i = 0; i < 20; i += 1) {
+      const started = await (worker as FetchWorker).fetch(sameIp('/api/contact/chat/start', {
+        start: true, event: 'intent_selected', intent: 'contract-dev', source: 'cloudia', locale: 'ja',
+      }), env);
+      expect(started.status).toBe(200);
+    }
+    const limited = await (worker as FetchWorker).fetch(sameIp('/api/contact/chat', {
+      intent: 'contract-dev', source: 'cloudia', locale: 'ja', messages: [{ role: 'user', content: USER_TEXT }],
+    }), env);
+    expect(limited.status).toBe(429);
+    expect(model.calls()).toBe(0);
+    expect(storedCalls(db, '2026-11-17')).toBe(0);
+  });
+
   it('上限で止めた要求は、その日の数を増やさない（数は model を呼んだ回数のまま）', async () => {
     fixClock('2026-11-17T03:00:00.000Z');
     const db = openDatabase();
@@ -397,6 +436,14 @@ describe('wrangler.toml の上限の設定', () => {
 });
 
 describe('上限の設定の値と日付', () => {
+  it('既定の値は 1 日 300 回', () => {
+    expect(DEFAULT_CHAT_DAILY_MODEL_CALL_LIMIT).toBe(300);
+  });
+
+  it('整数として安全に扱えないほど大きい値は、既定の値にする', () => {
+    expect(chatDailyModelCallLimit('99999999999999999999')).toBe(300);
+  });
+
   it.each([
     [undefined, DEFAULT_CHAT_DAILY_MODEL_CALL_LIMIT],
     ['', DEFAULT_CHAT_DAILY_MODEL_CALL_LIMIT],
