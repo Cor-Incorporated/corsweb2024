@@ -21,8 +21,9 @@ const BADGE_HREFS: Record<string, string> = {
 // 見出しの大きさ（2026-10-26 に測って決めた）。
 //
 // 7vw のときは 1440×900 で h1 が 100.8px、ヒーローが 1,132px と画面の高さを超え、「大きすぎる」と
-// 言われていた。5vw にすると 1440px で 72px。CJK（ja/zh/ko）は #302 のとおり上限を置かずに画面幅へ
-// 比例させる（外部モニターで頭打ちにならない）。15rem(240px) は 4800px 以上でだけ効く安全弁。
+// 言われていた。5vw にすると 1440px で 72px。その後、ブラウザの枠とタスクバーを引いたパソコンの窓（1366×657 など）でも
+// 5 業種の入口を最初の画面に入れるため、CJK は 4.5vw にした（1366px で 61px、1440px で 65px）。CJK（ja/zh/ko）は
+// #302 のとおり上限を置かずに画面幅へ比例させる（外部モニターで頭打ちにならない）。15rem(240px) は 4800px 以上でだけ効く安全弁。
 // ラテン系（en/es）はタイトルが折り返すので、比率を下げたうえで 5.5rem(88px) を上限にする。
 // 下限はスマホ幅で効く。ja/zh/ko は 2.15rem（390px では 34.4px）、en/es は 1.5rem（24px）。
 //
@@ -32,20 +33,21 @@ const BADGE_HREFS: Record<string, string> = {
 //        切られる）。検証する場合は行の矩形とビューポートを直接比較すること。
 const isCjkLocale = ['ja', 'zh', 'ko'].includes(currentLocale);
 const heroTitleSizeClass = isCjkLocale
-  ? 'text-[clamp(2.15rem,5vw,15rem)]'
+  ? 'text-[clamp(2.15rem,4.5vw,15rem)]'
   : 'text-[clamp(1.5rem,4.5vw,5.5rem)]';
 
 // 5 業種の入口を最初の画面に入れるための、言語ごとの余白と文字の大きさ。
-// en・es は説明の文と主ボタンの文が長く、ja・zh・ko と同じ大きさだと入口が画面の外へ出る
-// （1366×768・1280×720 と、ブラウザの枠を引いたスマホの高さ）。en・es だけを詰め、ja・zh・ko は変えない。
-// 測るのは e2e/first-view.spec.ts（14 の画面の大きさ × 5 言語）。
+// en・es は説明の文と主ボタンの文が長いので、スマホでは en・es だけを詰める（ブラウザの枠を引いたスマホの高さ）。
+// パソコンでは、ブラウザの枠とタスクバーを引いた窓（1366×657 など）でも入口が入るよう、ja・zh・ko の上の余白と
+// 間隔を en・es と同じにし、説明の文を 5 言語とも 18px（sm:text-lg）にする。
+// 測るのは e2e/first-view.spec.ts（画面の大きさ 14 とパソコンの窓 5 × 5 言語。窓は入る言語だけを見る）。
 const heroSpacing = isCjkLocale
   ? {
-      section: 'pt-4 sm:pt-20',
-      column: 'gap-4 sm:gap-8',
+      section: 'pt-4 sm:pt-12',
+      column: 'gap-4 sm:gap-6',
       kicker: 'text-sm tracking-widest',
-      titleBlock: 'gap-5 sm:gap-6',
-      subtitle: 'text-[15px] leading-relaxed sm:text-xl sm:leading-relaxed',
+      titleBlock: 'gap-5 sm:gap-5',
+      subtitle: 'text-[15px] leading-relaxed sm:text-lg sm:leading-relaxed',
       primaryCta: 'py-3 text-base sm:py-4 sm:text-lg',
     }
   : {
@@ -54,7 +56,7 @@ const heroSpacing = isCjkLocale
       kicker: 'text-xs leading-tight tracking-wide sm:text-sm sm:tracking-widest',
       titleBlock: 'gap-2 sm:gap-5',
       // パソコンの文字は ja・zh・ko と同じ大きさのまま（折り返しの位置を変えない）
-      subtitle: 'text-[13px] leading-normal sm:text-xl sm:leading-relaxed',
+      subtitle: 'text-[13px] leading-normal sm:text-lg sm:leading-relaxed',
       primaryCta: 'py-2.5 text-sm sm:py-4 sm:text-lg',
     };
 
@@ -89,7 +91,7 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
           class={`text-balance font-semibold leading-[1.05] tracking-tight ${heroTitleSizeClass}`}
           set:html={t.homeHero.title}
         />
-        {/* theme.fontSize が [size, lineHeight] のタプル指定のため text-xl は line-height も出し、
+        {/* theme.fontSize が [size, lineHeight] のタプル指定のため text-lg は line-height も出し、
             後勝ちで leading-relaxed を打ち消す。sm:leading-relaxed で戻す。 */}
         <p class={`max-w-3xl text-pretty text-primary-950/70 dark:text-primary-200/70 ${heroSpacing.subtitle}`} set:html={t.homeHero.subtitle} data-reveal style="--reveal-delay:0.15s"></p>
       </div>
