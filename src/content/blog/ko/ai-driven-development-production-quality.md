@@ -3,14 +3,14 @@ title: "AI 기반 개발(AI 주도 개발)이란? 속도뿐만 아니라 프로�
 description: "AI 기반 개발을 단순한 코드 생성에 그치지 않고, 요구사항 정의, 리뷰, 테스트, 운영에 이르기까지 프로덕션 품질로 내재화하는 접근 방식을 설명합니다. AI 개발을 내재화하고자 하는 기업을 위한 글입니다."
 summary: "AI 기반 개발은 AI에 코드를 작성하게 하는 것만으로는 프로덕션 품질에 도달할 수 없습니다. 개발의 각 공정에 AI를 결합하고, 사람이 책임을 지고 검증하는 체제를 구축하는 것이 중요합니다. 내재화를 추진한다면, 실패해도 영향 범위가 좁은 영역부터 시작해야 합니다."
 pubDate: 2026-06-11
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "engineering"
 tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "9a3d16400b1cb9c69a48285cb23a2a53681b2d67ba83902903db791ade8ad98d"
+translationSourceHash: "c2ca9a534453dfff6d94cbdb47c3d5a3695f8b147a96a67f863cae644bfbb54d"
 translatedAt: "2026-10-23T06:21:00.531Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -27,7 +27,8 @@ Cor.주식회사는 AI 기반 개발을 '엔지니어를 줄이는 기술'이 �
 >
 > - GitHub Octoverse 2025에서는 생성형 AI가 개발 표준으로 자리 잡아가고 있으며, 신규 개발자의 80%가 GitHub에서 첫 1주일 이내에 Copilot을 사용했다고 보고하고 있습니다.
 > - 해당 리포트에서는 TypeScript가 2025년 8월에 Python과 JavaScript를 제치고 GitHub에서 가장 많이 사용되는 언어가 되었다고 정리하고 있습니다.
-> - Cor. 홈페이지에서는 로컬 LLM 및 외부로 정보를 유출하지 않는 개발, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록을 전망) 등 품질과 안전성을 중시한 체제를 주요 소구점으로 내세우고 있습니다.
+> - Cor. 홈페이지에서는 로컬 LLM 및 외부로 정보를 유출하지 않는 개발 등 품질과 안전성을 중시한 체제를 주요 소구점으로 내세우고 있습니다.
+> - Cor.의 ISMS는 2026년 11월에 인증을 취득했습니다(인증 범위는 “소프트웨어의 수탁 개발 및 운영”).
 
 ## AI 기반 개발은 코드 생성에 그치지 않는다
 
