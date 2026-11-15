@@ -246,3 +246,54 @@ test('ヘッダーのプルダウンを Escape で閉じると、focus が開い
     await context.close();
   }
 });
+
+// 読み込んだ直後に窓の中に在るヒーローの主ボタンが、スクロールを待たずに 1 秒以内に見えること。
+// 演出（data-reveal）は窓の下 12% を除いて見え始めを決めるので、窓が低いと主ボタンが透明のまま残っていた。
+// ブラウザの枠とタスクバーを引いたパソコンの窓（1366×657・1280×609・1536×730）と、上の 14 の大きさで測る。
+const LOAD_VISIBLE_SIZES = [
+  { name: 'win-1366x657', width: 1366, height: 657, mobile: false },
+  { name: 'win-1280x609', width: 1280, height: 609, mobile: false },
+  { name: 'win-1536x730', width: 1536, height: 730, mobile: false },
+  ...VIEWPORTS,
+];
+const LOAD_VISIBLE_MS = 1000;
+
+for (const size of LOAD_VISIBLE_SIZES) {
+  for (const locale of ['ja', 'en'] as const) {
+    test(`${size.name} ${locale}: 読み込みの後 1 秒以内に、窓の中のヒーローの主ボタンが見える`, async ({ browser, browserName }, testInfo) => {
+      const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
+      expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
+      const context = await browser.newContext({
+        viewport: { width: size.width, height: size.height },
+        ...(size.mobile && browserName === 'chromium' ? { isMobile: true, hasTouch: true } : {}),
+      });
+      const page = await context.newPage();
+      try {
+        await page.goto(new URL(homePath(locale), baseURL!).toString(), { waitUntil: 'load' });
+        // load の直後は演出の script がまだ隠していないことがあるので、1 秒たった時点で読む
+        await page.waitForTimeout(LOAD_VISIBLE_MS);
+        const last = await page.evaluate((sel) => {
+          const el = document.querySelector<HTMLElement>(sel);
+          if (!el) return { found: false, revealActive: false, opacity: 0, top: 0, innerHeight: window.innerHeight };
+          let opacity = 1;
+          for (let node: HTMLElement | null = el; node; node = node.parentElement) opacity *= Number(getComputedStyle(node).opacity);
+          return {
+            found: true,
+            // 演出が働いている（主ボタンの枠に reveal-ready が付いている）ことを確かめ、空振りを防ぐ
+            revealActive: !!el.closest('[data-reveal].reveal-ready'),
+            opacity: Math.round(opacity * 100) / 100,
+            top: Math.round(el.getBoundingClientRect().top),
+            innerHeight: window.innerHeight,
+          };
+        }, PRIMARY_CTA_SELECTOR);
+        expect(last.found, '主ボタンが無い').toBe(true);
+        expect(last.revealActive, `演出が働いていない（${JSON.stringify(last)}）`).toBe(true);
+        // 隠れている間は 40px 下にずれるので、見えていることを先に確かめてから位置を見る
+        expect(last.opacity, `読み込みの 1 秒後の主ボタンの opacity（${JSON.stringify(last)}）`).toBeGreaterThanOrEqual(0.99);
+        expect(last.top, `主ボタンが窓の中に無い（${JSON.stringify(last)}）`).toBeLessThan(last.innerHeight);
+      } finally {
+        await context.close();
+      }
+    });
+  }
+}

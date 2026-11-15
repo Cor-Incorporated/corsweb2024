@@ -1,6 +1,6 @@
 ---
 title: "ISO/IEC 27001:2022 (ISMS) Certification Obtained (November 2026 update)"
-description: "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the contracted development and operation of software. The certification body is SGS Japan (SGS), registration number JP26/00000364, valid from November 7, 2026 to November 7, 2029."
+description: "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the contracted development and operation of software. The certification body is SGS Japan (SGS), registration number JP26/00000364, valid from November 7, 2026 to November 7, 2029. It remains valid as long as continued registration is confirmed at the surveillance audits during the validity period."
 publishedAt: 2026-10-20
 updatedAt: 2026-11-12
 category: "info"
@@ -9,7 +9,7 @@ source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translationSourceHash: "785456843a09802714299cd6b82c08b40ef804f968cc9f02bf4ff16c1f3514fd"
 translatedAt: "2026-11-12T07:06:38.167Z"
 translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
@@ -18,7 +18,7 @@ translationModel: "gemini-3.8-flash + codex-editorial-update"
 
 In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification. The scope is the contracted development and operation of software.
 
-The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029.
+The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029. It remains valid as long as continued registration is confirmed at the surveillance audits during the validity period.
 
 The following is the original announcement, published on October 20, 2026, before certification registration.
 
