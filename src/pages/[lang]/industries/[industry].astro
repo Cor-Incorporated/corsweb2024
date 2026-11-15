@@ -5,9 +5,13 @@ import ShigyoBody from '../../../components/industry/ShigyoBody.astro';
 import ConstructionBody from '../../../components/industry/ConstructionBody.astro';
 import ManufacturingBody from '../../../components/industry/ManufacturingBody.astro';
 import EducationBody from '../../../components/industry/EducationBody.astro';
+import ProposalPage from '../../../components/industry/ProposalPage.astro';
+import { isProposalLocale } from '../../../components/industry/proposal-locales';
+import type { IndustrySlug } from '../../../config/industry-context';
 import { getTranslations, type Locale } from '../../../utils/i18n';
 
 // ja はルート直下 (/industries/*) の薄いページが担当。ここは非ja の言語ルートを生成する。
+// PROPOSAL_LOCALES に在る言語は #525 の本文の訳（ProposalPage）、無い言語は旧い本文（*Body.astro）を描く。
 export function getStaticPaths() {
   const langs = ['en', 'zh', 'ko', 'es'];
   const industries = ['medical', 'shigyo', 'construction', 'manufacturing', 'education'];
@@ -36,6 +40,7 @@ const metaKeys = {
 
 const Body = bodies[industry as keyof typeof bodies];
 const meta = t.meta[metaKeys[industry as keyof typeof metaKeys]];
+const useProposal = isProposalLocale(lang as string);
 ---
 
 <Layout
@@ -43,5 +48,5 @@ const meta = t.meta[metaKeys[industry as keyof typeof metaKeys]];
   title={meta.title}
   availableLocales={['ja', 'en', 'zh', 'ko', 'es']}
 >
-  <Body />
+  {useProposal ? <ProposalPage industry={industry as IndustrySlug} /> : <Body />}
 </Layout>

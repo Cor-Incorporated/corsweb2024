@@ -1,17 +1,18 @@
 ---
-// 業種の提案ページ（#525 の本文）。今は ja の 5 ページ（src/pages/industries/*.astro）だけが使う。
-// en・zh・ko・es のページは、旧い本文の *Body.astro のまま（[lang]/industries/[industry].astro）。
+// 業種の提案ページ（#525 の本文とその訳）。ja の 5 ページ（src/pages/industries/*.astro）と、
+// PROPOSAL_LOCALES（proposal-locales.ts）に在る言語の [lang]/industries/[industry].astro が使う。
 // 並び: 導入（H1 と導入の文）→ 本文 → サービスへの道（IndustryPaths, #509）→ 問い合わせ → 参考資料。
-// 文言は ja.json の industry<Name>.proposal（ja だけの入れ子の key）、リンク先は proposal-links.ts。
+// 文言はその言語の locale の industry<Name>.proposal、リンク先は proposal-links.ts。
 // 形は proposal-schema.ts で検証する。
 import type { IndustrySlug } from '../../config/industry-context';
 import { industryContactSource } from '../../config/industry-context';
-import { getCurrentLocale, getJaTranslations } from '../../utils/i18n';
+import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import IndustryPaths from './IndustryPaths.astro';
 import ProposalBlocks from './ProposalBlocks.astro';
 import ProposalInline from './ProposalInline.astro';
 import ProposalSources from './ProposalSources.astro';
 import { DOCUMENT_DOWNLOAD_HREF, PROPOSAL_LINKS, industryInquiryHref } from './proposal-links';
+import { isProposalLocale } from './proposal-locales';
 import { assertProposalLinks, proposalPageSchema } from './proposal-schema';
 
 interface Props {
@@ -28,10 +29,10 @@ const PAGE_KEYS = {
 
 const { industry } = Astro.props;
 const locale = getCurrentLocale(Astro.url);
-if (locale !== 'ja') {
-  throw new Error(`ProposalPage は ja のページだけで使う（${locale} の ${industry} で呼ばれた）`);
+if (!isProposalLocale(locale)) {
+  throw new Error(`ProposalPage は PROPOSAL_LOCALES の言語だけで使う（${locale} の ${industry} で呼ばれた）`);
 }
-const page = proposalPageSchema.parse(getJaTranslations()[PAGE_KEYS[industry]].proposal);
+const page = proposalPageSchema.parse(getTranslations(locale)[PAGE_KEYS[industry]].proposal);
 assertProposalLinks(page, PROPOSAL_LINKS[industry], `${locale}/${PAGE_KEYS[industry]}`);
 const inquiryHref = industryInquiryHref(locale, industry);
 // 資料ダウンロードの段落と副ボタンは、資料の受け取りの入口（DOCUMENT_DOWNLOAD_HREF）ができるまで出さない。
