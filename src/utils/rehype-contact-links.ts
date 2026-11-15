@@ -13,10 +13,12 @@
  * - 同じ site のチャット（/contact/chat/）への a の href → source と locale が無いときだけ足す（在る値は変えない）。
  * 変えないもの: 外の site の link、似た path（/contacts、/contact-us など）、code の中の文字（a ではない）、画像の src、
  * 言語と slug が分からない file（src/content の外）。
+ * Cloudia を止めたときの切り戻し（isContactChatPrimary() が偽。問い合わせページにフォームが出る）の build では、
+ * 何も書き換えない（本文の link は書かれたとおり問い合わせページを指す）。
  */
 import { SITE_ORIGIN } from '../config/organization';
 import { CLOUDIA_CHAT_PATH, isContactPagePath, normalizeSitePath } from '../config/contact-guards';
-import { getContactUrl } from '../config/site';
+import { getContactUrl, isContactChatPrimary } from '../config/site';
 import type { Locale } from './i18n';
 
 type HastNode = {
@@ -86,9 +88,21 @@ export function rewriteContactLinksInTree(node: HastNode, context: ContactLinkCo
   return changed;
 }
 
+/**
+ * 切り戻しの旗を、この部品から読む。astro.config から読み込まれたこの部品には、import.meta.env に PUBLIC_ の値が
+ * 届かないことがある（旗を false にした build で、import.meta.env だけを見ると本文を書き換えてしまった）。
+ * そこで build の process の環境変数も見て、どちらかが false なら書き換えない。
+ */
+export function chatPrimaryForBuild(): boolean {
+  const fromProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED;
+  return isContactChatPrimary() && fromProcess !== 'false';
+}
+
 // unified の Transformer に代入できるよう引数は unknown で受ける（hast / vfile の型に依存しない）
 export function rehypeContactLinks() {
   return (tree: unknown, file: unknown): void => {
+    if (!chatPrimaryForBuild()) return;
     const vfile = file as AstroVFile;
     const context = contactLinkContextOf(vfile.path ?? vfile.history?.[0]);
     if (!context) return;

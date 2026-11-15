@@ -1,7 +1,7 @@
 // @vitest-environment node
 // 記事の本文の問い合わせの link を、build の時にそのページの言語のチャットへ向ける部品（rehype-contact-links.ts）の試験。
 // Astro が渡す HTML の木（hast）の形を手で組んで渡し、a の href だけが変わることを見る。
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   contactLinkContextOf,
   rehypeContactLinks,
@@ -165,5 +165,29 @@ describe('rehypeContactLinks: file の path で言語を決める', () => {
     const node = tree();
     rehypeContactLinks()(node, { path: '/repo/src/pages/x.md' });
     expect(hrefOf(node)).toBe('/contact');
+  });
+
+  it('build の process の環境変数だけが false でも、何も書き換えない（import.meta.env に値が届かない場合）', () => {
+    const before = process.env.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED;
+    process.env.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED = 'false';
+    try {
+      const node = tree();
+      rehypeContactLinks()(node, { path: '/repo/src/content/blog/ko/some-post.md' });
+      expect(hrefOf(node)).toBe('/contact');
+    } finally {
+      if (before === undefined) delete process.env.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED;
+      else process.env.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED = before;
+    }
+  });
+
+  it('切り戻し（PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false）の build では、何も書き換えない', () => {
+    vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', 'false');
+    try {
+      const node = tree();
+      rehypeContactLinks()(node, { path: '/repo/src/content/blog/en/some-post.md' });
+      expect(hrefOf(node)).toBe('/contact');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
