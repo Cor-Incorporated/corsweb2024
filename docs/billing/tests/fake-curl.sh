@@ -290,6 +290,19 @@ customer_search() {
     *clerk_org_id*)
       case "${FAKE_SEARCH_ORG:-none}" in
         dup) respond 200 '{"object":"search_result","data":[{"id":"cus_other","name":"別の顧客","metadata":{"customer_code":"other-co","payment":"card","clerk_org_id":"org_abc123"}}]}' ;;
+        # hold・unhold・clerk-sync の重なりの検査: 自分（cus_x）とほかの顧客（cus_y）が同じ組織を持つ
+        shared) respond 200 '{"object":"search_result","data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}},{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        # 作った直後で、自分がまだ検索に出ない形（ほかの顧客だけが出る）
+        other_only) respond 200 '{"object":"search_result","data":[{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        self) respond 200 '{"object":"search_result","data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
+        # 答えの形がおかしい場面（HTTP 200 のまま）。守りは「ほかの顧客は居ない」と読まずに止まる
+        nodata) respond 200 '{"object":"search_result"}' ;;
+        datanull) respond 200 '{"object":"search_result","data":null}' ;;
+        noid) respond 200 '{"object":"search_result","data":[{"metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        empty) respond 200 '' ;;
+        wrongobj) respond 200 '{"object":"list","data":[]}' ;;
+        # 続きが在る（limit を超える）。全部を見ていないので止まる
+        more) respond 200 '{"object":"search_result","has_more":true,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
         *) respond 200 '{"object":"search_result","data":[]}' ;;
       esac
       return 0

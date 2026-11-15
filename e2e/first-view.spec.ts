@@ -271,9 +271,10 @@ test('ヘッダーのプルダウンを Escape で閉じると、focus が開い
   }
 });
 
-// 読み込んだ直後に窓の中に在るヒーローの主ボタンが、スクロールを待たずに 1 秒以内に見えること。
-// 演出（data-reveal）は窓の下 12% を除いて見え始めを決めるので、窓が低いと主ボタンが透明のまま残っていた。
-// ブラウザの枠とタスクバーを引いたパソコンの窓（1366×657・1280×609・1536×730）と、上の 14 の大きさで測る。
+// 演出が働き始めてから（reveal-ready が付いてから）1 秒以内に、窓の中に在るヒーローの主ボタンが、スクロールを
+// 待たずに見えること。演出（data-reveal）は窓の下 12% を除いて見え始めを決めるので、窓が低いと主ボタンが透明の
+// まま残っていた。ブラウザの枠とタスクバーを引いたパソコンの窓（1366×657・1280×609・1536×730）と、上の 14 の
+// 大きさで測る。初期化が load からどれだけ遅れるかは、この試験では測らない（最長 10 秒まで待つ）。
 const LOAD_VISIBLE_SIZES = [
   { name: 'win-1366x657', width: 1366, height: 657, mobile: false },
   { name: 'win-1280x609', width: 1280, height: 609, mobile: false },
@@ -284,7 +285,7 @@ const LOAD_VISIBLE_MS = 1000;
 
 for (const size of LOAD_VISIBLE_SIZES) {
   for (const locale of ['ja', 'en'] as const) {
-    test(`${size.name} ${locale}: 読み込みの後 1 秒以内に、窓の中のヒーローの主ボタンが見える`, async ({ browser, browserName }, testInfo) => {
+    test(`${size.name} ${locale}: 演出が働き始めてから 1 秒以内に、窓の中のヒーローの主ボタンが見える`, async ({ browser, browserName }, testInfo) => {
       const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
       expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
       const context = await browser.newContext({
