@@ -26,6 +26,22 @@ const SCOPE: Record<Locale, string> = {
   es: 'Desarrollo y operación de software por encargo',
 };
 
+// 有効期間の文と、有効の条件の文（各言語）。ja は有効期間中の維持審査にて登録の継続が認められる限り有効
+const VALIDITY_PERIOD: Record<Locale, RegExp> = {
+  ja: /有効期間は2026年11月7日から2029年11月7日までです。/,
+  en: /valid from November 7, 2026 to November 7, 2029\./,
+  zh: /有效期为2026年11月7日至2029年11月7日。/,
+  ko: /유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다\./,
+  es: /válida del 7 de noviembre de 2026 al 7 de noviembre de 2029\./,
+};
+const VALIDITY_CONDITION: Record<Locale, RegExp> = {
+  ja: /有効期間中の維持審査にて登録の継続が認められる限り有効です。/,
+  en: /remains valid as long as continued registration is confirmed at the surveillance audits during the validity period\./,
+  zh: /只要在有效期内的监督审核中确认继续注册，认证即保持有效。/,
+  ko: /유효 기간 중의 사후심사에서 등록의 계속이 인정되는 한 유효합니다\./,
+  es: /Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento/,
+};
+
 function securityIsmsTexts(locale: Locale): Record<string, string> {
   const t = getTranslations(locale);
   const ismsRow = t.security.table.find((row) => row.area === 'ISMS');
@@ -50,6 +66,19 @@ describe('情報セキュリティのページの ISMS の状態', () => {
     const texts = securityIsmsTexts(locale);
     for (const key of ['security.status.isms', 'security.governanceDescription']) {
       expect(texts[key], `${locale} ${key}`).toContain(SCOPE[locale]);
+    }
+  });
+
+  // 有効期間は、有効の条件つきで書く。期限（2029年11月7日）まで無条件に有効とは書かない（ほかのページと同じ）
+  it.each(LOCALES)('%s: 状態の欄と体制の説明で、有効期間の文の直後に、有効の条件がある', (locale) => {
+    const texts = securityIsmsTexts(locale);
+    for (const key of ['security.status.isms', 'security.governanceDescription']) {
+      const text = texts[key];
+      const periodAt = text.search(VALIDITY_PERIOD[locale]);
+      const conditionAt = text.search(VALIDITY_CONDITION[locale]);
+      expect({ locale, key, period: periodAt >= 0, condition: conditionAt >= 0, text }).toMatchObject({ period: true, condition: true });
+      // 条件は、有効期間の文より後ろにある
+      expect(conditionAt, `${locale} ${key}`).toBeGreaterThan(periodAt);
     }
   });
 });

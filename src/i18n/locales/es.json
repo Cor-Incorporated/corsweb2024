@@ -1311,7 +1311,7 @@
     "statusTitle": "Desarrollo del marco",
     "status": {
       "legal": "Desde junio de 2026, en colaboración con nuestro asesor legal, estamos desarrollando un marco de revisión legal que abarca contratos, información personal, uso de IA y operación de la seguridad de la información.",
-      "isms": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes."
+      "isms": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes."
     },
     "aiTitle": "Política de uso de IA",
     "aiDescription": "Cor. aprovecha activamente las herramientas de IA para su trabajo. Al mismo tiempo, al manejar datos confidenciales de clientes, información personal, código fuente, datos de entrenamiento y similares, utilizamos herramientas de IA con contratos y configuraciones que impiden su uso para entrenamiento, cuentas de empresa o entornos aprobados. Los resultados de la IA son verificados por personas y se utilizan solo tras confirmar derechos, exactitud y seguridad.",
@@ -1359,7 +1359,7 @@
     "privacySuffix": ".",
     "privacyLead": "* Para los detalles legales sobre el tratamiento de la información personal y los datos de clientes, consulta nuestra Política de privacidad.",
     "governanceTitle": "Desarrollo del marco",
-    "governanceDescription": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes.",
+    "governanceDescription": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia. Mediante el refuerzo continuo de nuestra organización, cumplimos con nuestra responsabilidad de proteger la información de nuestros clientes.",
     "ctas": {
       "primary": "Consulta gratuita",
       "secondary": "Contáctanos",
