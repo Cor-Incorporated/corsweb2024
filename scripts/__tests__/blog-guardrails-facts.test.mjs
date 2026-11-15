@@ -68,12 +68,26 @@ describe('blog-guardrails.mjs は事実の照合を lint に任せる', () => {
       `**ISMS認証取得済み**\n\n${SCOPE}\n`,
       `## ISMS認証取得済み\n\n別の話です。\n\n${SCOPE}\n`,
       `**ISMS認証取得済み**\n\n## 次の見出し\n\n${SCOPE}\n`,
+      '当社は ISMS 認証を保有しています。',
+      'ISO/IEC 42001 の認証を取得しました。',
     ];
     for (const text of samples) {
       const mapped = lintRuleIds(text).map(ruleName).sort();
       expect({ text, guardrails: guardrailIds(text) }).toEqual({ text, guardrails: mapped });
     }
-  }, TIMEOUT_MS);
+    // 16 文 × python3 の起動 2 回。負荷のある環境でも落ちないよう、上限を長めにとる
+  }, 4 * TIMEOUT_MS);
+
+  it('--json は scanForViolations と同じ違反を stdout に出し、終了コードも同じ（content-advisory が使う）', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'guardrails-json-'));
+    for (const text of ['TapForge を利用します。\n', 'ISMS 認証を取得しました。\n', '設定ファイルを開きます。\n']) {
+      const file = path.join(dir, 'draft.md');
+      writeFileSync(file, text);
+      const run = spawnSync(process.execPath, ['scripts/blog-guardrails.mjs', '--json', file], { cwd: root, encoding: 'utf8', timeout: TIMEOUT_MS });
+      const expected = scanForViolations(text);
+      expect({ text, json: JSON.parse(run.stdout), status: run.status }).toEqual({ text, json: expected, status: expected.length === 0 ? 0 : 1 });
+    }
+  }, 4 * TIMEOUT_MS);
 
   it('古い状態の説明は止める（文脈なしの「取得に向けて整備中」も）', () => {
     for (const text of ['ISMS の第2段階審査を終え、2026年12月ごろの認証登録を見込んでいます', 'ISMS は取得予定です。', '取得に向けて整備中です。']) {

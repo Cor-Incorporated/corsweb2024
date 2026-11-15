@@ -101,13 +101,19 @@ export function scanForViolations(markdown, options = {}) {
 // 単体実行: node scripts/blog-guardrails.mjs <file.md> でチェック
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const fs = await import('node:fs');
-  const file = process.argv[2];
+  // --json: 違反の配列を JSON で stdout に出す（content-advisory が、python3 をもう 1 度起動せずに結果を使う）。終了コードは同じ
+  const json = process.argv.includes('--json');
+  const file = process.argv.slice(2).find((arg) => arg !== '--json');
   if (!file) {
-    console.error('使い方: node scripts/blog-guardrails.mjs <記事.md>');
+    console.error('使い方: node scripts/blog-guardrails.mjs [--json] <記事.md>');
     process.exit(2);
   }
   const md = fs.readFileSync(file, 'utf8');
   const v = scanForViolations(md);
+  if (json) {
+    console.log(JSON.stringify(v));
+    process.exit(v.length === 0 ? 0 : 1);
+  }
   if (v.length === 0) {
     console.log(`✅ ガードレール合格: ${file}`);
     process.exit(0);
