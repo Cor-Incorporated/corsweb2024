@@ -806,6 +806,28 @@ BADORG_P1="$(jq -c '.[0].metadata.clerk_org_id = "org-bad!"' <<<"$RESYNC_P1")"
 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$BADORG_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
 expect "resync は clerk_org_id の形が違えば止まる" 3 0 "clerk_org_id の形が違う"
 eq "resync は clerk_org_id の形が違えば Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+# 取り消した（void）請求書は数えない: hold 中の顧客の超過が void だけなら、hold を外す
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+VOIDINV="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_av", due_date: $d20, service: "xesm", status: "void"}], cus_b: [], cus_c: []}')"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+  FAKE_RESYNC=1 FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$VOIDINV" run resync --apply --mode test
+expect "void の請求書しか無ければ、hold を外すと出す" 0 - "PLAN unhold cus_a xesm"
+eq "void の請求書しか無い hold 中の顧客には、hold を外す 1 回を書く" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "1"
+check_no_arg "void の請求書の一覧は読まない" "status=void"
+# 状態を替えるときに、続きの位置を空に戻す: open が 2 ページ、uncollectible が 1 ページの顧客
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+PAGED_P1="$(jq -c -n --argjson d0 "$(due_of 0)" --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_o1", due_date: $d0, service: "xesm"}, {id: "in_u1", due_date: $d20, service: "xesm", status: "uncollectible"}], cus_b: [], cus_c: []}')"
+PAGED_P2="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_o2", due_date: $d20, service: "xesm"}]}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$PAGED_P1" FAKE_OPEN_INVOICES_P2="$PAGED_P2" \
+  run resync --apply --mode test
+expect "open が 2 ページ・uncollectible が 1 ページでも、最後まで読む" 0 - "RESYNC 完了"
+check_arg "open の 2 ページ目は、open の 1 ページ目の最後の id から読む" "starting_after=in_o1"
+printf '%s' "$OUT" | grep -qF 'PLAN hold cus_a xesm' && ok "2 つの状態を読んだうえで hold を決める" || ng "hold を決めていない: $OUT"
+# 重なりの検査は、本番の確認より前に止める（確認の後に置くと、確認で止まって重なりが見えない）
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
+expect "本番の resync でも、重なりは確認より前に止める" 3 0 "同じ Clerk の組織 org_a を 2 人以上の顧客が持っている"
+printf '%s' "$OUT" | grep -qF '本番は端末から実行する' && ng "重なりより先に確認で止まった: $OUT" || ok "確認より前に、重なりで止まる"
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"

@@ -3,7 +3,7 @@ title: "会社でChatGPTに入れていい情報・いけない情報〜機密�
 description: "契約書、議事録、見積書、顧客情報を生成AIに入力してよいか迷う経営者・管理部門向けに、機密度の分け方、クラウドAIとローカルLLMの使い分け、社内ルール整備の要点を解説します。"
 summary: "生成AIを会社で使うときに最初に決めるべきなのは、どのAIを使うかではなく、どの情報を外部AIに渡してよいかです。情報を3段階に分け、入力禁止情報や利用できるAIツールなどを社内ルールで決めれば、AI活用を「自己責任」から「会社の運用」へ移せます。"
 pubDate: 2026-06-19
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
@@ -63,5 +63,5 @@ A. 契約書、議事録、見積書、社内文書、ソースコードなど�
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI関連インシデントで適切なアクセス制御がなかった組織が97%、AIガバナンスポリシーを欠く組織が63%。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure、Excessive Agency、OverrelianceなどLLMアプリの代表的リスクを整理。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年10月に第2段階審査を終え、2026年12月ごろの認証登録を見込む）を確認。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年11月に認証を取得。対象範囲は「ソフトウエアの受託開発および運用」）を確認。
 - [Cor. HP: AI × CO-CREATION / 事業概要](https://cor-jp.com/) - Cor.の事業領域、Grift、ローカルLLM・セキュアAI、AI駆動開発、共創メッセージを確認。

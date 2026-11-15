@@ -44,7 +44,8 @@ describe('content advisory', () => {
     expect(findings.some((row) => row.tool === 'blog:check' && row.rule === '旧事業名')).toBe(true);
     expect(findings.some((row) => row.tool === 'yomiyasu')).toBe(true);
     expect(inspectMarkdown(clean)).toEqual([]);
-  });
+    // 子プロセスの python3（lint）を呼ぶので、負荷のある環境でも落ちないよう上限を長めにとる
+  }, 30_000);
 
   it('posts one marked comment for violations and records the ledger', async () => {
     const f = fixture();
@@ -57,13 +58,13 @@ describe('content advisory', () => {
     expect(body).not.toContain('TapForge');
     expect(JSON.parse(readFileSync(join(f.env.ADVISORY_OUTPUT_DIR, 'guard-ledger.jsonl'), 'utf8'))).toMatchObject({ decision: 'warn', sha: SHA, comment: 'created' });
     expect(f.calls.some((call) => call.args.includes(`repos/fork/articles/git/blobs/${BLOB}`))).toBe(true);
-  });
+  }, 30_000);
 
   it('does not create a clean comment or accept a human marker', async () => {
     const f = fixture({ text: clean, comments: [{ id: 1, user: { login: 'human' }, body: MARKER }] });
     expect((await run(f)).comment).toBe('none');
     expect(f.calls.some((call) => call.args[0] === '-X')).toBe(false);
-  });
+  }, 30_000);
 
   it('updates previous bot findings after fix, deletion, and rename away', async () => {
     for (const change of [{ text: clean }, { status: 'removed' }, { filename: 'src/content/blog/en/test.md', status: 'renamed' }]) {
@@ -72,7 +73,7 @@ describe('content advisory', () => {
       expect(f.calls.at(-1).args).toContain('PATCH');
       expect(JSON.parse(f.calls.at(-1).input).body).toContain('見直し候補はありません');
     }
-  });
+  }, 30_000);
 
   it('suppresses stale-head writes', async () => {
     const f = fixture({ stale: true });

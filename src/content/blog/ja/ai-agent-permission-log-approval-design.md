@@ -3,7 +3,7 @@ title: "AIエージェント導入前に決めるべき権限・ログ・承認�
 description: "AIエージェントの導入が進む2026年、業務に組み込む前に決めておくべき権限設計、操作ログ、人の承認ポイントを解説します。PoCで終わらせないための実装方針です。"
 summary: "AIエージェントの導入前に決めるべきなのは、どのエージェントを使うかではなく、どこまで任せるかです。権限を段階に分けて実行と外部送信には人の承認を置き、ログと停止条件まで先に設計した企業だけが、業務に組み込めます。"
 pubDate: 2026-06-12
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["AIエージェント", "権限管理", "ガバナンス"]
@@ -69,4 +69,4 @@ AIエージェントは、導入すれば自動的に成果が出るものでは
 - [Gartner: 40% of Enterprise Apps Will Feature Task-Specific AI Agents by 2026](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025) - 2026年末までに企業アプリの40%がタスク特化AIエージェントを搭載する予測。
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai) - 88%が少なくとも1業務でAIを定常利用、約3分の1がスケール、23%がAIエージェントをスケール、39%が実験段階。
 - [Gartner: Over 40% of Agentic AI Projects Will Be Canceled by End of 2027](https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027) - コスト増、価値不明確、リスク管理不足により2027年末までに40%超のAIエージェントPJが中止される予測。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年10月に第2段階審査を終え、2026年12月ごろの認証登録を見込む）を確認。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年11月に認証を取得。対象範囲は「ソフトウエアの受託開発および運用」）を確認。

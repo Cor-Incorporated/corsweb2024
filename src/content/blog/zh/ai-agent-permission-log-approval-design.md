@@ -3,14 +3,14 @@ title: "引入AI智能体前必须确定的权限、日志与审批流程"
 description: "在AI智能体引入不断推进的2026年，本文将解析在将其融入业务前必须确定的权限设计、操作日志以及人工审批节点。这是避免仅停留在PoC阶段的落地实施方针。"
 summary: "在引入AI智能体前需要确定的，不是使用哪款智能体，而是放权到什么程度。只有对权限进行分级，在执行和对外发送环节设置人工审批，并预先设计好日志与终止条件的企业，才能真正将其融入业务。"
 pubDate: 2026-06-12
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["AIエージェント", "権限管理", "ガバナンス"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "5088bc7f3a1f0cc684bc8e0a2c3a1ddcff937480121ed6e95b695fa2c533fcc9"
+translationSourceHash: "0573549c97435774f9b99cd9bb2c5e1a403adac703a0a8a05cc222b11ff1fc4b"
 translatedAt: "2026-10-23T05:21:12.640Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -72,4 +72,4 @@ AI Agent并非只要引入就能自动产生效果。唯有预先设计好权限
 - [Gartner: 40% of Enterprise Apps Will Feature Task-Specific AI Agents by 2026](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025) - 预测到2026年底，40%的企业应用将搭载任务特化型AI Agent。
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai) - 88%在至少一项业务中常规使用AI，约三分之一已实现规模化，23%已将AI Agent规模化，39%处于实验阶段。
 - [Gartner: Over 40% of Agentic AI Projects Will Be Canceled by End of 2027](https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027) - 预测由于成本增加、价值不明确和风险管理不足，到2027年底超过40%的AI Agent项目将被取消。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - 确认了本地优先、最小限度日志、敏感度分层、AI使用方针、ISMS（于2026年10月完成第二阶段审核，预计2026年12月左右完成认证注册）。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - 确认了本地优先、最小限度日志、敏感度分层、AI使用方针、ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。

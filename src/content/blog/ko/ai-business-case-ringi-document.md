@@ -3,7 +3,7 @@ title: "AI 도입 품의서 작성법｜비용 대 효과·리스크·견적 근
 description: "AI 도입을 위한 사내 품의를 통과시키는 데 필요한 목적, KPI, 비용, 리스크, 견적 근거 정리 방법을 설명합니다. 사내에 AI 도입을 설명하고자 하는 담당자를 위한 글입니다."
 summary: "AI 도입 품의서는 'AI로 무엇을 할 수 있는가'가 아니라, 해결할 업무 과제, 대상 범위, 기대 효과, 리스크, 판단 기한부터 작성해야 합니다. 목적, 대상 범위, KPI, 비용, 리스크, 다음 판단의 6가지 항목을 갖추고, 리스크를 숨기지 않고 어떻게 관리할 것인지 제시하는 것이 중요합니다."
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"
@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "920061b7d86bdf66d604741a1728886a0dffb8d3cbc49b84d401458918f35038"
+translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -79,4 +79,4 @@ AI의 기능이 아니라, 해결하고자 하는 업무 과제, 대상 범위, 
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-2025) - 2025년 6월 25일~7월 29일 온라인 조사. 105개국 응답자 1,993명. 88%가 최소 1개 업무에서 AI를 상시 활용, 약 3분의 1이 확장 완료, 23%가 AI 에이전트를 확장, 39%가 실험 단계.
 - [중소기구: 중소기업의 AI 등 활용 실태조사(2026년 3월)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 중소기업의 AI 도입률 20.4%, 도입 검토 18.6%, AI 도입 완료 기업의 생성형 AI 활용 82.6%, 도입 업무는 총무·관리 부문이 최다.
 - [Grift LP](https://griftai.org/) - 공개 당시 LP에서 GitHub 실적과 시장 시세 대조, 5~10회의 AI 인터뷰, 비교 보고서, 당시 알파 버전의 시장 조사를 확인. 현재 제공 형태의 설명이 아닙니다.
-- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 중요도 티어, AI 활용 방침, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록 전망) 확인.
+- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 중요도 티어, AI 활용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.

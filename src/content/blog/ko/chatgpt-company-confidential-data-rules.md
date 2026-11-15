@@ -3,14 +3,14 @@ title: "사내에서 ChatGPT에 입력해도 되는 정보와 안 되는 정보 
 description: "계약서, 회의록, 견적서, 고객 정보를 생성형 AI에 입력해도 될지 고민하는 경영진 및 관리 부서를 위해 기밀도 분류 방법, 클라우드 AI와 로컬 LLM의 구분 활용법, 사내 규정 정비의 핵심 포인트를 해설합니다."
 summary: "생성형 AI를 사내에서 도입할 때 가장 먼저 결정해야 하는 것은 어떤 AI를 사용할지가 아니라, 어떤 정보를 외부 AI에 제공해도 되는지입니다. 정보를 3단계로 분류하고 입력 금지 정보와 이용 가능한 AI 도구 등을 사내 규정으로 정립하면, AI 활용을 '개인의 책임'에서 '회사의 공식 운용'으로 전환할 수 있습니다."
 pubDate: 2026-06-19
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
 lang: "ko"
 featured: true
 isDraft: false
-translationSourceHash: "2a15c033801a1941e40c576c33fc31e0355648066d1c20d0272c8bc89c9a6b87"
+translationSourceHash: "9bf38640c7e35cf96c29287a7e4d6c7ed8c28f85d2281bd34ff53bb72eba54af"
 translatedAt: "2026-10-23T06:21:26.217Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ A. 계약서, 회의록, 견적서, 사내 문서, 소스 코드 등 외부 서�
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI 관련 인시던트에서 적절한 접근 제어가 없었던 조직 97%, AI 거버넌스 정책이 부재했던 조직 63%.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure, Excessive Agency, Overreliance 등 LLM 애플리케이션의 대표적 리스크 정리.
-- [Cor. 홈페이지: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 10월 2단계 심사를 마치고, 2026년 12월경 인증 등록 전망) 확인.
+- [Cor. 홈페이지: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.
 - [Cor. 홈페이지: AI × CO-CREATION / 사업 개요](https://cor-jp.com/) - Cor.의 사업 영역, Grift, 로컬 LLM·보안 AI, AI 기반 개발, 공창(Co-creation) 메시지 확인.

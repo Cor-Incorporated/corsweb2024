@@ -3,6 +3,7 @@ title: "수정 버전 출시부터 적용까지. LiteLLM 사례로 살펴보는 
 description: "LiteLLM의 비공개 레지스트리를 통한 수정 배포 사례를 바탕으로 로컬 LLM의 업데이트 담당, 적용 기한, 기록 관리 방안을 살펴봅니다. 수정 사항의 공개와 사내 환경으로의 적용을 구분하여 점검하기 위한 기업 대상 해설입니다."
 summary: "LiteLLM은 수정 사항의 존재와 입수 방법을 알리고 고객에게 이를 적용하도록 하는 데 어려움을 겪었다고 보고했습니다. 로컬 LLM 운영에 있어서도 수정 사항의 공개부터 적용까지를 누가 담당하고, 언제까지 수행하며, 어디에 기록할지를 미리 정해 두어야 한다고 생각합니다."
 pubDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
@@ -13,7 +14,7 @@ isDraft: false
 image:
   url: "/images/blog/litellm-update-management-placeholder-20261101.avif"
   alt: "서버와 단말기를 투명한 테두리로 구분한 설명용 일러스트"
-translationSourceHash: "e08fb0adc857d2a685cc14e1dee5040ad028eabe960f772028dedcd6b2a9716e"
+translationSourceHash: "53ea0b7860c3d0c451d2cdccb53dba33f2f6a8078a55491de27463de4a4996c7"
 translatedAt: "2026-11-02T11:30:24.453Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -58,7 +59,7 @@ LiteLLM의 비공개 레지스트리와 관련하여 향후 세부 사양이나 
 
 Cor.주식회사은 로컬 LLM을 사내나 고객 환경에 구축하는 여정을 함께하고 있습니다. 아키텍처를 선택하고 권한·해지·로그를 정하는 과정에 업데이트 담당자·기한·기록도 함께 연결하여 고려하고자 합니다.
 
-Cor.주식회사에서는 ISMS를 운용하고 있습니다. 2026년 10월에 ISO/IEC 27001 2단계 심사를 마쳤으며, 2026년 12월경 인증 등록을 예상하고 있습니다.
+Cor.주식회사에서는 ISMS를 운용하고 있습니다. 2026년 11월에 ISO/IEC 27001:2022 인증을 취득했습니다. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”입니다.
 
 도입한 추론 소프트웨어에 대해 누가 업데이트를 맡고, 기한을 어떻게 정하며, 적용했다는 사실을 어디에 남길 것인가. 이러한 질문들을 ISMS 운용에 반드시 포함해 두어야 한다고 생각합니다.
 

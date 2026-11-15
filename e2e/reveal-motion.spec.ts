@@ -68,6 +68,16 @@ function readRevealState({ ctaSelector, belowMargin }: { ctaSelector: string; be
 const readState = (page: Page) =>
   page.evaluate(readRevealState, { ctaSelector: PRIMARY_CTA_SELECTOR, belowMargin: BELOW_MARGIN_PX });
 
+// 演出の初期化（astro:page-load の後に reveal-ready を付ける）は、手元の負荷が高いと、load から 1〜1.5 秒で
+// 済まないことがある。付くまで待ってから測る（10 秒たっても付かなければ、演出が働いていないとして落とす）
+async function waitForRevealReady(page: Page) {
+  await page
+    .waitForFunction(() => document.querySelectorAll('[data-reveal].reveal-ready').length > 0, null, { timeout: 10_000 })
+    .catch(() => undefined);
+  const ready = await page.evaluate(() => document.querySelectorAll('[data-reveal].reveal-ready').length);
+  expect(ready, '演出が働いていない（10 秒待っても reveal-ready が 0 個）').toBeGreaterThan(0);
+}
+
 async function open(browser: Browser, testInfo: TestInfo, pathname: string, width: number, height: number) {
   const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
   expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
@@ -75,9 +85,8 @@ async function open(browser: Browser, testInfo: TestInfo, pathname: string, widt
   const page = await context.newPage();
   await page.goto(new URL(pathname, baseURL!).toString(), { waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
+  await waitForRevealReady(page);
   await page.waitForTimeout(SETTLE_MS);
-  const ready = await page.evaluate(() => document.querySelectorAll('[data-reveal].reveal-ready').length);
-  expect(ready, '演出が働いていない（reveal-ready が 0 個）').toBeGreaterThan(0);
   await page.mouse.move(Math.round(width / 2), Math.round(height / 2));
   return { context, page };
 }
@@ -338,11 +347,80 @@ test('再読み込みで、ページの途中の位置から始まっても、�
     await page.waitForTimeout(SETTLE_MS);
     await page.reload({ waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
+    await waitForRevealReady(page);
     await page.waitForTimeout(SETTLE_MS);
     const state = await readState(page);
     expect(Math.abs(state.scrollY - y), `再読み込みで前の位置に戻っていない（scrollY=${state.scrollY}、前は ${y}）`).toBeLessThanOrEqual(2);
     expect(state.hiddenInView, `再読み込みの後に窓の中で隠れている要素（${JSON.stringify(state)}）`).toEqual([]);
     expect(state.visibleBelow, `再読み込みの後に窓の下で出ている要素（${JSON.stringify(state)}）`).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+// ページを移る（View Transitions。文書は入れ替わらない）たびに、演出は前のページの監視を外してから付け直す。
+// 外し忘れると、移るたびに scroll の見張りと observer が増えていく。演出の observer（rootMargin が
+// 「0px 0px <下だけ> 0px」の形）と、window の scroll の見張りの数を、読み込みの前から数える。
+test('ページを移っても、演出の監視は前のページの分が外れ、増えていかない', async ({ browser }, testInfo) => {
+  const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
+  expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
+  const context = await browser.newContext({ viewport: { width: 1366, height: 657 } });
+  await context.addInitScript(() => {
+    const counts = { observers: new Set<IntersectionObserver>(), scroll: new Set<unknown>(), loads: 0, documentMark: Math.random() };
+    (window as unknown as { __revealCounts: typeof counts }).__revealCounts = counts;
+    const Native = window.IntersectionObserver;
+    window.IntersectionObserver = class extends Native {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(callback, options);
+        if (/^0px 0px (-12%|\d+px) 0px$/.test(String(options?.rootMargin ?? ''))) counts.observers.add(this);
+      }
+      disconnect() {
+        counts.observers.delete(this);
+        super.disconnect();
+      }
+    };
+    const add = window.addEventListener.bind(window);
+    const remove = window.removeEventListener.bind(window);
+    window.addEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+      if (type === 'scroll') counts.scroll.add(listener);
+      add(type, listener, options);
+    }) as typeof window.addEventListener;
+    window.removeEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => {
+      if (type === 'scroll') counts.scroll.delete(listener);
+      remove(type, listener, options);
+    }) as typeof window.removeEventListener;
+    document.addEventListener('astro:page-load', () => {
+      counts.loads += 1;
+    });
+  });
+  const page = await context.newPage();
+  const read = () =>
+    page.evaluate(() => {
+      const counts = (window as unknown as { __revealCounts: { observers: Set<unknown>; scroll: Set<unknown>; loads: number; documentMark: number } })
+        .__revealCounts;
+      return { observers: counts.observers.size, scroll: counts.scroll.size, loads: counts.loads, documentMark: counts.documentMark, path: location.pathname };
+    });
+  const waitLoads = (n: number) =>
+    page.waitForFunction((count) => (window as unknown as { __revealCounts: { loads: number } }).__revealCounts.loads >= count, n, { timeout: 15_000 });
+  try {
+    await page.goto(new URL('/', baseURL!).toString(), { waitUntil: 'load' });
+    await waitForRevealReady(page);
+    const first = await read();
+    expect(first.observers, `最初のページの演出の observer の数（${JSON.stringify(first)}）`).toBe(2);
+    const rounds = 4;
+    for (let i = 1; i <= rounds; i += 1) {
+      // 業種のページへ移り、戻る
+      await page.locator('[data-industry-entry="medical"]').click();
+      await waitLoads(first.loads + 2 * i - 1);
+      await page.goBack();
+      await waitLoads(first.loads + 2 * i);
+    }
+    await waitForRevealReady(page);
+    const last = await read();
+    expect(last.documentMark, `ページを移る間に文書が入れ替わった（${JSON.stringify({ first, last })}）`).toBe(first.documentMark);
+    expect(last.path, '最後にトップへ戻っていない').toBe('/');
+    expect(last.observers, `${rounds} 往復の後の演出の observer の数（最初 ${first.observers}、後 ${last.observers}）`).toBe(2);
+    expect(last.scroll, `${rounds} 往復の後の scroll の見張りの数（最初 ${first.scroll}、後 ${last.scroll}）`).toBe(first.scroll);
   } finally {
     await context.close();
   }
