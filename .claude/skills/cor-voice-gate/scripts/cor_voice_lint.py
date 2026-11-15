@@ -153,11 +153,17 @@ class FactRecordError(Exception):
     """facts.json が読めない、壊れている、必須のキーが無い。"""
 
 
+DAY_FORM = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
 def _iso_date(value: object, key: str) -> date:
+    """YYYY-MM-DD の日だけ。fromisoformat は 20261112・2026-W46-4 も受け入れるので、形を先に見る。"""
     try:
-        return date.fromisoformat(str(value))
+        if not isinstance(value, str) or not DAY_FORM.fullmatch(value):
+            raise ValueError(value)
+        return date.fromisoformat(value)
     except ValueError as exc:
-        raise FactRecordError(f"facts.json の {key} が YYYY-MM-DD ではありません: {value!r}") from exc
+        raise FactRecordError(f"facts.json の {key} が YYYY-MM-DD ではありません（観測した値: {value!r}）") from exc
 
 
 def _validate_isms(rec: dict) -> dict:
@@ -173,8 +179,11 @@ def _validate_isms(rec: dict) -> dict:
         if not isinstance(rec[key], list) or not all(isinstance(v, str) and v for v in rec[key]):
             raise FactRecordError(f"facts.json の isms.{key} が文字列の配列ではありません")
     groups = rec["forbidden_extensions"]
-    if not isinstance(groups, list) or not groups or not all(isinstance(g, dict) and g.get("terms") for g in groups):
-        raise FactRecordError("facts.json の isms.forbidden_extensions が {label, terms} の配列ではありません")
+    if (
+        not isinstance(groups, list) or not groups
+        or not all(isinstance(g, dict) and isinstance(g.get("terms"), list) and g["terms"] and all(isinstance(x, str) and x for x in g["terms"]) for g in groups)
+    ):
+        raise FactRecordError(f"facts.json の isms.forbidden_extensions が {{label, terms（文字列の配列）}} の配列ではありません（観測した値: {groups!r}）"[:400])
     _validate_decisions(rec["decision_records"])
     _iso_date(rec["valid_from"], "isms.valid_from")
     _iso_date(rec["valid_to"], "isms.valid_to")
@@ -196,7 +205,8 @@ def _validate_decisions(records: object) -> None:
             )
         blank = [k for k in DECISION_KEYS if not (isinstance(rec[k], str) and rec[k].strip())]
         if blank:
-            raise FactRecordError(f"facts.json の isms.decision_records[{i}] の {', '.join(blank)} が空です")
+            observed_values = ", ".join(f"{k}={rec[k]!r}" for k in blank)
+            raise FactRecordError(f"facts.json の isms.decision_records[{i}] の {', '.join(blank)} が空か文字列ではありません（観測した値: {observed_values}）")
         _iso_date(rec["decided_at"], f"isms.decision_records[{i}].decided_at")
         seen.append(rec["id"])
     dup = sorted({x for x in seen if seen.count(x) > 1})
@@ -239,7 +249,6 @@ class Vocab:
     """記録から作る検出の道具。lint と scripts/blog-guardrails.mjs が同じ記録を読む。"""
     acquired: re.Pattern[str]
     claim: re.Pattern[str]
-    completed: re.Pattern[str]
     cert: re.Pattern[str]
     scope: str
     number: str
@@ -251,7 +260,6 @@ CAUSAL = re.compile(r"なので|だから|ことから|ゆえ|のため")
 DATE_RE = re.compile(r"(?:(\d{4})年)?(\d{1,2})月(?:(\d{1,2})日)?|(\d{4})/(\d{1,2})/(\d{1,2})")
 DATE_LABEL = re.compile(r"(?:初回登録日|登録日|取得日|認証取得日|認証登録日|登録年月日|(?:取得|登録)は)[ 　]*[：:]?[ 　]*(?=\d{4}年|\d{1,2}月|\d{4}/)")
 NUMBER_RE = re.compile(r"JP\d{2}/\d{3,}|登録番号[ 　]*[：:]?[ 　]*([A-Za-z]{0,3}\d{2}/\d+)")
-COMPLETED_WORDS = r"取得しま|取得して|取得し、|取得済|認証取得|登録されま|認証済|登録を完了|登録が完了|登録完了"
 CERT_WINDOW = 24  # 認証名と取得の動詞の間に許す文字数
 
 
@@ -270,7 +278,6 @@ def build_vocab(record: dict) -> Vocab:
     return Vocab(
         acquired=re.compile(acquired),
         claim=re.compile(rf"{ISMS_WORD}[^。\n]{{0,40}}{acquired}|{acquired}[^。\n]{{0,40}}{ISMS_WORD}"),
-        completed=re.compile(COMPLETED_WORDS),
         cert=re.compile(rf"{names}[^。\n]{{0,{CERT_WINDOW}}}{acquired}|{acquired}[^。\n]{{0,{CERT_WINDOW}}}{names}", re.I),
         scope=_nfkc(rec["scope"]),
         number=_nfkc(rec["registration_number"]),
@@ -421,9 +428,11 @@ def _same_date(m: re.Match, want: date) -> bool:
     return int(month) == want.month and (day is None or int(day) == want.day)
 
 
-def _date_hits(lines: list[str], rec: dict, vocab: Vocab) -> list[Hit]:
+def _date_hits(lines: list[str], rec: dict, vocab: Vocab, archive_lines: frozenset[int]) -> list[Hit]:
     start, end, hits = date.fromisoformat(rec["valid_from"]), date.fromisoformat(rec["valid_to"]), []
     for no, sent in _sentences(lines):
+        if no in archive_lines:
+            continue  # 日付つきの過去の記録（--archive の範囲）は、登録前の予定日（「2026年12月ごろ」）も含めて許す
         acquired = vocab.acquired.search(sent) and re.search(rf"認証|{ISMS_WORD}", sent)
         if not (acquired or DATE_LABEL.search(sent) or re.search(r"有効期間|有効期限", sent)):
             continue
@@ -437,7 +446,7 @@ def _date_hits(lines: list[str], rec: dict, vocab: Vocab) -> list[Hit]:
     return hits
 
 
-def _stale_hits(lines: list[str], rec: dict, archive_lines: frozenset[int]) -> list[Hit]:
+def _stale_hits(lines: list[str], rec: dict, archive_lines: frozenset[int], vocab: Vocab) -> list[Hit]:
     if rec["status"] != "registered":
         return []
     hits = []
@@ -447,7 +456,7 @@ def _stale_hits(lines: list[str], rec: dict, archive_lines: frozenset[int]) -> l
         phrases = lambda key: [p for p in map(_nfkc, rec[key]) if p in sent]  # noqa: E731
         strong = phrases("stale_state_phrases") if re.search(rf"認証|{ISMS_WORD}", sent) else []
         strong += phrases("stale_state_phrases_any_context")  # #527 が文脈なしで止めていた句を弱めない
-        weak = phrases("stale_state_phrases_unless_completed") if re.search(ISMS_WORD, sent) and not re.search(COMPLETED_WORDS, sent) else []
+        weak = phrases("stale_state_phrases_unless_completed") if re.search(ISMS_WORD, sent) and not vocab.acquired.search(sent) else []
         if strong or weak:
             hits.append(_fact_hit("isms_stale_state", no, sent, f"記録の status は registered（{rec['valid_from']} 登録）なのに、古い状態（「{(strong or weak)[0]}」）を現在の説明として書いています。日付つきの過去の記録は archive ブロックに入れる"))
     return hits
@@ -468,8 +477,8 @@ def fact_hits(lines: list[str], facts: dict | None, as_of: date, archive_lines: 
         *_scope_missing_hits(claims, lines, vocab),
         *_overreach_hits(lines, rec),
         *_number_hits(lines, vocab),
-        *_date_hits(lines, rec, vocab),
-        *_stale_hits(lines, rec, archive_lines),
+        *_date_hits(lines, rec, vocab, archive_lines),
+        *_stale_hits(lines, rec, archive_lines, vocab),
     ]
 
 
@@ -642,9 +651,15 @@ def _archive_lines(specs: list[str]) -> frozenset[int]:
     return frozenset(lines)
 
 
+def _day(value: str) -> date:
+    if not DAY_FORM.fullmatch(value):
+        raise ValueError(value)
+    return date.fromisoformat(value)
+
+
 def _as_of(value: str | None) -> date:
     try:
-        return date.fromisoformat(value) if value else date.today()
+        return _day(value) if value else date.today()
     except ValueError:
         print(f"cor_voice_lint: --as-of は YYYY-MM-DD で指定します: {value}", file=sys.stderr)
         sys.exit(2)

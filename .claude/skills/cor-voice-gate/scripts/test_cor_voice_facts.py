@@ -4,7 +4,7 @@
 実行: python3 -I -m unittest discover -s .claude/skills/cor-voice-gate/scripts -p 'test_*.py'
 見るもの:
   - 通る形: 公開している業種ページ 5 本の本文の ISMS の部分（見出し + 範囲 + 番号と日付 + 参考資料の行）
-  - 止まる形: 仕様 4.3 の陰性例（範囲なし、範囲の拡大、番号違い、日付違い、古い状態、記録に無い認証）
+  - 止まる形: 陰性例（範囲なし、範囲の拡大、番号違い、日付違い、古い状態、記録に無い認証）
   - 片側変異: 記録だけを変えると、本文の値と記録の値の両方を挙げて落ちる
   - 記録が壊れているとき: 旧い固定の規則へ黙って戻らず、fact_record_invalid で止まる
 """
@@ -180,7 +180,7 @@ class FrontmatterAndValidityTest(unittest.TestCase):
 
 
 class NegativeCaseTest(unittest.TestCase):
-    """仕様 4.3 の陰性例。落ちることを固定する。"""
+    """陰性例。落ちることを固定する。"""
 
     def assertRule(self, text: str, rule_id: str, **kw):
         found = errors(text, **kw)
@@ -600,6 +600,113 @@ class CliTest(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             lint.main(["check", "--archive", "5-2", str(draft)])
         self.assertEqual(ctx.exception.code, 2)
+
+
+class ReviewFixesTest(unittest.TestCase):
+    """レビューで見つかった穴（--archive の日付、記録に無い認証の名前、取得の語彙、保有・付与、日の形、型の誤り、古い状態の言い方）を
+    閉じた試験。直す前の lint では、どれも通る（落ちない）形だった。"""
+
+    SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
+    OLD_SECTION = (
+        "以下は2026年10月20日に公開した、認証登録前のお知らせです。\n\n"
+        "## 第2段階審査の終了\n\n"
+        "Cor.株式会社は2026年10月7日に、情報セキュリティマネジメントシステム（ISMS）の国際規格 ISO/IEC 27001 の第2段階審査を終えました。\n\n"
+        "認証の登録は2026年12月ごろを見込んでいます。登録が完了するまでは「認証取得済み」とは表記せず、登録後にあらためてお知らせします。\n"
+    )
+
+    def test_M1_archive_also_allows_the_pre_registration_date(self):
+        # 日付つきの過去の記録（--archive の範囲）は、古い状態の説明と、登録前の予定日の両方を許す
+        found = errors(self.OLD_SECTION)
+        self.assertIn("isms_stale_state", found)
+        self.assertIn("isms_date_mismatch", found)
+        last = len(self.OLD_SECTION.splitlines())
+        self.assertEqual(errors(self.OLD_SECTION, archive=frozenset(range(1, last + 1))), [])
+        # 範囲の外の行は許さない（archive が当たっていない行の日付は止まる）
+        self.assertIn("isms_date_mismatch", errors(self.OLD_SECTION, archive=frozenset({1})))
+
+    def test_M1_the_published_news_page_passes_with_its_old_section_archived(self):
+        news = SKILLS.parents[1] / "src" / "content" / "news" / "ja" / "isms-stage2-audit.md"
+        lines = news.read_text(encoding="utf-8").split("\n")
+        start = next(i for i, line in enumerate(lines, 1) if line.startswith("以下は2026年10月20日に公開した"))
+        archived = frozenset(range(start, len(lines) + 1))
+        found = [(h.line, h.rule_id) for h in lint.check_facts_text("\n".join(lines), as_of=date(2026, 11, 15), archive_lines=archived)]
+        self.assertEqual(found, [], f"お知らせの旧い節（{start} 行目から）を archive にしても残る指摘: {found}")
+
+    def test_M4_correct_acquisition_sentences_are_not_stale(self):
+        for verb in ("認証を取得しました", "登録済みとなりました", "認証を受けました"):
+            with self.subTest(verb=verb):
+                text = f"ISMS は第2段階審査を終え、2026年11月7日に{verb}。{self.SC}\n"
+                self.assertEqual(errors(text), [], f"{verb}: 正しい文が止まる")
+
+    def test_M4_the_acquisition_vocabulary_is_the_record_only(self):
+        # 語彙が lint の中にもう 1 つ在ると、記録から語を引いても「古い状態」の判定は変わらない。記録だけを見るので、変わる
+        text = f"ISMS は第2段階審査を終え、2026年11月7日に認証を受けました。{self.SC}\n"
+        rec = facts()
+        rec["acquisition"] = [p for p in rec["acquisition"] if p != "認証を受け"]
+        self.assertIn("isms_stale_state", errors(text, record=rec))
+        self.assertNotIn("COMPLETED_WORDS", (Path(lint.__file__)).read_text(encoding="utf-8"))
+
+    def test_M2_certifications_without_a_record_are_stopped(self):
+        for text in (
+            "ISO/IEC 42001（AI マネジメントシステム）の認証を取得しました。\n",
+            "ISO 42001 認証を取得しています。\n",
+            "JIS Q 15001 の認証を取得しています。\n",
+            "TISAX の認証を取得済みです。\n",
+            "CSA STAR の認証を取得しました。\n",
+        ):
+            with self.subTest(text=text):
+                self.assertIn("cert_unverified", errors(text))
+
+    def test_M5_holding_and_being_granted_are_acquisition_claims(self):
+        for text in ("当社は ISMS 認証を保有しています。\n", "ISMS（ISO/IEC 27001）の認証を、SGS から付与されています。\n"):
+            with self.subTest(text=text):
+                self.assertIn("isms_scope_missing", errors(text))
+                with_scope = text + self.SC + "\n"
+                self.assertEqual(errors(with_scope), [])
+                rec = facts()
+                rec["isms"]["status"] = "registration_expected"
+                self.assertIn("isms_status_mismatch", errors(with_scope, record=rec))
+        # 範囲を広げる文は、保有でも止める
+        self.assertIn("isms_scope_overreach", errors(f"当社は ISMS 認証を保有しており、Grift も対象です。{self.SC}\n"))
+
+    def test_L3_will_be_registered_is_a_stale_state(self):
+        self.assertIn("isms_stale_state", errors("ISMS は12月に登録される予定です。\n"))
+        self.assertIn("isms_stale_state", errors("ISMS は12月に登録の予定です。\n"))
+
+    def test_L1_dates_must_be_in_the_day_form(self):
+        for field, bad_value in (("decided_at", "20261112"), ("decided_at", "2026-W46-4")):
+            with self.subTest(field=field, value=bad_value):
+                rec = json.loads(lint.FACTS_PATH.read_text(encoding="utf-8"))
+                rec["facts"][0]["decision_records"][0][field] = bad_value
+                self.assertIn(bad_value, BrokenRecordTest.load_error(self, rec))
+        for key, bad_value in (("valid_from", "20261107"), ("valid_to", "2029-W45-3")):
+            with self.subTest(key=key, value=bad_value):
+                rec = json.loads(lint.FACTS_PATH.read_text(encoding="utf-8"))
+                rec["facts"][0][key] = bad_value
+                self.assertIn(bad_value, BrokenRecordTest.load_error(self, rec))
+        for value in ("20261112", "2026-W46-4"):
+            with self.subTest(as_of=value), self.assertRaises(SystemExit) as ctx:
+                lint.main(["check", "--as-of", value, str(SKILLS / "cor-voice" / "references" / "facts.json")])
+            self.assertEqual(ctx.exception.code, 2)
+
+    def test_L2_wrong_types_stop_with_the_observed_value(self):
+        rec = json.loads(lint.FACTS_PATH.read_text(encoding="utf-8"))
+        rec["facts"][0]["decision_records"][0]["id"] = 123
+        self.assertIn("123", BrokenRecordTest.load_error(self, rec))
+        rec = json.loads(lint.FACTS_PATH.read_text(encoding="utf-8"))
+        rec["facts"][0]["forbidden_extensions"][0]["terms"] = [1, 2]
+        self.assertIn("観測した値", BrokenRecordTest.load_error(self, rec))
+        rec = json.loads(lint.FACTS_PATH.read_text(encoding="utf-8"))
+        rec["facts"][0]["valid_to"] = 20291107
+        self.assertIn("20291107", BrokenRecordTest.load_error(self, rec))
+
+    def test_L6_story_spine_carries_the_recorded_scope_and_date(self):
+        # docs/story-spine.md は、範囲と登録日を写しで持つ。記録を変えると、記録の値と文書の値の両方を挙げて落ちる
+        isms = lint.load_facts()["isms"]
+        text = (SKILLS.parents[1] / "docs" / "story-spine.md").read_text(encoding="utf-8")
+        y, m, d = (int(x) for x in isms["valid_from"].split("-"))
+        for label, want in (("登録範囲", isms["scope"]), ("登録日", f"{y} 年 {m} 月 {d} 日")):
+            self.assertIn(want, text, f"記録の{label}は「{want}」。docs/story-spine.md に無い（記録: {isms['scope']} / {isms['valid_from']}）")
 
 
 if __name__ == "__main__":
