@@ -1,6 +1,6 @@
 ---
 title: "已取得 ISO/IEC 27001:2022（ISMS）认证（2026年11月补充）"
-description: "Cor.株式会社于2026年11月取得 ISO/IEC 27001:2022（ISMS）认证，认证范围为软件的受托开发及运营。认证机构为SGS日本（SGS），注册编号为JP26/00000364，有效期为2026年11月7日至2029年11月7日。"
+description: "Cor.株式会社于2026年11月取得 ISO/IEC 27001:2022（ISMS）认证，认证范围为软件的受托开发及运营。认证机构为SGS日本（SGS），注册编号为JP26/00000364，有效期为2026年11月7日至2029年11月7日。只要在有效期内的监督审核中确认继续注册，认证即保持有效。"
 publishedAt: 2026-10-20
 updatedAt: 2026-11-12
 category: "info"
@@ -9,7 +9,7 @@ source: "Cor.株式会社"
 isDraft: false
 featured: true
 lang: "zh"
-translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translationSourceHash: "785456843a09802714299cd6b82c08b40ef804f968cc9f02bf4ff16c1f3514fd"
 translatedAt: "2026-11-12T07:06:38.167Z"
 translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
@@ -18,7 +18,7 @@ translationModel: "gemini-3.8-flash + codex-editorial-update"
 
 Cor.株式会社于2026年11月取得了 ISO/IEC 27001:2022（ISMS）认证。认证范围为软件的受托开发及运营。
 
-认证机构为SGS日本（SGS），注册编号为JP26/00000364。有效期为2026年11月7日至2029年11月7日。
+认证机构为SGS日本（SGS），注册编号为JP26/00000364。有效期为2026年11月7日至2029年11月7日。只要在有效期内的监督审核中确认继续注册，认证即保持有效。
 
 以下为2026年10月20日发布、认证注册前的原始公告。
 

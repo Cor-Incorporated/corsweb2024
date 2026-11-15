@@ -39,7 +39,7 @@ const VALIDITY_CONDITION: Record<Locale, RegExp> = {
   en: /remains valid as long as continued registration is confirmed at the surveillance audits during the validity period\./,
   zh: /只要在有效期内的监督审核中确认继续注册，认证即保持有效。/,
   ko: /유효 기간 중의 사후심사에서 등록의 계속이 인정되는 한 유효합니다\./,
-  es: /Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento/,
+  es: /Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia\./,
 };
 
 function securityIsmsTexts(locale: Locale): Record<string, string> {

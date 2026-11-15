@@ -1,6 +1,6 @@
 ---
 title: "Obtuvimos la certificación ISO/IEC 27001:2022 (SGSI) (actualización de noviembre de 2026)"
-description: "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI) para el desarrollo y la operación de software por encargo. La entidad certificadora es SGS Japón (SGS), número de registro JP26/00000364, con vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029."
+description: "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI) para el desarrollo y la operación de software por encargo. La entidad certificadora es SGS Japón (SGS), número de registro JP26/00000364, con vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia."
 publishedAt: 2026-10-20
 updatedAt: 2026-11-12
 category: "info"
@@ -9,7 +9,7 @@ source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "es"
-translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translationSourceHash: "785456843a09802714299cd6b82c08b40ef804f968cc9f02bf4ff16c1f3514fd"
 translatedAt: "2026-11-12T07:06:38.167Z"
 translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
@@ -18,7 +18,7 @@ translationModel: "gemini-3.8-flash + codex-editorial-update"
 
 En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI). El alcance es el desarrollo y la operación de software por encargo.
 
-La entidad certificadora es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación tiene vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029.
+La entidad certificadora es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación tiene vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia.
 
 A continuación se conserva el anuncio original, publicado el 20 de octubre de 2026, antes del registro de la certificación.
 
