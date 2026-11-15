@@ -314,3 +314,26 @@ test('背の高い要素の上端が窓の下の端に 1px 入った所へ一気
     await context.close();
   }
 });
+
+// 再読み込みでは、Astro の router が前の位置へ戻す（history.state の scrollY。演出の初期化より前に戻す）。
+// 位置を戻す動きを「下へのスクロール」と読んで、下 12% の要素を待たせないこと。
+test('再読み込みで、ページの途中の位置から始まっても、窓の中の演出の要素が出ている', async ({ browser }, testInfo) => {
+  const height = 657;
+  const { context, page } = await open(browser, testInfo, '/', 1366, height);
+  try {
+    const target = await pickBelowFold(page);
+    // 下 12% の中に演出の要素が在る位置へ下りて、止まってから再読み込みする
+    const y = target.top - Math.round(height * 0.95);
+    await jumpTo(page, y);
+    await page.waitForTimeout(SETTLE_MS);
+    await page.reload({ waitUntil: 'load' });
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(SETTLE_MS);
+    const state = await readState(page);
+    expect(Math.abs(state.scrollY - y), `再読み込みで前の位置に戻っていない（scrollY=${state.scrollY}、前は ${y}）`).toBeLessThanOrEqual(2);
+    expect(state.hiddenInView, `再読み込みの後に窓の中で隠れている要素（${JSON.stringify(state)}）`).toEqual([]);
+    expect(state.visibleBelow, `再読み込みの後に窓の下で出ている要素（${JSON.stringify(state)}）`).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
