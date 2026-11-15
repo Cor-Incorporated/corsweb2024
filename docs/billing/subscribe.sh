@@ -774,6 +774,17 @@ do_cancel() {
 
 # hold / unhold: Customer の metadata の印を書き、clerk-sync と同じ形で Clerk へ写す。
 # 印は contract_<サービス>_hold=true。外すときは空の値にして key を消す（Stripe は空の値で metadata の key を消す）。
+# 同じ Clerk の組織を、この顧客のほかに持っている顧客がいれば、何も書かずに止まる。hold・unhold・clerk-sync は、
+# この顧客の契約だけから組織の services 全体を作って送る（契約の無いサービスは null）ので、組織を共有していると、
+# もう一方の顧客のサービスを消してしまう。検索は metadata の変更を出すまでに最大 1 分（障害のときは 1 時間）かかる。
+# その間に作った重なりは、この検査をすり抜けることがある（resync の下見の検査は、顧客の一覧から数えるので、すり抜けない）。
+check_org_not_shared() {
+  local org="$1" others
+  api_ok "顧客の検索（組織の id）" GET /v1/customers/search --data-urlencode "query=metadata['clerk_org_id']:'$org'" --data-urlencode "limit=10"
+  others="$(jq -r --arg me "$OPT_CUSTOMER" '[.data[]? | select(.id != $me) | .id] | join(", ")' <<<"$RESP_BODY")"
+  [ -z "$others" ] || die 3 "clerk_org_id=$org を、$OPT_CUSTOMER のほかに顧客 $others も持っている。この組織に書くと、ほかの顧客のサービスを消してしまうので、何も書かない（先に重なりを直す。runbook の「問題が起きたら」）"
+}
+
 do_hold() { do_set_hold true; }
 do_unhold() { do_set_hold false; }
 do_set_hold() {
@@ -784,6 +795,7 @@ do_set_hold() {
   org="$(cust_meta clerk_org_id)"
   [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に写せないので書かない"
   [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。書かない"
+  check_org_not_shared "$org"
   cur="$(cust_meta "$kh")"
   if [ "$cur" = "true" ]; then s_hold="true"; else s_hold="false"; fi
   if [ "$on" = "true" ]; then label="hold"; else label="hold なし"; fi
@@ -1174,6 +1186,7 @@ do_clerk_sync() {
   org="$(cust_meta clerk_org_id)"
   [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に送らない"
   [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。Clerk に送らない"
+  check_org_not_shared "$org"
   check_clerk_rows
   services="$(clerk_services_json)"
   print_clerk_rows "$services"
