@@ -362,6 +362,24 @@ def _scope_missing_hits(claims: list[tuple[int, str]], lines: list[str], vocab: 
 CLAUSE_BREAK = re.compile(r"(?<=[しりてでがずくいれび])、|(?<=ます)、|(?<=です)、")
 
 
+# 限定句のあとに続いてよい形（節の終わり）。言い切り（です・ます）、となります・としています、節を切る語（であり・で・が。
+# CLAUSE_BREAK で切った節の終わり）、理由（からである・ため・ので）。語のあとに別の語が続く形（「含まれません（注）」など）は含めない
+LIMITER_TAIL = (
+    r"(?:です|でした|ます|である|だ"
+    r"|となります|になります|となる|になる|としています|としております|とします|とする"
+    r"|であり|で|が"
+    r"|から(?:です|である|だ)?|ため(?:です)?|ので)?"
+    r"[。.！!]?[）)」]?\s*$"
+)
+
+
+def _limits_at_clause_end(clause: str, limiters: list[str]) -> bool:
+    """限定句（「ものではありません」「対象外」「含まれません」など）が、否定の述語として節の終わりにあるか。
+    節の途中の語（「登録範囲外の Grift にも適用されます」「全社を対象外のない形で…」）は、拡大を打ち消さない。"""
+    tail = clause.rstrip()
+    return any(re.search(re.escape(p) + LIMITER_TAIL, tail) for p in limiters)
+
+
 def _overreach_units(lines: list[str]) -> list[int]:
     """行ごとの「拡大を見る単位」。通常の段落は 1 つに数える。箇条書き・表・引用・見出しは、1 行ごとに別の単位にする
     （参考資料の一覧で、別の項目の語を ISMS の項目に結びつけない）。空行は -1。"""
@@ -374,7 +392,8 @@ def _overreach_units(lines: list[str]) -> list[int]:
 def _overreach_hits(lines: list[str], rec: dict) -> list[Hit]:
     """ISMS の語がある単位（同じ段落）の文が、記録の forbidden_extensions の語を含むとき止める（ISMS の文とは別の文に
     書いた「だから当社の AI は誤回答しません」も止める）。限定句（「〜ものではありません」）が打ち消すのは、
-    その限定句と同じ節の語だけ（「全社の安全性を保証し、これは AI の精度保証を意味しません」の前半は打ち消されない）。"""
+    その限定句と同じ節の語だけで、限定句が否定の述語として節の終わりにあるときに限る（「全社の安全性を保証し、これは AI の精度保証を
+    意味しません」の前半は打ち消されない。「登録範囲外の Grift にも適用されます」のように節の途中にある語は打ち消さない）。"""
     hits = []
     limiters = [_nfkc(p) for p in rec["scope_limiting_phrases"]]
     units, sentences = _overreach_units(lines), list(_sentences(lines))
@@ -384,7 +403,7 @@ def _overreach_hits(lines: list[str], rec: dict) -> list[Hit]:
             continue
         for clause in CLAUSE_BREAK.split(sent):
             found = [(g.get("label", "?"), t) for g in rec["forbidden_extensions"] for t in map(_nfkc, g["terms"]) if t in clause]
-            if found and not (any(p in clause for p in limiters) and not CAUSAL.search(sent)):
+            if found and not (_limits_at_clause_end(clause, limiters) and not CAUSAL.search(sent)):
                 label, term = found[0]
                 hits.append(_fact_hit("isms_scope_overreach", no, sent, f"ISMS の表明を登録範囲「{rec['scope']}」の外へ広げています（{label}: 「{term}」）。範囲を限った文にする（同じ段落に ISMS の語がある文は、別の文でも見る）"))
                 break
@@ -446,6 +465,25 @@ def _date_hits(lines: list[str], rec: dict, vocab: Vocab, archive_lines: frozens
     return hits
 
 
+VALIDITY_WORDS = re.compile(r"有効期間|有効期限")
+
+
+def _validity_condition_hits(lines: list[str], rec: dict, archive_lines: frozenset[int]) -> list[Hit]:
+    """ISMS の語がある単位（同じ段落。箇条書き・表・引用は 1 行）で、有効期間の日付を書く文があるとき、同じ単位に
+    記録の validity_condition（「有効期間中の維持審査にて登録の継続が認められる限り有効」）が要る。期限まで無条件に有効とは書かない。"""
+    condition = _nfkc(rec["validity_condition"])
+    units, hits = _overreach_units(lines), []
+    with_isms = {units[i] for i, line in enumerate(lines) if units[i] != -1 and re.search(ISMS_WORD, line)}  # -1 は空行
+    for no, sent in _sentences(lines):
+        if no in archive_lines or units[no - 1] not in with_isms:
+            continue
+        if not (VALIDITY_WORDS.search(sent) and DATE_RE.search(sent)):
+            continue
+        if not any(condition in line for i, line in enumerate(lines) if units[i] == units[no - 1]):
+            hits.append(_fact_hit("isms_validity_condition_missing", no, sent, f"ISMS の有効期間を書く文と同じ段落に、有効の条件「{rec['validity_condition']}」が要ります（記録の validity_condition。期限まで無条件に有効とは書かない）"))
+    return hits
+
+
 def _stale_hits(lines: list[str], rec: dict, archive_lines: frozenset[int], vocab: Vocab) -> list[Hit]:
     if rec["status"] != "registered":
         return []
@@ -479,6 +517,7 @@ def fact_hits(lines: list[str], facts: dict | None, as_of: date, archive_lines: 
         *_number_hits(lines, vocab),
         *_date_hits(lines, rec, vocab, archive_lines),
         *_stale_hits(lines, rec, archive_lines, vocab),
+        *_validity_condition_hits(lines, rec, archive_lines),
     ]
 
 

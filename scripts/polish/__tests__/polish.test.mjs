@@ -114,7 +114,8 @@ describe('場面の決定', () => {
   });
 });
 
-describe('検査', () => {
+// 各 it が lint の python3 を呼ぶ（scanGuardrails）ので、負荷のある環境でも落ちないよう上限を長めにとる
+describe('検査', { timeout: 30_000 }, () => {
   it('会社の文章の僕は不合格、代表の文章の僕は合格', () => {
     const box = sandbox();
     const company = box.write('src/content/blog/ja/co.md', { category: 'ai' }, '僕は試しに書きました。');
