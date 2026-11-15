@@ -3,6 +3,7 @@ title: "From Patch Release to Application: Considering Update Responsibilities, 
 description: "Using LiteLLM's patch distribution via private registries as a starting point, this article explores update responsibilities, application deadlines, and record-keeping for local LLMs. A guide for companies to separately verify the release of a patch and its application to their internal environment."
 summary: "LiteLLM reported difficulties in informing customers about the existence and acquisition methods of patches, as well as getting them applied. We believe that when operating local LLMs, it is equally important to decide who handles the process from patch release to application, the deadline for completion, and where to keep the records."
 pubDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"

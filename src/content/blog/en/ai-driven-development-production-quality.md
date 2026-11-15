@@ -3,14 +3,14 @@ title: "What Is AI-Driven Development? How to Build a Development System That Im
 description: "We explain the mindset for integrating AI-driven development into production quality across requirement definition, code review, testing, and operations—rather than stopping at mere code generation. This article is for companies looking to insource AI development."
 summary: "AI-driven development does not achieve production quality simply by having AI write code. It is crucial to integrate AI into each stage of the development process and establish a system where humans take responsibility for verification. When insourcing, you should start in areas where the scope of impact remains small even if failures occur."
 pubDate: 2026-06-11
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "engineering"
 tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "f1d8bb94ebf95feac283a95da2ffef273fd746dc5310cf552ac201eedfe4aecb"
+translationSourceHash: "c2ca9a534453dfff6d94cbdb47c3d5a3695f8b147a96a67f863cae644bfbb54d"
 translatedAt: "2026-10-23T06:14:52.477Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -28,7 +28,7 @@ At Cor.Inc., we do not view AI-driven development as "technology to reduce engin
 > - GitHub Octoverse 2025 reports that generative AI is becoming standardized in development, with 80% of new developers using Copilot within their first week on GitHub.
 > - The same report notes that in August 2025, TypeScript surpassed Python and JavaScript to become the most used language on GitHub.
 > - Cor.'s corporate website highlights an organizational commitment focused on quality and security, including local LLMs and zero-data-leakage development.
-> - The ISMS was certified in November 2026 (scope: “Contract development and operation of software”).
+> - Cor.'s ISMS obtained certification in November 2026 (scope: “Contract development and operation of software”).
 
 ## AI-Driven Development Is More Than Just Code Generation
 

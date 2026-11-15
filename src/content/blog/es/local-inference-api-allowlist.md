@@ -3,7 +3,7 @@ title: "Antes de usar una API de inferencia local en la empresa: diseño de aute
 description: "Antes de usar una API de inferencia local en la empresa, hay que diseñar por separado la autenticación, la lista de permitidos y la baja de equipos. La lista de permitidos indica con quién puede pasar el tráfico. Quién puede usarla para qué trabajo se decide aparte."
 summary: "La documentación oficial de Ollama dice que la API de localhost no exige autenticación. La lista de permitidos muestra con quién puede pasar el tráfico. Eso solo no decide quién puede usarla para qué trabajo. Responder a vulnerabilidades y gestionar los permisos no son cosas que se resuelvan con una sola de las dos."
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"

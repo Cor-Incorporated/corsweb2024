@@ -3,7 +3,7 @@ title: "Before using a local inference API inside the company: designing authent
 description: "Before using a local inference API inside the company, design authentication, an allow list and device retirement as separate things. An allow list shows which peer may be reached. Who may use it for which work is decided separately."
 summary: "The official description of Ollama says the localhost API does not require authentication. An allow list shows which peer the traffic may reach. That alone does not decide who may use it for which work. Responding to vulnerabilities and managing allow rules are not alternatives that replace each other."
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"
@@ -107,4 +107,4 @@ Whose device may reach it, from when, and until when. Being able to explain that
 
 - [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - the local API on localhost (port 11434) does not require authentication (checked on 27 October 2026)
 - [Ollama Docs: FAQ](https://docs.ollama.com/faq) - the section "How can I expose Ollama on my network?". By default it listens on 127.0.0.1 port 11434, and the environment variable `OLLAMA_HOST` changes the listen address (checked on 27 October 2026)
-- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated, that certification was obtained in November 2026 (scope: “Contract development and operation of software”)
+- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated and that certification was obtained in November 2026 (scope: “Contract development and operation of software”)

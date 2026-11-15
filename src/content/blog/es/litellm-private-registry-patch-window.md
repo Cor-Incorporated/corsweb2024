@@ -3,6 +3,7 @@ title: "Desde el lanzamiento de una corrección hasta su aplicación: responsabi
 description: "Tomando como referencia la distribución de correcciones en registros privados de LiteLLM, analizamos los responsables de actualización, los plazos de aplicación y el registro para LLM locales. Una guía empresarial para verificar por separado la publicación de correcciones y su aplicación en el entorno propio."
 summary: "LiteLLM informó de las dificultades que experimentó para notificar la existencia y el método de obtención de las correcciones, así como para lograr que los clientes las aplicaran. Consideramos que, en la operación de LLM locales, también se debe definir quién se encarga del proceso desde la publicación hasta la aplicación, en qué plazo debe realizarse y dónde debe registrarse."
 pubDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"

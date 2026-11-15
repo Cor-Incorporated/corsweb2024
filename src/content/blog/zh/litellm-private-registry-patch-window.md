@@ -3,6 +3,7 @@ title: "从修复版本发布到完成应用：以LiteLLM为例探讨更新的�
 description: "以LiteLLM在非公开镜像仓库中分发修复补丁为契机，探讨本地LLM的更新负责人、应用期限与记录方式。本文是面向企业提供的专业解析，旨在帮助企业明确区分补丁发布与在自社环境中的实际应用。"
 summary: "LiteLLM曾报告称，在告知客户补丁的存在与获取途径、并促使客户完成应用方面遇到了困难。我们认为，在本地LLM的运维中，同样应当预先明确：从补丁发布到实际应用由谁负责、在何时之前完成，以及记录在何处。"
 pubDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"

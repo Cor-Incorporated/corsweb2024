@@ -3,7 +3,7 @@ title: "ローカル推論APIを社内で使う前に。認証・許可リスト
 description: "ローカル推論APIを社内で使う前に、認証、許可リスト、端末の退役を分けて設計します。許可リストが示すのは、通信を通してよい相手です。誰が何の業務に使ってよいかは、別に決めます。"
 summary: "OllamaのlocalhostのAPIは、公式の説明では認証を必要としません。許可リストで分かるのは、通信を通してよい相手です。それだけで、誰が何の業務に使ってよいかまで決まるわけではありません。脆弱性への対応と、許可設定の管理は、どちらか一方では済みません。"
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"

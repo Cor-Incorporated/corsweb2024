@@ -3,7 +3,7 @@ title: "사내에서 로컬 추론 API를 쓰기 전에. 인증, 허가 목록, 
 description: "사내에서 로컬 추론 API를 쓰기 전에 인증, 허가 목록, 단말 퇴역을 나누어 설계합니다. 허가 목록이 보여주는 것은 통신을 통과시켜도 되는 상대입니다. 누가 어떤 업무에 써도 되는지는 따로 정합니다."
 summary: "Ollama의 localhost API는 공식 설명에서 인증을 요구하지 않습니다. 허가 목록으로 알 수 있는 것은 통신을 통과시켜도 되는 상대입니다. 그것만으로 누가 어떤 업무에 써도 되는지까지 정해지지는 않습니다. 취약점 대응과 허가 설정의 관리는 어느 한쪽만으로 끝나지 않습니다."
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"

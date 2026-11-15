@@ -3,14 +3,14 @@ title: "什么是AI驱动开发？不仅提升速度，更能提高生产环境�
 description: "本文讲解如何不让AI驱动开发仅仅停留在代码生成层面，而是将需求定义、代码审查、测试直至运维全面融入生产环境质量的理念。适合希望实现AI开发自研内制化的企业阅读。"
 summary: "AI驱动开发如果仅仅让AI编写代码，是无法达到生产环境品质的。关键在于将AI融入开发的各个环节，并建立由人工负责验证的体制。如果要推进内制化，应当从即使失败影响范围也较小的领域着手。"
 pubDate: 2026-06-11
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "engineering"
 tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "f1d8bb94ebf95feac283a95da2ffef273fd746dc5310cf552ac201eedfe4aecb"
+translationSourceHash: "c2ca9a534453dfff6d94cbdb47c3d5a3695f8b147a96a67f863cae644bfbb54d"
 translatedAt: "2026-10-23T06:18:05.244Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -28,7 +28,7 @@ translationModel: "gemini-3.8-flash"
 > - GitHub Octoverse 2025 报告指出，生成式 AI 正在成为软件开发的标准配置，80% 的新开发者在加入 GitHub 的首周内就使用了 Copilot。
 > - 该报告还总结道，TypeScript 于 2025 年 8 月超越 Python 和 JavaScript，成为 GitHub 上使用最广泛的语言。
 > - Cor. 官网上将本地 LLM、不泄露信息的开发等重视质量与安全性的体制，作为其核心主张。
-> - ISMS于2026年11月取得认证（认证范围为“软件的受托开发及运营”）。
+> - Cor.的ISMS于2026年11月取得认证（认证范围为“软件的受托开发及运营”）。
 
 ## AI 驱动开发绝非仅止于代码生成
 

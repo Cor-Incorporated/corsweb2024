@@ -3,6 +3,7 @@ title: "修正版が出てから適用するまで。LiteLLMから考える更�
 description: "LiteLLMの非公開レジストリでの修正配布を手がかりに、ローカルLLMの更新担当・適用期限・記録を考えます。修正の公開と、自社環境への適用を分けて確認するための会社向け解説です。"
 summary: "LiteLLMは、修正の存在と入手方法を知らせ、顧客に適用してもらうことに苦労したと報告しています。ローカルLLMの運用でも、修正の公開から適用までを誰が受け持ち、いつまでに行い、どこに記録するかを決めておくべきだと考えます。"
 pubDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"

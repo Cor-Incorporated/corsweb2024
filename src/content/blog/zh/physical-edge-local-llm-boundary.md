@@ -3,7 +3,7 @@ title: "现场的AI和公司文书的AI在哪里分开。Cor.株式会社的设�
 description: "在相机和传感器附近运行的现场AI，与处理公司文书的本地LLM，重视的条件不同。Cor.株式会社的方针是把验证环境分开。分开本身并不是安全的证明。"
 summary: "现场的AI和公司文书的AI都可以选择抑制向外部发送的构成。仅凭这一点，并不会把它们放进同一个环境。Cor.株式会社的方针是把物理推理的验证环境与处理公司文书的环境分开。这是为了说明连接范围和影响的设计判断，不是安全的证明。"
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "エッジAI", "セキュアAI", "設計"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "c0dffc711841c5230198f9379c32de278d15e7037f2cd654c28ab19a60ea875e"
+translationSourceHash: "70bbefd1309910bf715dfe6d65a73acc60696cb5015e7231462c2c34a20a4cf4"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -93,7 +93,7 @@ Cor.株式会社以劈西瓜这类使用身体的任务为题，做物理推理�
 
 改成本地之后，还要加上基础的物理管理和运用。自己要画的线会因此变多。把那些线一条一条说明清楚，是Cor.株式会社看重的地方。
 
-## 审查的状态
+## 认证的状态
 
 Cor.株式会社在运用ISMS。2026年11月取得了ISO/IEC 27001:2022认证。认证范围为“软件的受托开发及运营”。认证的状态和各个系统验证了什么，分开说明。
 

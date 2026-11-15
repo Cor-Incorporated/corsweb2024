@@ -3,7 +3,7 @@ title: "在公司里使用本地推理API之前。认证、许可列表和终端
 description: "在公司里使用本地推理API之前，把认证、许可列表和终端退役分开设计。许可列表表明的是通信可以通到的对方。谁可以把它们用于哪项业务，要另外决定。"
 summary: "按官方说明，Ollama的localhost API不需要认证。许可列表能知道的是通信可以通到的对方。仅凭这一点，并不能决定谁可以把它们用于哪项业务。漏洞应对和许可设置的管理，不是做了其中一方就够了。"
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"
