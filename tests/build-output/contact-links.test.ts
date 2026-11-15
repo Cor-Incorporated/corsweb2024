@@ -1,0 +1,200 @@
+// ビルド済み dist の、サイト内の問い合わせの link の検査（設定: vitest.dist.config.ts。`npm run build` の後に `npm run test:dist`）。
+// サイト内の問い合わせの入口は、問い合わせページ（/contact、/<lang>/contact）を通さず、Cloudia のチャット（/contact/chat/）へ
+// 直接向ける。行き先は src/config/site.ts の getContactUrl が作る（intent・source・locale を link 自身が運ぶ）。
+// 見るもの:
+// 1. 5 言語の全ページで、問い合わせページへの link（a・area・form・meta refresh）が 0
+// 2. チャットへの link は、どれも source を持ち、locale がそのページの言語
+// 3. 主な入口が、決まった source（と intent）でチャットへ向く
+// 問い合わせページ自身は残している（自分と、言語の切り替えで他の言語の問い合わせページを指す）ので、1 の対象から外す。
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { CLOUDIA_CHAT_PATH, isContactPagePath, normalizeSitePath } from '../../src/config/contact-guards';
+import jaJson from '../../src/i18n/locales/ja.json';
+import enJson from '../../src/i18n/locales/en.json';
+
+const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
+const ORIGIN = 'https://cor-jp.com';
+const NON_JA = ['en', 'zh', 'ko', 'es'] as const;
+type Locale = 'ja' | (typeof NON_JA)[number];
+
+// 記事の本文（Markdown）の中の、問い合わせページへの link。この変更の外で、記事を直す変更で外す。
+// 記事を直したら、ここからも外す（下の「まだ持つ」の試験が、外し忘れを落とす）。
+const ARTICLES_OUTSIDE_THIS_CHANGE = [
+  'ai-business-case-ringi-document',
+  'ai-development-estimate-knowledge-asset',
+  'complete-markdown-guide',
+] as const;
+const articlePaths = new Set(
+  ARTICLES_OUTSIDE_THIS_CHANGE.flatMap((slug) => [`/blog/${slug}/`, ...NON_JA.map((locale) => `/${locale}/blog/${slug}/`)]),
+);
+
+interface Link {
+  kind: string;
+  raw: string;
+  url: URL;
+}
+
+function htmlFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return htmlFiles(full);
+    return entry.name.endsWith('.html') ? [full] : [];
+  });
+}
+
+/** dist の file から、そのページの path（/en/company/ など。404.html はそのまま） */
+function pagePathOf(file: string): string {
+  const relative = path.relative(DIST_DIR, file).split(path.sep).join('/');
+  return relative.endsWith('index.html') ? `/${relative.slice(0, -'index.html'.length)}` : `/${relative}`;
+}
+
+function localeOf(pagePath: string): Locale {
+  const first = pagePath.split('/')[1];
+  return (NON_JA as readonly string[]).includes(first) ? (first as Locale) : 'ja';
+}
+
+function decode(value: string): string {
+  return value
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+const ATTRIBUTE = String.raw`(?:"([^"]*)"|'([^']*)'|([^\s>]+))`;
+const LINK_PATTERNS: ReadonlyArray<{ kind: string; pattern: RegExp }> = [
+  { kind: 'a', pattern: new RegExp(String.raw`<a\b[^>]*?\shref=${ATTRIBUTE}`, 'gi') },
+  { kind: 'area', pattern: new RegExp(String.raw`<area\b[^>]*?\shref=${ATTRIBUTE}`, 'gi') },
+  { kind: 'form', pattern: new RegExp(String.raw`<form\b[^>]*?\saction=${ATTRIBUTE}`, 'gi') },
+];
+const META_REFRESH = new RegExp(String.raw`<meta\b(?=[^>]*http-equiv=["']?refresh)[^>]*?\scontent=${ATTRIBUTE}`, 'gi');
+
+/** ページの中の、同じ origin へ向く link（a・area・form と meta refresh の URL） */
+function sameOriginLinks(html: string, pagePath: string): Link[] {
+  const base = new URL(pagePath, ORIGIN);
+  const links: Link[] = [];
+  const push = (kind: string, raw: string) => {
+    const value = decode(raw).trim();
+    if (!value || /^(?:mailto|tel|javascript|data):/i.test(value) || value.startsWith('#')) return;
+    const url = new URL(value, base);
+    if (url.origin === ORIGIN) links.push({ kind, raw: value, url });
+  };
+  for (const { kind, pattern } of LINK_PATTERNS) {
+    for (const match of html.matchAll(pattern)) push(kind, match[1] ?? match[2] ?? match[3] ?? '');
+  }
+  for (const match of html.matchAll(META_REFRESH)) {
+    const target = decode(match[1] ?? match[2] ?? match[3] ?? '').match(/url\s*=\s*['"]?([^'"]+)/i)?.[1];
+    if (target) push('meta', target);
+  }
+  return links;
+}
+
+const isChatLink = (link: Link) => normalizeSitePath(link.url.pathname) === normalizeSitePath(CLOUDIA_CHAT_PATH);
+
+const files = existsSync(DIST_DIR) ? htmlFiles(DIST_DIR) : [];
+const pages = files.map((file) => {
+  const pagePath = pagePathOf(file);
+  return { pagePath, locale: localeOf(pagePath), links: sameOriginLinks(readFileSync(file, 'utf8'), pagePath) };
+});
+const byPath = new Map(pages.map((page) => [page.pagePath, page]));
+
+function chatLinksOn(pagePath: string): Link[] {
+  const page = byPath.get(pagePath);
+  expect(page, `${pagePath} が dist に無い`).toBeTruthy();
+  return (page?.links ?? []).filter(isChatLink);
+}
+
+const describeLink = (link: Link) => {
+  const { searchParams } = link.url;
+  return { source: searchParams.get('source'), intent: searchParams.get('intent'), locale: searchParams.get('locale') };
+};
+
+describe('サイト内の問い合わせの link（Cloudia のチャットへ直接）', () => {
+  it('dist がある', () => {
+    expect(existsSync(DIST_DIR), `${DIST_DIR} が無い。先に npm run build を実行する`).toBe(true);
+    expect(pages.length, 'dist の HTML が少なすぎる').toBeGreaterThan(500);
+  });
+
+  it('5 言語の全ページで、問い合わせページへの link が 0（問い合わせページ自身と、この変更の外の記事を除く）', () => {
+    const found = pages
+      .filter((page) => !isContactPagePath(page.pagePath) && !articlePaths.has(page.pagePath))
+      .flatMap((page) =>
+        page.links.filter((link) => isContactPagePath(link.url.pathname)).map((link) => `${page.pagePath} → ${link.kind} ${link.raw}`),
+      );
+    expect(found).toEqual([]);
+  });
+
+  it('この変更の外の記事は、まだ問い合わせページへの link を持つ（記事を直したら、表から外す）', () => {
+    const stale = [...articlePaths].filter(
+      (pagePath) => !(byPath.get(pagePath)?.links ?? []).some((link) => isContactPagePath(link.url.pathname)),
+    );
+    expect(stale, 'dist に無いか、もう問い合わせページへの link が無い記事').toEqual([]);
+  });
+
+  it('チャットへの link は、どれも source を持ち、locale がそのページの言語', () => {
+    const wrong = pages
+      .filter((page) => !page.pagePath.startsWith(CLOUDIA_CHAT_PATH))
+      .flatMap((page) =>
+        page.links
+          .filter(isChatLink)
+          .filter((link) => !link.url.searchParams.get('source') || link.url.searchParams.get('locale') !== page.locale)
+          .map((link) => `${page.pagePath}（${page.locale}）→ ${link.raw}`),
+      );
+    expect(wrong).toEqual([]);
+  });
+
+  // 主な入口と、そこから出る source（と intent）。問い合わせページを通していた頃は、source の無い入口は
+  // ページの主ボタンの corsweb-contact-primary になっていた。今は入口ごとに付ける。
+  const ENTRIES: ReadonlyArray<{ name: string; pagePath: string; expected: ReadonlyArray<Partial<ReturnType<typeof describeLink>>> }> = [
+    {
+      name: 'ja のトップ（ヘッダー・最初の画面・締め・フッター）',
+      pagePath: '/',
+      expected: [
+        { source: 'header', locale: 'ja' },
+        { source: 'header-quick', locale: 'ja' },
+        { source: 'home-hero', intent: 'confidential-ai-assessment', locale: 'ja' },
+        ...jaJson.finalCta.items
+          .filter((item) => !item.intent.startsWith('grift'))
+          .map((item) => ({ source: 'final-cta', intent: item.intent, locale: 'ja' })),
+        { source: 'footer', locale: 'ja' },
+      ],
+    },
+    {
+      name: 'en のトップ',
+      pagePath: '/en/',
+      expected: [
+        { source: 'header', locale: 'en' },
+        { source: 'home-hero', intent: 'confidential-ai-assessment', locale: 'en' },
+        ...enJson.finalCta.items
+          .filter((item) => !item.intent.startsWith('grift'))
+          .map((item) => ({ source: 'final-cta', intent: item.intent, locale: 'en' })),
+        { source: 'footer', locale: 'en' },
+      ],
+    },
+    { name: 'ja の会社概要', pagePath: '/company/', expected: [{ source: 'company', locale: 'ja' }] },
+    { name: 'zh の会社概要', pagePath: '/zh/company/', expected: [{ source: 'company', locale: 'zh' }] },
+    { name: 'en の About', pagePath: '/en/about/', expected: [{ source: 'about', locale: 'en' }] },
+    { name: 'ja のセキュリティ', pagePath: '/security/', expected: [{ source: 'security', locale: 'ja' }] },
+    { name: 'ko のセキュリティ', pagePath: '/ko/security/', expected: [{ source: 'security', locale: 'ko' }] },
+    { name: 'ja の投げ銭の取り消し', pagePath: '/tip-cancelled/', expected: [{ source: 'tip-cancelled', locale: 'ja' }] },
+    { name: 'es の投げ銭の取り消し', pagePath: '/es/tip-cancelled/', expected: [{ source: 'tip-cancelled', locale: 'es' }] },
+    { name: 'ja の実績の一覧', pagePath: '/works/', expected: [{ source: 'works-next', intent: 'confidential-ai-assessment', locale: 'ja' }] },
+    { name: 'ja の実績の記事', pagePath: '/works/grift/', expected: [{ source: 'works/grift', locale: 'ja' }] },
+    { name: 'ja の取材のページ', pagePath: '/news/press/', expected: [{ source: 'press-page', intent: 'press-speaking-other', locale: 'ja' }] },
+    {
+      name: 'ja のブログの記事',
+      pagePath: '/blog/complete-markdown-guide/',
+      expected: [{ source: 'blog/complete-markdown-guide', locale: 'ja' }],
+    },
+  ];
+
+  it.each(ENTRIES)('主な入口: $name', ({ pagePath, expected }) => {
+    const found = chatLinksOn(pagePath).map(describeLink);
+    const missing = expected.filter(
+      (want) => !found.some((have) => Object.entries(want).every(([key, value]) => have[key as keyof typeof have] === value)),
+    );
+    expect(missing, `${pagePath} のチャットへの link: ${JSON.stringify(found)}`).toEqual([]);
+  });
+});

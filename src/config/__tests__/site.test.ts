@@ -39,14 +39,23 @@ describe('getGriftUrl / getContactUrl (ADR-0010)', () => {
     expect(u.searchParams.get('utm_source')).toBe('cor');
   });
 
-  it('getContactUrl localizes path and intent', async () => {
+  it('getContactUrl は問い合わせページを通さず、チャットへ intent・source・locale を渡す', async () => {
     const { getContactUrl } = await loadSite();
     expect(getContactUrl('ja', { intent: 'confidential-ai-assessment', source: 'header' })).toBe(
-      '/contact?intent=confidential-ai-assessment&source=header',
+      '/contact/chat/?intent=confidential-ai-assessment&source=header&locale=ja',
     );
+    // path は言語で変わらず、言語は locale で渡す
     expect(getContactUrl('en', { intent: 'local-llm-poc' })).toBe(
-      '/en/contact?intent=local-llm-poc',
+      '/contact/chat/?intent=local-llm-poc&locale=en',
     );
+    expect(getContactUrl('zh', { source: 'footer' })).toBe('/contact/chat/?source=footer&locale=zh');
+    expect(getContactUrl('ko')).toBe('/contact/chat/?locale=ko');
+    // source の「/」も壊さずに運ぶ（ブログの記事の blog/<slug>）
+    const url = new URL(getContactUrl('es', { intent: 'contract-dev', source: 'blog/some-post' }), 'https://example.test');
+    expect(url.pathname).toBe('/contact/chat/');
+    expect(url.searchParams.get('source')).toBe('blog/some-post');
+    expect(url.searchParams.get('locale')).toBe('es');
+    expect(url.searchParams.has('embed')).toBe(false);
   });
 
   it('resolveExternalHref rewrites grift sentinel and absolute griftai URLs', async () => {
@@ -155,7 +164,7 @@ describe('ContactIntent 7 keys (ADR-0014 / #250)', () => {
     expect(isContactIntent('nope')).toBe(false);
     expect([...AUTO_HANDOFF_INTENTS]).toEqual(['contract-dev']);
     expect(getContactUrl('ja', { intent: 'contract-dev', source: 'header-ai-dev' })).toBe(
-      '/contact?intent=contract-dev&source=header-ai-dev',
+      '/contact/chat/?intent=contract-dev&source=header-ai-dev&locale=ja',
     );
   });
 });

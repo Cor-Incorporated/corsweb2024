@@ -17,7 +17,7 @@ import { buildServiceJsonLd } from '../../utils/structured-data';
 // どんな業務がよくなるか → 業種ごとのよくあるテーマ → 止まっているところ → 言葉 → 進め方 → 手元に残るもの →
 // 費用 → 実績 → ほかのサービス → 最後に 1 か所だけ相談の CTA。
 // 技術の言葉（ローカルLLM・PoC など）で始めない（読み手はエンジニアではない決裁者。ADR-0024 の 2）。サービス名は見出しの上の小さなラベルにする。
-// 以前はヘッダーの「サービス」から intent 付きの /contact へ直行していた。読んでから Cloudia へつなぐ。
+// 以前はヘッダーの「サービス」から intent 付きの問い合わせページへ直行していた。読んでから Cloudia へつなぐ。
 interface Props {
   serviceKey: ServiceKey;
 }
@@ -350,7 +350,7 @@ const serviceJsonLd = buildServiceJsonLd(currentLocale, {
   </div>
 </section>
 
-<!-- 10. CTA（ページの最後に 1 か所だけ。intent 付きで /contact の Cloudia へ） -->
+<!-- 10. CTA（ページの最後に 1 か所だけ。intent 付きで Cloudia のチャットへ） -->
 <section class="pb-24 sm:pb-32">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
     <div

@@ -1,6 +1,7 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+import { getContactUrl } from '../../config/site';
 import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
 
@@ -52,9 +53,10 @@ const bottomLinks = [
         href: getLocalizedUrl('/news', currentLocale),
         isExternal: false,
       },
+      // 問い合わせは Cloudia のチャットへ直接向ける（問い合わせページは通さない）
       {
         name: t.footer.links.contact,
-        href: getLocalizedUrl('/contact', currentLocale),
+        href: getContactUrl(currentLocale, { source: 'footer' }),
         isExternal: false,
       },
     ],

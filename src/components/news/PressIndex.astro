@@ -16,11 +16,8 @@ const { entries } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-// チャット窓口 (/contact/chat/) は ja にしか存在しないため、非ja は各言語の /contact に intent 付きで送る。
-const pressContactHref =
-  currentLocale === 'ja'
-    ? '/contact/chat/?intent=press-speaking-other&source=press-page'
-    : getContactUrl(currentLocale, { intent: 'press-speaking-other', source: 'press-page' });
+// 問い合わせは Cloudia のチャットへ直接向ける（問い合わせページは通さない）。5 言語とも同じ形で、locale はそのページの言語。
+const pressContactHref = getContactUrl(currentLocale, { intent: 'press-speaking-other', source: 'press-page' });
 
 const pageUrl = new URL(getLocalizedUrl('/news/press/', currentLocale), Astro.site).toString();
 const jsonLd = {

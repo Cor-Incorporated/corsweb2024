@@ -2,7 +2,7 @@
  * サイト横断の URL / 環境ヘルパ（ADR-0010 / ADR-0011）。
  * 外部ドメインや intent 付き CTA はここ経由のみにする。
  */
-import { getLocalizedUrl, type Locale } from '../utils/i18n';
+import type { Locale } from '../utils/i18n';
 
 /**
  * ADR-0014 intent 正本（7 キー）。
@@ -124,14 +124,18 @@ export type ContactUrlOptions = {
   source?: string;
 };
 
-/** Cor /contact への locale + intent 付き URL */
+/**
+ * サイト内の問い合わせの入口から、Cloudia のチャット（/contact/chat/）へ直接向ける URL。
+ * 問い合わせページ（/contact、/<lang>/contact）は通さない。
+ * path は言語で変えず、言語は locale で渡す（浮きボタン CloudiaLauncher と業種のページと同じ形）。
+ * 枠の中で開くための embed は付けない（枠の中で開くのは浮きボタンだけ）。
+ */
 export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): string {
-  const base = getLocalizedUrl('/contact', locale);
   const params = new URLSearchParams();
   if (opts.intent) params.set('intent', opts.intent);
   if (opts.source) params.set('source', opts.source);
-  const qs = params.toString();
-  return qs ? `${base}?${qs}` : base;
+  params.set('locale', locale);
+  return `/contact/chat/?${params.toString()}`;
 }
 
 /**

@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import NextStep from '../../components/common/NextStep.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import { getContactUrl } from '../../config/site';
 
 const locale = Astro.props.locale || getCurrentLocale(Astro.url);
 const t = getTranslations(locale);
@@ -103,6 +104,6 @@ const t = getTranslations(locale);
 
   <NextStep
     heading={t.nextStep.security.heading}
-    ctas={[{ label: t.nextStep.security.ctaLabel, href: getLocalizedUrl('/contact', locale), primary: true }]}
+    ctas={[{ label: t.nextStep.security.ctaLabel, href: getContactUrl(locale, { source: 'security' }), primary: true }]}
   />
 </Layout>

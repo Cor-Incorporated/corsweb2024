@@ -186,8 +186,12 @@ describe('トップからのリンク先 (#414)', () => {
     expect(hrefs.length, '本文にサイト内リンクが無い').toBeGreaterThan(0);
     expect(hrefs.filter((href) => !existsInDist(href)), 'dist に無いリンク先').toEqual([]);
     if (locale !== 'ja') {
-      // 代表の物語は、訳がまだない言語では ja の記事へ戻す決まり（src/utils/founder-story.ts）なので除く
-      const otherLocale = hrefs.filter((href) => !href.startsWith(`/${locale}/`) && href !== `/${locale}` && !href.includes('/blog/founder-story'));
+      // 代表の物語は、訳がまだない言語では ja の記事へ戻す決まり（src/utils/founder-story.ts）なので除く。
+      // Cloudia のチャット（/contact/chat/）は 1 つの path で、言語は query の locale で渡すので除く
+      // （locale がそのページの言語であることは tests/build-output/contact-links.test.ts が見る）。
+      const otherLocale = hrefs.filter(
+        (href) => !href.startsWith(`/${locale}/`) && href !== `/${locale}` && !href.includes('/blog/founder-story') && href !== '/contact/chat/',
+      );
       expect(otherLocale, `/${locale}/ で始まらないリンク`).toEqual([]);
     }
   });
