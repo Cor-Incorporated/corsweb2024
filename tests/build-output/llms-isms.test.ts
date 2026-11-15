@@ -1,5 +1,5 @@
 // ビルド済み dist の /llms.txt の ISMS の検査（設定: vitest.dist.config.ts。`npm run build` の後に `npm run test:dist`）。
-// 公開の /llms.txt に、ISMS の登録前の書き方が残っていないこと（独立査読 PR #527 の HIGH-1）。
+// 公開の /llms.txt に、ISMS の登録前の書き方が残っていないこと。
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';

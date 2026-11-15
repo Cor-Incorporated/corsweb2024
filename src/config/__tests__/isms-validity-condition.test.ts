@@ -3,7 +3,6 @@
  * 5 言語の ISMS の「有効期間」の文は、有効の条件を併記する。
  * 記録（#532 の facts.json）は、有効期間を「有効期間中の維持審査にて登録の継続が認められる限り有効」の条件つきでだけ許し、
  * 期限（2029年11月7日）まで無条件に有効とは書かない。条件の文を消す・一部の言語だけ消すと落ちる。
- * 独立査読（PR #527 の head d4382a7）の MEDIUM-3。
  */
 import { describe, expect, it } from 'vitest';
 import en from '../../i18n/locales/en.json';

@@ -2,7 +2,7 @@
 /**
  * /llms.txt（回答エンジン・取引先が読む入口）の ISMS の行が、会社概要と同じ登録済みの事実であること。
  * ISMS の登録前の書き方（「登録前のため取得済みではない」「2026年12月ごろの認証登録見込み」）が戻ると落ちる。
- * 独立査読（PR #527 の head d4382a7）の HIGH-1: llms.txt だけが登録前の表記のまま残っていた。
+ * 会社概要などは登録済みの書き方なのに、llms.txt だけが登録前の表記のまま残る、という食い違いを防ぐ。
  * ビルドした出力の検査は tests/build-output/llms-isms.test.ts。
  */
 import { describe, expect, it } from 'vitest';
