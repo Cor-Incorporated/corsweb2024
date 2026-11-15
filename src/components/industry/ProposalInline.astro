@@ -1,0 +1,25 @@
+---
+// 文の中の文字とリンク（proposal-schema.ts の Rich）。リンク先は proposal-links.ts の inline から引く。
+// 日本語の文の途中に空白が入らないよう、出力は 1 行で書く。
+import type { IndustrySlug } from '../../config/industry-context';
+import { getCurrentLocale } from '../../utils/i18n';
+import { PROPOSAL_LINKS, isInternalHref, resolveProposalHref } from './proposal-links';
+import type { Rich } from './proposal-schema';
+
+interface Props {
+  value: Rich;
+  industry: IndustrySlug;
+}
+
+const { value, industry } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const inline: Readonly<Record<string, string>> = PROPOSAL_LINKS[industry].inline;
+const parts = (typeof value === 'string' ? [value] : value).map((part) => {
+  if (typeof part === 'string') return { text: part, href: undefined, external: false };
+  const target = inline[part.link];
+  return { text: part.text, href: resolveProposalHref(target, locale), external: !isInternalHref(target) };
+});
+const linkClass =
+  'font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600';
+---
+{parts.map((part) => part.href ? (part.external ? <a href={part.href} class={linkClass} target="_blank" rel="noopener noreferrer">{part.text}</a> : <a href={part.href} class={linkClass}>{part.text}</a>) : part.text)}
