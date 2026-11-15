@@ -4,8 +4,10 @@
 //  - 下へスクロールして入る要素は、窓の下 12% では待ち、それより上に入ったらふわっと出る。
 //  - 下へのスクロールの途中でなければ、窓の中に在る要素は出ている（上へ戻った後・一気に上へ移った後・
 //    配置が変わった後）。窓が低いと、ヒーローの主ボタンは下 12% に在る。
-//  - 窓から出きった要素は隠れる（次に入ったとき、また演出がかかる）。
-// 「窓の中」は、隠れている間のずれ（transform）を除いた位置（offsetTop）で決める。
+//  - 窓から出きった要素は隠れる（次に入ったとき、また演出がかかる）。窓の下に在る要素は、スクロールで
+//    入るまで隠れている。
+// 「窓の中」は、隠れている間のずれ（transform）を除いた位置（offsetTop）で決める。script は判定を
+// ずれと縮みの分（50px ほど）だけ下へ広げるので、「窓の下」は窓の下の端から BELOW_MARGIN_PX より下とする。
 //
 // 動かし方（ビルド結果で測る。first-view.spec.ts と同じ変数）:
 //   npm run build
@@ -16,6 +18,7 @@ import { expect, test, type Browser, type Page, type TestInfo } from '@playwrigh
 // 演出は最大 0.5s 遅れて 0.6s かけて出る。出終わるのを待つ時間
 const SETTLE_MS = 1500;
 const PRIMARY_CTA_SELECTOR = '[data-hero-primary-cta]';
+const BELOW_MARGIN_PX = 120;
 
 interface InViewHidden {
   text: string;
@@ -27,11 +30,12 @@ interface RevealState {
   scrollY: number;
   innerHeight: number;
   hiddenInView: InViewHidden[];
+  visibleBelow: InViewHidden[];
   ctaOpacity: number | null;
 }
 
-// 窓の中に（1px 以上）在るのに、演出で隠れたままの要素と、主ボタンの opacity
-function readRevealState(ctaSelector: string): RevealState {
+// 窓の中に（1px 以上）在るのに、演出で隠れたままの要素、窓の下に在るのに出ている要素、主ボタンの opacity
+function readRevealState({ ctaSelector, belowMargin }: { ctaSelector: string; belowMargin: number }): RevealState {
   const h = window.innerHeight;
   const layoutTop = (el: HTMLElement) => {
     let top = 0;
@@ -45,6 +49,12 @@ function readRevealState(ctaSelector: string): RevealState {
       return { text: (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 24), top, bottom: top + el.offsetHeight };
     })
     .filter((r) => r.top < h && r.bottom > 0);
+  const visibleBelow = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal].reveal-ready.is-visible'))
+    .filter((el) => el.getClientRects().length > 0 && layoutTop(el) > h + belowMargin)
+    .map((el) => {
+      const top = layoutTop(el);
+      return { text: (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 24), top, bottom: top + el.offsetHeight };
+    });
   const cta = document.querySelector<HTMLElement>(ctaSelector);
   let ctaOpacity: number | null = null;
   if (cta && cta.getClientRects().length > 0 && layoutTop(cta) < h && layoutTop(cta) + cta.offsetHeight > 0) {
@@ -52,8 +62,11 @@ function readRevealState(ctaSelector: string): RevealState {
     for (let node: HTMLElement | null = cta; node; node = node.parentElement) ctaOpacity *= Number(getComputedStyle(node).opacity);
     ctaOpacity = Math.round(ctaOpacity * 100) / 100;
   }
-  return { scrollY: Math.round(window.scrollY), innerHeight: h, hiddenInView, ctaOpacity };
+  return { scrollY: Math.round(window.scrollY), innerHeight: h, hiddenInView, visibleBelow, ctaOpacity };
 }
+
+const readState = (page: Page) =>
+  page.evaluate(readRevealState, { ctaSelector: PRIMARY_CTA_SELECTOR, belowMargin: BELOW_MARGIN_PX });
 
 async function open(browser: Browser, testInfo: TestInfo, pathname: string, width: number, height: number) {
   const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
@@ -91,45 +104,78 @@ async function wheelToTop(page: Page, height: number) {
 const jumpTo = (page: Page, top: number) =>
   page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior }), top);
 
-const RETURN_CASES = [
-  { pathname: '/', width: 1366, height: 657 },
-  { pathname: '/', width: 1280, height: 609 },
-  { pathname: '/en/', width: 1280, height: 609 },
-  { pathname: '/', width: 1536, height: 730 },
-  { pathname: '/', width: 375, height: 667 },
-  { pathname: '/services/confidential-ai-assessment/', width: 1920, height: 953 },
-] as const;
+async function wheelBy(page: Page, dy: number, times: number, waitMs: number) {
+  for (let i = 0; i < times; i += 1) {
+    await page.mouse.wheel(0, dy);
+    await page.waitForTimeout(waitMs);
+  }
+}
 
-const RETURN_WAYS = {
-  '下まで回して、少しずつ上へ戻る': async (page: Page, height: number) => {
-    await wheelToBottom(page, height);
-    await wheelToTop(page, height);
+type ReturnWay = (page: Page, height: number) => Promise<void>;
+
+const RETURN_WAYS: Record<string, ReturnWay> = {
+  '500px 下へ行き、100px ずつゆっくり戻る': async (page) => {
+    await wheelBy(page, 100, 5, 300);
+    await wheelBy(page, -100, 6, 300);
   },
-  '下まで回して、一気に上へ移る': async (page: Page, height: number) => {
+  '2000px 下へ行き、200px ずつ速めに戻る': async (page) => {
+    await wheelBy(page, 200, 10, 150);
+    await wheelBy(page, -200, 11, 150);
+  },
+  '下まで回して、Home キーで戻る': async (page, height) => {
+    await wheelToBottom(page, height);
+    await page.keyboard.press('Home');
+  },
+  '下まで回して、一気に上へ移る': async (page, height) => {
     await wheelToBottom(page, height);
     await jumpTo(page, 0);
   },
-} as const;
+  '300px 下へ行き、一気に上へ移る': async (page) => {
+    await wheelBy(page, 100, 3, 300);
+    await jumpTo(page, 0);
+  },
+  '下まで回して、少しずつ上へ戻る': async (page, height) => {
+    await wheelToBottom(page, height);
+    await wheelToTop(page, height);
+  },
+};
+
+// ブラウザの枠とタスクバーを引いたパソコンの窓は、戻り方を 6 通り。ほかは、下まで回す 2 通り
+const PC_WINDOWS = [
+  { pathname: '/', width: 1366, height: 657 },
+  { pathname: '/en/', width: 1280, height: 609 },
+  { pathname: '/', width: 1536, height: 730 },
+];
+const OTHER_CASES = [
+  { pathname: '/', width: 1280, height: 609 },
+  { pathname: '/', width: 375, height: 667 },
+  { pathname: '/services/confidential-ai-assessment/', width: 1920, height: 953 },
+];
+const RETURN_CASES = [
+  ...PC_WINDOWS.flatMap((c) => Object.keys(RETURN_WAYS).map((way) => ({ ...c, way }))),
+  ...OTHER_CASES.flatMap((c) => ['下まで回して、少しずつ上へ戻る', '下まで回して、一気に上へ移る'].map((way) => ({ ...c, way }))),
+];
 
 for (const c of RETURN_CASES) {
-  for (const [way, act] of Object.entries(RETURN_WAYS)) {
-    test(`${c.pathname} ${c.width}x${c.height}: ${way}と、窓の中の演出の要素が出ている`, async ({ browser }, testInfo) => {
-      test.setTimeout(120_000);
-      const { context, page } = await open(browser, testInfo, c.pathname, c.width, c.height);
-      try {
-        const atLoad = await page.evaluate(readRevealState, PRIMARY_CTA_SELECTOR);
-        expect(atLoad.hiddenInView, `読み込みの後に窓の中で隠れている要素（${JSON.stringify(atLoad)}）`).toEqual([]);
-        await act(page, c.height);
-        await page.waitForTimeout(SETTLE_MS);
-        const back = await page.evaluate(readRevealState, PRIMARY_CTA_SELECTOR);
-        expect(back.scrollY, '上まで戻れていない').toBe(0);
-        expect(back.hiddenInView, `戻った後に窓の中で隠れている要素（${JSON.stringify(back)}）`).toEqual([]);
-        if (back.ctaOpacity !== null) expect(back.ctaOpacity, '戻った後の主ボタンの opacity').toBeGreaterThanOrEqual(0.99);
-      } finally {
-        await context.close();
-      }
-    });
-  }
+  test(`${c.pathname} ${c.width}x${c.height}: ${c.way}と、窓の中の演出の要素が出ていて、窓の下の要素は隠れている`, async ({ browser }, testInfo) => {
+    test.setTimeout(120_000);
+    const { context, page } = await open(browser, testInfo, c.pathname, c.width, c.height);
+    try {
+      const atLoad = await readState(page);
+      expect(atLoad.hiddenInView, `読み込みの後に窓の中で隠れている要素（${JSON.stringify(atLoad)}）`).toEqual([]);
+      expect(atLoad.visibleBelow, `読み込みの後に窓の下で出ている要素（${JSON.stringify(atLoad)}）`).toEqual([]);
+      await RETURN_WAYS[c.way](page, c.height);
+      await page.waitForFunction(() => window.scrollY === 0, null, { timeout: 10_000 }).catch(() => undefined);
+      await page.waitForTimeout(SETTLE_MS);
+      const back = await readState(page);
+      expect(back.scrollY, '上まで戻れていない').toBe(0);
+      expect(back.hiddenInView, `戻った後に窓の中で隠れている要素（${JSON.stringify(back)}）`).toEqual([]);
+      expect(back.visibleBelow, `戻った後に窓の下で出ている要素（${JSON.stringify(back)}）`).toEqual([]);
+      if (back.ctaOpacity !== null) expect(back.ctaOpacity, '戻った後の主ボタンの opacity').toBeGreaterThanOrEqual(0.99);
+    } finally {
+      await context.close();
+    }
+  });
 }
 
 // 読み込んだ時に窓の外（下）に在る、低い演出の要素を 1 つ選び、文書の中の上端と高さを返す
@@ -261,7 +307,7 @@ test('背の高い要素の上端が窓の下の端に 1px 入った所へ一気
     expect((await probeState(page)).visible, '下の端へ移った後、窓の上へ出きった要素が表示のまま').toBe(false);
     await jumpTo(page, picked!.top - height + 1);
     await page.waitForTimeout(SETTLE_MS);
-    const state = await page.evaluate(readRevealState, PRIMARY_CTA_SELECTOR);
+    const state = await readState(page);
     expect((await probeState(page)).visible, `上端が窓に 1px 入った要素が隠れたまま（${JSON.stringify({ picked, state })}）`).toBe(true);
     expect(state.hiddenInView, '窓の中で隠れている要素').toEqual([]);
   } finally {
