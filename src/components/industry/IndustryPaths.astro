@@ -31,7 +31,10 @@ if (namedCaseSlug && !namedCase) {
   throw new Error(`業種 ${industry} の関連実績「${namedCaseSlug}」が無い`);
 }
 
-const industryListHref = `${getLocalizedUrl('/', currentLocale)}#home-industry-entry`;
+// その言語のトップの業種の入口。path は末尾の / まで書く（getLocalizedUrl('/', 'en') は '/en' を返す）。
+// /en は本番（Firebase Hosting）で /en/ へ転送され、ページ遷移（ViewTransitions）の間に hash が落ちて入口に着かない。
+const homePath = getLocalizedUrl('/', currentLocale);
+const industryListHref = `${homePath.endsWith('/') ? homePath : `${homePath}/`}#home-industry-entry`;
 ---
 
 <nav class="pb-4 sm:pb-8" aria-label={t.nav.services} data-industry-paths={source}>
