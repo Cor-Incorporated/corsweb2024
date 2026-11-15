@@ -24,12 +24,12 @@ export type DailyModelCallDecision = 'reserved' | 'limited';
 
 const RESERVE_SQL = `INSERT INTO chat_daily_usage (day, model_calls, updated_at) VALUES (?1, 1, ?3)
   ON CONFLICT(day) DO UPDATE SET model_calls = chat_daily_usage.model_calls + 1, updated_at = excluded.updated_at
-  WHERE chat_daily_usage.model_calls < ?2
-  RETURNING model_calls`;
+  WHERE chat_daily_usage.model_calls < ?2`;
 
 /**
  * その日の数を 1 つ足せたら 'reserved'（model を 1 回呼んでよい）。上限に達していたら足さずに 'limited'。
- * 足すのと比べるのを 1 文で行うので、同時の要求でも上限を越えない。D1 の誤りはそのまま投げる（呼ぶ側が止める）。
+ * 足すのと比べるのを 1 文で行うので、同時の要求でも上限を越えない。足せたかは、書いた行の数（meta.changes）で
+ * 読む（storage.ts の取り込みの判定と同じ読み方）。D1 の誤りはそのまま投げる（呼ぶ側が止める）。
  */
 export async function reserveDailyModelCall(
   db: D1Database,
@@ -37,9 +37,9 @@ export async function reserveDailyModelCall(
   nowMs: number,
 ): Promise<DailyModelCallDecision> {
   if (limit <= 0) return 'limited';
-  const row = await db
+  const result = await db
     .prepare(RESERVE_SQL)
     .bind(jstDay(nowMs), limit, Math.floor(nowMs / 1000))
-    .first<{ model_calls: number }>();
-  return row ? 'reserved' : 'limited';
+    .run();
+  return Number(result.meta?.changes ?? 0) > 0 ? 'reserved' : 'limited';
 }
