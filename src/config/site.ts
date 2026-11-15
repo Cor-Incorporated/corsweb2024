@@ -2,7 +2,7 @@
  * サイト横断の URL / 環境ヘルパ（ADR-0010 / ADR-0011）。
  * 外部ドメインや intent 付き CTA はここ経由のみにする。
  */
-import type { Locale } from '../utils/i18n';
+import { getLocalizedUrl, type Locale } from '../utils/i18n';
 
 /**
  * ADR-0014 intent 正本（7 キー）。
@@ -125,15 +125,31 @@ export type ContactUrlOptions = {
 };
 
 /**
- * サイト内の問い合わせの入口から、Cloudia のチャット（/contact/chat/）へ直接向ける URL。
- * 問い合わせページ（/contact、/<lang>/contact）は通さない。
+ * 問い合わせの入口を Cloudia のチャットへ向けるか。build 時の旗 PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED（既定は真）。
+ * src/config/contact.ts の CLOUDIA_CONTACT_PRIMARY_ENABLED と同じ旗で、false は Cloudia が止まったときの切り戻し
+ * （問い合わせページにフォームが出る）。両方の値がそろうことは src/config/__tests__/site.test.ts が照らす。
+ * 呼ばれた時に読む（astro.config から読み込まれる部品も使うので、読み込みの時には env に触らない）。
+ */
+export function isContactChatPrimary(): boolean {
+  return import.meta.env?.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED !== 'false';
+}
+
+/**
+ * サイト内の問い合わせの入口の URL。
+ * 通常は Cloudia のチャット（/contact/chat/）へ直接向け、問い合わせページ（/contact、/<lang>/contact）は通さない。
  * path は言語で変えず、言語は locale で渡す（浮きボタン CloudiaLauncher と業種のページと同じ形）。
  * 枠の中で開くための embed は付けない（枠の中で開くのは浮きボタンだけ）。
+ * 切り戻し（isContactChatPrimary() が偽）の build では、フォームの在る問い合わせページ（/<lang>/contact?intent&source）へ向ける。
  */
 export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): string {
   const params = new URLSearchParams();
   if (opts.intent) params.set('intent', opts.intent);
   if (opts.source) params.set('source', opts.source);
+  if (!isContactChatPrimary()) {
+    const base = getLocalizedUrl('/contact', locale);
+    const query = params.toString();
+    return query ? `${base}?${query}` : base;
+  }
   params.set('locale', locale);
   return `/contact/chat/?${params.toString()}`;
 }
