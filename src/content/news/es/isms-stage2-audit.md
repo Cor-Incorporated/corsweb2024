@@ -1,37 +1,37 @@
 ---
-title: "Hemos obtenido la certificación ISO/IEC 27001:2022 (ISMS) (Adenda de noviembre de 2026)"
-description: "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) para el alcance de «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japan, el número de registro es JP26/00000364 y el periodo de validez abarca del 7 de noviembre de 2026 al 7 de noviembre de 2029. Será válida siempre que se apruebe la continuidad del registro en las auditorías de seguimiento durante dicho periodo."
+title: "Obtuvimos la certificación ISO/IEC 27001:2022 (SGSI) (actualización de noviembre de 2026)"
+description: "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI) para el desarrollo y la operación de software por encargo. La entidad certificadora es SGS Japón (SGS), número de registro JP26/00000364, con vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia."
 publishedAt: 2026-10-20
 updatedAt: 2026-11-12
 category: "info"
-tags: ["Avisos", "Seguridad de la información", "ISMS"]
+tags: ["Avisos", "Seguridad de la información", "SGSI"]
 source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "es"
 translationSourceHash: "785456843a09802714299cd6b82c08b40ef804f968cc9f02bf4ff16c1f3514fd"
-translatedAt: "2026-11-15T07:37:10.313Z"
-translationModel: "gemini-3.8-flash"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
 
-## Actualización de noviembre de 2026: Hemos obtenido la certificación
+## Actualización de noviembre de 2026: Certificación obtenida
 
-En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI). El alcance cubre el «desarrollo por encargo y operación de software».
+En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI). El alcance es el desarrollo y la operación de software por encargo.
 
-El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. El periodo de validez es del 7 de noviembre de 2026 al 7 de noviembre de 2029. Es válida siempre que se apruebe la continuidad del registro en las auditorías de seguimiento durante el periodo de validez.
+La entidad certificadora es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación tiene vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia.
 
-A continuación figura el comunicado anterior al registro de la certificación, publicado el 20 de octubre de 2026.
+A continuación se conserva el anuncio original, publicado el 20 de octubre de 2026, antes del registro de la certificación.
 
 ---
 
-## Finalización de la auditoría de Fase 2
+## Finalización de la auditoría de fase 2
 
-El 7 de octubre de 2026, Cor.Inc. concluyó la auditoría de Fase 2 de la norma internacional de sistemas de gestión de la seguridad de la información (SGSI) ISO/IEC 27001. No se señalaron no conformidades durante la auditoría.
+El 7 de octubre de 2026, Cor.Inc. completó la auditoría de fase 2 para la norma internacional ISO/IEC 27001 de Sistemas de Gestión de Seguridad de la Información (SGSI). Durante la auditoría no se señalaron no conformidades.
 
-Se prevé que el registro de la certificación se realice hacia diciembre de 2026. Hasta que no se complete el registro, no indicaremos «certificación obtenida» y publicaremos un nuevo aviso tras dicho registro.
+Se prevé que el registro de la certificación se concrete en torno a diciembre de 2026. Hasta que el registro no esté completado, no se indicará como «certificación obtenida»; publicaremos una nueva notificación tras su registro.
 
 ## Próximas iniciativas
 
-Ayudamos a crear entornos de IA que manejan información difícil de compartir con IA externas, como contratos e información de clientes. Continuaremos reforzando internamente nuestra estructura para proteger la información de nuestros clientes.
+Ayudamos a crear entornos de IA capaces de gestionar información sensible y difícil de compartir con IA externas, como contratos y datos de clientes. Continuaremos fortaleciendo internamente nuestra estructura para proteger la información de nuestros clientes.
 
-Nuestras iniciativas de seguridad de la información se encuentran recopiladas en la [Política de seguridad](/security).
+Nuestras iniciativas en materia de seguridad de la información se resumen en la [Política de seguridad](/security).
