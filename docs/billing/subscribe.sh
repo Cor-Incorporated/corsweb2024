@@ -781,7 +781,12 @@ do_cancel() {
 check_org_not_shared() {
   local org="$1" others
   api_ok "顧客の検索（組織の id）" GET /v1/customers/search --data-urlencode "query=metadata['clerk_org_id']:'$org'" --data-urlencode "limit=10"
-  others="$(jq -r --arg me "$OPT_CUSTOMER" '[.data[]? | select(.id != $me) | .id] | join(", ")' <<<"$RESP_BODY")"
+  # 数える前に答えの形を確かめる。形が違うのに「ほかの顧客は居ない」と読むと、守りが書く側に倒れる。
+  jq -e '.object == "search_result" and (.data | type) == "array" and all(.data[]; (.id | type) == "string")' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "顧客の検索（組織の id）の答えの形が違う（object が search_result、data が配列、どの要素にも文字列の id、のどれかが無い）。ほかの顧客を数えられないので、何も書かない"
+  [ "$(jq -r '.has_more' <<<"$RESP_BODY")" != "true" ] ||
+    die 3 "clerk_org_id=$org を持つ顧客が 10 件を超える（検索の続きが在る）。全部を見ていないので、何も書かない"
+  others="$(jq -r --arg me "$OPT_CUSTOMER" '[.data[] | select(.id != $me) | .id] | join(", ")' <<<"$RESP_BODY")"
   [ -z "$others" ] || die 3 "clerk_org_id=$org を、$OPT_CUSTOMER のほかに顧客 $others も持っている。この組織に書くと、ほかの顧客のサービスを消してしまうので、何も書かない（先に重なりを直す。runbook の「問題が起きたら」）"
 }
 

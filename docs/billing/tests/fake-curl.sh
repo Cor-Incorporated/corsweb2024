@@ -295,6 +295,14 @@ customer_search() {
         # 作った直後で、自分がまだ検索に出ない形（ほかの顧客だけが出る）
         other_only) respond 200 '{"object":"search_result","data":[{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
         self) respond 200 '{"object":"search_result","data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
+        # 答えの形がおかしい場面（HTTP 200 のまま）。守りは「ほかの顧客は居ない」と読まずに止まる
+        nodata) respond 200 '{"object":"search_result"}' ;;
+        datanull) respond 200 '{"object":"search_result","data":null}' ;;
+        noid) respond 200 '{"object":"search_result","data":[{"metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        empty) respond 200 '' ;;
+        wrongobj) respond 200 '{"object":"list","data":[]}' ;;
+        # 続きが在る（limit を超える）。全部を見ていないので止まる
+        more) respond 200 '{"object":"search_result","has_more":true,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
         *) respond 200 '{"object":"search_result","data":[]}' ;;
       esac
       return 0

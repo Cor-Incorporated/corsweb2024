@@ -839,6 +839,8 @@ expect "hold は、同じ組織をほかの顧客も持っていれば止まる"
 eq "重なった組織への hold は、Clerk に書かない" "$(clerk_patches)" "0"
 shared_body_seen && ng "hold が、もう一方の顧客のサービスを null で送った: $LOG" || ok "hold は、もう一方の顧客のサービスを null で送らない"
 check_arg "hold は、組織の id で顧客を検索する" "query=metadata['clerk_org_id']:'org_x'"
+check_arg "hold の組織の検索は 10 件まで読む" "limit=10"
+eq "重なった組織への hold は、Clerk の今の値も読まない" "$(clerk_calls)" "0"
 rm -f "$WORK/log.clerk"
 FAKE_SEARCH_ORG=shared FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true},"business-dossier":{"from":"2026-10-01","until":null,"hold":false}}}' \
   FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run unhold --customer cus_x --service xesm --apply --mode test
@@ -859,6 +861,26 @@ expect "検索に自分が出なくても、ほかの顧客が出れば hold は
 rm -f "$WORK/log.clerk"
 FAKE_SEARCH_ORG=self FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
 expect "同じ組織の顧客が自分だけなら、hold は書く" 0 1 "HOLD cus_x xesm: metadata に印を書いた"
+# 検索が HTTP 200 でも答えの形がおかしければ、ほかの顧客は居ないと読まずに、何も書かずに止まる（exit 4）。
+# 続きが在る（limit を超える）答えは、全部を見ていないので止まる（exit 3）。3 つのコマンドと clerk-sync の dry-run で
+for sc in nodata datanull noid empty wrongobj more; do
+  if [ "$sc" = "more" ]; then want_rc=3 want_msg="全部を見ていない"; else want_rc=4 want_msg="答えの形が違う"; fi
+  rm -f "$WORK/log.clerk"
+  FAKE_SEARCH_ORG=$sc FAKE_CLERK_META="$SHARED_ORG" FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
+  expect "組織の検索の答えが $sc なら、hold は止まる" "$want_rc" 0 "$want_msg"
+  eq "組織の検索の答えが $sc なら、hold は Clerk に書かない" "$(clerk_patches)" "0"
+  rm -f "$WORK/log.clerk"
+  FAKE_SEARCH_ORG=$sc FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+    FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run unhold --customer cus_x --service xesm --apply --mode test
+  expect "組織の検索の答えが $sc なら、unhold は止まる" "$want_rc" 0 "$want_msg"
+  eq "組織の検索の答えが $sc なら、unhold は Clerk に書かない" "$(clerk_patches)" "0"
+  rm -f "$WORK/log.clerk"
+  FAKE_SEARCH_ORG=$sc FAKE_CLERK_META="$SHARED_ORG" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+  expect "組織の検索の答えが $sc なら、clerk-sync は止まる" "$want_rc" 0 "$want_msg"
+  eq "組織の検索の答えが $sc なら、clerk-sync は Clerk に書かない" "$(clerk_patches)" "0"
+  FAKE_SEARCH_ORG=$sc FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
+  expect "組織の検索の答えが $sc なら、clerk-sync の dry-run も止まる" "$want_rc" 0 "$want_msg"
+done
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"
