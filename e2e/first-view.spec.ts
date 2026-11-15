@@ -178,7 +178,8 @@ for (const viewport of VIEWPORTS) {
             continue;
           }
           await target.click();
-          await page.waitForURL(industryPath(locale, slug), { timeout: 10_000 }).catch(() => undefined);
+          // waitForURL に正規表現を渡すと URL 全体（scheme と host を含む）に当たるので、path で判定する関数を渡す
+          await page.waitForURL((url) => industryPath(locale, slug).test(url.pathname), { timeout: 10_000 }).catch(() => undefined);
           const pathname = new URL(page.url()).pathname;
           clicks.push({ id: slug, pathname, ok: industryPath(locale, slug).test(pathname) });
         }
