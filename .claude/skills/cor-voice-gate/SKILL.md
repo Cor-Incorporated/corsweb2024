@@ -108,7 +108,7 @@ Check every outbound medium, including email and formal documents:
 20. □ **公開済み note の更新＝同一 key（when the job is 更新／改稿／リライト of a published note）— hard stop（2026-10-29 に決定）:** 出典 `<agent-server>/reports/20261029_note_new_key_publish_rca.md`・運用メモ `note-editor-formatting.md`（「更新／リライト」節）。
     - 編集URLの noteId（`editor.note.com/notes/<id>/edit/`）は、旧公開URLの noteId（`note.com/.../n/<id>`）と **一致必須**。報告に `targetPublicKey` / `editorNoteId` / `key一致: yes|no` を必ず書く。不一致、または旧公開URLの書き漏れ → FAIL。ready／ワンタップ公開導線に載せない。
     - 本文・タイトル・完了報告に「更新しました」等の更新フレーミングがあるのに key が新規 → FAIL。
-    - 新規 key で作ってよいのは **続稿・新シリーズ**、または寺田が「別記事」と明示した場合のみ。その場合は更新フレーミングを使わない。
+    - 新規 key で作ってよいのは **続稿・新シリーズ**、または依頼者が「別記事」と明示した場合のみ。その場合は更新フレーミングを使わない。
     - 詳細手順は [note-edit-safe](../note-edit-safe/SKILL.md) Hard stops §5–6。
 
 21. □ **技術・安全系の調査／検証レンズ（when the piece is a 技術・安全／フィジカルAI／機能安全／エッジ安全停止／検証記事, or claims 検証した・実証・試験済み）— hard stop on checks 1・2・5; checks 3・4・6 are Full-required（2026-10-29 に決定）:** 出典: 2026-10-29 P0-S1 外部レビュー（「設計思想として良いが調査／検証記事として不足」; 原文保管先は未確認）＋`<agent-server>/reports/20261029_tech_safety_article_gate_draft.md`。item12／13／14／18 を置換せず補強する。
