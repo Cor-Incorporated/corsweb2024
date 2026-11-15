@@ -66,7 +66,7 @@ cd ~/Developer/corsweb/.worktrees/claude/billing-develop
 git fetch origin develop && git checkout --detach FETCH_HEAD
 ```
 
-鍵なしで動く検査を先に通す（通信しない）。順に `54 passed, 0 failed`、`390 passed, 0 failed`、`103 passed, 0 failed`、`25 passed, 0 failed`、`6 passed, 0 failed`、`ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること。`test-verify-sample.sh` は `node` が要る（無ければ `FAIL node が要る` で止まる）:
+鍵なしで動く検査を先に通す（通信しない）。はじめの 5 本は、最後の行が `… passed, 0 failed` で終わること（項目の数は README の tests の行と同じ。試験を足すと増えるので、ここには書かない）。最後の 1 本は `ok: 最低利用期間を変えた plans.json では落ちる（反証）` が出ること。`test-verify-sample.sh` は `node` が要る（無ければ `FAIL node が要る` で止まる）:
 
 ```bash
 bash docs/billing/tests/test-apply-plans.sh | tail -1
@@ -634,6 +634,8 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプトが表示しない入力で聞く（Stripe の鍵と同じ扱い。表示しない・ファイルに書かない・引数に載せない）。既定は dry-run で、書くのは `--apply --mode test|live` のとき。`live` は端末で `live` と打つ確認がある。
 
 **`--mode` は Clerk を守らない。** `--mode` が確かめるのは Stripe の鍵のモード（`livemode`）だけで、Clerk の鍵が test 用か live 用かは API では分からない（未確認。README 12 章の 13）。だから `--mode test` でも、貼った Clerk の鍵の組織にそのまま PATCH する。**試験は開発用のインスタンスの鍵と組織で行い、`--apply` の前に dry-run の `PLAN services.…` と、顧客の `clerk_org_id` が開発用の `org_…` であることを確かめる。** 本番の組織に試験の `services` を書かない。
+
+E2〜E5 のコマンドは、本番の形（`--mode live`）で書いてある。テストモードで流すときは、`--mode live` を `--mode test` に替えて打つ（E1 は、テストの形で書いてある）。
 
 ### E1. 契約・解約のあとに Clerk へ写す（`clerk-sync`）
 
