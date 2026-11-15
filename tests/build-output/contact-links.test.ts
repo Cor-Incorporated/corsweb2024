@@ -284,15 +284,6 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
 // 本番（Firebase Hosting）は、末尾の / が無い path（/en、/contact）を / 付きへ転送する。ページ遷移（ViewTransitions）は
 // 転送の後の URL を使うので、hash が落ちて、その区画に着かない。hash を持つサイト内の link は、path を末尾の / まで書く。
 // file（.xml・.pdf など）への link は転送されないので除く。
-// 下の表は、この形のまま残っている link（業種のページから、その言語のトップの業種の入口へ）。直す変更で表から外す
-// （下の「まだ在る」の試験が、外し忘れを落とす）。
-const HASH_LINKS_OUTSIDE_THIS_CHANGE = [
-  '/en#home-industry-entry',
-  '/zh#home-industry-entry',
-  '/ko#home-industry-entry',
-  '/es#home-industry-entry',
-] as const;
-const hashLinkRaw = (link: Link) => `${link.url.pathname}${link.url.search}${link.url.hash}`;
 const isFilePath = (pathname: string) => /\.[a-z0-9]{2,5}$/i.test(pathname);
 const isRedirectedHashLink = (link: Link) =>
   (link.kind === 'a' || link.kind === 'area') &&
@@ -301,19 +292,10 @@ const isRedirectedHashLink = (link: Link) =>
   !isFilePath(link.url.pathname);
 
 describe('サイト内の hash を持つ link（本番の転送で hash が落ちない形）', () => {
-  it('hash を持つサイト内の link は、path を末尾の / まで書く（表の link を除く）', () => {
-    const allowed = new Set<string>(HASH_LINKS_OUTSIDE_THIS_CHANGE);
+  it('hash を持つサイト内の link は、path を末尾の / まで書く', () => {
     const found = pages.flatMap((page) =>
-      page.links
-        .filter(isRedirectedHashLink)
-        .filter((link) => !allowed.has(hashLinkRaw(link)))
-        .map((link) => `${page.pagePath} → ${link.raw}`),
+      page.links.filter(isRedirectedHashLink).map((link) => `${page.pagePath} → ${link.raw}`),
     );
     expect(found).toEqual([]);
-  });
-
-  it('表の link は、まだ dist に在る（直したら、表から外す）', () => {
-    const seen = new Set(pages.flatMap((page) => page.links.filter(isRedirectedHashLink).map(hashLinkRaw)));
-    expect(HASH_LINKS_OUTSIDE_THIS_CHANGE.filter((raw) => !seen.has(raw))).toEqual([]);
   });
 });
