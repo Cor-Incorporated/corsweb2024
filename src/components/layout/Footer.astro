@@ -1,7 +1,8 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
-import { getContactUrl } from '../../config/site';
+import { getContactCalendarUrl, getContactUrl } from '../../config/site';
+import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
 
@@ -59,6 +60,11 @@ const bottomLinks = [
         href: getContactUrl(currentLocale, { source: 'footer' }),
         isExternal: false,
       },
+      // 問い合わせページのカレンダーの区画（代表の公開スケジュール）へ直接向ける 1 本。
+      // カレンダーは PUBLIC_GCAL_ID がある build にだけ在るので、その時だけ描く（無いのに時間を言わない）。
+      ...(CONTACT_CALENDAR_VISIBLE
+        ? [{ name: t.footer.links.calendar, href: getContactCalendarUrl(currentLocale), isExternal: false }]
+        : []),
     ],
   },
   {

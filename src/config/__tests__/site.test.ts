@@ -78,18 +78,39 @@ describe('getGriftUrl / getContactUrl (ADR-0010)', () => {
 
   // 同じ旗を src/config/contact.ts（問い合わせページの出し分け）と site.ts（入口の行き先）が別々に読む。
   // 片方だけ読み方を変えると、フォームが出ているのに入口がチャットを指す（またはその逆）ので、両方の値を並べて照らす。
+  // 切り戻しになるのは小文字の 'false' だけ。'False'・'0'・空文字はチャットのまま（両方の読み方が同じ答えになることを見る）。
   it.each([
     ['未設定', undefined],
     ['true', 'true'],
     ['false', 'false'],
+    ['False', 'False'],
+    ['0', '0'],
+    ['空文字', ''],
   ])('旗が %s のとき、問い合わせページの出し分けと入口の行き先がそろう', async (_label, value) => {
     if (value !== undefined) vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', value);
-    else vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', '');
+    else vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', undefined);
     const { getContactUrl } = await loadSite();
     const { CLOUDIA_CONTACT_PRIMARY_ENABLED } = await import('../contact');
     const toChat = getContactUrl('ja').startsWith('/contact/chat/');
     expect({ page: CLOUDIA_CONTACT_PRIMARY_ENABLED, links: toChat }).toEqual({ page: toChat, links: toChat });
     expect(toChat).toBe(value !== 'false');
+  });
+
+  // フッターのカレンダーへの 1 本。dist の試験（tests/build-output/contact-links.test.ts）は、この source と hash で
+  // その 1 本を名指しして数えるので、値はここで固定する。
+  it('getContactCalendarUrl は、その言語の問い合わせページのカレンダーの区画を指す', async () => {
+    const { getContactCalendarUrl } = await loadSite();
+    expect(getContactCalendarUrl('ja')).toBe('/contact?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('en')).toBe('/en/contact?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('zh')).toBe('/zh/contact?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ko')).toBe('/ko/contact?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('es')).toBe('/es/contact?source=footer-calendar#contact-calendar');
+  });
+
+  it.each(['true', 'false'])('getContactCalendarUrl は、切り戻しの旗が %s でも同じ問い合わせページを指す', async (value) => {
+    vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', value);
+    const { getContactCalendarUrl } = await loadSite();
+    expect(getContactCalendarUrl('ko')).toBe('/ko/contact?source=footer-calendar#contact-calendar');
   });
 
   it('resolveExternalHref rewrites grift sentinel and absolute griftai URLs', async () => {
