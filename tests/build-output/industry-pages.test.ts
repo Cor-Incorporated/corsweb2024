@@ -1,25 +1,28 @@
 // ビルド済み dist の業種のページ（5 業種 × 5 言語 = 25 ページ）の検査（設定: vitest.dist.config.ts）。
 // `npm run build` の後に `npm run test:dist`。
-// ja の 5 ページは issue #525 の本文（ja.json の industry<Name>.proposal、ProposalPage が描く）。
-// en・zh・ko・es の 20 ページは、旧い本文（industry<Name> の hero・challenges・support・cta、*Body.astro）のまま。
-// ja の 5 ページで確かめること:
-// - H1 は 1 つで、industry<Name>.proposal.title と同じ
+// PROPOSAL_LOCALES（src/components/industry/proposal-locales.ts）の言語のページは、issue #525 の本文とその訳
+// （locale の industry<Name>.proposal、ProposalPage が描く）。一覧に無い言語のページは、旧い本文
+// （industry<Name> の hero・challenges・support・cta、*Body.astro）のまま。
+// #525 の本文のページで確かめること:
+// - H1 は 1 つで、その言語の industry<Name>.proposal.title と同じ
 // - 署名の区画は 1 つ。肩書と名前の行が 1 つあり、会社の提供の条件（ISMS の欄・問い合わせ）を含まない
 // - 出典の表示が、参考資料の数だけある（本文の [n] と、CTA の後の参考資料の欄。教育は本文の近くのリンク）
-// - 問い合わせの入口が業種の source を持つ。本文の中に問い合わせページ（/contact）への link が無い
+// - 問い合わせの入口が業種の source を持ち、行き先（path・source・locale）が浮きボタンと同じ。
+//   本文の中に問い合わせページ（/contact と /<lang>/contact）への link が無い
 // - 問い合わせのボタンの文は、同じ Cloudia の画面へ進む浮きボタンの文（CloudiaLauncher）と同じ
 // - 資料ダウンロードの段落と副ボタンは、資料の受け取りの入口（DOCUMENT_DOWNLOAD_HREF）があるときだけ出る
 // - Markdown の記号やコメントが本文に出ていない。サイト内の link はその言語のページを指し、dist に在る
 // 25 ページで確かめること:
 // - 本文（<main>）が Grift に触れず、Grift へ誘わない
 // - 浮きボタンの相談の link が業種の source を持つ
-// en・zh・ko・es の 20 ページで確かめること:
+// 旧い本文のままのページで確かめること（一覧から外した言語があるとき）:
 // - H1 は 1 つで、その言語の industry<Name>.hero.title と同じ。サービスへの道（IndustryPaths）がある
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { DOCUMENT_DOWNLOAD_HREF, PROPOSAL_LINKS } from '../../src/components/industry/proposal-links';
+import { PROPOSAL_LOCALES } from '../../src/components/industry/proposal-locales';
 import en from '../../src/i18n/locales/en.json';
 import es from '../../src/i18n/locales/es.json';
 import ja from '../../src/i18n/locales/ja.json';
@@ -41,12 +44,9 @@ const SLUGS = Object.keys(PAGE_KEYS) as Slug[];
 const ALL_CASES = (Object.keys(LOCALES) as LocaleKey[]).flatMap((locale) =>
   SLUGS.map((slug) => ({ locale, slug, name: `${locale}/${slug}` })),
 );
-const JA_CASES = SLUGS.map((slug) => ({ slug, name: `ja/${slug}` }));
-const OTHER_CASES = ALL_CASES.filter(({ locale }) => locale !== 'ja') as {
-  locale: Exclude<LocaleKey, 'ja'>;
-  slug: Slug;
-  name: string;
-}[];
+const PROPOSAL_CASES = ALL_CASES.filter(({ locale }) => PROPOSAL_LOCALES.includes(locale));
+const OLD_CASES = ALL_CASES.filter(({ locale }) => !PROPOSAL_LOCALES.includes(locale));
+const CONTACT_PAGE = /^(?:\/(?:en|zh|ko|es))?\/contact\/?(?:[?#]|$)/;
 
 function prefix(locale: LocaleKey): string {
   return locale === 'ja' ? '' : `/${locale}`;
@@ -75,17 +75,17 @@ function distHas(pathname: string): boolean {
 
 const PROPOSAL_PARTS = '[data-proposal-hero], [data-proposal-body], [data-proposal-cta], [data-proposal-sources]';
 
-describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
-  const page = ja[PAGE_KEYS[slug]].proposal;
+describe.each(PROPOSAL_CASES)('#525 の本文の業種のページ $name', ({ locale, slug }) => {
+  const page = LOCALES[locale][PAGE_KEYS[slug]].proposal;
   const links = PROPOSAL_LINKS[slug];
 
   it('H1 は 1 つで、本文の題と同じ', () => {
-    const h1s = [...load('ja', slug).querySelectorAll('h1')].map((h) => squash(h.textContent));
+    const h1s = [...load(locale, slug).querySelectorAll('h1')].map((h) => squash(h.textContent));
     expect(h1s).toEqual([page.title]);
   });
 
   it('署名の区画は 1 つで、肩書と名前の行が 1 つ。会社の提供の条件を含まない', () => {
-    const voices = load('ja', slug).querySelectorAll('[data-founder-voice]');
+    const voices = load(locale, slug).querySelectorAll('[data-founder-voice]');
     expect(voices.length).toBe(1);
     const voice = voices[0];
     expect(voice.querySelectorAll('[data-founder-byline]').length).toBe(1);
@@ -94,7 +94,7 @@ describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
   });
 
   it('出典の表示が参考資料の数だけあり、リンク先がそろう', () => {
-    const doc = load('ja', slug);
+    const doc = load(locale, slug);
     const count = links.sources.length;
     const cites = [...doc.querySelectorAll('[data-source-cite]')].map((a) => Number(a.getAttribute('data-source-cite')));
     const nearLinks = [...doc.querySelectorAll('[data-source-link]')].map((a) => Number(a.getAttribute('data-source-link')));
@@ -108,26 +108,30 @@ describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
       expect(cards.length).toBe(count);
       [...cards].forEach((card, index) => {
         const href = card.querySelector('a')?.getAttribute('href') ?? '';
-        expect(href, `参考資料 ${index + 1}`).toBe(links.sources[index]);
+        const expected = links.sources[index].startsWith('/') ? `${prefix(locale)}${links.sources[index]}` : links.sources[index];
+        expect(href, `参考資料 ${index + 1}`).toBe(expected);
       });
     }
   });
 
-  it('問い合わせの入口が業種の source を持ち、本文に問い合わせページへの link が無い', () => {
-    const doc = load('ja', slug);
+  it('問い合わせの入口が業種の source を持ち、行き先が浮きボタンと同じ。本文に問い合わせページへの link が無い', () => {
+    const doc = load(locale, slug);
     const inquiry = doc.querySelectorAll(`[data-industry-inquiry="industry-${slug}"]`);
     expect(inquiry.length).toBe(1);
     const url = new URL(inquiry[0].getAttribute('href') ?? '', 'https://cor-jp.com');
     expect(url.searchParams.get('source')).toBe(`industry-${slug}`);
+    const chat = new URL(doc.querySelector('#cloudia-launcher')?.getAttribute('data-chat-path') ?? '', url);
+    const where = (u: URL) => ({ path: u.pathname, source: u.searchParams.get('source'), locale: u.searchParams.get('locale') });
+    expect(where(url), '主ボタンと浮きボタンの行き先').toEqual(where(chat));
     const viaContact = [...main(doc).querySelectorAll(PROPOSAL_PARTS)]
       .flatMap((part) => [...part.querySelectorAll('a[href]')])
       .map((a) => a.getAttribute('href') ?? '')
-      .filter((href) => /^\/contact\/?(?:[?#]|$)/.test(href));
+      .filter((href) => CONTACT_PAGE.test(href));
     expect(viaContact).toEqual([]);
   });
 
   it('問い合わせのボタンの文は、同じ Cloudia の画面へ進む浮きボタンの文と同じ', () => {
-    const doc = load('ja', slug);
+    const doc = load(locale, slug);
     const button = squash(doc.querySelector(`[data-industry-inquiry="industry-${slug}"]`)?.textContent);
     const launcher = doc.querySelector('#cloudia-launcher-open')?.getAttribute('data-label-open') ?? '';
     expect(launcher, '浮きボタンの文が無い').not.toBe('');
@@ -136,7 +140,7 @@ describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
   });
 
   it('資料ダウンロードの段落と副ボタンは、資料の受け取りの入口があるときだけ出る', () => {
-    const cta = load('ja', slug).querySelector('[data-proposal-cta]');
+    const cta = load(locale, slug).querySelector('[data-proposal-cta]');
     expect(cta).not.toBeNull();
     const note = page.cta.body.find((block) => 'downloadNote' in block) as { downloadNote: string } | undefined;
     expect(note, 'locale に資料ダウンロードの段落が無い').toBeDefined();
@@ -153,7 +157,7 @@ describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
   });
 
   it('本文に Markdown の記号・コメントが出ず、サイト内の link は dist に在る', () => {
-    const parts = [...main(load('ja', slug)).querySelectorAll(PROPOSAL_PARTS)];
+    const parts = [...main(load(locale, slug)).querySelectorAll(PROPOSAL_PARTS)];
     expect(parts.length).toBeGreaterThanOrEqual(3);
     for (const part of parts) {
       expect(part.textContent ?? '').not.toMatch(/\*\*|##|<!--|\]\(/);
@@ -161,7 +165,11 @@ describe.each(JA_CASES)('ja の業種のページ $name', ({ slug }) => {
       const internal = [...part.querySelectorAll('a[href^="/"]')]
         .map((a) => a.getAttribute('href') ?? '')
         .filter((href) => !href.startsWith('/contact/chat/'));
-      for (const href of internal) expect(distHas(href.split(/[?#]/)[0]), `${href} が dist に無い`).toBe(true);
+      for (const href of internal) {
+        const pathname = href.split(/[?#]/)[0];
+        if (locale !== 'ja') expect(pathname, href).toMatch(new RegExp(`^/${locale}(?:/|$)`));
+        expect(distHas(pathname), `${href} が dist に無い`).toBe(true);
+      }
     }
   });
 });
@@ -184,11 +192,14 @@ describe.each(ALL_CASES)('業種のページ $name', ({ locale, slug }) => {
   });
 });
 
-describe.each(OTHER_CASES)('旧い本文のままの業種のページ $name', ({ locale, slug }) => {
-  it('H1 は 1 つで、その言語の hero.title と同じ。サービスへの道がある', () => {
-    const doc = load(locale, slug);
-    const h1s = [...doc.querySelectorAll('h1')].map((h) => squash(h.textContent));
-    expect(h1s).toEqual([squash(LOCALES[locale][PAGE_KEYS[slug]].hero.title)]);
-    expect(doc.querySelector(`[data-industry-paths="industry-${slug}"]`)).not.toBeNull();
+// 今は 5 言語とも #525 の本文なので空。PROPOSAL_LOCALES から言語を外すと、その言語の 5 ページを見る。
+if (OLD_CASES.length > 0) {
+  describe.each(OLD_CASES)('旧い本文のままの業種のページ $name', ({ locale, slug }) => {
+    it('H1 は 1 つで、その言語の hero.title と同じ。サービスへの道がある', () => {
+      const doc = load(locale, slug);
+      const h1s = [...doc.querySelectorAll('h1')].map((h) => squash(h.textContent));
+      expect(h1s).toEqual([squash(LOCALES[locale][PAGE_KEYS[slug]].hero.title)]);
+      expect(doc.querySelector(`[data-industry-paths="industry-${slug}"]`)).not.toBeNull();
+    });
   });
-});
+}
