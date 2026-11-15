@@ -317,6 +317,24 @@ describe('1 日の model の呼び出しの上限', () => {
     expect(storedCalls(db, '2026-11-17')).toBe(1);
   });
 
+  it('Anthropic の道でも、予約 1 つにつき model への HTTP の要求は 1 回だけ（失敗しても呼び直さない）', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ type: 'error', error: { type: 'api_error', message: 'upstream' } }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const env = { ...testEnv(db, '3'), LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'test-key' } as Env;
+    const response = await chatTurn(env);
+    expect(response.status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(storedCalls(db, '2026-11-17')).toBe(1);
+  });
+
   it('D1 の binding が無い env では上限を掛けずに呼び、そのことを記録に 1 行残す（本文・IP・メールは出さない）', async () => {
     fixClock('2026-11-17T03:00:00.000Z');
     const db = openDatabase();

@@ -79,7 +79,7 @@ submit では、分類・業種・path をサーバー側の会話の状態か�
 チャットの API が model を呼ぶ回数に、1 日（JST の日付）の上限を付ける。上限は vars の `CHAT_DAILY_MODEL_CALL_LIMIT`（既定 300）。`0` は、その日は model を呼ばないための値（チャットを止めたいときに使う）。
 
 - 数は D1 の `chat_daily_usage`（1 日 1 行。`day`・`model_calls`・`updated_at`。個人の情報は持たない）に置く。
-- model を呼ぶ前に、その日の数を 1 文で 1 つ足す（`src/daily-cap.ts`）。上限に達していれば足さずに、model を呼ばず 503（「AIが一時的に利用できません…」）を返す。数は model を呼んだ回数だけを表す（止めた要求は数えない）。model の呼び出しが失敗しても、足した 1 は残る。
+- model を呼ぶ前に、その日の数を 1 文で 1 つ足す（`src/daily-cap.ts`）。上限に達していれば足さずに、model を呼ばず 503（「AIが一時的に利用できません…」）を返す。数は model を呼ぼうとした回数（予約した回数）を表す（止めた要求は数えない）。model の呼び出しが失敗しても、足した 1 は残る。予約 1 つにつき model への HTTP の要求は 1 回で、失敗しても呼び直さない（Anthropic の SDK の自動の呼び直しは切っている）。
 - start（会話の始まり）は model を呼ばないので数えない。
 - 数を読めない・書けない（D1 の誤り、0006 を当てる前の D1）ときも、model を呼ばず同じ 503 を返す。
 - 上限に当たると記録に `contact-chat:daily_cap_reached`、数を扱えないと `contact-chat:daily_cap_unavailable` を出す。本文・IP・メールは出さない。
