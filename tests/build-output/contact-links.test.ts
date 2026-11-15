@@ -3,22 +3,27 @@
 // 直接向ける。行き先は src/config/site.ts の getContactUrl が作る（intent・source・locale を link 自身が運ぶ）。
 // 見るもの:
 // 1. 5 言語の全ページで、問い合わせページへの link（a・area・form・button と input の formaction・meta refresh）が 0。
-//    www の host も同じ site として数える。言語つきのチャットの path（/<lang>/contact/chat/。そのページは無い）も落とす
+//    www の host も同じ site として数える。言語つきのチャットの path（/<lang>/contact/chat/。そのページは無い）も落とす。
+//    除くのは、フッターから問い合わせページのカレンダーの区画へ向ける 1 本だけ（source と hash で名指しする）
+// 1b. その 1 本は、カレンダーの区画が在る build では各ページに 1 本、無い build では 0 本
 // 2. チャットへの link は、どれも source を持ち、locale がそのページの言語
 // 3. 主な入口が、決まった source（と intent）でチャットへ向く
+// 4. hash を持つサイト内の link は、path を末尾の / まで書く（本番は / 付きへ転送し、ページ遷移の間に hash が落ちる）
 // 問い合わせページ自身は残している（自分と、言語の切り替えで他の言語の問い合わせページを指す）ので、1 の対象から外す。
 // script の中の文字（location.href = '/contact' など）は HTML の属性ではないので、この試験の範囲の外。
 // 切り戻し（PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false）の build では、入口が問い合わせページを指すので 1〜3 は落ちる作り。
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CLOUDIA_CHAT_PATH, isContactPagePath, normalizeSitePath } from '../../src/config/contact-guards';
+import { JSDOM } from 'jsdom';
+import { CLOUDIA_CHAT_PATH, hasCalendarEmbed, isContactPagePath, normalizeSitePath } from '../../src/config/contact-guards';
 import jaJson from '../../src/i18n/locales/ja.json';
 import enJson from '../../src/i18n/locales/en.json';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
 const ORIGIN = 'https://cor-jp.com';
 const SAME_SITE_ORIGINS = new Set([ORIGIN, 'https://www.cor-jp.com']);
+// host の末尾にドットが付いた URL（cor-jp.com.）は同じ site として数えない（今の dist には無い。在れば外への link として素通りする）
 const NON_JA = ['en', 'zh', 'ko', 'es'] as const;
 type Locale = 'ja' | (typeof NON_JA)[number];
 
@@ -32,6 +37,14 @@ const ARTICLES_OUTSIDE_THIS_CHANGE = [
 const articlePaths = new Set(
   ARTICLES_OUTSIDE_THIS_CHANGE.flatMap((slug) => [`/blog/${slug}/`, ...NON_JA.map((locale) => `/${locale}/blog/${slug}/`)]),
 );
+
+// フッターから、問い合わせページのカレンダーの区画（代表の公開スケジュール）へ直接向ける 1 本
+// （src/config/site.ts の getContactCalendarUrl、src/components/contact/Calendar.astro の id）。
+// サイト内で問い合わせページを指してよいのはこの 1 本だけ。文言ではなく source と hash で名指しする。
+const CALENDAR_SOURCE = 'footer-calendar';
+const CALENDAR_ANCHOR = 'contact-calendar';
+// その dist を作った build の条件（ci.yml が渡す）。'0' = カレンダーなし、'1' = カレンダーあり（ダミーの ID）
+const EXPECT_CALENDAR = process.env.CONTACT_GUARD_EXPECT_CALENDAR;
 
 interface Link {
   kind: string;
@@ -109,8 +122,35 @@ const isChatLink = (link: Link) => normalizeSitePath(link.url.pathname) === norm
 const files = existsSync(DIST_DIR) ? htmlFiles(DIST_DIR) : [];
 const pages = files.map((file) => {
   const pagePath = pagePathOf(file);
-  return { pagePath, locale: localeOf(pagePath), links: sameOriginLinks(readFileSync(file, 'utf8'), pagePath) };
+  const html = readFileSync(file, 'utf8');
+  return {
+    pagePath,
+    locale: localeOf(pagePath),
+    links: sameOriginLinks(html, pagePath),
+    // 圧縮の後の HTML は属性の引用符を外す（id=footer-heading）ので、どちらの書き方でも見る
+    hasSiteFooter: /\sid=["']?footer-heading["'\s>]/.test(html),
+  };
 });
+
+const contactPathOf = (locale: Locale) => (locale === 'ja' ? '/contact/' : `/${locale}/contact/`);
+
+/**
+ * そのページの言語の問い合わせページの、カレンダーの区画へ向く 1 本か。path は末尾の / まで同じであること
+ * （/contact は本番で /contact/ へ転送され、ページ遷移の間に hash が落ちて区画に着かない）。
+ */
+const isCalendarLinkFor = (locale: Locale) => (link: Link) =>
+  link.kind === 'a' &&
+  link.url.pathname === contactPathOf(locale) &&
+  link.url.searchParams.get('source') === CALENDAR_SOURCE &&
+  link.url.hash === `#${CALENDAR_ANCHOR}`;
+
+/** その言語の問い合わせページに、id の区画が在り、その中にカレンダーの埋め込みが在るか（link の着く先が実在するか） */
+function calendarSectionExists(locale: Locale): boolean {
+  const file = path.join(DIST_DIR, ...contactPathOf(locale).split('/').filter(Boolean), 'index.html');
+  if (!existsSync(file)) return false;
+  const section = new JSDOM(readFileSync(file, 'utf8')).window.document.getElementById(CALENDAR_ANCHOR);
+  return section !== null && hasCalendarEmbed(section);
+}
 const byPath = new Map(pages.map((page) => [page.pagePath, page]));
 
 function chatLinksOn(pagePath: string): Link[] {
@@ -130,15 +170,42 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(pages.length, 'dist の HTML が少なすぎる').toBeGreaterThan(500);
   });
 
-  it('5 言語の全ページで、問い合わせページと無いチャットの path への link が 0（問い合わせページ自身と、この変更の外の記事を除く）', () => {
+  it('5 言語の全ページで、問い合わせページと無いチャットの path への link が 0（問い合わせページ自身と、この変更の外の記事と、カレンダーの区画への 1 本を除く）', () => {
     const found = pages
       .filter((page) => !isContactPagePath(page.pagePath) && !articlePaths.has(page.pagePath))
       .flatMap((page) =>
         page.links
+          .filter((link) => !isCalendarLinkFor(page.locale)(link))
           .filter((link) => isContactPagePath(link.url.pathname) || isLocalizedChatPath(link.url.pathname))
           .map((link) => `${page.pagePath} → ${link.kind} ${link.raw}`),
       );
     expect(found).toEqual([]);
+  });
+
+  // カレンダーは PUBLIC_GCAL_ID がある build にだけ在る（CI はカレンダーなしと、ダミーの ID のカレンダーありの 2 回 build する）。
+  // 区画が在る言語では、フッターの在る全ページに 1 本。無ければ 0 本（無いのに打ち合わせの時間を言わない）。
+  // 2 本以上・言語の違う問い合わせページ・hash の無い link も、この数か上の試験で落ちる。
+  it('カレンダーの区画への link は、区画が在る build では各ページに 1 本、無い build では 0 本', () => {
+    const locales: readonly Locale[] = ['ja', ...NON_JA];
+    const sections = Object.fromEntries(locales.map((locale) => [locale, calendarSectionExists(locale)])) as Record<Locale, boolean>;
+    if (EXPECT_CALENDAR !== undefined) {
+      expect(sections, 'build の条件（CONTACT_GUARD_EXPECT_CALENDAR）とカレンダーの区画が合わない').toEqual(
+        Object.fromEntries(locales.map((locale) => [locale, EXPECT_CALENDAR === '1'])),
+      );
+    }
+    const withFooter = pages.filter((page) => page.hasSiteFooter);
+    expect(withFooter.length, 'フッターの在るページが少なすぎる').toBeGreaterThan(500);
+    const wrong = withFooter.flatMap((page) => {
+      const want = sections[page.locale] ? 1 : 0;
+      const have = page.links.filter(isCalendarLinkFor(page.locale)).length;
+      const strays = page.links
+        .filter((link) => link.url.searchParams.get('source') === CALENDAR_SOURCE && !isCalendarLinkFor(page.locale)(link))
+        .map((link) => link.raw);
+      return have === want && strays.length === 0
+        ? []
+        : [`${page.pagePath}（${page.locale}）: ${have} 本（期待 ${want} 本）${strays.length ? ` / 行き先の違う link ${strays.join(' ')}` : ''}`];
+    });
+    expect(wrong).toEqual([]);
   });
 
   it('この変更の外の記事は、まだ問い合わせページへの link を持つ（記事を直したら、表から外す）', () => {
@@ -211,5 +278,42 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
       (want) => !found.some((have) => Object.entries(want).every(([key, value]) => have[key as keyof typeof have] === value)),
     );
     expect(missing, `${pagePath} のチャットへの link: ${JSON.stringify(found)}`).toEqual([]);
+  });
+});
+
+// 本番（Firebase Hosting）は、末尾の / が無い path（/en、/contact）を / 付きへ転送する。ページ遷移（ViewTransitions）は
+// 転送の後の URL を使うので、hash が落ちて、その区画に着かない。hash を持つサイト内の link は、path を末尾の / まで書く。
+// file（.xml・.pdf など）への link は転送されないので除く。
+// 下の表は、この形のまま残っている link（業種のページから、その言語のトップの業種の入口へ）。直す変更で表から外す
+// （下の「まだ在る」の試験が、外し忘れを落とす）。
+const HASH_LINKS_OUTSIDE_THIS_CHANGE = [
+  '/en#home-industry-entry',
+  '/zh#home-industry-entry',
+  '/ko#home-industry-entry',
+  '/es#home-industry-entry',
+] as const;
+const hashLinkRaw = (link: Link) => `${link.url.pathname}${link.url.search}${link.url.hash}`;
+const isFilePath = (pathname: string) => /\.[a-z0-9]{2,5}$/i.test(pathname);
+const isRedirectedHashLink = (link: Link) =>
+  (link.kind === 'a' || link.kind === 'area') &&
+  link.url.hash !== '' &&
+  !link.url.pathname.endsWith('/') &&
+  !isFilePath(link.url.pathname);
+
+describe('サイト内の hash を持つ link（本番の転送で hash が落ちない形）', () => {
+  it('hash を持つサイト内の link は、path を末尾の / まで書く（表の link を除く）', () => {
+    const allowed = new Set<string>(HASH_LINKS_OUTSIDE_THIS_CHANGE);
+    const found = pages.flatMap((page) =>
+      page.links
+        .filter(isRedirectedHashLink)
+        .filter((link) => !allowed.has(hashLinkRaw(link)))
+        .map((link) => `${page.pagePath} → ${link.raw}`),
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('表の link は、まだ dist に在る（直したら、表から外す）', () => {
+    const seen = new Set(pages.flatMap((page) => page.links.filter(isRedirectedHashLink).map(hashLinkRaw)));
+    expect(HASH_LINKS_OUTSIDE_THIS_CHANGE.filter((raw) => !seen.has(raw))).toEqual([]);
   });
 });
