@@ -62,8 +62,10 @@ describe('getProvider の設定の確かめ', () => {
     expect(() => getProvider({ VERTEX_GATEWAY_URL: 'https://gateway/generateContent', VERTEX_GATEWAY_SECRET: 'secret' } as unknown as Env)).not.toThrow();
   });
 
-  it('anthropic で鍵が無いときも投げる', () => {
+  it('anthropic で鍵が無いとき・空白だけのときも投げる', () => {
     expect(() => getProvider({ LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: '' } as unknown as Env)).toThrow();
+    expect(() => getProvider({ LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: '  ' } as unknown as Env)).toThrow();
+    expect(() => getProvider({ LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'test-key' } as unknown as Env)).not.toThrow();
   });
 });
 

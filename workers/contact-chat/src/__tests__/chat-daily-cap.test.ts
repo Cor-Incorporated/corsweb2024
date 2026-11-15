@@ -415,6 +415,7 @@ describe('LLM の設定が無い env と 1 日の上限', () => {
     ['vertex-gemini で Gateway の秘密が無い', { VERTEX_GATEWAY_SECRET: '' }],
     ['vertex-gemini で Gateway の URL と秘密が空白だけ', { VERTEX_GATEWAY_URL: ' ', VERTEX_GATEWAY_SECRET: ' ' }],
     ['anthropic で鍵が無い', { LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: '' }],
+    ['anthropic で鍵が空白だけ', { LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: ' \t' }],
   ])('%s: 503 で、その日の数は増えず、記録は llm_not_configured の 1 行、model への HTTP は 0', async (_label, overrides) => {
     fixClock('2026-11-17T03:00:00.000Z');
     const db = openDatabase();

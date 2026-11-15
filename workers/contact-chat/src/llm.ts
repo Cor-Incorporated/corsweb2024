@@ -92,7 +92,8 @@ export function getProvider(env: Env): LlmProvider {
       }
       return new VertexGeminiProvider(env);
     case 'anthropic':
-      if (!env.ANTHROPIC_API_KEY) {
+      // vertex-gemini と同じく、前後の空白を除いて空なら無いと見る（空白だけの鍵で予約し、外へ送らないため）。
+      if (!env.ANTHROPIC_API_KEY?.trim()) {
         throw new Error('LLM が未設定です（ANTHROPIC_API_KEY）');
       }
       return new AnthropicProvider(env.ANTHROPIC_API_KEY);
