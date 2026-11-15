@@ -292,14 +292,19 @@ describe('1 日の model の呼び出しの上限', () => {
     expect(storedCalls(db, '2026-11-17')).toBe(0);
   });
 
-  it('数を置く表が無い D1（0006 を当てる前）では、model を呼ばず、今の 503 を返す', async () => {
+  it('数を置く表が無い D1（0006 を当てる前）では、model を呼ばず、今の 503 を返し、記録に印を 1 つ残す', async () => {
     fixClock('2026-11-17T03:00:00.000Z');
     const db = openDatabase({ skip: '0006_' });
     const model = stubModel();
+    const lines: string[] = [];
+    vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
     const response = await chatTurn(testEnv(db, '3'));
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: AI_UNAVAILABLE });
     expect(model.calls()).toBe(0);
+    expect(lines).toEqual(['contact-chat:daily_cap_unavailable']);
   });
 
   it('model の呼び出しが失敗しても、予約した 1 は数に残る（呼んだ回数として数える）', async () => {
