@@ -769,6 +769,44 @@ expect "resync に --customer は使わない" 64 0 "contract card-setup cancel 
 run resync --apply
 expect "resync の --apply には --mode が要る" 64 0 "--apply には --mode"
 
+# 20b. E 章の前の守り: 回収できないとした請求書、同じ組織の id、組織の id の形
+# 回収できない（uncollectible）とした請求書も、払われていない請求書として hold に数える
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+UNCOL="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, service: "xesm", status: "uncollectible"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNCOL" run resync --apply --mode test
+expect "回収できないとした請求書でも、期限の 14 日後を過ぎたら hold にする" 0 - "PLAN hold cus_a xesm"
+check_arg "回収できないとした請求書の一覧も読む" "status=uncollectible"
+eq "回収できないとした請求書の顧客に hold を書く" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "1"
+# hold 中で、残っているのが回収できないとした請求書だけなら、hold を外さない
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+  FAKE_RESYNC=1 FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNCOL" run resync --apply --mode test
+eq "回収できないとした請求書が残っていれば hold を外さない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+eq "回収できないとした請求書が残っていれば Clerk の hold も true のまま" "$(clerk_state org_a | jq -r '.services.xesm.hold')" "true"
+# 同じ Clerk の組織を 2 人の顧客が持っていれば、resync は何も書かずに止まり、2 人の id を出す
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+DUP_P1="$(jq -c '.[1].metadata.clerk_org_id = "org_a"' <<<"$RESYNC_P1")"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "同じ組織の id を 2 人が持てば resync は止まる" 3 0 "同じ Clerk の組織 org_a を 2 人以上の顧客が持っている"
+printf '%s\n' "$OUT" | grep -F '同じ Clerk の組織 org_a を 2 人以上の顧客が持っている:' | grep -qF 'cus_a, cus_b' && ok "重なった 2 人の顧客の id を、その行に両方出す" || ng "重なりの行に 2 人の id が無い: $OUT"
+eq "重なりがあれば Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+# customer --clerk-org: 同じ組織の id を持つ顧客が既にいれば作らない
+FAKE_SEARCH=none FAKE_SEARCH_ORG=dup run customer --code new-co --name x --email billing@example.test --payment card --clerk-org org_abc123 --apply --mode test
+expect "同じ組織の id の顧客が既にいれば、customer は作らずに exit 3" 3 0 "clerk_org_id=org_abc123 は既に顧客 cus_other"
+check_arg "customer は組織の id でも検索する" "query=metadata['clerk_org_id']:'org_abc123'"
+FAKE_SEARCH=none run customer --code new-co --name x --email billing@example.test --payment card --clerk-org org_abc123 --apply --mode test
+expect "同じ組織の id の顧客がいなければ作る" 0 1 "CREATED customer cus_new"
+# hold と resync も、clerk_org_id の形が違えば何も書かない（Clerk の API の path に入れる前の守り）
+rm -f "$WORK/log.clerk"
+FAKE_CUST_META="$(jq -c '. + {clerk_org_id: "org-bad!"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "hold は clerk_org_id の形が違えば止まる" 3 0 "clerk_org_id の形が違う"
+eq "hold は clerk_org_id の形が違えば Clerk を呼ばない" "$(clerk_calls)" "0"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+BADORG_P1="$(jq -c '.[0].metadata.clerk_org_id = "org-bad!"' <<<"$RESYNC_P1")"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$BADORG_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "resync は clerk_org_id の形が違えば止まる" 3 0 "clerk_org_id の形が違う"
+eq "resync は clerk_org_id の形が違えば Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"
 run set-payment --customer cus_x --payment card
