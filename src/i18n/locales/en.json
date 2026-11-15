@@ -343,7 +343,7 @@
                 "p": "Gathering and organizing the information recorded in past medical charts: using AI to assist with that work is something we can consider. Diagnosis, on the other hand, is the doctor's job. Nursing judgments and pharmaceutical assessments, too, belong to the respective professionals. I want to draw that line clearly."
               },
               {
-                "p": "We start with administrative and routine tasks. Systems that go into diagnosis or treatment are something I want to consider after that, based on the necessary checks of laws and regulations and of safety."
+                "p": "We start with administrative and routine tasks. Systems that go into diagnosis or treatment are something I want to consider after that, once the necessary legal, regulatory and safety checks have been made."
               }
             ]
           }
@@ -379,7 +379,7 @@
           "p": "Cor. talks with directors of nursing, nurse managers and the people who actually write the records, to understand your current formats and workflow. We consider the time spent writing together with the effort needed to check and correct."
         },
         {
-          "p": "A collection of nursing DX case studies from the Ministry of Health, Labour and Welfare (MHLW) also presents a case in which the director of nursing, ward nurse managers and others worked out the workflow, and nurses check AI drafts against the original records.",
+          "p": "A collection of nursing DX case studies from the Ministry of Health, Labour and Welfare (MHLW) also presents a case in which the director of nursing, ward nurse managers and others worked out the workflow, and nurses checked AI drafts against the original records.",
           "cite": [
             2
           ]
@@ -418,7 +418,7 @@
           ]
         },
         {
-          "p": "For each individual build, we follow the MHLW's security management guidelines and the hospital's own operations, and check everything down to permissions, equipment updates, and backup and recovery methods.",
+          "p": "For each individual build, we take into account the MHLW's security management guidelines and the hospital's own operations, and check everything down to permissions, equipment updates, and backup and recovery methods.",
           "cite": [
             5
           ]
@@ -481,7 +481,7 @@
           "p": "If we judge that it can be implemented in a short time, we can also consider a contract that covers both the investigation and building an MVP, after confirming cost and scope. An MVP is a system with the minimum features needed."
         },
         {
-          "p": "Uses involving diagnosis or treatment need to be checked, depending on their intended purpose and risk, for matters such as whether they count as a medical device under the Pharmaceuticals and Medical Devices Act (PMD Act). The policy that professionals check and decide, and the system's legal status, are confirmed separately.",
+          "p": "Uses involving diagnosis or treatment need to be checked, depending on their intended purpose and risk, for matters such as whether they count as a medical device under the Pharmaceuticals and Medical Devices Act (PMD Act). Our policy of having professionals review and decide is one thing; the system's legal status is another, and we confirm each separately.",
           "cite": [
             6
           ]
@@ -506,7 +506,7 @@
             "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
           },
           {
-            "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+            "downloadNote": "If you can't yet picture what a consultation would look like, please download Cor.'s introduction materials. We will follow up using the contact details you provide when you request them."
           },
           {
             "p": "An outline of your work is enough to start. Please do not include real patient data, medical charts or login credentials."
@@ -638,7 +638,7 @@
           "p": "We break down your usual work and bring AI in little by little, starting with the tasks where it helps. While keeping the burden on day-to-day work low, we build a system that suits your firm."
         },
         {
-          "p": "Heads and partners of licensed professional firms (tax accountants, lawyers, labor and social security attorneys and others), as well as the staff in charge of adoption at those firms, are welcome to consult us."
+          "p": "Heads and partners of licensed professional firms (certified public tax accountants, lawyers, labor and social security attorneys and others), as well as the staff in charge of adoption at those firms, are welcome to consult us."
         }
       ],
       "sections": [
@@ -687,7 +687,7 @@
           "p": "Searching past consultation records and in-house materials, then drafting an answer: starting from tasks like these, we consider how far we can support you."
         },
         {
-          "p": "The published policy of Tsuji & Hongo Tax & Consulting (辻・本郷税理士法人) also lists preparing documents and assisting with answers to routine questions as uses of generative AI.",
+          "p": "The published policy of Hongo Tsuji Tax & Consulting (辻・本郷税理士法人) also lists preparing documents and assisting with answers to routine questions as uses of generative AI.",
           "cite": [
             1
           ]
@@ -717,7 +717,7 @@
           "p": "Finding the manual shared within the firm. Checking the answer given to an earlier labor consultation. Then confirming whether it fits the current client's situation."
         },
         {
-          "p": "Fukuoka Social Insurance and Labor Consultants Corporation (福岡社会保険労務士法人) has published how it builds up FAQs and manuals into a system its staff can search.",
+          "p": "Fukuoka Labor and Social Security Attorney Corporation (福岡社会保険労務士法人) has published how it builds up FAQs and manuals into a system its staff can search.",
           "cite": [
             3
           ]
@@ -730,7 +730,7 @@
         },
         {
           "founder": {
-            "h3": "Kousuke Terada's view",
+            "h3": "Representative Director Kousuke Terada's view",
             "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
             "bylineAt": "bottom",
             "body": [
@@ -768,10 +768,10 @@
           "p": "Use an existing service, or build something to fit your firm? Run it in your own environment, or use the cloud? We consider each of these."
         },
         {
-          "p": "Cor. has the technology to build a local LLM into consumer PCs as a system. A local LLM is generative AI that runs on your own PCs, in-office servers or similar hardware."
+          "p": "Cor. has the technology to build a local LLM into systems on consumer PCs. A local LLM is generative AI that runs on your own PCs, in-office servers or similar hardware."
         },
         {
-          "p": "The equipment you need depends on the volume of documents, the number of people using it at the same time, and the response speed you need. Before buying equipment first, let's check how much can be done with what you have now."
+          "p": "The equipment you need depends on the volume of documents, the number of people using it at the same time, and the response speed you need. Before buying any equipment, let's check how much can be done with what you have now."
         },
         {
           "h3": "We test it on one task before widening the scope"
@@ -832,7 +832,7 @@
             "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
           },
           {
-            "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+            "downloadNote": "If you can't yet picture what a consultation would look like, please download Cor.'s introduction materials. We will follow up using the contact details you provide when you request them."
           },
           {
             "p": "An outline of your work is enough to start. Please do not include real client data or login credentials."
@@ -844,7 +844,7 @@
       "sourcesTitle": "References",
       "sources": [
         {
-          "title": "Guidelines for the Use of Generative AI (Tsuji & Hongo Tax & Consulting)",
+          "title": "Guidelines for the Use of Generative AI (Hongo Tsuji Tax & Consulting)",
           "note": "September 1, 2025. Referred to for its stated purposes of use: preparing documents and assisting with answers to routine questions. This is the firm's own policy, not a document measuring any reduction effect."
         },
         {
@@ -852,7 +852,7 @@
           "note": "Official description of the summarizing and chronology features and the feature that opens the source passage from the output. It does not indicate any deployment by Cor."
         },
         {
-          "title": "Announcement on the system for sharing FAQs and manuals (Fukuoka Social Insurance and Labor Consultants Corporation)",
+          "title": "Announcement on the system for sharing FAQs and manuals (Fukuoka Labor and Social Security Attorney Corporation)",
           "note": "October 7, 2025. An in-house knowledge-sharing initiative published by the firm itself. Not a document that independently verifies its effects."
         },
         {
@@ -1009,7 +1009,7 @@
           "p": "We aim for a setup that, even when new prime contractors or formats are added, lets you sort out what can be shared across them and what needs extra handling."
         },
         {
-          "h2": "Putting “this form is the only one that's different here” into words, together."
+          "h2": "Putting “on this form alone, this part is different” into words, together."
         },
         {
           "p": "The people who can prepare these documents also know things that aren't written on the forms."
@@ -1102,7 +1102,7 @@
           "p": "Before adding new devices or apps, we check with you what is in use now and where people are passing information on again by hand."
         },
         {
-          "p": "The devices people operate and the place where AI runs are each chosen to fit the work. For example, a setup in which smartphones are used on site and AI processing happens on PCs or servers in your office. Cor. handles everything from infrastructure and data foundations to sorting out requirements and development, including building a local LLM into consumer PCs."
+          "p": "The devices people operate and the place where AI runs are each chosen to fit the work. For example, a setup in which smartphones are used on site and AI processing happens on PCs or servers in your office. Cor. handles everything from infrastructure and data foundations to sorting out requirements and development, including building a local LLM into systems on consumer PCs."
         },
         {
           "p": "The equipment and connection methods needed are decided based on the information handled, the number of users, the processing speed required, and network conditions at the site."
@@ -1134,7 +1134,7 @@
         {
           "founder": {
             "h2": "Improvements that get people saying, “We finished five minutes earlier than last month.”",
-            "h3": "Kousuke Terada's view",
+            "h3": "Representative Director Kousuke Terada's view",
             "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
             "bylineAt": "bottom",
             "body": [
@@ -1173,7 +1173,7 @@
             "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
           },
           {
-            "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+            "downloadNote": "If you can't yet picture what a consultation would look like, please download Cor.'s introduction materials. We will follow up using the contact details you provide when you request them."
           },
           {
             "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
@@ -1201,7 +1201,7 @@
           "note": "Summary of the ISMS certification registration, based on certificate of registration JP26/00000364 issued by SGS Japan Inc."
         },
         {
-          "title": "SiteBox features (KENTEM / Kensetsu System)",
+          "title": "SiteBox features (KENTEM / Kensetsu System Co., ltd.)",
           "note": "Official description of recording and taking photos on a smartphone, integration with construction management software, and form generation."
         }
       ]
@@ -1337,7 +1337,7 @@
           "p": "Cor. has worked with manufacturers of smart devices in Japan and abroad to develop software that captures information from the field. Besides PCs and smartphones, we treat smart glasses, smart cameras, smartwatches and similar devices as options depending on the use."
         },
         {
-          "h3": "We are still developing together with a smart glasses manufacturer today."
+          "h3": "We are currently co-developing with a smart glasses manufacturer."
         },
         {
           "p": "We are currently working with the manufacturer to develop smart glasses that read text and convey it by voice for people with visual impairments."
@@ -1355,13 +1355,13 @@
           "p": "Who will use it, and where? Will it get in the way of the work? Can it capture the changes that matter? We check all this, including noise and network conditions on site, and choose what equipment to add."
         },
         {
-          "p": "A skills-transfer case from Hitachi and Daikin also describes how measuring with many instruments alone did not reveal the difference from skilled workers, and how interviews with skilled workers were used to decide what to observe and to narrow down the measurement methods.",
+          "p": "A skills-transfer case from Hitachi and Daikin also describes how measuring with many instruments alone did not reveal what set skilled workers apart, and how interviews with skilled workers were used to decide what to observe and to narrow down the measurement methods.",
           "cite": [
             2
           ]
         },
         {
-          "h2": "Passing it to AI, “interpreted so it understands.”"
+          "h2": "Interpreting the shop floor for AI."
         },
         {
           "p": "What Cor. wants to be is the bridge between the shop floor, AI, and the people who take on the work next."
@@ -1370,10 +1370,10 @@
           "p": "Linking the footage and sound collected to which equipment, under what conditions, and what is being done in that scene. Making the reasons an experienced worker gave for a judgment checkable from the corresponding scene."
         },
         {
-          "strong": "Collect the data AI needs, and pass it to AI “interpreted so it understands.”"
+          "strong": "Collect the data AI needs, and pass it on in a form AI can understand."
         },
         {
-          "p": "NEDO, too, names the fact that the meaning of in-company data and the relationships among it are not organized as a challenge for using AI, and treats preparing such data into a usable state, and evaluating it, as a subject of research.",
+          "p": "NEDO, too, identifies poorly organized meaning and relationships in in-company data as a challenge for using AI, and is researching how to prepare such data for use and evaluate it.",
           "cite": [
             3
           ]
@@ -1438,7 +1438,7 @@
           "p": "When filming or recording audio, we confirm with you the purpose and scope, how it is explained to those involved, who can view it, how long it is kept, and how any information sent outside is handled."
         },
         {
-          "p": "Cor. handles device integration, infrastructure and data foundations, sorting out requirements and development, including building a local LLM into consumer PCs. Whether to process in-house or use the cloud is also considered based on the information involved and the conditions on site."
+          "p": "Cor. handles device integration, infrastructure and data foundations, sorting out requirements and development, including building a local LLM into systems on consumer PCs. Whether to process in-house or use the cloud is also considered based on the information involved and the conditions on site."
         },
         {
           "p": "After the investigation, we propose feasible options, such as starting with a minimal setup or also covering related tasks. If we judge that it can be implemented in a short time, we can also consider combining the investigation with building a system with the minimum features needed, after confirming cost and scope."
@@ -1446,7 +1446,7 @@
         {
           "founder": {
             "h2": "Keeping sight of the North Star, and racking our brains together.",
-            "h3": "Kousuke Terada's view",
+            "h3": "Representative Director Kousuke Terada's view",
             "byline": "Kousuke Terada, Representative Director, Cor.Inc.",
             "bylineAt": "bottom",
             "body": [
@@ -1482,7 +1482,7 @@
             "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
           },
           {
-            "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+            "downloadNote": "If you can't yet picture what a consultation would look like, please download Cor.'s introduction materials. We will follow up using the contact details you provide when you request them."
           },
           {
             "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
@@ -1593,7 +1593,7 @@
                 "p": "This happened some time ago, when Cor. was commissioned by a prime contractor and took part in developing a system for the teachers, staff and students of a vocational school."
               },
               {
-                "p": "On our first visit after the contract was signed, I heard that the teacher who ran the school's internal database would reach retirement age and retire in six months. Nothing had been done to prepare for it, and if things stayed as they were, the running of the school itself could run into problems."
+                "p": "On our first visit after the contract was signed, I heard that the teacher who ran the school's internal database would reach retirement age and retire in six months. Nothing had been done to prepare for it, and if things stayed as they were, school operations themselves could be affected."
               },
               {
                 "p": "Information such as students, courses and timetables was kept in an internal database that had been in use for many years. The teacher entered data into it directly, while other teachers and administrative staff, to make up for how hard it was to use, kept their own separate records in Access or FileMaker."
@@ -1765,13 +1765,13 @@
           "h3": "We propose a build plan that suits your school"
         },
         {
-          "p": "When there are several options, we present them in tiers (for example, good / better / best), from a full setup to a minimal one. We use whatever format is easiest for the school, such as Google Docs or Word documents. If the options are limited, or something is hard to achieve, we tell you frankly."
+          "p": "When there are several options, we present them in tiers (for example, best / better / good), from a full setup to a minimal one. We use whatever format is easiest for the school, such as Google Docs or Word documents. If the options are limited, or something is hard to achieve, we tell you frankly."
         },
         {
           "p": "If we can judge at the first meeting that a short implementation is feasible, we can also consider a contract that covers both the investigation and building an MVP (a system with the minimum features needed), after confirming the additional cost and scope. In that case, we discuss delivering a working MVP in place of a minimal-setup plan."
         },
         {
-          "p": "The role Cor. wants to play is something like a life planner and development company for your AI project, rolled into one. If we are going to build a system, we want it to be used on the ground for a long time. So please let us think it through with you, even before anything has taken shape."
+          "p": "The role Cor. wants to play is something like a long-term planning partner and a development company for your AI project, rolled into one. If we are going to build a system, we want it to be used on the ground for a long time. So please let us think it through with you, even before anything has taken shape."
         }
       ],
       "cta": {
@@ -1781,7 +1781,7 @@
             "p": "Through the contact form, tell us what you want to do, what is already under way, and what is holding you back right now. After reading it, we will get back to you about a first meeting."
           },
           {
-            "downloadNote": "If you can't yet picture what a consultation would look like, please get Cor.'s introduction materials from the materials download. We will contact you at the details you give when you apply."
+            "downloadNote": "If you can't yet picture what a consultation would look like, please download Cor.'s introduction materials. We will follow up using the contact details you provide when you request them."
           },
           {
             "p": "An outline of your work is enough to start. Please do not include real data on students, confidential documents or login credentials."
@@ -2203,24 +2203,24 @@
       "description": "Page not found. Please check the URL in the address bar and try again."
     },
     "industryMedical": {
-      "title": "AI adoption for medical institutions | Nursing records, referral letters and medication information | Cor.Inc.",
-      "description": "For medical institutions that want support in preparing referral letters, nursing summaries and medication management summaries. Cor. looks into how patient information is handled and into your electronic medical records and in-house formats, and stays with you from designing a setup that can include a local LLM through to implementation."
+      "title": "AI for medical institutions: nursing records, referrals | Cor.Inc.",
+      "description": "For referral letters and nursing and medication summaries: Cor. reviews patient data handling and EMR formats, then designs and builds with you, local LLMs included."
     },
     "industryShigyo": {
-      "title": "AI adoption for licensed professional firms | Document search and draft answers, step by step | Cor.Inc.",
-      "description": "For the offices of tax accountants, lawyers and labor and social security attorneys. We support drafting answers whose basis can be checked, from past consultation records and in-house materials. Cor. looks into your data and practice, and stays with you from a design that can include local and cloud options through to step-by-step adoption."
+      "title": "AI for licensed professional firms: drafting answers | Cor.Inc.",
+      "description": "For offices of certified public tax accountants, lawyers and labor and social security attorneys: draft answers checkable against past records, adopted step by step."
     },
     "industryConstruction": {
-      "title": "AI adoption for construction companies | Less re-keying of daily reports and documents | Cor.Inc.",
-      "description": "Are you entering the same information again and again into formats that differ for each prime contractor? Cor. organizes the output of your existing apps and the tacit knowledge on site, and builds with you a system that gradually automates re-keying and drafting of daily construction reports and documents, while keeping human checks and approval."
+      "title": "AI for construction | Less re-keying of daily reports | Cor.Inc.",
+      "description": "Same details re-entered for each prime contractor's format? Cor. helps you gradually automate re-keying and drafting of daily reports and documents, keeping human checks."
     },
     "industryManufacturing": {
-      "title": "AI support for skills transfer in manufacturing | Connecting tacit knowledge on the factory floor | Cor.Inc.",
-      "description": "What did the veteran look at, and how did they decide? Cor. gathers images, video, audio and existing records in a way that fits your site, and organizes them into a form AI can handle. From linking devices such as smart glasses and the data foundation to a system that turns it into knowledge the next person can use, we design and implement it together."
+      "title": "AI for skills transfer in manufacturing | Cor.Inc.",
+      "description": "What did the veteran look at, and how did they decide? Cor. organizes images, video, audio and records for AI, turning them into knowledge the next person can use."
     },
     "industryEducation": {
-      "title": "Data integration and AI adoption for school administration and academic affairs | For schools and universities | Cor.Inc.",
-      "description": "In a system project for a vocational school, we learned only after the contract was signed that the teacher in charge was due to retire. Drawing on that experience, Cor. supports AI adoption in schools starting from a survey of the current situation, and thinks it through with you, from organizing internal data and connecting existing systems to implementing a local LLM."
+      "title": "Data integration and AI for schools and universities | Cor.Inc.",
+      "description": "Drawing on a vocational school project, Cor. supports AI adoption in schools, from a survey of the current situation to internal data, system links and local LLMs."
     },
     "home": {
       "title": "AI Development and Generative AI Adoption in Fukuoka | Cor.Inc. (Local LLM, Grift)",

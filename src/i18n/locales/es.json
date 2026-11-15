@@ -285,7 +285,7 @@
           "p": "Supongamos, por ejemplo, que quiere probar la IA para redactar borradores de cartas de derivación."
         },
         {
-          "p": "La información necesaria está en la historia clínica electrónica. También existe el formato que usan siempre. Pero ¿dónde se tratará la información del paciente y cómo se volcará en ese formato? Si se piensa hasta el momento en que el médico revisa el contenido, no es posible decidir la implantación de inmediato."
+          "p": "La información necesaria está en la historia clínica electrónica. También existe el formato que usan siempre. Pero ¿dónde se tratará la información del paciente y cómo se volcará en ese formato? Y si además hay que prever cómo revisará el médico el contenido, la implantación no se puede decidir de inmediato."
         },
         {
           "p": "El resumen de enfermería al alta o al traslado, del que se encarga el departamento de enfermería. El resumen de gestión farmacéutica que prepara el servicio de farmacia para traspasar la información a otros centros o a farmacias. También para documentos como estos, pensamos con usted el flujo de reunir los registros, darles formato y que los revise el profesional responsable."
@@ -294,7 +294,7 @@
           "p": "Pueden consultarnos no solo directores de centro y equipos directivos, sino también directores y jefes de enfermería, jefes del servicio de farmacia, y personal de sistemas de información o de administración."
         },
         {
-          "p": "Cor. le ayuda desde la investigación de sus datos actuales y de su forma de trabajar. Qué tareas reducir y qué decisiones asumen las personas. Desde ordenar eso hasta diseñar e implementar la configuración, avanzamos juntos."
+          "p": "Cor. le ayuda desde la investigación de sus datos actuales y de su forma de trabajar. Qué tareas reducir y qué decisiones dejar en manos de las personas. Desde ordenar eso hasta diseñar e implementar la configuración, avanzamos juntos."
         }
       ],
       "sections": [
@@ -454,7 +454,7 @@
           "p": "Aunque el estudio empiece desde enfermería o farmacia, identificamos a quienes lo usarán, a quienes revisan los sistemas y la gestión de la información, y a quienes deciden el presupuesto y los contratos. Avanzamos con las personas necesarias según la organización del centro."
         },
         {
-          "h3": "En la primera reunión le preguntamos qué quiere hacer y por qué se ha detenido"
+          "h3": "En la primera reunión le preguntamos qué quiere hacer y qué lo tiene detenido"
         },
         {
           "p": "Prevemos que la reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y qué dificultades encuentra para avanzar."
@@ -481,7 +481,7 @@
           "p": "Si concluimos que se puede implementar en poco tiempo, tras confirmar el coste y el alcance, también se puede considerar un contrato que incluya la investigación y la creación de un MVP. Un MVP es un sistema con las funciones mínimas necesarias."
         },
         {
-          "p": "Para usos relacionados con el diagnóstico o el tratamiento, según su finalidad y sus riesgos, hay que comprobar, entre otras cosas, si se considera un dispositivo médico según la Ley de Productos Farmacéuticos y Dispositivos Médicos (Ley PMD). El principio de que los profesionales revisen y decidan y el tratamiento legal del sistema se comprueban por separado.",
+          "p": "Para usos relacionados con el diagnóstico o el tratamiento, según su finalidad y sus riesgos, hay que comprobar, entre otras cosas, si se considera un dispositivo médico según la Ley de Productos Farmacéuticos y Dispositivos Médicos (Ley PMD). Que los profesionales revisen y decidan es una cosa; el tratamiento legal del sistema es otra, y ambas se comprueban por separado.",
           "cite": [
             6
           ]
@@ -503,10 +503,10 @@
         "title": "Para empezar, cuéntenos lo que tiene en mente.",
         "body": [
           {
-            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y por qué está parado el proyecto. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
           },
           {
-            "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+            "downloadNote": "Si todavía no tiene claro cómo plantear la consulta, puede descargar los materiales de presentación de Cor. Nos pondremos en contacto con usted a través de los datos que nos facilite en la solicitud."
           },
           {
             "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de pacientes, historias clínicas ni credenciales de acceso."
@@ -550,7 +550,7 @@
         },
         {
           "title": "Cor.Inc.: información de la empresa",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
         },
         {
           "title": "Cor.Inc.: seguridad de la información",
@@ -687,7 +687,7 @@
           "p": "Buscar en registros de consultas anteriores y en documentos internos, y redactar un borrador de respuesta. A partir de tareas como estas, estudiamos hasta dónde podemos ayudar."
         },
         {
-          "p": "La política publicada por Tsuji & Hongo Tax & Consulting también menciona, como usos de la IA generativa, el apoyo en la elaboración de documentos y en las respuestas a preguntas habituales.",
+          "p": "La política publicada por Hongo Tsuji Tax & Consulting también menciona, como usos de la IA generativa, el apoyo en la elaboración de documentos y en las respuestas a preguntas habituales.",
           "cite": [
             1
           ]
@@ -717,20 +717,20 @@
           "p": "Buscar los manuales que se comparten en el despacho. Revisar las respuestas dadas a consultas laborales anteriores. Y después comprobar si encajan con la situación del cliente asesorado actual."
         },
         {
-          "p": "Fukuoka Social Insurance and Labor Consultants Corporation (福岡社会保険労務士法人) ha dado a conocer un sistema en el que acumula preguntas frecuentes y manuales que su personal puede consultar mediante búsquedas.",
+          "p": "Fukuoka Shakai Hoken Rōmushi Hōjin (福岡社会保険労務士法人) ha dado a conocer un sistema en el que acumula preguntas frecuentes y manuales que su personal puede consultar mediante búsquedas.",
           "cite": [
             3
           ]
         },
         {
-          "p": "En Cor., distinguimos entre el conocimiento de uso común y los documentos propios de cada cliente asesorado, y pensamos una configuración que permita comprobar la información necesaria. Las decisiones laborales las toma el asesor laboral; también ordenamos con usted el flujo en el que el personal reúne la información y le pide que la revise."
+          "p": "En Cor., distinguimos entre el conocimiento de uso común y los documentos propios de cada cliente asesorado, y pensamos una configuración que permita comprobar la información necesaria. Las decisiones laborales las toma el asesor laboral; también ordenamos con usted el flujo en el que el personal reúne la información y pide al asesor laboral que la revise."
         },
         {
           "h2": "Que la preparación de la implantación no detenga el trabajo diario."
         },
         {
           "founder": {
-            "h3": "La visión de Kousuke Terada",
+            "h3": "La visión de Kousuke Terada, Director Representante",
             "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
             "bylineAt": "bottom",
             "body": [
@@ -741,7 +741,7 @@
                 "p": "Yo quiero empezar por descomponer el trabajo actual. Encontrar, tarea por tarea, dónde ayuda dejarlo en manos de la IA. Ahorrar trabajo poco a poco, añadiendo el menor esfuerzo posible al trabajo diario."
               },
               {
-                "p": "No cambiarlo todo de repente, sino ponerme en el lugar del cliente y de su día a día. Para eso, quiero empezar escuchando a cada empresa, una por una."
+                "p": "No cambiarlo todo de repente, sino ponerme en el lugar del cliente y de su día a día. Para eso, quiero empezar escuchando a cada despacho, uno por uno."
               }
             ]
           }
@@ -786,7 +786,7 @@
           "p": "Si es necesario, acordamos cómo avanzar según el trabajo diario, incluido un plan anual. Nuestro objetivo es ir ampliando el alcance de uso manteniendo en lo posible el flujo de trabajo del personal."
         },
         {
-          "h2": "Quién trata, y dónde, la información de clientes asesorados y de clientes de asuntos concretos."
+          "h2": "Quién trata, y dónde, la información de sus clientes, tanto de asesoría continuada como de asuntos puntuales."
         },
         {
           "p": "Antes de recibir datos reales, firmamos un acuerdo de confidencialidad y acordamos qué información se usará y dónde se trabajará."
@@ -804,7 +804,7 @@
           "h2": "De la primera reunión a la investigación y el desarrollo."
         },
         {
-          "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y por qué se ha detenido. Ordenamos lo imprescindible y lo que le gustaría conseguir si es posible, y le presentamos un borrador de lo que investigaremos a continuación."
+          "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y qué lo tiene detenido. Ordenamos lo imprescindible y lo que le gustaría conseguir si es posible, y le presentamos un borrador de lo que investigaremos a continuación."
         },
         {
           "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Investigamos dónde están los documentos y cómo se usan y, si es necesario, hablamos con usted de hacer entrevistas al personal o visitas presenciales."
@@ -829,13 +829,13 @@
         "title": "Para empezar, cuéntenos lo que tiene en mente.",
         "body": [
           {
-            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y por qué está parado el proyecto. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
           },
           {
-            "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+            "downloadNote": "Si todavía no tiene claro cómo plantear la consulta, puede descargar los materiales de presentación de Cor. Nos pondremos en contacto con usted a través de los datos que nos facilite en la solicitud."
           },
           {
-            "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de clientes asesorados ni de clientes de asuntos concretos, ni credenciales de acceso."
+            "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de sus clientes ni credenciales de acceso."
           }
         ],
         "primary": "Consultar con Cloudia",
@@ -844,7 +844,7 @@
       "sourcesTitle": "Referencias",
       "sources": [
         {
-          "title": "Directrices para el uso de la IA generativa (Tsuji & Hongo Tax & Consulting)",
+          "title": "Directrices para el uso de la IA generativa (Hongo Tsuji Tax & Consulting)",
           "note": "1 de septiembre de 2025. Se citan los fines de uso de apoyo en la elaboración de documentos y en las respuestas a preguntas habituales. Es la política de la propia firma, no un documento que mida el efecto de reducción."
         },
         {
@@ -852,12 +852,12 @@
           "note": "Explicación oficial de las funciones de resumen, elaboración de cronologías y apertura del pasaje de origen desde el resultado. No indica ninguna implantación realizada por Cor."
         },
         {
-          "title": "Anuncio sobre el sistema para compartir las preguntas frecuentes y los manuales (Fukuoka Social Insurance and Labor Consultants Corporation)",
+          "title": "Anuncio sobre el sistema para compartir las preguntas frecuentes y los manuales (Fukuoka Shakai Hoken Rōmushi Hōjin)",
           "note": "7 de octubre de 2025. Iniciativa de intercambio interno de conocimientos publicada por la propia firma. No es un documento que verifique sus efectos de forma independiente."
         },
         {
           "title": "Información de la empresa (Cor.Inc.)",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
         },
         {
           "title": "Seguridad de la información (Cor.Inc.)",
@@ -1021,7 +1021,7 @@
           "p": "Si ese criterio solo está en la cabeza de la persona encargada, igualar el aspecto de los formatos no basta para crear un sistema que se ajuste al trabajo diario."
         },
         {
-          "p": "Para empezar, permítanos poner en palabras con ustedes ese «conocimiento tácito» que solo conoce el personal de esa obra."
+          "p": "Para empezar, permítanos poner en palabras con usted y su equipo ese «conocimiento tácito» que solo conoce el personal de esa obra."
         },
         {
           "table": {
@@ -1054,7 +1054,7 @@
           }
         },
         {
-          "p": "El personal de obra no necesita preparar un manual completo desde el principio. Le preguntamos por el orden de las tareas y los motivos de cada decisión mientras vemos los registros y documentos que usan habitualmente."
+          "p": "El personal de obra no necesita preparar un manual completo desde el principio. Les preguntamos por el orden de las tareas y los motivos de cada decisión mientras vemos los registros y documentos que usan habitualmente."
         },
         {
           "h2": "Del smartphone en la obra a los documentos de la oficina."
@@ -1117,7 +1117,7 @@
           "h2": "Empezamos investigando los documentos que más se usan."
         },
         {
-          "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y por qué se ha detenido, y le presentamos un borrador de lo que investigaremos a continuación."
+          "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y qué lo tiene detenido, y le presentamos un borrador de lo que investigaremos a continuación."
         },
         {
           "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Primero revisamos los documentos más habituales y los formatos excepcionales, y decidimos por dónde empezar."
@@ -1134,7 +1134,7 @@
         {
           "founder": {
             "h2": "Mejoras que hagan decir: «Hemos terminado cinco minutos antes que el mes pasado».",
-            "h3": "La visión de Kousuke Terada",
+            "h3": "La visión de Kousuke Terada, Director Representante",
             "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
             "bylineAt": "bottom",
             "body": [
@@ -1170,10 +1170,10 @@
         "title": "Para empezar, cuéntenos lo que tiene en mente.",
         "body": [
           {
-            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y por qué está parado el proyecto. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
           },
           {
-            "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+            "downloadNote": "Si todavía no tiene claro cómo plantear la consulta, puede descargar los materiales de presentación de Cor. Nos pondremos en contacto con usted a través de los datos que nos facilite en la solicitud."
           },
           {
             "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la obra ni documentos confidenciales."
@@ -1198,10 +1198,10 @@
         },
         {
           "title": "Información de la empresa (Cor.Inc.)",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
         },
         {
-          "title": "Funciones de SiteBox (KENTEM / Kensetsu System)",
+          "title": "Funciones de SiteBox (KENTEM / Kensetsu System Co., ltd.)",
           "note": "Explicación oficial del registro y la toma de fotos con el smartphone, la integración con el software de gestión de obra y la creación de formularios."
         }
       ]
@@ -1277,7 +1277,7 @@
           "p": "Por ejemplo, cuando un equipo no funciona como debería."
         },
         {
-          "p": "El veterano escucha el sonido, mira lo que tiene entre manos y comprueba qué está distinto de lo habitual. En el registro posterior solo queda una breve anotación: «cambio de pieza»."
+          "p": "El veterano escucha el sonido, mira lo que tiene entre manos y comprueba qué ha cambiado respecto a lo habitual. En el registro posterior solo queda una breve anotación: «cambio de pieza»."
         },
         {
           "p": "Qué miró y cómo lo decidió. ¿Se están transmitiendo también esas pistas a la siguiente persona responsable?"
@@ -1337,7 +1337,7 @@
           "p": "Cor. ha trabajado con fabricantes de dispositivos inteligentes de Japón y del extranjero en el desarrollo de software que captura información sobre el terreno. Además de PC y smartphones, contemplamos gafas inteligentes, cámaras inteligentes, relojes inteligentes y otros dispositivos como opciones según el uso."
         },
         {
-          "h3": "Seguimos desarrollando actualmente con un fabricante de gafas inteligentes."
+          "h3": "Seguimos trabajando en un desarrollo conjunto con un fabricante de gafas inteligentes."
         },
         {
           "p": "Actualmente estamos desarrollando, en colaboración con el fabricante, unas gafas inteligentes para personas con discapacidad visual que leen texto y lo transmiten por voz."
@@ -1429,7 +1429,7 @@
           "h2": "Empezamos por una tarea que se quiera conservar."
         },
         {
-          "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y por qué se ha detenido, y le presentamos un borrador de lo que investigaremos a continuación."
+          "p": "Prevemos que la primera reunión dure aproximadamente una hora. Le preguntamos qué quiere hacer, qué está ya en marcha y qué lo tiene detenido, y le presentamos un borrador de lo que investigaremos a continuación."
         },
         {
           "p": "Si está de acuerdo con la orientación, pasamos a firmar un acuerdo de confidencialidad y un contrato de investigación. Elegimos una tarea que se quiera conservar o una situación que cause problemas, y ordenamos los registros existentes, los equipos que se usan en planta y lo que se quiere preguntar a las personas experimentadas."
@@ -1446,7 +1446,7 @@
         {
           "founder": {
             "h2": "Sin perder de vista la estrella polar, devanarnos los sesos juntos.",
-            "h3": "La visión de Kousuke Terada",
+            "h3": "La visión de Kousuke Terada, Director Representante",
             "byline": "Kousuke Terada, Director Representante de Cor.Inc.",
             "bylineAt": "bottom",
             "body": [
@@ -1479,10 +1479,10 @@
         "title": "Para empezar, cuéntenos lo que tiene en mente.",
         "body": [
           {
-            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y por qué está parado el proyecto. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
           },
           {
-            "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+            "downloadNote": "Si todavía no tiene claro cómo plantear la consulta, puede descargar los materiales de presentación de Cor. Nos pondremos en contacto con usted a través de los datos que nos facilite en la solicitud."
           },
           {
             "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la planta ni documentos confidenciales."
@@ -1507,7 +1507,7 @@
         },
         {
           "title": "Información de la empresa (Cor.Inc.)",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japan Inc."
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
         }
       ]
     }
@@ -1593,7 +1593,7 @@
                 "p": "Esto ocurrió hace un tiempo, cuando Cor., por encargo de un contratista principal, participó en el desarrollo de un sistema para el personal docente y administrativo y los estudiantes de una escuela de formación profesional."
               },
               {
-                "p": "En la primera visita tras firmar el contrato, me dijeron que el profesor que gestionaba la base de datos interna se jubilaba en seis meses. No se había avanzado nada al respecto y, tal como estaban las cosas, podían surgir problemas incluso en el funcionamiento de la escuela."
+                "p": "En la primera visita tras firmar el contrato, me dijeron que el profesor que gestionaba la base de datos interna se jubilaba en seis meses. No se había avanzado en ello y, tal como estaban las cosas, podían surgir problemas incluso en el funcionamiento de la escuela."
               },
               {
                 "p": "La información de estudiantes, asignaturas, horarios y demás estaba en una base de datos interna que llevaba muchos años en uso. Ese profesor introducía los datos directamente en ella, mientras que, para suplir lo difícil que era de usar, los docentes y el personal administrativo los gestionaban cada uno por su cuenta en Access o FileMaker."
@@ -1771,17 +1771,17 @@
           "p": "Si en la primera reunión se concluye que es posible implementarlo en poco tiempo, tras confirmar el coste adicional y el alcance, también se puede considerar un contrato que incluya la investigación y la creación de un MVP (un sistema con las funciones mínimas necesarias). En ese caso, le plantearemos entregar un MVP que funcione en lugar del plan de configuración mínima."
         },
         {
-          "p": "El papel que Cor. quiere desempeñar es, por así decirlo, el de «planificador de vida» de un proyecto de IA y, al mismo tiempo, el de empresa de desarrollo. Ya que vamos a construir un sistema, queremos que se use durante mucho tiempo en el día a día. Por eso, permítanos pensar con usted desde que la idea todavía no tiene forma."
+          "p": "El papel que Cor. quiere desempeñar es, por así decirlo, el de un acompañante que planifica todo el ciclo de vida de un proyecto de IA y, al mismo tiempo, el de empresa de desarrollo. Ya que vamos a construir un sistema, queremos que se use durante mucho tiempo en el día a día. Por eso, permítanos pensar con usted desde que la idea todavía no tiene forma."
         }
       ],
       "cta": {
         "title": "Para empezar, cuéntenos lo que tiene en mente.",
         "body": [
           {
-            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y el motivo por el que se ha detenido. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
+            "p": "Envíenos, a través del formulario de contacto, lo que quiere hacer, lo que ya está en marcha y por qué está parado el proyecto. Tras leerlo, nos pondremos en contacto con usted en relación con la primera reunión."
           },
           {
-            "downloadNote": "Si todavía no se imagina cómo sería la consulta, reciba los materiales de presentación de Cor. desde la descarga de materiales. Nos pondremos en contacto con usted en los datos que nos indique al solicitarlos."
+            "downloadNote": "Si todavía no tiene claro cómo plantear la consulta, puede descargar los materiales de presentación de Cor. Nos pondremos en contacto con usted a través de los datos que nos facilite en la solicitud."
           },
           {
             "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de estudiantes ni alumnos, documentos confidenciales ni credenciales de acceso."
@@ -2203,24 +2203,24 @@
       "description": "Página no encontrada. Por favor, verifica la URL en la barra de direcciones e inténtalo de nuevo."
     },
     "industryMedical": {
-      "title": "Implantación de la IA en centros sanitarios | Registros de enfermería, cartas de derivación e información farmacéutica | Cor.Inc.",
-      "description": "Para centros sanitarios que quieren apoyo en la preparación de cartas de derivación, resúmenes de enfermería y resúmenes de gestión farmacéutica. Cor. estudia cómo se trata la información de los pacientes, la historia clínica electrónica y los formatos del centro, y le acompaña desde el diseño de una configuración que puede incluir un LLM local hasta la implementación."
+      "title": "IA para centros sanitarios: derivaciones y enfermería | Cor.Inc.",
+      "description": "Cartas de derivación y resúmenes de enfermería y farmacia: Cor. estudia sus datos y formatos, y le acompaña hasta implantar la IA, incluso con un LLM local."
     },
     "industryShigyo": {
-      "title": "Implantación de la IA en despachos profesionales colegiados | Búsqueda de documentos y borradores de respuesta, paso a paso | Cor.Inc.",
-      "description": "Para despachos de asesores fiscales, abogados y asesores laborales. Apoyamos la preparación de borradores de respuesta cuyo fundamento se pueda comprobar, a partir de consultas anteriores y documentos internos. Cor. estudia sus datos y su práctica, y le acompaña desde un diseño que puede incluir opciones locales y en la nube hasta una implantación por etapas."
+      "title": "IA para despachos profesionales: documentos y respuestas | Cor.Inc.",
+      "description": "Para despachos de asesores fiscales, abogados y asesores laborales: borradores de respuesta con fuentes comprobables, en local o en la nube, implantados por etapas."
     },
     "industryConstruction": {
-      "title": "Implantación de la IA en empresas de construcción | Menos transcripción de partes diarios y documentos | Cor.Inc.",
-      "description": "¿Introduce una y otra vez la misma información en formatos distintos para cada contratista principal? Cor. ordena la salida de sus aplicaciones actuales y el conocimiento tácito de la obra, y construye con usted un sistema que automatiza poco a poco la transcripción y los borradores de partes diarios y documentos, manteniendo la revisión y la aprobación de las personas."
+      "title": "IA en construcción: menos transcripción de partes de obra | Cor.Inc.",
+      "description": "¿Introduce los mismos datos en el formato de cada contratista principal? Reducimos con IA la transcripción de partes diarios y documentos, manteniendo la revisión humana."
     },
     "industryManufacturing": {
-      "title": "Apoyo con IA a la transmisión de habilidades en la fabricación | Conectar el conocimiento tácito de la planta | Cor.Inc.",
-      "description": "¿Qué miraba el veterano y cómo decidía? Cor. reúne imágenes, vídeo, audio y registros existentes de forma adaptada a su planta, y los organiza en un formato que la IA pueda manejar. Desde la conexión de dispositivos como gafas inteligentes y la base de datos hasta un sistema que lo convierta en conocimiento útil para la siguiente persona, lo diseñamos e implementamos con usted."
+      "title": "IA y transmisión de competencias en la industria | Cor.Inc.",
+      "description": "¿Qué miraba el veterano y cómo decidía? Cor. organiza imágenes, vídeo, audio y registros de planta para la IA y los convierte en conocimiento para la siguiente persona."
     },
     "industryEducation": {
-      "title": "Integración de datos e implantación de la IA en la gestión escolar y académica | Para colegios y universidades | Cor.Inc.",
-      "description": "En un proyecto de sistemas para una escuela de formación profesional, supimos después de firmar el contrato que el profesor responsable iba a jubilarse. A partir de esa experiencia, Cor. apoya la implantación de la IA en centros educativos empezando por un estudio de la situación actual, y piensa con usted desde la organización de los datos internos y la integración con los sistemas existentes hasta la implementación de un LLM local."
+      "title": "IA y datos para colegios y universidades | Cor.Inc.",
+      "description": "Cor. apoya la IA en colegios y universidades desde el estudio de la situación actual: datos internos, integración con sistemas existentes y LLM local."
     },
     "home": {
       "title": "Desarrollo de IA y adopción de IA generativa en Fukuoka | Cor.Inc. (LLM local, Grift)",
