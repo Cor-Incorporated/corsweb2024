@@ -8,6 +8,7 @@
 // 1b. その 1 本は、カレンダーの区画が在る build では各ページに 1 本、無い build では 0 本
 // 2. チャットへの link は、どれも source を持ち、locale がそのページの言語
 // 3. 主な入口が、決まった source（と intent）でチャットへ向く
+// 4. hash を持つサイト内の link は、path を末尾の / まで書く（本番は / 付きへ転送し、ページ遷移の間に hash が落ちる）
 // 問い合わせページ自身は残している（自分と、言語の切り替えで他の言語の問い合わせページを指す）ので、1 の対象から外す。
 // script の中の文字（location.href = '/contact' など）は HTML の属性ではないので、この試験の範囲の外。
 // 切り戻し（PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false）の build では、入口が問い合わせページを指すので 1〜3 は落ちる作り。
@@ -133,10 +134,13 @@ const pages = files.map((file) => {
 
 const contactPathOf = (locale: Locale) => (locale === 'ja' ? '/contact/' : `/${locale}/contact/`);
 
-/** そのページの言語の問い合わせページの、カレンダーの区画へ向く 1 本か */
+/**
+ * そのページの言語の問い合わせページの、カレンダーの区画へ向く 1 本か。path は末尾の / まで同じであること
+ * （/contact は本番で /contact/ へ転送され、ページ遷移の間に hash が落ちて区画に着かない）。
+ */
 const isCalendarLinkFor = (locale: Locale) => (link: Link) =>
   link.kind === 'a' &&
-  normalizeSitePath(link.url.pathname) === normalizeSitePath(contactPathOf(locale)) &&
+  link.url.pathname === contactPathOf(locale) &&
   link.url.searchParams.get('source') === CALENDAR_SOURCE &&
   link.url.hash === `#${CALENDAR_ANCHOR}`;
 
@@ -274,5 +278,42 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
       (want) => !found.some((have) => Object.entries(want).every(([key, value]) => have[key as keyof typeof have] === value)),
     );
     expect(missing, `${pagePath} のチャットへの link: ${JSON.stringify(found)}`).toEqual([]);
+  });
+});
+
+// 本番（Firebase Hosting）は、末尾の / が無い path（/en、/contact）を / 付きへ転送する。ページ遷移（ViewTransitions）は
+// 転送の後の URL を使うので、hash が落ちて、その区画に着かない。hash を持つサイト内の link は、path を末尾の / まで書く。
+// file（.xml・.pdf など）への link は転送されないので除く。
+// 下の表は、この形のまま残っている link（業種のページから、その言語のトップの業種の入口へ）。直す変更で表から外す
+// （下の「まだ在る」の試験が、外し忘れを落とす）。
+const HASH_LINKS_OUTSIDE_THIS_CHANGE = [
+  '/en#home-industry-entry',
+  '/zh#home-industry-entry',
+  '/ko#home-industry-entry',
+  '/es#home-industry-entry',
+] as const;
+const hashLinkRaw = (link: Link) => `${link.url.pathname}${link.url.search}${link.url.hash}`;
+const isFilePath = (pathname: string) => /\.[a-z0-9]{2,5}$/i.test(pathname);
+const isRedirectedHashLink = (link: Link) =>
+  (link.kind === 'a' || link.kind === 'area') &&
+  link.url.hash !== '' &&
+  !link.url.pathname.endsWith('/') &&
+  !isFilePath(link.url.pathname);
+
+describe('サイト内の hash を持つ link（本番の転送で hash が落ちない形）', () => {
+  it('hash を持つサイト内の link は、path を末尾の / まで書く（表の link を除く）', () => {
+    const allowed = new Set<string>(HASH_LINKS_OUTSIDE_THIS_CHANGE);
+    const found = pages.flatMap((page) =>
+      page.links
+        .filter(isRedirectedHashLink)
+        .filter((link) => !allowed.has(hashLinkRaw(link)))
+        .map((link) => `${page.pagePath} → ${link.raw}`),
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('表の link は、まだ dist に在る（直したら、表から外す）', () => {
+    const seen = new Set(pages.flatMap((page) => page.links.filter(isRedirectedHashLink).map(hashLinkRaw)));
+    expect(HASH_LINKS_OUTSIDE_THIS_CHANGE.filter((raw) => !seen.has(raw))).toEqual([]);
   });
 });

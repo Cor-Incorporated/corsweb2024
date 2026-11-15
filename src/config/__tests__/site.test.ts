@@ -100,17 +100,17 @@ describe('getGriftUrl / getContactUrl (ADR-0010)', () => {
   // その 1 本を名指しして数えるので、値はここで固定する。
   it('getContactCalendarUrl は、その言語の問い合わせページのカレンダーの区画を指す', async () => {
     const { getContactCalendarUrl } = await loadSite();
-    expect(getContactCalendarUrl('ja')).toBe('/contact?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('en')).toBe('/en/contact?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('zh')).toBe('/zh/contact?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('ko')).toBe('/ko/contact?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('es')).toBe('/es/contact?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ja')).toBe('/contact/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('en')).toBe('/en/contact/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('zh')).toBe('/zh/contact/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ko')).toBe('/ko/contact/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('es')).toBe('/es/contact/?source=footer-calendar#contact-calendar');
   });
 
   it.each(['true', 'false'])('getContactCalendarUrl は、切り戻しの旗が %s でも同じ問い合わせページを指す', async (value) => {
     vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', value);
     const { getContactCalendarUrl } = await loadSite();
-    expect(getContactCalendarUrl('ko')).toBe('/ko/contact?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ko')).toBe('/ko/contact/?source=footer-calendar#contact-calendar');
   });
 
   it('resolveExternalHref rewrites grift sentinel and absolute griftai URLs', async () => {
