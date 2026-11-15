@@ -10,6 +10,7 @@ import enJson from '../../src/i18n/locales/en.json';
 import zhJson from '../../src/i18n/locales/zh.json';
 import koJson from '../../src/i18n/locales/ko.json';
 import esJson from '../../src/i18n/locales/es.json';
+import { INDUSTRY_SLUGS, industryPagePath } from '../../src/config/industry-context';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
 const LOCALES = { ja: jaJson, en: enJson, zh: zhJson, ko: koJson, es: esJson } as const;
@@ -83,14 +84,23 @@ describe('トップの見出しの並び (#414)', () => {
 
     const text = textOf(entry);
     expect(text).toContain(t.homeIndustries.eyebrow);
-    expect(text).toContain(t.homeIndustries.title);
+    // 見出しの文は業種の欄の h2 にだけ出す（トップに同じ文を 2 回出さない）
+    expect(text).not.toContain(t.homeIndustries.title);
+    const hrefs = [...entry.matchAll(/\bhref=["']?([^"'\s>]+)/g)].map((m) => decode(m[1]).split(/[?#]/)[0].replace(/\/+$/, ''));
+    expect(hrefs).toEqual(INDUSTRY_SLUGS.map((slug) => `${locale === 'ja' ? '' : `/${locale}`}${industryPagePath(slug)}`));
+    const marks = [...entry.matchAll(/\bdata-industry-entry=["']?([\w-]+)/g)].map((m) => m[1]);
+    expect(marks).toEqual([...INDUSTRY_SLUGS]);
     for (const row of t.homeIndustries.rows) {
       expect(text).toContain(row.industry);
-      expect(text).toContain(row.theme);
-      const href = (locale === 'ja' ? row.link : `/${locale}${row.link}`).replace(/\/+$/, '');
-      const hrefs = [...entry.matchAll(/\bhref=["']?([^"'\s>]+)/g)].map((m) => decode(m[1]).split(/[?#]/)[0].replace(/\/+$/, ''));
-      expect(hrefs).toContain(href);
     }
+  });
+
+  it.each(LOCALE_KEYS)('%s: 業種の入口はヒーローの中、診断の主ボタンより後にある', (locale) => {
+    const hero = mainOf(readHome(locale)).match(/<section\b[\s\S]*?<\/section>/)?.[0] ?? '';
+    expect(hero, 'ヒーローの section が無い').not.toBe('');
+    const entryAt = hero.indexOf('data-home-industry-entry');
+    expect(entryAt, 'ヒーローの中に業種の入口が無い').toBeGreaterThanOrEqual(0);
+    expect(hero.search(/intent=confidential-ai-assessment/)).toBeLessThan(entryAt);
   });
 });
 
@@ -103,7 +113,62 @@ describe('最初の画面 (#414)', () => {
     const works = locale === 'ja' ? '/works' : `/${locale}/works`;
     expect(hero).toMatch(new RegExp(`href=["']?${works}/?["'\\s>]`));
   });
+
+  it.each(LOCALE_KEYS)('%s: 業種の入口の a が 5 つあり、a にも祖先にも、隠す class・属性・style が無い', (locale) => {
+    const entries = elementsWithAncestors(mainOf(readHome(locale)), /\bdata-industry-entry=/);
+    expect(entries.map((entry) => entry.attrs.match(/data-industry-entry=["']?([\w-]+)/)?.[1]), '入口の a の行き先').toEqual([...INDUSTRY_SLUGS]);
+    const hidden = entries.flatMap((entry) =>
+      [entry, ...entry.ancestors].filter((el) => hidesElement(el.attrs)).map((el) => `${entry.attrs.match(/data-industry-entry=["']?([\w-]+)/)?.[1]}: <${el.tag} ${el.attrs.trim().slice(0, 120)}>`),
+    );
+    expect(hidden, '入口を隠している要素').toEqual([]);
+  });
+
+  it.each(LOCALE_KEYS)('%s: 入口の nav の名前、ヒーローの実績へのリンク 2 本（パソコン用とスマホ用）、信頼の印', (locale) => {
+    const t = LOCALES[locale];
+    const hero = mainOf(readHome(locale)).match(/<section\b[\s\S]*?<\/section>/)?.[0] ?? '';
+    const nav = hero.match(/<nav\b[^>]*data-home-industry-entry[^>]*>/)?.[0] ?? '';
+    expect(decode(nav.match(/aria-label=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/)?.slice(1).find((v) => v !== undefined) ?? ''), '入口の nav の aria-label').toBe(
+      t.homeIndustries.eyebrow,
+    );
+    const works = locale === 'ja' ? '/works' : `/${locale}/works`;
+    expect([...hero.matchAll(new RegExp(`href=["']?${works}/?["'\\s>]`, 'g'))], 'ヒーローの実績へのリンク').toHaveLength(2);
+    const text = textOf(hero);
+    expect(t.homeHero.trustBadges.filter((badge) => !text.includes(badge.label)), 'ヒーローに無い信頼の印').toEqual([]);
+  });
 });
+
+// 要素の開きタグと、その祖先の開きタグ（main の中だけ。script と style の中身は見ない）
+interface OpenTag {
+  tag: string;
+  attrs: string;
+}
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+function elementsWithAncestors(html: string, match: RegExp): (OpenTag & { ancestors: OpenTag[] })[] {
+  const body = html.replace(/<(script|style)\b[\s\S]*?<\/\1>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  const stack: OpenTag[] = [];
+  const found: (OpenTag & { ancestors: OpenTag[] })[] = [];
+  for (const m of body.matchAll(/<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g)) {
+    const [, closing, rawTag, attrs] = m;
+    const tag = rawTag.toLowerCase();
+    if (closing) {
+      const at = stack.map((el) => el.tag).lastIndexOf(tag);
+      if (at >= 0) stack.length = at;
+      continue;
+    }
+    if (match.test(attrs)) found.push({ tag, attrs, ancestors: [...stack].reverse() });
+    if (!VOID_TAGS.has(tag) && !attrs.trim().endsWith('/')) stack.push({ tag, attrs });
+  }
+  return found;
+}
+
+// 見えなくする印: Tailwind の hidden・invisible・sr-only（画面の幅の接頭辞つきを含む）、hidden 属性、x-cloak、x-show、display:none
+function hidesElement(attrs: string): boolean {
+  const cls = attrs.match(/\bclass=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/)?.slice(1).find((v) => v !== undefined) ?? '';
+  const classHides = cls.split(/\s+/).some((name) => /^(?:[\w-]+:)*(hidden|invisible|sr-only)$/.test(name));
+  const attrHides = /(^|\s)(hidden|x-cloak|x-show)(=|\s|$)/.test(attrs);
+  const styleHides = /style=["']?[^"'>]*display\s*:\s*none/i.test(attrs);
+  return classHides || attrHides || styleHides;
+}
 
 // 本文に描画されたサイト内リンク（クエリと # を除いたパス）
 function internalHrefs(html: string): string[] {

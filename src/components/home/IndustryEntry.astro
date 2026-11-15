@@ -1,60 +1,42 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+import { industryRowsInOrder } from '../../config/industry-context';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
+// 並びは src/config/industry-context.ts の INDUSTRY_SLUGS。locale の行と食い違うと build を止める。
+const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIndustries`);
 
-// ヒーローの直後に置く、既存の業種ページへの入口。
-// 文言とリンクは homeIndustries だけを使う。新しい業種名や実績・認証の主張は足さない。
+// ヒーローの主ボタンの下に置く、既存の業種ページへの入口（ProblemHero.astro の中）。
+// 最初の画面（scroll 0）に 5 つとも入ることを e2e/first-view.spec.ts が 4 つの画面の大きさ × 5 言語で測る。
+// 文言は homeIndustries の見出しの小さな文字と業種名だけ。各業種のテーマはトップの業種の欄（IndustryList）にある。
 // h2 は付けない。本文の見出し順は IndustryList 以降のまま（tests/build-output/home-page.test.ts）。
-// リンク文字は業種名だけにする。説明文を a の中に入れると、折り返した末尾が
-// visual-text の孤立断片になる（ChallengeGrid と同じ理由）。
+// data-reveal は付けない。画面の下 12% に入った要素は演出が始まらず、透明のまま残るため。
 ---
 
 <nav
   id="home-industry-entry"
-  class="home-industry-entry pb-10 sm:pb-16"
+  class="flex w-full flex-col items-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3"
   data-home-industry-entry
   aria-label={t.homeIndustries.eyebrow}
 >
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-    <div class="flex flex-col gap-4 sm:gap-5">
-      <div class="flex max-w-3xl flex-col gap-2">
-        <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
-          {t.homeIndustries.eyebrow}
-        </p>
-        <p class="text-pretty text-lg font-medium tracking-tight text-primary-950 dark:text-primary-50 sm:text-xl">
-          {t.homeIndustries.title}
-        </p>
-      </div>
-      <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {
-          t.homeIndustries.rows.map((row) => {
-            const slug = row.link.split('/').pop() ?? row.link;
-            const themeId = `home-industry-theme-${slug}`;
-            return (
-              <li class="group relative flex min-w-0 flex-col rounded-3xl bg-primary-500/10 p-4 shadow-sm transition hover:bg-primary-500/15 dark:bg-primary-400/10 dark:hover:bg-primary-400/15 sm:p-5">
-                <div aria-hidden="true" class="pointer-events-none flex min-h-12 items-center gap-3">
-                  <span class="min-w-0 flex-1 break-words text-base font-medium text-primary-950 group-hover:underline group-hover:underline-offset-4 dark:text-primary-50">
-                    {row.industry}
-                  </span>
-                  <span class="shrink-0 text-[#2d4a6b] dark:text-[#d5e4f2]">→</span>
-                </div>
-                <p id={themeId} class="pointer-events-none mt-1 break-words text-sm leading-relaxed text-primary-800 dark:text-primary-200">
-                  {row.theme}
-                </p>
-                <a
-                  href={getLocalizedUrl(row.link, currentLocale)}
-                  aria-describedby={themeId}
-                  class="absolute inset-0 z-10 scroll-mb-28 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:focus-visible:outline-[#d5e4f2]"
-                >
-                  <span class="sr-only">{row.industry}</span>
-                </a>
-              </li>
-            );
-          })
-        }
-      </ul>
-    </div>
-  </div>
+  <p class="text-xs font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400 sm:text-sm">
+    {t.homeIndustries.eyebrow}
+  </p>
+  <ul class="flex max-w-3xl flex-wrap justify-center gap-1.5 sm:gap-2">
+    {
+      rows.map((row) => (
+        <li>
+          <a
+            href={getLocalizedUrl(row.link, currentLocale)}
+            data-industry-entry={row.slug}
+            class="inline-flex min-h-[36px] items-center gap-1 rounded-full border border-primary-900/15 bg-primary-50/80 px-3 text-[13px] font-medium text-primary-950 transition hover:border-primary-900/30 hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:border-primary-300/20 dark:bg-primary-950/60 dark:text-primary-100 dark:hover:bg-primary-400/10 dark:focus-visible:outline-[#d5e4f2] sm:min-h-[40px] sm:px-4 sm:text-sm"
+          >
+            {row.industry}
+            <span aria-hidden="true" class="hidden text-[#2d4a6b] dark:text-[#d5e4f2] sm:inline">→</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
 </nav>
