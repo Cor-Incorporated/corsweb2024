@@ -150,6 +150,24 @@ respond() {
   printf '%s\n%s\n%s' "$2" "$replayed" "$1"
 }
 
+# 一覧・検索の答えの形を壊した本文（FAKE_*_SHAPE の値）。$2 は list か search_result
+malformed_body() {
+  case "$1" in
+    nodata) printf '{"object":"%s","has_more":false}' "$2" ;;
+    datanull) printf '{"object":"%s","has_more":false,"data":null}' "$2" ;;
+    dataobj) printf '{"object":"%s","has_more":false,"data":{}}' "$2" ;;
+    noid) printf '{"object":"%s","has_more":false,"data":[{"metadata":{}}]}' "$2" ;;
+    emptyid) printf '{"object":"%s","has_more":false,"data":[{"id":"","metadata":{}}]}' "$2" ;;
+    empty) printf '' ;;
+    wrongobj) printf '{"object":"other","has_more":false,"data":[]}' ;;
+    hasmore_missing) printf '{"object":"%s","data":[]}' "$2" ;;
+    hasmore_num) printf '{"object":"%s","has_more":1,"data":[]}' "$2" ;;
+    twojson) printf '{"object":"%s","has_more":false,"data":null}{"object":"%s","has_more":false,"data":[]}' "$2" "$2" ;;
+    twovalid) printf '{"object":"%s","has_more":false,"data":[]}{"object":"%s","has_more":false,"data":[]}' "$2" "$2" ;;
+    *) printf '{"object":"%s","has_more":false,"data":[]}' "$2" ;;
+  esac
+}
+
 balance() {
   local live="false"
   case "$FAKE_SCENARIO" in livemismatch | live) live="true" ;; esac
@@ -172,6 +190,7 @@ product() {
 }
 
 prices() {
+  if [ -n "${FAKE_PRICE_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_PRICE_SHAPE" list)"; return 0; fi
   case "$FAKE_SCENARIO" in
     empty | livemismatch) respond 200 '{"object":"list","data":[],"has_more":false}' ;;
     *)
@@ -194,6 +213,7 @@ resync_store() {
 # 顧客の一覧。100 件ずつ、starting_after でページを送る（FAKE_CUST_PAGE1 と FAKE_CUST_PAGE2）
 resync_customers_list() {
   local data more
+  if [ -n "${FAKE_CUST_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_CUST_SHAPE" list)"; return 0; fi
   if [ -n "${start_arg:-}" ]; then
     data="${FAKE_CUST_PAGE2:-[]}"
     more=false
@@ -221,6 +241,7 @@ resync_customer_update() {
 }
 # open の請求書の一覧。FAKE_OPEN_INVOICES（1 ページ目）と FAKE_OPEN_INVOICES_P2（2 ページ目）
 resync_invoices() {
+  if [ -n "${FAKE_INV_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INV_SHAPE" list)"; return 0; fi
   local cus="${customer_arg:-}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" data more cnt=0
   # 呼ばれた回数を数える。FAKE_OPEN_INVOICES_AFTER があれば 2 回目からそちらを返す
   # （下見の後に請求書の状態が変わったことを、1 回の実行の中で作るため）
@@ -261,6 +282,7 @@ resync_find_invoice() {
 }
 # 請求書の明細の一覧（hold を決めるのに使う）。100 件ずつ、starting_after=il_<番号> でページを送る
 resync_invoice_lines() {
+  if [ -n "${FAKE_LINES_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_LINES_SHAPE" list)"; return 0; fi
   local id="${path#/v1/invoices/}" rec svc_json total start=0 limit=100 data more
   id="${id%/lines}"
   rec="$(resync_find_invoice "$id")"
@@ -301,31 +323,33 @@ customer_search() {
   case "$query_arg" in
     *clerk_org_id*)
       case "${FAKE_SEARCH_ORG:-none}" in
-        dup) respond 200 '{"object":"search_result","data":[{"id":"cus_other","name":"別の顧客","metadata":{"customer_code":"other-co","payment":"card","clerk_org_id":"org_abc123"}}]}' ;;
+        dup) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_other","name":"別の顧客","metadata":{"customer_code":"other-co","payment":"card","clerk_org_id":"org_abc123"}}]}' ;;
         # hold・unhold・clerk-sync の重なりの検査: 自分（cus_x）とほかの顧客（cus_y）が同じ組織を持つ
-        shared) respond 200 '{"object":"search_result","data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}},{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        shared) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}},{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
         # 作った直後で、自分がまだ検索に出ない形（ほかの顧客だけが出る）
-        other_only) respond 200 '{"object":"search_result","data":[{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
-        self) respond 200 '{"object":"search_result","data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
+        other_only) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        self) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
         # 答えの形がおかしい場面（HTTP 200 のまま）。守りは「ほかの顧客は居ない」と読まずに止まる
         nodata) respond 200 '{"object":"search_result"}' ;;
-        datanull) respond 200 '{"object":"search_result","data":null}' ;;
-        noid) respond 200 '{"object":"search_result","data":[{"metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        datanull) respond 200 '{"object":"search_result","has_more":false,"data":null}' ;;
+        noid) respond 200 '{"object":"search_result","has_more":false,"data":[{"metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
         empty) respond 200 '' ;;
         wrongobj) respond 200 '{"object":"list","data":[]}' ;;
         # 続きが在る（limit を超える）。全部を見ていないので止まる
         more) respond 200 '{"object":"search_result","has_more":true,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
-        *) respond 200 '{"object":"search_result","data":[]}' ;;
+        dataobj | emptyid | hasmore_missing | hasmore_num | twojson | twovalid) respond 200 "$(malformed_body "$FAKE_SEARCH_ORG" search_result)" ;;
+        *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
       esac
       return 0
       ;;
   esac
+  if [ -n "${FAKE_SEARCH_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_SEARCH_SHAPE" search_result)"; return 0; fi
   case "${FAKE_SEARCH:-none}" in
-    one) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card"}}]}' ;;
-    one_clerk) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card","clerk_org_id":"org_other"}}]}' ;;
-    one_transfer) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"transfer"}}]}' ;;
-    two) respond 200 '{"object":"search_result","data":[{"id":"cus_a","metadata":{}},{"id":"cus_b","metadata":{}}]}' ;;
-    *) respond 200 '{"object":"search_result","data":[]}' ;;
+    one) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card"}}]}' ;;
+    one_clerk) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card","clerk_org_id":"org_other"}}]}' ;;
+    one_transfer) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"transfer"}}]}' ;;
+    two) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_a","metadata":{}},{"id":"cus_b","metadata":{}}]}' ;;
+    *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
   esac
 }
 
@@ -377,8 +401,8 @@ invoice_search() {
   local m
   m="$(printf '%s' "$query_arg" | sed -n 's/.*billing_month"\]:"\([0-9-]*\)".*/\1/p')"
   case "${FAKE_INV_WHERE:-both}" in
-    both | search) respond 200 "{\"object\":\"search_result\",\"data\":$(found_invoices "$m")}" ;;
-    *) respond 200 '{"object":"search_result","data":[]}' ;;
+    both | search) respond 200 "{\"object\":\"search_result\",\"has_more\":false,\"data\":$(found_invoices "$m")}" ;;
+    *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
   esac
 }
 

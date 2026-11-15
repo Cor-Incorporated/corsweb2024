@@ -140,6 +140,19 @@ api_ok() {
   require_ok "$what"
 }
 
+# 一覧（list）と検索（search_result）の答えの形を確かめる。形が違えば、数えも読み進めもせずに止まる（exit 4）。
+# 形が違うのに「0 件」「続きなし」と読むと、作る・書く・hold を外す側に倒れるため。確かめること: JSON がちょうど 1 つ、
+# object が $2、data が配列、has_more が真偽値、data のどの要素も object で、id が空でない文字列（$3 を渡せば、その形）。
+check_list_shape() {
+  local what="$1" want="$2" id_re="${3:-.}"
+  jq -e -s --arg o "$want" --arg re "$id_re" '
+    length == 1 and (.[0] | type) == "object" and .[0].object == $o
+    and (.[0].data | type) == "array" and (.[0].has_more | type) == "boolean"
+    and all(.[0].data[]; type == "object" and (.id | type) == "string" and (.id | test($re)))
+  ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、data が配列、has_more が真偽値、どの要素にも空でない id、のどれかが無い）。全部を読めないので、何も書かない"
+}
+
 read_key() {
   if [ -n "${COR_BILLING_API_KEY:-}" ]; then
     API_KEY="$COR_BILLING_API_KEY"

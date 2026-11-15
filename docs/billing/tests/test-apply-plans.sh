@@ -133,6 +133,14 @@ KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --apply --mode test
 [ "$RC" -eq 64 ] && ok "--check と --apply は一緒に使えない（exit 64）" || ng "--check と --apply rc=$RC: $OUT"
 [ -z "$LOG" ] && ok "使い方の誤りでは curl を呼ばない" || ng "使い方の誤りで curl を呼んだ: $LOG"
 
+# 5c. 価格の検索の答えの形: HTTP 200 でも形が違えば、作らずに止まる（exit 4）。--apply でも --check でも
+for sh in nodata datanull dataobj noid emptyid empty wrongobj hasmore_missing hasmore_num twojson twovalid; do
+  FAKE_PRICE_SHAPE=$sh KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --apply --mode test
+  [ "$RC" -eq 4 ] && no_write && printf '%s' "$OUT" | grep -q '答えの形が違う' && ok "価格の検索の答えが $sh なら、apply は作らずに止まる" || ng "価格の検索が $sh の apply rc=$RC: $(printf '%s\n' "$LOG" | grep -E '^(CALL POST|WRITE_REFUSED)' | head -3 || true)"
+  FAKE_PRICE_SHAPE=$sh FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --mode test
+  [ "$RC" -eq 4 ] && no_write && printf '%s' "$OUT" | grep -q '答えの形が違う' && ok "価格の検索の答えが $sh なら、check も止まる" || ng "価格の検索が $sh の check rc=$RC: $OUT"
+done
+
 # 鍵が無いと止まる（端末も無い）
 KEY_FOR_RUN="" run empty "$PLANS" --apply --mode test
 [ "$RC" -eq 64 ] && ok "鍵なし・端末なしは exit 64" || ng "鍵なし rc=$RC"

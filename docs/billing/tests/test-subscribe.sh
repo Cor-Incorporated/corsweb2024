@@ -896,12 +896,53 @@ expect "resync --preview も、組織の重なりで止まる" 3 0 "同じ Clerk
 SCN=live FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode live
 expect "本番の resync --preview は、確認を聞かずに読む" 0 0 "DONE preview: 何も書いていない"
 eq "本番の resync --preview も書く API を呼ばない" "$(count "$LOG" '^WRITE_REFUSED')$(clerk_patches)" "00"
+FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1='[]' FAKE_OPEN_INVOICES="" run resync --preview --mode test
+expect "顧客が 0 件でも、resync --preview は書く先が無いことを出す" 0 0 "PREVIEW 書く先の Clerk の組織 0 件: なし"
+printf '%s' "$OUT" | grep -qF 'DONE preview: 何も書いていない' && ok "顧客が 0 件でも、DONE preview の行で終わる" || ng "0 件の preview に DONE preview の行が無い: $OUT"
 run resync --preview
 expect "--preview には --mode が要る" 64 0 "--preview には --mode test か --mode live が要る"
 run resync --preview --apply --mode test
 expect "--preview と --apply は一緒に使えない" 64 0 "--preview と --apply は一緒に使わない"
 run status --customer cus_x --preview --mode test
 expect "--preview は resync でだけ使う" 64 0 "--preview は resync でだけ使う"
+
+# 20e. 一覧と検索の答えの形: HTTP 200 でも形が違えば、読まずに止まる（exit 4）。書かない・hold を外さない。
+#      形 = JSON が 1 つだけ、object が期待どおり、data が配列、has_more が真偽値、どの要素も object で空でない id
+SHAPES="nodata datanull dataobj noid emptyid empty wrongobj hasmore_missing hasmore_num twojson twovalid"
+for sh in $SHAPES; do
+  # customer の customer_code の検索
+  FAKE_SEARCH_SHAPE=$sh run customer --code sample-co --name テスト株式会社 --email billing@example.test --payment card --apply --mode test
+  expect "customer_code の検索の答えが $sh なら、customer は作らずに止まる" 4 0 "答えの形が違う"
+  # customer --clerk-org の組織の id の検索
+  FAKE_SEARCH_ORG=$sh run customer --code sample-co --name テスト株式会社 --email billing@example.test --payment card --clerk-org org_new --apply --mode test
+  expect "組織の id の検索の答えが $sh なら、customer --clerk-org は作らずに止まる" 4 0 "答えの形が違う"
+  # resync の顧客の一覧
+  rm -f "$WORK/log.customers" "$WORK/log.clerk"
+  FAKE_RESYNC=1 FAKE_CUST_SHAPE=$sh FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+  expect "顧客の一覧の答えが $sh なら、resync は止まる" 4 0 "答えの形が違う"
+  eq "顧客の一覧の答えが $sh なら、resync は Clerk に書かない" "$(clerk_patches)" "0"
+  # resync の請求書の一覧（hold 中の顧客。形が違うのに「超過なし」と読むと、hold を外してしまう）
+  rm -f "$WORK/log.customers" "$WORK/log.clerk"
+  FAKE_RESYNC=1 FAKE_INV_SHAPE=$sh FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+  expect "請求書の一覧の答えが $sh なら、resync は止まる（hold を外さない）" 4 0 "答えの形が違う"
+  eq "請求書の一覧の答えが $sh なら、resync は Clerk に書かない" "$(clerk_patches)" "0"
+  # resync の請求書の明細（期限の 14 日後を過ぎた請求書のサービスを読む所）
+  rm -f "$WORK/log.customers" "$WORK/log.clerk"
+  FAKE_RESYNC=1 FAKE_LINES_SHAPE=$sh FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+  expect "請求書の明細の答えが $sh なら、resync は止まる" 4 0 "答えの形が違う"
+  eq "請求書の明細の答えが $sh なら、resync は Clerk に書かない" "$(clerk_patches)" "0"
+done
+# hold・clerk-sync の組織の重なりの検査にも、#562 の 6 つの形のほかの形を流す（同じ関数で確かめる）
+for sh in dataobj emptyid hasmore_missing hasmore_num twojson twovalid; do
+  rm -f "$WORK/log.clerk"
+  FAKE_SEARCH_ORG=$sh FAKE_CLERK_META="$SHARED_ORG" FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
+  expect "組織の検索の答えが $sh なら、hold は止まる" 4 0 "答えの形が違う"
+  eq "組織の検索の答えが $sh なら、hold は Clerk に書かない" "$(clerk_patches)" "0"
+  rm -f "$WORK/log.clerk"
+  FAKE_SEARCH_ORG=$sh FAKE_CLERK_META="$SHARED_ORG" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+  expect "組織の検索の答えが $sh なら、clerk-sync は止まる" 4 0 "答えの形が違う"
+  eq "組織の検索の答えが $sh なら、clerk-sync は Clerk に書かない" "$(clerk_patches)" "0"
+done
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"

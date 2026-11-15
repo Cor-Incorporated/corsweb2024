@@ -276,6 +276,7 @@ ensure_price() {
   currency="$(jq -r '.currency' "$PLANS")"
   api GET /v1/prices --data-urlencode "lookup_keys[]=$lk" --data-urlencode "limit=10"
   require_ok "価格 $lk の読取 GET /v1/prices"
+  check_list_shape "価格 $lk の検索" list
   if [ "$(jq '.data | length' <<<"$RESP_BODY")" -ge 1 ]; then
     diff="$(jq -r --argjson w "$want" --arg cur "$currency" '.data[0] as $o | [
       (if $o.unit_amount != $w.unit_amount_jpy_excl_tax then "unit_amount 期待 \($w.unit_amount_jpy_excl_tax) 観測 \($o.unit_amount)" else empty end),
