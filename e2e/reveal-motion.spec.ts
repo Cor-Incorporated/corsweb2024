@@ -208,12 +208,22 @@ test('下へのスクロールでは、窓の下 12% に入った要素は待ち
   const { context, page } = await open(browser, testInfo, '/', 1366, height);
   try {
     const target = await pickBelowFold(page);
-    // 上端が窓の 95% の所（下 12% の中）に来るまで、下へ移る
-    await jumpTo(page, target.top - Math.round(height * 0.95));
+    // 上端が窓の 90% の所（下の端から 66px）に来るまで、下へ移る。隠れている間は 44〜51px 下へずれるので、
+    // ずれた後の上端も窓の中に在り、下 12%（79px）の中に在る。95% の所だと、ずれた後の上端は窓の外に出るので、
+    // 見え始めの判定から 12% を外しても出ず、12% を確かめられない。
+    const depth = Math.round(height * 0.9);
+    await jumpTo(page, target.top - depth);
     await page.waitForTimeout(SETTLE_MS);
-    expect((await probeState(page)).visible, '下へのスクロールで、下 12% に入った要素がもう出ている').toBe(false);
+    const waiting = await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>('[data-reveal-probe]')!;
+      return { visible: el.classList.contains('is-visible'), shiftedTop: el.getBoundingClientRect().top, innerHeight: window.innerHeight };
+    });
+    // 空振りを防ぐ: ずれた後の上端が、窓の中で、かつ下 12% の中に在ること
+    expect(waiting.shiftedTop, `ずれた後の上端が窓の中に無い（${JSON.stringify(waiting)}）`).toBeLessThan(waiting.innerHeight);
+    expect(waiting.shiftedTop, `ずれた後の上端が下 12% の中に無い（${JSON.stringify(waiting)}）`).toBeGreaterThan(waiting.innerHeight * 0.88);
+    expect(waiting.visible, '下へのスクロールで、下 12% に入った要素がもう出ている').toBe(false);
     // 上へ 10px（まだ窓の中）
-    await jumpTo(page, target.top - Math.round(height * 0.95) - 10);
+    await jumpTo(page, target.top - depth - 10);
     await page.waitForTimeout(SETTLE_MS);
     const after = await probeState(page);
     expect(after.visible, '上へ動いた後も、窓の中の要素が隠れたまま').toBe(true);
