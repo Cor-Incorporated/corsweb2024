@@ -92,6 +92,12 @@ bash docs/billing/tests/test-gitleaksignore.sh | tail -1
 bash docs/billing/tests/test-tokushoho-link.sh | tail -1
 ```
 
+### 値を入れる行（このページの全部のコマンドに共通）
+
+顧客の id・顧客コード・日付などは、コマンドの中に直接書かない。先に「値を入れる行」（`printf … && read -r …`）を打ち、聞かれた値を入れて Enter。行はその場で形を確かめ、`OK …` か `STOP: …` を出す（何も送らない）。`STOP:` のときは値を消すので、同じ行をもう一度打つ。
+
+コマンドは `"${CUS:?…}"` の形で値を使う。値が空なら `CUS: 空。先に CUS を入れる行を打つ` と出て、そのコマンドは起動せずに止まる。ログを残す行（`| tee` の付く行）は、先頭の `: "${…:?…}" … &&` が、パイプを始める前に全部の値を確かめる（値が 1 つでも空なら、スクリプトも `tee` も起動しない。ログの file も作らない）。bash 5.3・bash 3.2・zsh で、端末から打つ形とそうでない形の両方で、そう動くことを確かめた。値を入れる行の検査は、打ち間違いを早く見つけるための粗い検査で、形の最後の検査は `subscribe.sh` がする（通らない値は、鍵を読む前に `STOP:` で止まる）。値は、その端末の中だけに残る。端末を替えたら、その節の値を入れる行をもう一度打つ。どの行も 1 行ずつ貼って Enter する（まとめて貼ると、`read` が次の行を値として読んでしまう）。
+
 ## T. テストモード
 
 ### T1. テストモードの鍵を用意する（画面の作業）
@@ -166,14 +172,28 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode test' "$log"
 
 `<開発の組織の id>` は、Clerk の**開発のインスタンス**で、社内の人だけが入っている試験用の組織の id（`org_` で始まる。英数字と下線だけ）。Clerk の画面の組織の一覧で、その組織を開いて読む（画面の名前と文言は未確認）。お客様や社外の人が入っている組織の id は使わない。E1 の `clerk-sync` が、ここで結んだ組織に試験の `services` を書くため。`--clerk-org` を付けずに作った顧客は、E1・E2 で `STOP: … に clerk_org_id が無い` で止まり、スクリプトはあとから足せない（既存の顧客を書き換えない）。
 
+先に、請求先のメールと組織の id を入れる（2 行を順に打つ）:
+
 ```bash
-bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email <請求先のメール> --payment card --clerk-org <開発の組織の id> --apply --mode test
+printf '請求先のメール: ' && read -r BILLING_EMAIL && case "$BILLING_EMAIL" in ?*@?*.?*) echo "OK BILLING_EMAIL=$BILLING_EMAIL" ;; *) echo "STOP: メールの形でない（観測: $BILLING_EMAIL）。この行をもう一度打つ"; unset BILLING_EMAIL ;; esac
 ```
 
-`CREATED customer cus_…（customer_code=cor-test、payment=card、clerk_org_id=org_…）` が出ること。前に `cor-test` を `--clerk-org` なしで作っていたら、`NOTE 既存の顧客 cus_… に clerk_org_id が無い。このスクリプトは既存を書き換えない` が出て、組織は結ばれない（止まらない）。この行が出たら、顧客コードを `cor-test2` に変えてもう一度作り、この節から先の `cor-test` を全部 `cor-test2` と読み替える。別の組織の id で作っていたら、`STOP: … の clerk_org_id が違う（期待 …、観測 …）` で止まる。`cus_…` の id を控える（台帳には書かない。テストだけ）。以下の `<cus_…>` はこの id。控え忘れたら次の `FOUND` の行で取れる（作った直後は 1 分ほど出ないことがある）:
+```bash
+printf 'Clerk の組織の id（org_ で始まる）: ' && read -r CLERK_ORG && case "$CLERK_ORG" in org_?*) echo "OK CLERK_ORG=$CLERK_ORG" ;; *) echo "STOP: org_ で始まっていない（観測: $CLERK_ORG）。この行をもう一度打つ"; unset CLERK_ORG ;; esac
+```
+
+```bash
+bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email "${BILLING_EMAIL:?空。先に BILLING_EMAIL を入れる行を打つ}" --payment card --clerk-org "${CLERK_ORG:?空。先に CLERK_ORG を入れる行を打つ}" --apply --mode test
+```
+
+`CREATED customer cus_…（customer_code=cor-test、payment=card、clerk_org_id=org_…）` が出ること。前に `cor-test` を `--clerk-org` なしで作っていたら、`NOTE 既存の顧客 cus_… に clerk_org_id が無い。このスクリプトは既存を書き換えない` が出て、組織は結ばれない（止まらない）。この行が出たら、顧客コードを `cor-test2` に変えてもう一度作り、この節から先の `cor-test` を全部 `cor-test2` と読み替える。別の組織の id で作っていたら、`STOP: … の clerk_org_id が違う（期待 …、観測 …）` で止まる。`cus_…` の id を、下の行で `CUS` に入れる（台帳には書かない。テストだけ）。T6〜T10 と E1 のコマンドは、この `CUS` を使う。控え忘れたら次の `FOUND` の行で取れる（作った直後は 1 分ほど出ないことがある）:
 
 ```bash
 bash docs/billing/subscribe.sh find --code cor-test --mode test
+```
+
+```bash
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
 ```
 
 同じ customer のコマンドをすぐ（1 分以内に）もう一度実行し、出た行で次のように判定する（前回の結果の見分けが、実物の通信でも効くかの実測）。
@@ -196,7 +216,7 @@ bash docs/billing/subscribe.sh simulate --service xesm --start "$(TZ=Asia/Tokyo 
 `LINE <先月> usage_first 10000 <先月>-15〜<先月の末日> XESM 利用料 <先月>（初月。1 か月分）`、`LINE <先月> devfee 8000 … 1/12 回目`、`TOTAL <先月> 18000` が出ること（`<先月>` は `TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m'` の値）。
 
 ```bash
-bash docs/billing/subscribe.sh contract --customer <cus_…> --service xesm --start "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')-15" --devfee-count 12 --apply --mode test
+bash docs/billing/subscribe.sh contract --customer "${CUS:?空。先に CUS を入れる行を打つ}" --service xesm --start "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')-15" --devfee-count 12 --apply --mode test
 ```
 
 `CONTRACT <cus_…> xesm: start=<先月>-15 devfee_count=12 bill_from=なし` が出ること。もう一度実行すると `OK contract … 既に …（書かない）` が出る。
@@ -204,7 +224,7 @@ bash docs/billing/subscribe.sh contract --customer <cus_…> --service xesm --st
 ### T7. カードを保存する（ブラウザでテスト用カード）
 
 ```bash
-bash docs/billing/subscribe.sh card-setup --customer <cus_…> --apply --mode test
+bash docs/billing/subscribe.sh card-setup --customer "${CUS:?空。先に CUS を入れる行を打つ}" --apply --mode test
 ```
 
 1. `CREATED card-setup cs_…（期限 …）` と `SETUP_URL https://…` が出ること。
@@ -212,7 +232,7 @@ bash docs/billing/subscribe.sh card-setup --customer <cus_…> --apply --mode te
 3. 状態を読む:
 
    ```bash
-   bash docs/billing/subscribe.sh status --customer <cus_…> --mode test
+   bash docs/billing/subscribe.sh status --customer "${CUS:?空。先に CUS を入れる行を打つ}" --mode test
    ```
 
    `CARD pm_…（card-setup（cs_… → seti_…））` が出ること。**Checkout の setup のあとカードが顧客に付くかは未実測**（この手順で確かめる）。`CARD なし（card-setup のページ: open）` のままなら、まだ入力が終わっていない。`complete` なのに `CARD なし` なら、統括へ渡す。
@@ -220,7 +240,7 @@ bash docs/billing/subscribe.sh card-setup --customer <cus_…> --apply --mode te
 ### T8. 先月分の請求書を作る
 
 ```bash
-bash docs/billing/subscribe.sh invoice --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode test 2>&1 | tee ~/billing-invoice-test-$(date +%Y%m%d-%H%M%S).log
+: "${CUS:?空。先に CUS を入れる行を打つ}" && bash docs/billing/subscribe.sh invoice --customer "$CUS" --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode test 2>&1 | tee ~/billing-invoice-test-$(date +%Y%m%d-%H%M%S).log
 ```
 
 次の行が出ること:
@@ -247,7 +267,7 @@ INVOICE_URL https://…
 `--early-test` を付けなければ、期限の日より前は止まる。先に、止まることを確かめる（通信しない）:
 
 ```bash
-bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')"
+bash docs/billing/subscribe.sh charge --customer "${CUS:?空。先に CUS を入れる行を打つ}" --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')"
 ```
 
 `STOP: <先月> 分の支払期限は <今月の末日>。期限の日より前は払わない（今日: …）` が出て、終了コードが 64 であること（`echo $?` で `64`）。
@@ -255,7 +275,7 @@ bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/To
 次に、`--early-test` を付けて、テストモードで今日払う（寺田 2026-11-07 の決定。本番では `--early-test` は exit 64 で止まる）。下のコマンドは T8 と同じ `<先月>` を入れる。月をまたいだら、`--month` の `"$(…)"` を T8 のログの `INVOICE in_… <先月>` の値に書き換える。
 
 ```bash
-bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --early-test --apply --mode test 2>&1 | tee ~/billing-charge-test-$(date +%Y%m%d-%H%M%S).log
+: "${CUS:?空。先に CUS を入れる行を打つ}" && bash docs/billing/subscribe.sh charge --customer "$CUS" --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --early-test --apply --mode test 2>&1 | tee ~/billing-charge-test-$(date +%Y%m%d-%H%M%S).log
 ```
 
 - `PLAN charge: 請求書 in_…（<先月> 分、税込 19800 円、期限 <今月の末日>）を pm_…（card-setup（…））で払う` のあと、`PAID in_… <先月>: 税込 19800 円を pm_… で払った` が出ること。**`invoices/pay` の成功は未実測**（この手順で確かめる）。
@@ -267,7 +287,7 @@ bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/To
 受理日は今日にする（下のコマンドがそのまま入れる）。
 
 ```bash
-bash docs/billing/subscribe.sh cancel --customer <cus_…> --service xesm --accepted "$(TZ=Asia/Tokyo date '+%Y-%m-%d')" --apply --mode test
+bash docs/billing/subscribe.sh cancel --customer "${CUS:?空。先に CUS を入れる行を打つ}" --service xesm --accepted "$(TZ=Asia/Tokyo date '+%Y-%m-%d')" --apply --mode test
 ```
 
 - `CANCEL <cus_…> xesm: 受理日 <今日> → 終了日 <1 か月後の同じ日>。<終了の月> 分の請求書（<終了の月の翌月 1 日> に invoice）に、次の明細が入る` と、その月の `LINE` の行（`usage_prorated`、`devfee`、`remaining_usage`、`remaining_devfee`）が出ること。
@@ -340,40 +360,92 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode live' "$log"
 
 ### C2. Customer を作る
 
-`<顧客コード>`・`<社名>`・`<請求先のメール>`・`<支払い方法>`・`<Clerk の組織の id>` は台帳の同じ名前の列。まず dry-run（`--apply` なし）で PLAN を読む。
+顧客を替えるたびに、最初に前の顧客の値を消す（前の顧客の id や請求を始める月が、次の顧客のコマンドに入らないように）:
 
 ```bash
-bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール> --payment <支払い方法> --clerk-org <Clerk の組織の id>
+unset CUS BILLING_FROM
+```
+
+顧客コード・社名・請求先のメール・支払い方法・Clerk の組織の id は、台帳の同じ名前の列。下の 5 行で順に入れてから、まず dry-run（`--apply` なし）で PLAN を読む。
+
+```bash
+printf '顧客コード（英小文字・数字・ハイフン）: ' && read -r CODE && case "$CODE" in [a-z0-9]*) echo "OK CODE=$CODE" ;; *) echo "STOP: 英小文字か数字で始まっていない（観測: $CODE）。この行をもう一度打つ"; unset CODE ;; esac
 ```
 
 ```bash
-bash docs/billing/subscribe.sh customer --code <顧客コード> --name '<社名>' --email <請求先のメール> --payment <支払い方法> --clerk-org <Clerk の組織の id> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf '社名（台帳のとおり）: ' && read -r COMPANY_NAME && case "$COMPANY_NAME" in ?*) echo "OK COMPANY_NAME=$COMPANY_NAME" ;; *) echo "STOP: 空のまま（観測: $COMPANY_NAME）。この行をもう一度打つ"; unset COMPANY_NAME ;; esac
+```
+
+```bash
+printf '請求先のメール: ' && read -r BILLING_EMAIL && case "$BILLING_EMAIL" in ?*@?*.?*) echo "OK BILLING_EMAIL=$BILLING_EMAIL" ;; *) echo "STOP: メールの形でない（観測: $BILLING_EMAIL）。この行をもう一度打つ"; unset BILLING_EMAIL ;; esac
+```
+
+```bash
+printf '支払い方法（card か transfer）: ' && read -r PAYMENT && case "$PAYMENT" in card|transfer) echo "OK PAYMENT=$PAYMENT" ;; *) echo "STOP: card でも transfer でもない（観測: $PAYMENT）。この行をもう一度打つ"; unset PAYMENT ;; esac
+```
+
+```bash
+printf 'Clerk の組織の id（org_ で始まる）: ' && read -r CLERK_ORG && case "$CLERK_ORG" in org_?*) echo "OK CLERK_ORG=$CLERK_ORG" ;; *) echo "STOP: org_ で始まっていない（観測: $CLERK_ORG）。この行をもう一度打つ"; unset CLERK_ORG ;; esac
+```
+
+```bash
+bash docs/billing/subscribe.sh customer --code "${CODE:?空。先に CODE を入れる行を打つ}" --name "${COMPANY_NAME:?空。先に COMPANY_NAME を入れる行を打つ}" --email "${BILLING_EMAIL:?空。先に BILLING_EMAIL を入れる行を打つ}" --payment "${PAYMENT:?空。先に PAYMENT を入れる行を打つ}" --clerk-org "${CLERK_ORG:?空。先に CLERK_ORG を入れる行を打つ}"
+```
+
+```bash
+: "${CODE:?空。先に CODE を入れる行を打つ}" "${COMPANY_NAME:?空。先に COMPANY_NAME を入れる行を打つ}" "${BILLING_EMAIL:?空。先に BILLING_EMAIL を入れる行を打つ}" "${PAYMENT:?空。先に PAYMENT を入れる行を打つ}" "${CLERK_ORG:?空。先に CLERK_ORG を入れる行を打つ}" && bash docs/billing/subscribe.sh customer --code "$CODE" --name "$COMPANY_NAME" --email "$BILLING_EMAIL" --payment "$PAYMENT" --clerk-org "$CLERK_ORG" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 `CREATED customer cus_…（customer_code=…、payment=…、clerk_org_id=org_…）`（既にあれば `OK customer cus_…`）が出ること。既存の顧客の `clerk_org_id` か `payment` が違えば `STOP: … が違う（期待 …、観測 …）` で止まる。id は次で取り直せる（作った直後は 1 分ほど出ないことがある）:
 
 ```bash
-bash docs/billing/subscribe.sh find --code <顧客コード> --mode live
+bash docs/billing/subscribe.sh find --code "${CODE:?空。先に CODE を入れる行を打つ}" --mode live
+```
+
+出た `cus_…` を `CUS` に入れる（C3〜C5 のコマンドが使う）:
+
+```bash
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
 ```
 
 ### C3. 契約を書く
 
-`<cus_…>` は C2 の id、`<サービス>`・`<契約日>`・`<開発費の回数>` は台帳の列。先に毎月の額を通信せずに確かめる（13 か月分。12 か月目に開発費の 12 回目が出て、13 か月目は利用料だけになる）:
+`CUS` は C2 で入れた id。顧客コード・サービス・契約日・開発費の回数は台帳の列で、下の 4 行で入れる（顧客コードはログの file の名前に使う。C2 と同じ端末なら同じ値を入れ直す）。先に毎月の額を通信せずに確かめる（13 か月分。12 か月目に開発費の 12 回目が出て、13 か月目は利用料だけになる）:
 
 ```bash
-bash docs/billing/subscribe.sh simulate --service <サービス> --start <契約日> --devfee-count <開発費の回数> --months 13
+printf '顧客コード（英小文字・数字・ハイフン）: ' && read -r CODE && case "$CODE" in [a-z0-9]*) echo "OK CODE=$CODE" ;; *) echo "STOP: 英小文字か数字で始まっていない（観測: $CODE）。この行をもう一度打つ"; unset CODE ;; esac
 ```
 
 ```bash
-bash docs/billing/subscribe.sh contract --customer <cus_…> --service <サービス> --start <契約日> --devfee-count <開発費の回数> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf 'サービス（台帳のとおり）: ' && read -r SERVICE && case "$SERVICE" in ?*) echo "OK SERVICE=$SERVICE" ;; *) echo "STOP: 空のまま（観測: $SERVICE）。この行をもう一度打つ"; unset SERVICE ;; esac
+```
+
+```bash
+printf '契約日（YYYY-MM-DD）: ' && read -r START_DATE && case "$START_DATE" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) echo "OK START_DATE=$START_DATE" ;; *) echo "STOP: YYYY-MM-DD の形でない（観測: $START_DATE）。この行をもう一度打つ"; unset START_DATE ;; esac
+```
+
+```bash
+printf '開発費の回数（数字）: ' && read -r DEVFEE_COUNT && case "$DEVFEE_COUNT" in ''|*[^0-9]*) echo "STOP: 数字でない（観測: $DEVFEE_COUNT）。この行をもう一度打つ"; unset DEVFEE_COUNT ;; *) echo "OK DEVFEE_COUNT=$DEVFEE_COUNT" ;; esac
+```
+
+```bash
+bash docs/billing/subscribe.sh simulate --service "${SERVICE:?空。先に SERVICE を入れる行を打つ}" --start "${START_DATE:?空。先に START_DATE を入れる行を打つ}" --devfee-count "${DEVFEE_COUNT:?空。先に DEVFEE_COUNT を入れる行を打つ}" --months 13
+```
+
+```bash
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${SERVICE:?空。先に SERVICE を入れる行を打つ}" "${START_DATE:?空。先に START_DATE を入れる行を打つ}" "${DEVFEE_COUNT:?空。先に DEVFEE_COUNT を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh contract --customer "$CUS" --service "$SERVICE" --start "$START_DATE" --devfee-count "$DEVFEE_COUNT" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 `CONTRACT <cus_…> <サービス>: start=<契約日> devfee_count=<開発費の回数> bill_from=なし` が出ること。違う値が既にあれば `STOP: … が違う（期待 …、観測 …）。書き換えない` で止まる（台帳と見比べて寺田が決める）。
 
-前からの顧客（台帳の「請求を始める月」に値がある顧客）は、上の代わりに次を実行する。`<契約日>` は元の契約日:
+前からの顧客（台帳の「請求を始める月」に値がある顧客）は、上の代わりに次を実行する。`START_DATE` は元の契約日。先に請求を始める月を入れる:
 
 ```bash
-bash docs/billing/subscribe.sh contract --customer <cus_…> --service <サービス> --start <契約日> --devfee-count <開発費の回数> --billing-from <請求を始める月> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf '請求を始める月（YYYY-MM）: ' && read -r BILLING_FROM && case "$BILLING_FROM" in [0-9][0-9][0-9][0-9]-[0-9][0-9]) echo "OK BILLING_FROM=$BILLING_FROM" ;; *) echo "STOP: YYYY-MM の形でない（観測: $BILLING_FROM）。この行をもう一度打つ"; unset BILLING_FROM ;; esac
+```
+
+```bash
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${SERVICE:?空。先に SERVICE を入れる行を打つ}" "${START_DATE:?空。先に START_DATE を入れる行を打つ}" "${DEVFEE_COUNT:?空。先に DEVFEE_COUNT を入れる行を打つ}" "${BILLING_FROM:?空。先に BILLING_FROM を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh contract --customer "$CUS" --service "$SERVICE" --start "$START_DATE" --devfee-count "$DEVFEE_COUNT" --billing-from "$BILLING_FROM" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 `CONTRACT <cus_…> <サービス>: start=<契約日> devfee_count=<開発費の回数> bill_from=<請求を始める月>` が出ること。このあと `invoice` は、`<請求を始める月>` より前の月を `STOP: … より前を請求しない` で止める（その月は請求書払いで請求済み）。先に `simulate --billing-from <請求を始める月>` で月ごとの明細を確かめてよい。
@@ -381,7 +453,7 @@ bash docs/billing/subscribe.sh contract --customer <cus_…> --service <サー�
 ### C4. カードを保存してもらう（支払い方法が card の顧客だけ）
 
 ```bash
-bash docs/billing/subscribe.sh card-setup --customer <cus_…> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh card-setup --customer "$CUS" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 - `SETUP_URL https://…` を顧客へ送る（送る経路と文面は寺田が決める。このレーンは送らない）。ページの期限は `CREATED card-setup cs_…（期限 …）` の行。
@@ -390,7 +462,7 @@ bash docs/billing/subscribe.sh card-setup --customer <cus_…> --apply --mode li
 ### C5. カードが保存されたことを確かめる
 
 ```bash
-bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
+bash docs/billing/subscribe.sh status --customer "${CUS:?空。先に CUS を入れる行を打つ}" --mode live
 ```
 
 `CUSTOMER … payment=card`、`CONTRACT <サービス> start=<契約日> devfee_count=<回数> end=`、`CARD pm_…` が出ること。`CARD なし（card-setup のページ: open）` なら、まだ入力が終わっていない（`SETUP_URL` の行の URL を送り直せる）。
@@ -419,8 +491,18 @@ printf '振込先（1 行。例: お振込先: ○○銀行 ○○支店 普通 
 
 入れ忘れると、振込の顧客の `invoice` は `STOP: … 振込先（環境変数 COR_BILLING_TRANSFER_FOOTER）が無い` で止まる（何も作らない）。カードの顧客の請求書には載らない。
 
+顧客ごとに、台帳の顧客の id と顧客コードを入れてから実行する:
+
 ```bash
-bash docs/billing/subscribe.sh invoice --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+```
+
+```bash
+printf '顧客コード（英小文字・数字・ハイフン）: ' && read -r CODE && case "$CODE" in [a-z0-9]*) echo "OK CODE=$CODE" ;; *) echo "STOP: 英小文字か数字で始まっていない（観測: $CODE）。この行をもう一度打つ"; unset CODE ;; esac
+```
+
+```bash
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh invoice --customer "$CUS" --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 1. `LINE` の行と `TOTAL <先月> … 円（税別、明細 … 行）` が出る。額を台帳と見比べる。
@@ -432,10 +514,18 @@ bash docs/billing/subscribe.sh invoice --customer <cus_…> --month "$(TZ=Asia/T
 
 ### M2. 期限の日（毎月の末日）: カードの顧客の先月分を払う
 
-台帳の支払い方法が `card` の顧客ごとに実行する。期限の日（今月の末日）は `TZ=Asia/Tokyo date -v1d -v+1m -v-1d '+%Y-%m-%d'` の値。
+台帳の支払い方法が `card` の顧客ごとに実行する。期限の日（今月の末日）は `TZ=Asia/Tokyo date -v1d -v+1m -v-1d '+%Y-%m-%d'` の値。顧客ごとに、顧客の id と顧客コードを入れる:
 
 ```bash
-bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+```
+
+```bash
+printf '顧客コード（英小文字・数字・ハイフン）: ' && read -r CODE && case "$CODE" in [a-z0-9]*) echo "OK CODE=$CODE" ;; *) echo "STOP: 英小文字か数字で始まっていない（観測: $CODE）。この行をもう一度打つ"; unset CODE ;; esac
+```
+
+```bash
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh charge --customer "$CUS" --month "$(TZ=Asia/Tokyo date -v1d -v-1m '+%Y-%m')" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 `PLAN charge: 請求書 in_…（…、税込 … 円、期限 …）を pm_…（…）で払う` を読み、`live` と打つ。`PAID in_… <先月>: 税込 … 円を pm_… で払った` が出ること。台帳に入金日を書く。顧客が請求書のページから先に払っていれば `OK charge … は支払い済み（払わない）` が出る。
@@ -443,10 +533,26 @@ bash docs/billing/subscribe.sh charge --customer <cus_…> --month "$(TZ=Asia/To
 ### M3. 振込の顧客の入金を確かめる
 
 - 支払い方法が `transfer` の顧客は、請求書の下の振込先へ、期限の日までに振り込んでもらう。`charge` は止まる（`STOP: … の支払い方法が card でない`）。
-- 入金を通帳か銀行の画面で確かめたら、その入金がどの月の分かを台帳で決め、その月の請求書を支払い済みにする（引き落とさない。open のままだと、請求書のページから二重に払われうる）。`<請求の月>` は台帳の請求の月（YYYY-MM。日付から計算しない。期限は翌月末日なので、確かめる日は月をまたぐことが多い）、`<入金日>` は入金を確かめた日（YYYY-MM-DD）:
+- 入金を通帳か銀行の画面で確かめたら、その入金がどの月の分かを台帳で決め、その月の請求書を支払い済みにする（引き落とさない。open のままだと、請求書のページから二重に払われうる）。`BILL_MONTH` は台帳の請求の月（YYYY-MM。日付から計算しない。期限は翌月末日なので、確かめる日は月をまたぐことが多い）、`PAID_ON` は入金を確かめた日（YYYY-MM-DD）。顧客の id と顧客コードも入れる（4 行を順に打つ）:
 
 ```bash
-bash docs/billing/subscribe.sh mark-paid --customer <cus_…> --month <請求の月> --paid-on <入金日> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+```
+
+```bash
+printf '顧客コード（英小文字・数字・ハイフン）: ' && read -r CODE && case "$CODE" in [a-z0-9]*) echo "OK CODE=$CODE" ;; *) echo "STOP: 英小文字か数字で始まっていない（観測: $CODE）。この行をもう一度打つ"; unset CODE ;; esac
+```
+
+```bash
+printf '請求の月（YYYY-MM）: ' && read -r BILL_MONTH && case "$BILL_MONTH" in [0-9][0-9][0-9][0-9]-[0-9][0-9]) echo "OK BILL_MONTH=$BILL_MONTH" ;; *) echo "STOP: YYYY-MM の形でない（観測: $BILL_MONTH）。この行をもう一度打つ"; unset BILL_MONTH ;; esac
+```
+
+```bash
+printf '入金日（YYYY-MM-DD）: ' && read -r PAID_ON && case "$PAID_ON" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) echo "OK PAID_ON=$PAID_ON" ;; *) echo "STOP: YYYY-MM-DD の形でない（観測: $PAID_ON）。この行をもう一度打つ"; unset PAID_ON ;; esac
+```
+
+```bash
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${BILL_MONTH:?空。先に BILL_MONTH を入れる行を打つ}" "${PAID_ON:?空。先に PAID_ON を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh mark-paid --customer "$CUS" --month "$BILL_MONTH" --paid-on "$PAID_ON" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 - `<請求の月>` より前の月の請求書が open のまま残っていれば `STOP: … より前の open の請求書がある: …` で止まる（何もしていない）。古い月から順に実行する。
@@ -457,10 +563,26 @@ bash docs/billing/subscribe.sh mark-paid --customer <cus_…> --month <請求の
 
 ### D1. 終了日を書く
 
-特商法ページの解約条件のとおり、当社が解約のお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は末日）を終了日にする。`<受理日>` は、お申し出のメールを受理した日（YYYY-MM-DD。台帳に書いた日）。
+特商法ページの解約条件のとおり、当社が解約のお申し出を受理した日の 1 か月後の同じ日（同じ日が無い月は末日）を終了日にする。`ACCEPTED_DATE` は、お申し出のメールを受理した日（YYYY-MM-DD。台帳に書いた日）。顧客の id・顧客コード・サービスも入れる（4 行を順に打つ。D2 も同じ値を使う）:
 
 ```bash
-bash docs/billing/subscribe.sh cancel --customer <cus_…> --service <サービス> --accepted <受理日> --apply --mode live 2>&1 | tee -a ~/billing-live-<顧客コード>.log
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+```
+
+```bash
+printf '顧客コード（英小文字・数字・ハイフン）: ' && read -r CODE && case "$CODE" in [a-z0-9]*) echo "OK CODE=$CODE" ;; *) echo "STOP: 英小文字か数字で始まっていない（観測: $CODE）。この行をもう一度打つ"; unset CODE ;; esac
+```
+
+```bash
+printf 'サービス（台帳のとおり）: ' && read -r SERVICE && case "$SERVICE" in ?*) echo "OK SERVICE=$SERVICE" ;; *) echo "STOP: 空のまま（観測: $SERVICE）。この行をもう一度打つ"; unset SERVICE ;; esac
+```
+
+```bash
+printf '受理日（YYYY-MM-DD）: ' && read -r ACCEPTED_DATE && case "$ACCEPTED_DATE" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) echo "OK ACCEPTED_DATE=$ACCEPTED_DATE" ;; *) echo "STOP: YYYY-MM-DD の形でない（観測: $ACCEPTED_DATE）。この行をもう一度打つ"; unset ACCEPTED_DATE ;; esac
+```
+
+```bash
+: "${CUS:?空。先に CUS を入れる行を打つ}" "${SERVICE:?空。先に SERVICE を入れる行を打つ}" "${ACCEPTED_DATE:?空。先に ACCEPTED_DATE を入れる行を打つ}" "${CODE:?空。先に CODE を入れる行を打つ}" && bash docs/billing/subscribe.sh cancel --customer "$CUS" --service "$SERVICE" --accepted "$ACCEPTED_DATE" --apply --mode live 2>&1 | tee -a ~/billing-live-"$CODE".log
 ```
 
 `CANCEL <cus_…> <サービス>: 受理日 <受理日> → 終了日 <終了日>。…` と、終了の月の `LINE` の行が出ること。例: 受理日 `2026-03-05` なら終了日 `2026-04-05`。額は `simulate --end <終了日>` でも確かめられる（README 1C 章の例と同じ: 11/15 開始なら 4 月の請求書は日割り 1,666 円、開発費 8,000 円、残りの期間分 68,334 円、開発費の残り 48,000 円、合計 126,000 円・税別）。終了日を台帳に書く。
@@ -471,7 +593,7 @@ bash docs/billing/subscribe.sh cancel --customer <cus_…> --service <サービ�
 ### D2. 終了日を書けたことを確かめる
 
 ```bash
-bash docs/billing/subscribe.sh status --customer <cus_…> --mode live
+bash docs/billing/subscribe.sh status --customer "${CUS:?空。先に CUS を入れる行を打つ}" --mode live
 ```
 
 `CONTRACT <サービス> … end=<終了日>` が出ること。
@@ -495,7 +617,7 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 
 ## E. 権利を Clerk に写す・hold・照合・支払い方法（テストモード → 本番）
 
-[README 1A 章](README.md)の権利（`services`）を Clerk の組織に写す手順と、支払いが遅れたときの止め方（ADR-0028 の 2 節と決定 1）。**本物の Clerk の API ではまだ確かめていない（未確認）。** 下の値は例で、実際の値は台帳から入れる。
+[README 1A 章](README.md)の権利（`services`）を Clerk の組織に写す手順と、支払いが遅れたときの止め方（ADR-0028 の 2 節と決定 1）。**本物の Clerk の API ではまだ確かめていない（未確認）。** 値は、各節の値を入れる行で入れる（テストでは T5 の顧客、本番では台帳の顧客）。
 
 Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプトが表示しない入力で聞く（Stripe の鍵と同じ扱い。表示しない・ファイルに書かない・引数に載せない）。既定は dry-run で、書くのは `--apply --mode test|live` のとき。`live` は端末で `live` と打つ確認がある。
 
@@ -503,17 +625,21 @@ Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプト
 
 ### E1. 契約・解約のあとに Clerk へ写す（`clerk-sync`）
 
-1. dry-run。顧客を読むだけで、Clerk には送らない（Clerk の鍵も読まない）。
+1. dry-run。顧客を読むだけで、Clerk には送らない（Clerk の鍵も読まない）。先に顧客の id を入れる（テストでは T5 の id）:
 
    ```bash
-   bash docs/billing/subscribe.sh clerk-sync --customer cus_XXXXXXXXXXXX --mode test
+   printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+   ```
+
+   ```bash
+   bash docs/billing/subscribe.sh clerk-sync --customer "${CUS:?空。先に CUS を入れる行を打つ}" --mode test
    ```
 
    サービスごとに `PLAN services.<サービス> from=2026-12-01 until=null hold=false`、最後に `JSON {"public_metadata":{"services":{…}}}` が出る。`null` のサービスは Clerk から消える。
 2. 送る。
 
    ```bash
-   bash docs/billing/subscribe.sh clerk-sync --customer cus_XXXXXXXXXXXX --mode test --apply
+   bash docs/billing/subscribe.sh clerk-sync --customer "${CUS:?空。先に CUS を入れる行を打つ}" --mode test --apply
    ```
 
    `SENT clerk org_XXXXXXXXXX: services を送った（…）` が出れば写った。本番は `--mode live --apply`。
@@ -522,10 +648,18 @@ Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプト
 
 ### E2. 支払いが遅れたら止める（`hold`）
 
-期限の 14 日後を過ぎても払われていないサービスを止める（決定 1）。書き込みだけが止まり、閲覧は残る。
+期限の 14 日後を過ぎても払われていないサービスを止める（決定 1）。書き込みだけが止まり、閲覧は残る。先に顧客の id とサービスを入れる（E3 も同じ値を使う）:
 
 ```bash
-bash docs/billing/subscribe.sh hold --customer cus_XXXXXXXXXXXX --service xesm --apply --mode live
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+```
+
+```bash
+printf 'サービス（台帳のとおり）: ' && read -r SERVICE && case "$SERVICE" in ?*) echo "OK SERVICE=$SERVICE" ;; *) echo "STOP: 空のまま（観測: $SERVICE）。この行をもう一度打つ"; unset SERVICE ;; esac
+```
+
+```bash
+bash docs/billing/subscribe.sh hold --customer "${CUS:?空。先に CUS を入れる行を打つ}" --service "${SERVICE:?空。先に SERVICE を入れる行を打つ}" --apply --mode live
 ```
 
 `HOLD cus_XXXXXXXXXXXX xesm: metadata に印を書いた。Clerk の組織に写す` が出る。Stripe の metadata と Clerk の両方に書くので、書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）。`clerk_org_id` の無い顧客と、契約の無いサービスは書かない。
@@ -533,7 +667,7 @@ bash docs/billing/subscribe.sh hold --customer cus_XXXXXXXXXXXX --service xesm -
 ### E3. 払われたら外す（`unhold`）
 
 ```bash
-bash docs/billing/subscribe.sh unhold --customer cus_XXXXXXXXXXXX --service xesm --apply --mode live
+bash docs/billing/subscribe.sh unhold --customer "${CUS:?空。先に CUS を入れる行を打つ}" --service "${SERVICE:?空。先に SERVICE を入れる行を打つ}" --apply --mode live
 ```
 
 `UNHOLD cus_XXXXXXXXXXXX xesm: metadata の印を消した。Clerk の組織に写す` が出る。metadata の key を消し（空の値にする）、Clerk の `services` の `hold` を `false` にする。
@@ -554,10 +688,14 @@ bash docs/billing/subscribe.sh resync --mode live --apply
 
 ### E5. 支払い方法を変える（`set-payment`。段階 5）
 
-請求書払い（振込）の顧客を、保存したカードでの引き落としに移す。
+請求書払い（振込）の顧客を、保存したカードでの引き落としに移す。先に顧客の id を入れる:
 
 ```bash
-bash docs/billing/subscribe.sh set-payment --customer cus_XXXXXXXXXXXX --payment card --apply --mode live
+printf '顧客の id（cus_ で始まる）: ' && read -r CUS && case "$CUS" in cus_?*) echo "OK CUS=$CUS" ;; *) echo "STOP: cus_ で始まっていない（観測: $CUS）。この行をもう一度打つ"; unset CUS ;; esac
+```
+
+```bash
+bash docs/billing/subscribe.sh set-payment --customer "${CUS:?空。先に CUS を入れる行を打つ}" --payment card --apply --mode live
 ```
 
 `SET_PAYMENT cus_XXXXXXXXXXXX: transfer→card。発行済みの請求書は変えない（次の締めから効く）` が出る。
@@ -586,6 +724,9 @@ bash docs/billing/subscribe.sh set-payment --customer cus_XXXXXXXXXXXX --payment
 
 | 出たもの | 原因 | 対処 |
 |---|---|---|
+| `CUS: 空。先に CUS を入れる行を打つ`（`bash:` か `zsh:` で始まる。ほかの値の名前でも同じ） | その端末で、値を入れる行を打っていない（端末を替えた、`STOP:` のあと打ち直していない） | その節の値を入れる行を打ってから、同じコマンドをもう一度打つ。コマンドは起動していない（`| tee` の付く行も、先頭の確かめで止まり、ログの file を作らない） |
+| `STOP: cus_ で始まっていない（観測: …）`、`STOP: org_ で始まっていない`、`STOP: 英小文字か数字で始まっていない`、`STOP: … の形でない`、`STOP: 空のまま`、`STOP: 数字でない`、`STOP: card でも transfer でもない`（値を入れる行） | 写し違い、前後の空白、全角の文字、空のまま Enter | 台帳か、前のコマンドの出力（`FOUND`・`CREATED` の行）から写し直して、同じ行をもう一度打つ。この行は値を確かめるだけで、何も送らない。`STOP:` のときは値を消すので、次のコマンドは上の行の理由で止まる |
+| 値を入れる行を打ったのに、何も聞かれずに次の行へ進んだ | 2 行以上をまとめて貼った（`read` が次の行を値として読んだ） | 1 行ずつ貼る。多くの行では、次の行の文が値になって `STOP: …（観測: <次の行の全文>）` が出て、値は空のまま（コマンドは上の 1 行目の理由で止まる）。社名とサービスの行は空でなければ通るので、`OK COMPANY_NAME=bash docs/…` のように次の行の文が入る。`OK …` の中身を読み、違えば値を入れる行をもう一度打つ |
 | `NG: …` の行と `STOP: plans.json の検査で不合格`（exit 2） | plans.json の誤り（税込で書いた、100 倍、小数、税率を内税にした、回数が無い など） | `NG:` の行を読み、plans.json を直す PR を出す。何も作られていない |
 | `STOP: plans.json の請求の形（billing.closing=…）は、このスクリプトの実装（month_end。…）と違う`（exit 3） | plans.json の `billing` を前の形（`same_day_advance`）にした、または `--plans` に古い写しを渡した | 何もしていない。plans.json を `month_end` に戻すか、`--plans` を外す |
 | `STOP: 鍵のモードが --mode と違う（--mode test、観測 livemode=true）`（exit 3） | テストのつもりで本番の鍵を貼った（またはその逆） | 正しいモードの鍵で、同じコマンドをもう一度。何も作られていない |
