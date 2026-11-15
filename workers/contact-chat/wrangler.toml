@@ -25,6 +25,8 @@ LLM_PROVIDER = "vertex-gemini"
 GOOGLE_CLOUD_PROJECT = "cor-jp-web"
 GOOGLE_CLOUD_LOCATION = "global"
 VERTEX_MODEL = "gemini-3.5-flash"
+# 1 日（JST の日付）に model を呼ぶ回数の上限（チャットの API）。0 以上の整数。0 はその日は呼ばない。
+CHAT_DAILY_MODEL_CALL_LIMIT = "300"
 # 問い合わせメールの宛先/差出人（PIIではなく運用設定。シークレットにしてもよい）。
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
 CONTACT_CC_EMAILS = "company@cor-jp.com,nagisa.terada@cor-jp.com"
@@ -66,6 +68,8 @@ LLM_PROVIDER = "vertex-gemini"
 GOOGLE_CLOUD_PROJECT = "cor-jp-web"
 GOOGLE_CLOUD_LOCATION = "global"
 VERTEX_MODEL = "gemini-3.5-flash"
+# 1 日（JST の日付）に model を呼ぶ回数の上限。preview の数は preview の D1 で別に数える。
+CHAT_DAILY_MODEL_CALL_LIMIT = "300"
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
 CONTACT_CC_EMAILS = "company@cor-jp.com,nagisa.terada@cor-jp.com"
 CONTACT_FROM_EMAIL = "noreply@cor-jp.com"

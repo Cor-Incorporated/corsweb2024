@@ -23,7 +23,9 @@ class AnthropicProvider implements LlmProvider {
   constructor(private readonly apiKey: string) {}
 
   async chat(system: string, messages: ChatMessage[]): Promise<string> {
-    const client = new Anthropic({ apiKey: this.apiKey });
+    // 1 日の呼び出しの上限は、model を呼ぶ前に 1 つ予約する（daily-cap.ts）。SDK の自動の呼び直しは、
+    // 予約 1 つで HTTP の要求を複数にするので使わない（失敗はそのまま返し、呼ぶ側が 503 にする）。
+    const client = new Anthropic({ apiKey: this.apiKey, maxRetries: 0 });
     const response = await client.messages.create({
       model: DEFAULT_MODEL,
       max_tokens: MAX_OUTPUT_TOKENS,
