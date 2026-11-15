@@ -231,7 +231,7 @@ resync_invoices() {
     data="$(jq -c --arg c "$cus" --arg st "$st" "$filter" <<<"$p1")"
     if [ "$(jq -c --arg c "$cus" --arg st "$st" "$filter | length" <<<"$p2")" -gt 0 ]; then more=true; else more=false; fi
   fi
-  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: ($d | map(. + {object: "invoice", status: "open"}))}')"
+  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: ($d | map(. + {object: "invoice", status: (.status // "open")}))}')"
 }
 resync_find_invoice() {
   local id="$1" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}"
@@ -277,6 +277,16 @@ readonly MANAGED="corsweb/docs/billing/plans.json"
 ITEMS="$FAKE_LOG.items"
 
 customer_search() {
+  # 組織の id での検索（customer --clerk-org の重なりの検査）は FAKE_SEARCH_ORG で返す（既定は 0 件）
+  case "$query_arg" in
+    *clerk_org_id*)
+      case "${FAKE_SEARCH_ORG:-none}" in
+        dup) respond 200 '{"object":"search_result","data":[{"id":"cus_other","name":"別の顧客","metadata":{"customer_code":"other-co","payment":"card","clerk_org_id":"org_abc123"}}]}' ;;
+        *) respond 200 '{"object":"search_result","data":[]}' ;;
+      esac
+      return 0
+      ;;
+  esac
   case "${FAKE_SEARCH:-none}" in
     one) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card"}}]}' ;;
     one_clerk) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card","clerk_org_id":"org_other"}}]}' ;;
