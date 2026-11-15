@@ -1,6 +1,6 @@
 ---
 title: "ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다 (2026년 11월 추가)"
-description: "Cor.주식회사는 2026년 11월 소프트웨어 수탁 개발 및 운영을 범위로 ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다. 인증 기관은 SGS재팬(SGS), 등록 번호는 JP26/00000364이며, 유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다."
+description: "Cor.주식회사는 2026년 11월 소프트웨어 수탁 개발 및 운영을 범위로 ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다. 인증 기관은 SGS재팬(SGS), 등록 번호는 JP26/00000364이며, 유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다. 유효 기간 중의 사후심사에서 등록의 계속이 인정되는 한 유효합니다."
 publishedAt: 2026-10-20
 updatedAt: 2026-11-12
 category: "info"
@@ -9,7 +9,7 @@ source: "Cor.주식회사"
 isDraft: false
 featured: true
 lang: "ko"
-translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translationSourceHash: "785456843a09802714299cd6b82c08b40ef804f968cc9f02bf4ff16c1f3514fd"
 translatedAt: "2026-11-12T07:06:38.167Z"
 translationModel: "gemini-3.8-flash + codex-editorial-update"
 ---
@@ -18,7 +18,7 @@ translationModel: "gemini-3.8-flash + codex-editorial-update"
 
 Cor.주식회사는 2026년 11월 ISO/IEC 27001:2022(ISMS) 인증을 취득했습니다. 인증 범위는 소프트웨어 수탁 개발 및 운영입니다.
 
-인증 기관은 SGS재팬(SGS), 등록 번호는 JP26/00000364입니다. 유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다.
+인증 기관은 SGS재팬(SGS), 등록 번호는 JP26/00000364입니다. 유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다. 유효 기간 중의 사후심사에서 등록의 계속이 인정되는 한 유효합니다.
 
 아래는 인증 등록 전인 2026년 10월 20일에 게시한 기존 공지입니다.
 
