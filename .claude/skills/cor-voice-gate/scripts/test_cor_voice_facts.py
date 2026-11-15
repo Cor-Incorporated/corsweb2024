@@ -736,6 +736,36 @@ class LimiterAndValidityConditionTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(self.over(text), [])
 
+    # 正しく範囲を限った文のうち、よくある言い方（となります・としています・であり・で・が など）。直す前の lint では、6 つとも止まる
+    CORRECT_LIMITING = {
+        "となります": "Grift は ISMS の対象外となります。%s\n",
+        "としています": "Grift は ISMS の範囲外としています。%s\n",
+        "であり（節を切る）": "Grift は ISMS の範囲外であり、受託開発の運用だけが対象です。%s\n",
+        "で（節を切る）": "製品は ISMS の対象外で、受託開発の運用だけが対象です。%s\n",
+        "が（節を切る）": "ISMS 認証は AI の回答精度を保証しませんが、運用の仕組みは審査を受けています。%s\n",
+        "になります": "Grift は ISMS の対象外になります。%s\n",
+    }
+    # 意味が逆の文。限定句の語があっても、止めたままにする
+    REVERSED = {
+        "範囲外の Grift に適用": "ISMS の認証は、登録範囲外の Grift にも適用されます。%s\n",
+        "対象外のない形": "ISMS 認証は全社を対象外のない形で取得しています。%s\n",
+        "範囲外の製品に及ぶ": "ISMS 認証は範囲外の製品にも及びます。%s\n",
+        "対象外ではありません": "Grift は対象外ではありません。ISMS の認証を受けています。%s\n",
+        "含みませんという誤解": "ISMS は、Grift も含みませんという誤解がありますが、実際は Grift も対象です。%s\n",
+    }
+
+    def test_correct_limiting_sentences_with_common_endings_pass(self):
+        for name, text in self.CORRECT_LIMITING.items():
+            with self.subTest(case=name):
+                found = self.over(text)
+                self.assertEqual(found, [], f"{name}: 正しく限った文が止まる（{found}）")
+
+    def test_reversed_sentences_with_a_limiter_word_stay_blocked(self):
+        for name, text in self.REVERSED.items():
+            with self.subTest(case=name):
+                found = self.over(text)
+                self.assertIn("isms_scope_overreach", found, f"{name}: 意味が逆の文が通る（{found}）")
+
     def test_limiter_with_a_causal_word_still_does_not_cancel(self):
         self.assertIn("isms_scope_overreach", self.over("ISMS 認証を取得済みなので、Grift は対象外です。%s\n"))
 

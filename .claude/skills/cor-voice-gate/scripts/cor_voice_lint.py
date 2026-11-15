@@ -362,11 +362,22 @@ def _scope_missing_hits(claims: list[tuple[int, str]], lines: list[str], vocab: 
 CLAUSE_BREAK = re.compile(r"(?<=[しりてでがずくいれび])、|(?<=ます)、|(?<=です)、")
 
 
+# 限定句のあとに続いてよい形（節の終わり）。言い切り（です・ます）、となります・としています、節を切る語（であり・で・が。
+# CLAUSE_BREAK で切った節の終わり）、理由（からである・ため・ので）。語のあとに別の語が続く形（「含まれません（注）」など）は含めない
+LIMITER_TAIL = (
+    r"(?:です|でした|ます|である|だ"
+    r"|となります|になります|となる|になる|としています|としております|とします|とする"
+    r"|であり|で|が"
+    r"|から(?:です|である|だ)?|ため(?:です)?|ので)?"
+    r"[。.！!]?[）)」]?\s*$"
+)
+
+
 def _limits_at_clause_end(clause: str, limiters: list[str]) -> bool:
     """限定句（「ものではありません」「対象外」「含まれません」など）が、否定の述語として節の終わりにあるか。
     節の途中の語（「登録範囲外の Grift にも適用されます」「全社を対象外のない形で…」）は、拡大を打ち消さない。"""
     tail = clause.rstrip()
-    return any(re.search(re.escape(p) + r"(?:です|でした|ます|である|だ|から(?:です|である|だ)?|ため(?:です)?|ので)?[。.！!]?[）)」]?\s*$", tail) for p in limiters)
+    return any(re.search(re.escape(p) + LIMITER_TAIL, tail) for p in limiters)
 
 
 def _overreach_units(lines: list[str]) -> list[int]:
