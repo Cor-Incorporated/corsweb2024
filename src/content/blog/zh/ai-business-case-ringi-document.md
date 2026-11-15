@@ -3,7 +3,7 @@ title: "AI引入立项审批资料编写指南｜阐明成本效益、风险与�
 description: "本文解析为通过AI引入的内部立项审批所必需的目的、KPI、成本、风险及报价依据的梳理方法。适合需要在公司内部说明AI引入方案的负责人阅读。"
 summary: "AI引入的立项审批资料不应写成“AI能做什么”，而应从要解决的业务课题、适用范围、预期效果、风险及决策期限入手。备齐目的、适用范围、KPI、费用、风险、后续决策这6个项目，并且不隐瞒风险、明确展示如何管理风险至关重要。"
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"

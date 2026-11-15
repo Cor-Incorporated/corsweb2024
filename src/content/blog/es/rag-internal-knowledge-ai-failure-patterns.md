@@ -3,7 +3,7 @@ title: "Por qué fracasan la RAG y la IA de conocimiento interno: lo que debe pr
 description: "Explicamos por qué la búsqueda de documentos internos y la implementación de RAG no dan resultados, desde las perspectivas de organización de datos, permisos, métricas de evaluación y diseño operativo. Una guía práctica para evitar que la IA de conocimiento interno se quede solo en una PoC."
 summary: "La razón por la que la IA de conocimiento interno y la RAG se topan con un muro no radica en el modelo, sino en el diseño previo a la implementación. Antes de elegir un modelo, es necesario definir el alcance de los documentos a consultar, la gestión de las versiones más recientes, los permisos y las métricas de evaluación."
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]

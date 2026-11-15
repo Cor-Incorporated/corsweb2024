@@ -3,7 +3,7 @@ title: "How to Create Internal Rules for Generative AI | Risk Management from OW
 description: "For executives and administrative departments formulating rules for generative AI use, this article outlines prohibited input information, approved AI tools, logging, education, and incident response. It is intended for companies seeking to balance AI utilization with information management."
 summary: "Internal rules for generative AI are created not to prevent its use, but to utilize it safely and fully. It is essential to begin with five key areas—approved AI tools, prohibited input information, eligible tasks, human review, and logging and reporting—and to continuously update them based on feedback from the field."
 pubDate: 2026-06-17
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "社内ルール", "セキュリティ", "ガバナンス"]

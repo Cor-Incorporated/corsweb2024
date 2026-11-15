@@ -3,7 +3,7 @@ title: "Cómo elaborar una propuesta de aprobación interna para la adopción de
 description: "Explicamos cómo estructurar el propósito, los KPI, los costos, los riesgos y la justificación de las estimaciones necesarios para obtener la aprobación interna de la adopción de IA. Un artículo dirigido a los responsables que desean explicar la adopción de IA en su empresa."
 summary: "En la documentación de propuesta para la adopción de IA, en lugar de centrarse en «qué puede hacer la IA», se debe partir del problema operativo a resolver, el alcance, los efectos esperados, los riesgos y el plazo para la toma de decisiones. Es fundamental reunir seis elementos —propósito, alcance, KPI, costos, riesgos y la siguiente decisión— y, lejos de ocultar los riesgos, mostrar cómo se gestionarán."
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"

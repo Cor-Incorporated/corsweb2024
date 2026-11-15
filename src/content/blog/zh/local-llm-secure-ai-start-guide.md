@@ -3,7 +3,7 @@ title: "什么是本地LLM？不让机密数据外泄的实用AI应用起步指�
 description: "解析本地LLM的基础知识、与云端AI的区别、适合引入的业务场景，以及在PoC前应确认的安全与运营要求。本篇文章面向希望安全利用机密数据开展AI应用的企业。"
 summary: "引入本地LLM不应仅仅比较性能，而应作为一项业务风险设计来做出判断。它适用于涉及不希望外泄信息的业务；若在PoC之前未明确目标业务、数据范围、机密级别、权限和评估方法，验证结果将无法为经营决策提供参考。"
 pubDate: 2026-06-15
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"

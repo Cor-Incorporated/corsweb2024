@@ -3,7 +3,7 @@ title: "Why RAG and Internal Knowledge AI Fail: What to Prepare Before Tuning Se
 description: "We explain why internal document search and RAG implementations fail to deliver results, looking from the perspectives of data organization, permissions, evaluation metrics, and operational design. This is a practical guide to keep internal knowledge AI from ending at the PoC stage."
 summary: "The reason internal knowledge AI and RAG hit a wall lies not in the models, but in the pre-implementation design. Before choosing a model, you need to determine the scope of documents to reference, manage version control for the latest updates, establish access permissions, and define evaluation metrics."
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]

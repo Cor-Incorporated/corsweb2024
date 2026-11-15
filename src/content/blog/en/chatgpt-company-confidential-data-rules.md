@@ -3,7 +3,7 @@ title: "What Information Can and Cannot Be Entered into ChatGPT at Work: Criteri
 description: "For executives and administrative departments unsure whether they can input contracts, meeting minutes, estimates, or customer information into generative AI, this article explains how to classify confidentiality levels, choose between cloud AI and local LLMs, and establish internal rules."
 summary: "When introducing generative AI in a company, the first thing to decide is not which AI to use, but what information can be shared with external AI. By classifying information into three levels and establishing internal rules regarding prohibited inputs and approved AI tools, companies can shift AI usage from an employee's \"self-responsibility\" to standard corporate operations."
 pubDate: 2026-06-19
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]

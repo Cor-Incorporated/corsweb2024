@@ -3,7 +3,7 @@ title: "Cómo crear directrices internas para el uso de IA generativa | Gestión
 description: "Una guía para directivos y departamentos de administración que buscan elaborar directrices de uso de IA generativa, estructurando información restringida, IA autorizadas, registros, formación y respuesta ante incidentes. Dirigido a empresas que desean compaginar el aprovechamiento de la IA con la seguridad de la información."
 summary: "Las directrices internas para el uso de la IA generativa no se crean para impedir su uso, sino para aprovecharla de forma segura. Es fundamental comenzar con 5 puntos clave (herramientas de IA permitidas, información restringida, tareas en las que se autoriza su uso, revisión humana, y registros y notificación) y continuar actualizándolas según la respuesta operativa."
 pubDate: 2026-06-17
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "社内ルール", "セキュリティ", "ガバナンス"]

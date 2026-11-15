@@ -3,7 +3,7 @@ title: "RAG与企业知识库AI失败的原因：在追求检索精度之前更�
 description: "从数据整理、权限、评估指标和运营设计的角度，解析企业内部文档检索与RAG引入后未见成效的原因。这是一份旨在避免企业知识库AI止步于PoC的实用指南。"
 summary: "企业知识库AI和RAG陷入瓶颈的原因不在于模型，而在于引入前的设计。在挑选模型之前，需要先明确供参考的文档范围、最新版本管理、权限设置以及评估指标。"
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]

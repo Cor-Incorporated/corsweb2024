@@ -3,7 +3,7 @@ title: "Qué información se puede introducir en ChatGPT en la empresa y cuál n
 description: "Para directivos y departamentos de administración que dudan sobre si ingresar contratos, actas de reuniones, presupuestos o datos de clientes en la IA generativa, explicamos cómo clasificar la confidencialidad, diferenciar el uso de la IA en la nube frente a LLM locales y los puntos clave para definir normativas internas."
 summary: "Al utilizar IA generativa en la empresa, lo primero que debe decidirse no es qué IA utilizar, sino qué información está permitido entregar a una IA externa. Si clasifica la información en 3 niveles y define mediante normas internas los datos de entrada prohibidos y las herramientas de IA permitidas, podrá transformar el uso de la IA de una «responsabilidad individual» a una «operación corporativa»."
 pubDate: 2026-06-19
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]

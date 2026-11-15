@@ -3,7 +3,7 @@ title: "Permissions, Logs, and Approval Flows to Determine Before Introducing AI
 description: "In 2026, as the adoption of AI agents advances, this article explains the permission design, operation logs, and human approval points that should be determined before integrating them into operations. This implementation policy ensures projects do not end at the PoC stage."
 summary: "What must be decided before introducing AI agents is not which agent to use, but how much to delegate to them. Only companies that design tiered permissions, place human approvals on execution and external transmissions, and plan logs and stopping conditions in advance can successfully integrate them into their operations."
 pubDate: 2026-06-12
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["AIエージェント", "権限管理", "ガバナンス"]

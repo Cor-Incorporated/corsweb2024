@@ -3,7 +3,7 @@ title: "¿Qué es un LLM local? Cómo empezar de forma realista a utilizar la IA
 description: "Explicamos los aspectos básicos de los LLM locales, sus diferencias con la IA en la nube, las tareas idóneas para su implementación y los requisitos operativos y de seguridad que deben verificarse antes de una PoC. Un artículo para empresas que desean aprovechar la IA con datos confidenciales de manera segura."
 summary: "La adopción de un LLM local debe evaluarse como un diseño de riesgos operativos y no como una comparación de rendimiento. Es adecuado para tareas que manejan información que no se desea transferir al exterior, y si no se definen las tareas objetivo, el alcance de los datos, la confidencialidad, los permisos y el método de evaluación antes de la PoC, no se obtendrán resultados útiles para la toma de decisiones empresariales."
 pubDate: 2026-06-15
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
