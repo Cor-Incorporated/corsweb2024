@@ -41,7 +41,8 @@
 # unhold     hold を外す（contract_<サービス>_hold を消し、Clerk の services の hold を false にする）
 # resync     全件の送り直し（ADR-0028 の 2 節）。clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、
 #            組織の metadata に resync_at（時刻）も書く（Clerk に更新のイベントを起こさせる）。
-#            同じ回で hold を判定する: 請求書の支払いの期限の 14 日後を過ぎても open のものがあれば hold を書き、
+#            同じ回で hold を判定する: 請求書の支払いの期限の 14 日後を過ぎても払われていないもの（open か
+#            uncollectible）があれば hold を書き、
 #            無ければ外す（決定 1）。顧客の一覧と請求書の一覧は 100 件ずつページを送る
 # set-payment 支払い方法を card（当社が保存したカードで払う）か transfer（請求書のとおり振り込む）に変える（段階 5）。
 #            card へ変えるときは、保存したカードがあることを確かめてから書く。発行済みの請求書は変えない（次の締めから効く）
@@ -338,7 +339,7 @@ print_plan() {
     clerk-sync) printf 'PLAN clerk-sync: %s の clerk_org_id の組織に、契約の metadata から作った services を PATCH で送る（deep merge。契約の無いサービスは null で消す）。dry-run は顧客を読むだけで、Clerk の鍵は読まない\n' "$OPT_CUSTOMER" ;;
     hold) printf 'PLAN hold: %s の %s を止める（metadata[contract_%s_hold]=true を書き、Clerk の組織の services の hold も true にする）。書き込みを止め、閲覧は残る（決定 1）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
     unhold) printf 'PLAN unhold: %s の %s の hold を外す（metadata[contract_%s_hold] を消し、Clerk の組織の services の hold を false にする）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
-    resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く（plans.json に無いサービスは各組織の metadata から消える。顧客ごとの本文は送る前に出す）。同じ回で、請求書の支払いの期限の 14 日後を過ぎても open のものから hold を決めて書き直す（決定 1）\n' ;;
+    resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く（plans.json に無いサービスは各組織の metadata から消える。顧客ごとの本文は送る前に出す）。同じ回で、請求書の支払いの期限の 14 日後を過ぎても払われていないもの（open か uncollectible）から hold を決めて書き直す（決定 1）\n' ;;
     set-payment) printf 'PLAN set-payment: %s の支払い方法を %s にする（metadata[payment]=%s）。card へ変えるときは保存したカードがあることを確かめる。発行済みの請求書は変えない（次の締めから効く）\n' "$OPT_CUSTOMER" "$OPT_PAYMENT" "$OPT_PAYMENT" ;;
   esac
 }
@@ -896,7 +897,9 @@ invoice_services() {
 # 期限の日（日本時間）の 14 日後を過ぎたものだけ。1 件でもあれば、そのサービスは hold。
 # 判定できない請求書（期限が無い・明細にサービスが無い）が 1 枚でもあれば UNKNOWN を返す。
 # 呼ぶ側は UNKNOWN のとき、その顧客の hold を変えない（外さない。払われたかどうかを決められないため）。
-# 請求書の一覧も、状態ごとに 100 件ずつページを送る。
+# 請求書の一覧も、状態ごとに 100 件ずつページを送る。状態を替えるときは、続きの位置（after）を空に戻す
+# （前の状態の最後の id を、次の状態の starting_after に渡さない）。ページの上限 1000 は、2 つの状態で合わせて
+# 数える（n は for の外。1000 ページは 10 万件で、ふだん届く数ではない。届いたら全件を見ていないので止める）。
 overdue_services() {
   local cus="$1" today="$2" after="" page more ids id svcs out="" n=0 unknown=0 st
   OVERDUE_SERVICES=""
@@ -949,15 +952,15 @@ check_unique_orgs() {
   die 3 "同じ Clerk の組織を 2 人以上の顧客が持っている（上の NG の行）。どちらの契約で開け閉めするかが決まらないので、何も書かない。台帳で正しい顧客を決め、もう一方の顧客の clerk_org_id を外してから、もう一度 resync を流す"
 }
 
-# 全件の送り直しと hold の判定。顧客ごとに、契約しているサービスの hold を「期限の 14 日後を過ぎても open の
-# 請求書があるか」で決め直し、変わったところだけ metadata に書く。clerk_org_id があれば services と resync_at を送る。
+# 全件の送り直しと hold の判定。顧客ごとに、契約しているサービスの hold を「期限の 14 日後を過ぎても払われていない
+# （open か uncollectible の）請求書があるか」で決め直し、変わったところだけ metadata に書く。clerk_org_id があれば services と resync_at を送る。
 do_resync() {
   local today ts all n i cus overdue svc cur want cond kvs extra org body svcs skip_hold kv
   local customers=0 holds=0 sent=0
   local -a p_cus=() p_kvs=() p_cond=() p_org=() p_body=() p_svcs=() p_over=()
   today="$(today_jst)"
   ts="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  printf 'NOTE resync: 全件の送り直し（今日 %s JST、resync_at %s）。hold は請求書の支払いの期限の 14 日後を過ぎても open のものから決める\n' "$today" "$ts"
+  printf 'NOTE resync: 全件の送り直し（今日 %s JST、resync_at %s）。hold は請求書の支払いの期限の 14 日後を過ぎても払われていないもの（open か uncollectible）から決める\n' "$today" "$ts"
   all="$(list_all_customers)"
   n="$(jq 'length' <<<"$all")"
   printf 'RESYNC 顧客 %s 件を見る（まず読むだけで、何を書くかを見せる）\n' "$n"
@@ -977,7 +980,7 @@ do_resync() {
     overdue="$OVERDUE_SERVICES"
     skip_hold=0
     if printf '%s\n' "$overdue" | grep -qx UNKNOWN; then
-      printf 'NOTE %s: 判定できない open の請求書がある（期限が無い・明細にサービスが無い）。この顧客の hold は変えない\n' "$cus"
+      printf 'NOTE %s: 判定できない払われていない請求書（open か uncollectible）がある（期限が無い・明細にサービスが無い）。この顧客の hold は変えない\n' "$cus"
       skip_hold=1
       overdue=""
     fi
