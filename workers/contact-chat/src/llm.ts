@@ -85,6 +85,11 @@ export function getProvider(env: Env): LlmProvider {
   const provider = (env.LLM_PROVIDER || 'vertex-gemini').toLowerCase();
   switch (provider) {
     case 'vertex-gemini':
+      // 1 日の上限の数を予約する前に止めるため、Gateway の設定が無ければここで投げる（anthropic の鍵と同じ形）。
+      // 確かめ方は VertexGeminiProvider.chat と同じ（前後の空白を除いて空なら無い）。
+      if (!env.VERTEX_GATEWAY_URL?.trim() || !env.VERTEX_GATEWAY_SECRET?.trim()) {
+        throw new Error('LLM が未設定です（VERTEX_GATEWAY_URL・VERTEX_GATEWAY_SECRET）');
+      }
       return new VertexGeminiProvider(env);
     case 'anthropic':
       if (!env.ANTHROPIC_API_KEY) {

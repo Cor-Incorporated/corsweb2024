@@ -41,6 +41,32 @@ describe('VertexGeminiProvider', () => {
   });
 });
 
+describe('getProvider の設定の確かめ', () => {
+  const VERTEX = { LLM_PROVIDER: 'vertex-gemini', VERTEX_GATEWAY_URL: 'https://gateway/generateContent', VERTEX_GATEWAY_SECRET: 'secret' };
+
+  it.each([
+    ['Gateway の URL が無い', { ...VERTEX, VERTEX_GATEWAY_URL: undefined }],
+    ['Gateway の URL が空', { ...VERTEX, VERTEX_GATEWAY_URL: '' }],
+    ['Gateway の URL が空白だけ', { ...VERTEX, VERTEX_GATEWAY_URL: '   ' }],
+    ['Gateway の秘密が無い', { ...VERTEX, VERTEX_GATEWAY_SECRET: undefined }],
+    ['Gateway の秘密が空白だけ', { ...VERTEX, VERTEX_GATEWAY_SECRET: ' \n' }],
+  ])('vertex-gemini で %s ときは、provider を返さずに投げる（model は呼ばない）', (_label, env) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(() => getProvider(env as unknown as Env)).toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('LLM_PROVIDER を書かない env も vertex-gemini として確かめる', () => {
+    expect(() => getProvider({ VERTEX_GATEWAY_URL: '', VERTEX_GATEWAY_SECRET: 'secret' } as unknown as Env)).toThrow();
+    expect(() => getProvider({ VERTEX_GATEWAY_URL: 'https://gateway/generateContent', VERTEX_GATEWAY_SECRET: 'secret' } as unknown as Env)).not.toThrow();
+  });
+
+  it('anthropic で鍵が無いときも投げる', () => {
+    expect(() => getProvider({ LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: '' } as unknown as Env)).toThrow();
+  });
+});
+
 describe('mode prompt', () => {
   it('uses the canonical company name and rejects known variants', () => {
     const prompt = buildSystemPrompt({ mode: 'intake', locale: 'ja' });
