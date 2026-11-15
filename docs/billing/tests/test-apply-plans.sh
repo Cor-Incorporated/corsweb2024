@@ -107,6 +107,32 @@ KEY_FOR_RUN="$DUMMY_KEY" run pricemismatch "$PLANS" --apply --mode test
 printf '%s' "$OUT" | grep -q 'unit_amount 期待 10000 観測 11000' && ok "食い違いの期待値と観測値を出す" || ng "期待値と観測値が無い: $OUT"
 [ "$(count "$LOG" '^CALL POST ')" -eq 0 ] && ok "食い違いでは POST しない" || ng "食い違いで POST した"
 
+# 5b. --check: 読んで plans.json と照らすだけで、書かない。偽の curl は書く呼び出しを断って記録する（FAKE_NO_WRITE=1）
+no_write() { [ "$(count "$LOG" '^WRITE_REFUSED')" -eq 0 ] && [ "$(count "$LOG" '^CALL POST ')" -eq 0 ]; }
+FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --mode test
+[ "$RC" -eq 0 ] && ok "check（既存と一致）rc=0" || ng "check（一致）rc=$RC: $OUT"
+no_write && ok "check は書く API を呼ばない（既存と一致）" || ng "check（一致）が書いた: $(printf '%s\n' "$LOG" | grep -E '^(CALL POST|WRITE_REFUSED)' || true)"
+[ "$(count "$OUT" '^OK ')" -eq 9 ] && ok "check（一致）の OK は 9 件（税率 1・商品 4・価格 4）" || ng "check（一致）の OK の件数: $(count "$OUT" '^OK ')"
+printf '%s' "$OUT" | grep -q '^DONE check --mode test' && ok "check は DONE check の行で終わる" || ng "DONE check の行が無い: $OUT"
+FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run empty "$PLANS" --check --mode test
+[ "$RC" -eq 0 ] && ok "check（何も無い）rc=0" || ng "check（何も無い）rc=$RC: $OUT"
+no_write && ok "check は書く API を呼ばない（何も無い）" || ng "check（何も無い）が書いた: $(printf '%s\n' "$LOG" | grep -E '^(CALL POST|WRITE_REFUSED)' || true)"
+[ "$(count "$OUT" '^MISSING ')" -eq 9 ] && ok "check（何も無い）の MISSING は 9 件" || ng "check（何も無い）の MISSING の件数: $(count "$OUT" '^MISSING ')"
+FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run pricemismatch "$PLANS" --check --mode test
+[ "$RC" -eq 3 ] && printf '%s' "$OUT" | grep -q 'unit_amount 期待 10000 観測 11000' && ok "check も、金額の食い違いで期待値と観測値を出して exit 3" || ng "check の食い違い rc=$RC: $OUT"
+no_write && ok "食い違いの check は書く API を呼ばない" || ng "食い違いの check が書いた"
+# 本番の check は、書かないので live と打つ確認を求めない。鍵のモードの検査は同じ
+FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run live "$PLANS" --check --mode live
+[ "$RC" -eq 0 ] && ok "本番の check は確認なしで読む（rc=0）" || ng "本番の check rc=$RC: $OUT"
+no_write && ok "本番の check は書く API を呼ばない" || ng "本番の check が書いた"
+FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run livemismatch "$PLANS" --check --mode test
+[ "$RC" -eq 3 ] && printf '%s' "$OUT" | grep -q '観測 livemode=true' && ok "check もモード違いで exit 3" || ng "check のモード違い rc=$RC: $OUT"
+KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check
+[ "$RC" -eq 64 ] && ok "--check には --mode が要る（exit 64）" || ng "--check だけ rc=$RC: $OUT"
+KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --apply --mode test
+[ "$RC" -eq 64 ] && ok "--check と --apply は一緒に使えない（exit 64）" || ng "--check と --apply rc=$RC: $OUT"
+[ -z "$LOG" ] && ok "使い方の誤りでは curl を呼ばない" || ng "使い方の誤りで curl を呼んだ: $LOG"
+
 # 鍵が無いと止まる（端末も無い）
 KEY_FOR_RUN="" run empty "$PLANS" --apply --mode test
 [ "$RC" -eq 64 ] && ok "鍵なし・端末なしは exit 64" || ng "鍵なし rc=$RC"

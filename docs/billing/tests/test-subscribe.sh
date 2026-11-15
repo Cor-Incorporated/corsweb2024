@@ -881,6 +881,27 @@ for sc in nodata datanull noid empty wrongobj more; do
   FAKE_SEARCH_ORG=$sc FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
   expect "組織の検索の答えが $sc なら、clerk-sync の dry-run も止まる" "$want_rc" 0 "$want_msg"
 done
+# 20d. resync --preview: 下見と重なりの検査だけをして、書く先の組織の id と送る本文を出し、何も書かない。
+#      偽の curl は書く呼び出しを断って記録する（FAKE_NO_WRITE=1）。書かないので live でも確認を聞かない
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode test
+expect "resync --preview は書く先の組織の id を全部出す" 0 0 "PREVIEW 書く先の Clerk の組織 3 件: org_a, org_b, org_c"
+eq "resync --preview は書く API を呼ばない" "$(count "$LOG" '^WRITE_REFUSED')" "0"
+eq "resync --preview は Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+printf '%s' "$OUT" | grep -qF 'RESYNC cus_c → Clerk の組織 org_c: 送る本文は次のとおり' && ok "resync --preview は顧客ごとの送る本文を出す（2 ページ目の顧客も）" || ng "送る本文の行が無い: $OUT"
+printf '%s' "$OUT" | grep -qF 'PLAN hold cus_a xesm' && ok "resync --preview は hold の判定も出す" || ng "hold の判定の行が無い: $OUT"
+printf '%s' "$OUT" | grep -qF 'DONE preview: 何も書いていない' && ok "resync --preview は DONE preview の行で終わる" || ng "DONE preview の行が無い: $OUT"
+FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode test
+expect "resync --preview も、組織の重なりで止まる" 3 0 "同じ Clerk の組織 org_a を 2 人以上の顧客が持っている"
+SCN=live FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode live
+expect "本番の resync --preview は、確認を聞かずに読む" 0 0 "DONE preview: 何も書いていない"
+eq "本番の resync --preview も書く API を呼ばない" "$(count "$LOG" '^WRITE_REFUSED')$(clerk_patches)" "00"
+run resync --preview
+expect "--preview には --mode が要る" 64 0 "--preview には --mode test か --mode live が要る"
+run resync --preview --apply --mode test
+expect "--preview と --apply は一緒に使えない" 64 0 "--preview と --apply は一緒に使わない"
+run status --customer cus_x --preview --mode test
+expect "--preview は resync でだけ使う" 64 0 "--preview は resync でだけ使う"
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"

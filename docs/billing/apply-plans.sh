@@ -15,6 +15,9 @@
 # 分割（開発費の 12 回）: 価格は月額の定期価格として作るだけ。毎月末の請求書（作り方 B）は価格を使わず、
 #       plans.json の金額を明細に入れる。回数は subscribe.sh invoice が Customer の metadata から数える（README.md 3 章）。
 #
+# 照らすだけ: --check --mode test|live は、--apply と同じ読取と照らし合わせをして、作る所では MISSING を出すだけで
+#       作らない（書く API を呼ばない）。食い違いは --apply と同じ STOP で止まる。書かないので live の確認は聞かない。
+#
 # 終了コード: 0 = 成功 / 2 = plans.json の検査で不合格 / 3 = Stripe 側の既存と食い違い・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方の誤り
 set -euo pipefail
@@ -25,6 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/lib.sh"
 PLANS="$SCRIPT_DIR/plans.json"
 DO_APPLY=0
+DO_CHECK=0
 
 usage() {
   cat <<'EOF'
@@ -32,6 +36,7 @@ usage() {
   bash docs/billing/apply-plans.sh [--plans <path>]                     dry-run（既定。通信しない・鍵を読まない）
   bash docs/billing/apply-plans.sh --apply --mode test [--plans <path>] テストモードに作る（寺田が実行）
   bash docs/billing/apply-plans.sh --apply --mode live [--plans <path>] 本番に作る（寺田が実行。端末で live と打つ確認あり）
+  bash docs/billing/apply-plans.sh --check --mode test|live [--plans <path>] 読んで plans.json と照らすだけ（書かない）
 鍵: 環境変数 COR_BILLING_API_KEY。無ければ表示しない入力で受ける。
 EOF
 }
@@ -41,6 +46,7 @@ parse_args() {
     case "$1" in
       --apply) DO_APPLY=1 ;;
       --dry-run) DO_APPLY=0 ;;
+      --check) DO_CHECK=1 ;;
       --mode)
         [ $# -ge 2 ] || { usage >&2; die 64 "--mode に値が無い"; }
         MODE="$2"
@@ -62,7 +68,13 @@ parse_args() {
     esac
     shift
   done
-  if [ "$DO_APPLY" -eq 1 ]; then
+  if [ "$DO_CHECK" -eq 1 ]; then
+    [ "$DO_APPLY" -eq 0 ] || die 64 "--check と --apply は一緒に使わない（--check は書かない）"
+    case "$MODE" in
+      test | live) ;;
+      *) die 64 "--check には --mode test か --mode live が要る（観測: '${MODE}'）" ;;
+    esac
+  elif [ "$DO_APPLY" -eq 1 ]; then
     case "$MODE" in
       test | live) ;;
       *) die 64 "--apply には --mode test か --mode live が要る（観測: '${MODE}'）" ;;
@@ -209,6 +221,10 @@ ensure_tax_rate() {
     printf 'OK tax_rate %s: 既存 %s と一致\n' "$key" "$(jq -r '.[0].id' <<<"$matches")"
     return 0
   fi
+  if [ "$DO_CHECK" -eq 1 ]; then
+    printf 'MISSING tax_rate %s: 無い（--apply で作る。--check は作らない）\n' "$key"
+    return 0
+  fi
   api POST /v1/tax_rates \
     --data-urlencode "display_name=$(jq -r '.display_name' <<<"$want")" \
     --data-urlencode "percentage=$(jq -r '.percentage' <<<"$want")" \
@@ -228,6 +244,10 @@ ensure_product() {
   want="$(jq -c --arg id "$id" '.products[] | select(.id == $id)' "$PLANS")"
   api GET "/v1/products/$id"
   if [ "$RESP_CODE" = "404" ]; then
+    if [ "$DO_CHECK" -eq 1 ]; then
+      printf 'MISSING product %s: 無い（--apply で作る。--check は作らない）\n' "$id"
+      return 0
+    fi
     api POST /v1/products \
       --data-urlencode "id=$id" \
       --data-urlencode "name=$(jq -r '.name' <<<"$want")" \
@@ -269,6 +289,10 @@ ensure_price() {
     printf 'OK price %s: 既存 %s と一致\n' "$lk" "$(jq -r '.data[0].id' <<<"$RESP_BODY")"
     return 0
   fi
+  if [ "$DO_CHECK" -eq 1 ]; then
+    printf 'MISSING price %s: 無い（--apply で作る。--check は作らない）\n' "$lk"
+    return 0
+  fi
   product="$(jq -r '.product' <<<"$want")"
   local -a extra=()
   if [ "$(jq -r '.plan' <<<"$want")" = "dev_fee" ]; then
@@ -303,10 +327,23 @@ apply_all() {
   printf 'DONE apply --mode %s: 上の CREATED / OK が全件\n' "$MODE"
 }
 
+# 読んで plans.json と照らすだけ。--apply と同じ読取と照らし合わせを使い、作る所では MISSING を出すだけ（書く API を呼ばない）。
+check_all() {
+  require_curl
+  read_key
+  check_mode
+  ensure_tax_rate
+  while IFS= read -r id; do ensure_product "$id"; done < <(jq -r '.products[].id' "$PLANS")
+  while IFS= read -r lk; do ensure_price "$lk"; done < <(jq -r '.prices[] | select(.enabled) | .lookup_key' "$PLANS")
+  printf 'DONE check --mode %s: 何も作っていない。上の OK / MISSING が全件\n' "$MODE"
+}
+
 main() {
   parse_args "$@"
   command -v jq >/dev/null 2>&1 || die 64 "jq が要る"
-  if [ "$DO_APPLY" -eq 1 ]; then
+  if [ "$DO_CHECK" -eq 1 ]; then
+    printf 'mode: check --mode %s（読んで照らすだけ。書かない）\n' "$MODE"
+  elif [ "$DO_APPLY" -eq 1 ]; then
     printf 'mode: apply --mode %s\n' "$MODE"
   else
     printf 'mode: dry-run（通信しない・鍵を読まない）\n'
@@ -315,6 +352,10 @@ main() {
   load_api_version
   printf 'api_version: %s\nplans: %s\n' "$API_VERSION" "$PLANS"
   jq -r "$JQ_LIB$JQ_PLAN" "$PLANS"
+  if [ "$DO_CHECK" -eq 1 ]; then
+    check_all
+    return 0
+  fi
   if [ "$DO_APPLY" -eq 0 ]; then
     printf 'DONE dry-run: 何も作っていない。作るのは寺田が --apply --mode test で（docs/billing/runbook.md）\n'
     return 0
