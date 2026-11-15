@@ -408,6 +408,48 @@ describe('1 日の model の呼び出しの上限', () => {
   });
 });
 
+// LLM の設定が欠けた env では、1 日の上限の数を予約する前に止める（設定を直した後も、その日の数が残るように）。
+describe('LLM の設定が無い env と 1 日の上限', () => {
+  it.each([
+    ['vertex-gemini で Gateway の URL が無い', { VERTEX_GATEWAY_URL: '' }],
+    ['vertex-gemini で Gateway の秘密が無い', { VERTEX_GATEWAY_SECRET: '' }],
+    ['vertex-gemini で Gateway の URL と秘密が空白だけ', { VERTEX_GATEWAY_URL: ' ', VERTEX_GATEWAY_SECRET: ' ' }],
+    ['anthropic で鍵が無い', { LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: '' }],
+    ['anthropic で鍵が空白だけ', { LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: ' \t' }],
+  ])('%s: 503 で、その日の数は増えず、記録は llm_not_configured の 1 行、model への HTTP は 0', async (_label, overrides) => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    const model = stubModel();
+    const lines: string[] = [];
+    vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      lines.push(args.map(String).join(' '));
+    });
+    const env = { ...testEnv(db, '3'), ...overrides } as Env;
+
+    const response = await chatTurn(env);
+
+    expect(response.status).toBe(503);
+    expect((await response.json() as { error: string }).error).toBe(AI_UNAVAILABLE);
+    expect(storedCalls(db, '2026-11-17')).toBe(0);
+    expect(lines).toEqual(['contact-chat:llm_not_configured']);
+    expect(model.calls()).toBe(0);
+  });
+
+  it('設定を直した後は、同じ日に model を呼べる（欠けていた間の要求で数を使っていない）', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    const model = stubModel();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const missing = { ...testEnv(db, '1'), VERTEX_GATEWAY_SECRET: '' } as Env;
+    expect((await chatTurn(missing)).status).toBe(503);
+    expect((await chatTurn(missing)).status).toBe(503);
+
+    expect((await chatTurn(testEnv(db, '1'))).status).toBe(200);
+    expect(storedCalls(db, '2026-11-17')).toBe(1);
+    expect(model.calls()).toBe(1);
+  });
+});
+
 // 上限は D1 の binding（DB）が在る env で掛かる。本番と preview の設定に DB と、本番に上限の値が在ることを固定する。
 describe('wrangler.toml の上限の設定', () => {
   const toml = readFileSync(resolve(__dirname, '../../wrangler.toml'), 'utf8');

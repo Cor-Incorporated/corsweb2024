@@ -19,7 +19,7 @@
 #   clerk-sync --customer <cus_…>
 #   hold       --customer <cus_…> --service <サービス>
 #   unhold     --customer <cus_…> --service <サービス>
-#   resync
+#   resync     [--preview]
 #   set-payment --customer <cus_…> --payment card|transfer
 #
 # customer   Customer を作る（あれば作らない）。支払い方法を metadata.payment に書く
@@ -44,6 +44,8 @@
 #            同じ回で hold を判定する: 請求書の支払いの期限の 14 日後を過ぎても払われていないもの（open か
 #            uncollectible）があれば hold を書き、
 #            無ければ外す（決定 1）。顧客の一覧と請求書の一覧は 100 件ずつページを送る
+#            --preview --mode test|live は、下見と組織の重なりの検査までをして、書く先の Clerk の組織の id と
+#            送る本文を出し、何も書かない（Stripe にも Clerk にも）。書かないので live でも確認を聞かない
 # set-payment 支払い方法を card（当社が保存したカードで払う）か transfer（請求書のとおり振り込む）に変える（段階 5）。
 #            card へ変えるときは、保存したカードがあることを確かめてから書く。発行済みの請求書は変えない（次の締めから効く）
 #
@@ -75,6 +77,7 @@ OPT_BILL_FROM=""
 OPT_PAID_ON=""
 TRANSFER_FOOTER=""
 OPT_EARLY=0
+OPT_PREVIEW=0
 CANCEL_END_DATE=""
 DUE_DATE=""
 DUE_EPOCH=""
@@ -133,6 +136,7 @@ parse_args() {
     case "$1" in
       --apply) DO_APPLY=1 ;;
       --early-test) OPT_EARLY=1 ;;
+      --preview) OPT_PREVIEW=1 ;;
       --mode | --plans | --code | --name | --email | --clerk-org | --payment | --customer | --service | --start | --devfee-count | --accepted | --month | --end | --months | --billing-from | --paid-on)
         [ $# -ge 2 ] || die 64 "$1 に値が無い"
         set_opt "$1" "$2"
@@ -301,6 +305,7 @@ validate_inputs() {
   scope --months "$OPT_MONTHS" "simulate"
   scope --billing-from "$OPT_BILL_FROM" "contract simulate"
   if [ "$OPT_EARLY" -eq 1 ]; then scope --early-test 1 "charge"; fi
+  if [ "$OPT_PREVIEW" -eq 1 ]; then scope --preview 1 "resync"; fi
   validate_command
   if [ -n "$OPT_CODE" ]; then
     [[ "$OPT_CODE" =~ ^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$ ]] || die 64 "--code は英小文字・数字・ハイフン（40 文字まで。観測: ${OPT_CODE}）"
@@ -314,6 +319,11 @@ validate_inputs() {
   case "$CMD" in
     find | status) [ -n "$MODE" ] || die 64 "$CMD は読むだけ。--mode test か --mode live が要る（--apply は要らない）" ;;
     clerk-sync) [ -n "$MODE" ] || die 64 "clerk-sync は送る JSON を作るために顧客を読む。--mode test か --mode live が要る（書くのは --apply のとき）" ;;
+    resync)
+      if [ "$OPT_PREVIEW" -eq 1 ]; then
+        [ "$DO_APPLY" -eq 0 ] || die 64 "--preview と --apply は一緒に使わない（--preview は書かない）"
+        [ -n "$MODE" ] || die 64 "--preview には --mode test か --mode live が要る（書く先の組織を読むため。書くのは --apply のとき）"
+      fi ;;
   esac
 }
 
@@ -1059,6 +1069,14 @@ do_resync() {
     [ -z "${p_org[$j]}" ] || pairs="$pairs${p_cus[$j]} ${p_org[$j]}"$'\n'
   done
   check_unique_orgs "$pairs"
+  # --preview: 下見と重なりの検査まで。書く先の組織の id を出して、確認の前に終わる（書く API を呼ばない）
+  if [ "$OPT_PREVIEW" -eq 1 ]; then
+    local orgs
+    orgs="$(printf '%s' "$pairs" | awk 'NF == 2 {print $2}')"
+    printf 'PREVIEW 書く先の Clerk の組織 %s 件: %s\n' "$(printf '%s' "$orgs" | grep -c . || true)" "$(printf '%s' "$orgs" | paste -sd ',' - | sed 's/,/, /g')"
+    printf 'DONE preview: 何も書いていない（Stripe にも Clerk にも）。書くのは --apply のとき\n'
+    return 0
+  fi
   printf 'RESYNC これから %s 件の顧客に書く（Stripe の metadata と、clerk_org_id があれば Clerk の組織）\n' "$n"
   # 2) 確認（1 回。上の下見で見せた内容だけを書く）
   confirm_live
@@ -1282,7 +1300,8 @@ main() {
     find | status) ;;
     clerk-sync) ;; # dry-run でも顧客を読む（読むだけ）。Clerk へ送るのは --apply のとき
     *)
-      if [ "$DO_APPLY" -eq 0 ]; then
+      # resync の --preview は下見だけをする（読むだけ）。それ以外で --apply が無ければ、何もしない
+      if [ "$DO_APPLY" -eq 0 ] && [ "$OPT_PREVIEW" -eq 0 ]; then
         printf 'DONE dry-run: 何もしていない。実行は --apply --mode test|live（寺田）\n'
         return 0
       fi

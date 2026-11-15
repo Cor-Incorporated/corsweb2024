@@ -4,6 +4,7 @@
 export const CONTACT_LOG_EVENTS = [
   'session_storage_failed',
   'llm_failed',
+  'llm_not_configured',
   'email_unconfigured',
   'submission_storage_failed',
   'notification_queue_unconfigured',
