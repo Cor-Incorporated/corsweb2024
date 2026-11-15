@@ -64,17 +64,19 @@ test.describe('Cloudia contact routing', () => {
     });
   }
 
-  test('keeps the separate chat link on /contact after a ViewTransitions navigation from another page', async ({
-    page,
-  }) => {
-    await page.goto('/about/');
+  // サイト内の link は、どれも問い合わせページを通さずチャットへ向く（フッターも同じ）。問い合わせページへ
+  // クライアント遷移で入るのは、古い URL で来た人が別のページへ移り、ブラウザで戻るときだけ。その経路を固定する。
+  test('keeps the separate chat link on /contact after a ViewTransitions back navigation', async ({ page }) => {
+    await page.goto('/contact');
     await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(1);
     // クライアント遷移だったことを証明する目印。フルリロードなら window が作り直されて消える。
     const sentinel = `vt-${Date.now()}-${Math.random()}`;
     await page.evaluate((value) => {
       (window as unknown as { __vtSentinel?: string }).__vtSentinel = value;
     }, sentinel);
-    await page.locator('footer a[href="/contact"]').first().click();
+    await page.locator('footer a[href="/about"]').first().click();
+    await expect(page).toHaveURL(/\/about\/?$/);
+    await page.goBack();
     await expect(page).toHaveURL(/\/contact\/?$/);
     expect(
       await page.evaluate(() => (window as unknown as { __vtSentinel?: string }).__vtSentinel)

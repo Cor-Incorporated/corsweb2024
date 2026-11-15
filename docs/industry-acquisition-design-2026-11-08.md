@@ -37,6 +37,8 @@ corsweb2024 のこの作業で読んだ範囲。
 - 添付の照合（cloudia の main を読んだ記録。このターンでは cloudia を開いていない）では、GA4 に送るのは `utm_source=grift` と `utm_medium=cta` と intent で、素の `source` は送らない。チャット開始の source は `'cloudia'` 固定で、業種の source を応答に使う箇所は見つかっていない。URL を渡しただけでは、業種に合わせた応答や計測は実装済みとしない。
 - 電話は `CALL_CENTER_PHONE_VISIBLE = false`。`/contact` には tel を出さない。番号の定数と、フラグが真のときの AI 応対カード（`ContactInfo.astro`）はある。番号の掲示先、営業時間、既存の AI コールセンター番号をそのまま出してよいかは未確認なので、フラグは変えていない。番号を隠すだけでは営業電話は減らない。
 - 通常フォームは `CLOUDIA_CONTACT_PRIMARY_ENABLED` が真のとき描画しない。フラグを戻すと `ContactForm` が戻る。非常口として残している。
+  - 同じフラグ（`PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED`）は、サイトの問い合わせの入口の link にも効く（`src/config/site.ts` の `getContactUrl` と、それを通る業種のページの入口）。真のときは Cloudia のチャット（`/contact/chat/`）へ直接向け、false の build ではフォームの在る問い合わせページ（`/<lang>/contact`）へ向ける。
+  - 浮きボタン（`CloudiaLauncher`）は、このフラグではなく別のフラグ `PUBLIC_CLOUDIA_LAUNCHER_ENABLED` で止める。Cloudia を止めて切り戻すときは、両方を false にして build し直す。
 - `Calendar.astro` は `PUBLIC_GCAL_ID` があるときの閲覧用 embed である。予約の作成、空きの確保、Meet の発行、tl;dv への参加は、このファイルには無い。
 - 会社紹介資料は `COMPANY_DECK_URL` の直リンク（Google スライドの閲覧）。入力も通知も無い。
 

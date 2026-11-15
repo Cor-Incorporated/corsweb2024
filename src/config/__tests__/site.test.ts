@@ -39,14 +39,57 @@ describe('getGriftUrl / getContactUrl (ADR-0010)', () => {
     expect(u.searchParams.get('utm_source')).toBe('cor');
   });
 
-  it('getContactUrl localizes path and intent', async () => {
+  it('getContactUrl は問い合わせページを通さず、チャットへ intent・source・locale を渡す', async () => {
     const { getContactUrl } = await loadSite();
+    expect(getContactUrl('ja', { intent: 'confidential-ai-assessment', source: 'header' })).toBe(
+      '/contact/chat/?intent=confidential-ai-assessment&source=header&locale=ja',
+    );
+    // path は言語で変わらず、言語は locale で渡す
+    expect(getContactUrl('en', { intent: 'local-llm-poc' })).toBe(
+      '/contact/chat/?intent=local-llm-poc&locale=en',
+    );
+    expect(getContactUrl('zh', { source: 'footer' })).toBe('/contact/chat/?source=footer&locale=zh');
+    expect(getContactUrl('ko')).toBe('/contact/chat/?locale=ko');
+    // source の「/」も壊さずに運ぶ（ブログの記事の blog/<slug>）
+    const url = new URL(getContactUrl('es', { intent: 'contract-dev', source: 'blog/some-post' }), 'https://example.test');
+    expect(url.pathname).toBe('/contact/chat/');
+    expect(url.searchParams.get('source')).toBe('blog/some-post');
+    expect(url.searchParams.get('locale')).toBe('es');
+    expect(url.searchParams.has('embed')).toBe(false);
+  });
+
+  it('切り戻しの旗を真にした build でも、行き先はチャット', async () => {
+    vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', 'true');
+    const { getContactUrl, isContactChatPrimary } = await loadSite();
+    expect(isContactChatPrimary()).toBe(true);
+    expect(getContactUrl('ja', { source: 'footer' })).toBe('/contact/chat/?source=footer&locale=ja');
+  });
+
+  it('切り戻し（旗が false）の build では、フォームの在る問い合わせページへ intent と source を付けて向ける', async () => {
+    vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', 'false');
+    const { getContactUrl, isContactChatPrimary } = await loadSite();
+    expect(isContactChatPrimary()).toBe(false);
     expect(getContactUrl('ja', { intent: 'confidential-ai-assessment', source: 'header' })).toBe(
       '/contact?intent=confidential-ai-assessment&source=header',
     );
-    expect(getContactUrl('en', { intent: 'local-llm-poc' })).toBe(
-      '/en/contact?intent=local-llm-poc',
-    );
+    expect(getContactUrl('en', { source: 'footer' })).toBe('/en/contact?source=footer');
+    expect(getContactUrl('zh')).toBe('/zh/contact');
+  });
+
+  // 同じ旗を src/config/contact.ts（問い合わせページの出し分け）と site.ts（入口の行き先）が別々に読む。
+  // 片方だけ読み方を変えると、フォームが出ているのに入口がチャットを指す（またはその逆）ので、両方の値を並べて照らす。
+  it.each([
+    ['未設定', undefined],
+    ['true', 'true'],
+    ['false', 'false'],
+  ])('旗が %s のとき、問い合わせページの出し分けと入口の行き先がそろう', async (_label, value) => {
+    if (value !== undefined) vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', value);
+    else vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', '');
+    const { getContactUrl } = await loadSite();
+    const { CLOUDIA_CONTACT_PRIMARY_ENABLED } = await import('../contact');
+    const toChat = getContactUrl('ja').startsWith('/contact/chat/');
+    expect({ page: CLOUDIA_CONTACT_PRIMARY_ENABLED, links: toChat }).toEqual({ page: toChat, links: toChat });
+    expect(toChat).toBe(value !== 'false');
   });
 
   it('resolveExternalHref rewrites grift sentinel and absolute griftai URLs', async () => {
@@ -155,7 +198,7 @@ describe('ContactIntent 7 keys (ADR-0014 / #250)', () => {
     expect(isContactIntent('nope')).toBe(false);
     expect([...AUTO_HANDOFF_INTENTS]).toEqual(['contract-dev']);
     expect(getContactUrl('ja', { intent: 'contract-dev', source: 'header-ai-dev' })).toBe(
-      '/contact?intent=contract-dev&source=header-ai-dev',
+      '/contact/chat/?intent=contract-dev&source=header-ai-dev&locale=ja',
     );
   });
 });

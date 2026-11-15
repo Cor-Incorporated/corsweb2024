@@ -66,7 +66,7 @@ FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
 
 ### SSGFORM のフォームが外から送れる状態で残っている
 
-- `src/components/contact/ContactForm.astro` には、SSGFORM の送信先（`action` の URL）が書いてある。このリポジトリは公開なので、ページにフォームを出していなくても、送信先へ直接送ることはできる。いまのサイトでは、このフォームは `PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false` のとき（Cloudia を止めたときの非常口）にだけ出る
+- `src/components/contact/ContactForm.astro` には、SSGFORM の送信先（`action` の URL）が書いてある。このリポジトリは公開なので、ページにフォームを出していなくても、送信先へ直接送ることはできる。いまのサイトでは、このフォームは `PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false` のとき（Cloudia を止めたときの非常口）にだけ出る（2026-11 の追記: このフラグは、サイトの問い合わせの入口の link にも効く。false の build では、入口がチャットではなく問い合わせページのフォームへ向く。浮きボタンは別のフラグ `PUBLIC_CLOUDIA_LAUNCHER_ENABLED` で止める）
 - 全ページの `<head>` に、使っていない `ssgform.com` への `dns-prefetch` が残っている（`src/layouts/Layout.astro`）
 - SSGFORM の管理画面でこのフォームを止めれば、外からの直接の送信は届かなくなる。ただし、非常口のフォームも同時に使えなくなる。どちらを取るかは代表の判断（ADR-0025 の「決めてほしいこと」）
 
