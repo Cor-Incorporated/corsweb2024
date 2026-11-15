@@ -281,7 +281,12 @@ for (const size of LOAD_VISIBLE_SIZES) {
       const page = await context.newPage();
       try {
         await page.goto(new URL(homePath(locale), baseURL!).toString(), { waitUntil: 'load' });
-        // load の直後は演出の script がまだ隠していないことがあるので、1 秒たった時点で読む
+        // 演出の初期化（astro:page-load の後に reveal-ready を付ける）は、手元の負荷が高いと、load から 1〜1.5 秒で
+        // 済まないことがある。付くまで（最長 10 秒）待ってから 1 秒数え、その時点で読む。付かないまま 10 秒たったら、
+        // 下の「演出が働いていない」で落ちる
+        await page
+          .waitForFunction(() => document.querySelectorAll('[data-reveal].reveal-ready').length > 0, null, { timeout: 10_000 })
+          .catch(() => undefined);
         await page.waitForTimeout(LOAD_VISIBLE_MS);
         const last = await page.evaluate((sel) => {
           const el = document.querySelector<HTMLElement>(sel);

@@ -68,6 +68,16 @@ function readRevealState({ ctaSelector, belowMargin }: { ctaSelector: string; be
 const readState = (page: Page) =>
   page.evaluate(readRevealState, { ctaSelector: PRIMARY_CTA_SELECTOR, belowMargin: BELOW_MARGIN_PX });
 
+// 演出の初期化（astro:page-load の後に reveal-ready を付ける）は、手元の負荷が高いと、load から 1〜1.5 秒で
+// 済まないことがある。付くまで待ってから測る（10 秒たっても付かなければ、演出が働いていないとして落とす）
+async function waitForRevealReady(page: Page) {
+  await page
+    .waitForFunction(() => document.querySelectorAll('[data-reveal].reveal-ready').length > 0, null, { timeout: 10_000 })
+    .catch(() => undefined);
+  const ready = await page.evaluate(() => document.querySelectorAll('[data-reveal].reveal-ready').length);
+  expect(ready, '演出が働いていない（10 秒待っても reveal-ready が 0 個）').toBeGreaterThan(0);
+}
+
 async function open(browser: Browser, testInfo: TestInfo, pathname: string, width: number, height: number) {
   const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
   expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
@@ -75,9 +85,8 @@ async function open(browser: Browser, testInfo: TestInfo, pathname: string, widt
   const page = await context.newPage();
   await page.goto(new URL(pathname, baseURL!).toString(), { waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
+  await waitForRevealReady(page);
   await page.waitForTimeout(SETTLE_MS);
-  const ready = await page.evaluate(() => document.querySelectorAll('[data-reveal].reveal-ready').length);
-  expect(ready, '演出が働いていない（reveal-ready が 0 個）').toBeGreaterThan(0);
   await page.mouse.move(Math.round(width / 2), Math.round(height / 2));
   return { context, page };
 }
@@ -338,6 +347,7 @@ test('再読み込みで、ページの途中の位置から始まっても、�
     await page.waitForTimeout(SETTLE_MS);
     await page.reload({ waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
+    await waitForRevealReady(page);
     await page.waitForTimeout(SETTLE_MS);
     const state = await readState(page);
     expect(Math.abs(state.scrollY - y), `再読み込みで前の位置に戻っていない（scrollY=${state.scrollY}、前は ${y}）`).toBeLessThanOrEqual(2);
@@ -347,3 +357,4 @@ test('再読み込みで、ページの途中の位置から始まっても、�
     await context.close();
   }
 });
+
