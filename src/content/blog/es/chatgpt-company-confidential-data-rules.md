@@ -10,7 +10,7 @@ tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
 lang: "es"
 featured: true
 isDraft: false
-translationSourceHash: "2a15c033801a1941e40c576c33fc31e0355648066d1c20d0272c8bc89c9a6b87"
+translationSourceHash: "9bf38640c7e35cf96c29287a7e4d6c7ed8c28f85d2281bd34ff53bb72eba54af"
 translatedAt: "2026-10-23T06:24:34.604Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ R. Son idóneos para aquellas empresas que desean utilizar IA con contratos, act
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach): El 97% de las organizaciones con incidentes relacionados con la IA carecían de controles de acceso adecuados; el 63% carecía de políticas de gobernanza de la IA.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/): Sistematización de los principales riesgos en aplicaciones LLM, tales como Sensitive Information Disclosure, Excessive Agency y Overreliance.
-- [Sitio web de Cor.: Seguridad](https://cor-jp.com/security/): Enfoque prioritario en local (local-first), registros mínimos, niveles de confidencialidad, políticas de uso de IA e ISMS (con la finalización de la fase 2 de auditoría prevista para octubre de 2026 y la obtención del registro de certificación estimada hacia diciembre de 2026).
+- [Sitio web de Cor.: Seguridad](https://cor-jp.com/security/): Enfoque prioritario en local (local-first), registros mínimos, niveles de confidencialidad, políticas de uso de IA e ISMS (con certificación obtenida en noviembre de 2026; alcance: «Desarrollo y operación de software por encargo»).
 - [Sitio web de Cor.: AI × CO-CREATION / Descripción del negocio](https://cor-jp.com/): Información sobre las áreas de negocio de Cor., Grift, LLM locales e IA segura, desarrollo impulsado por IA y mensajes de cocreación.

@@ -10,7 +10,7 @@ tags: ["AIエージェント", "権限管理", "ガバナンス"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "5088bc7f3a1f0cc684bc8e0a2c3a1ddcff937480121ed6e95b695fa2c533fcc9"
+translationSourceHash: "0573549c97435774f9b99cd9bb2c5e1a403adac703a0a8a05cc222b11ff1fc4b"
 translatedAt: "2026-10-23T05:23:14.598Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -72,4 +72,4 @@ Los permisos, los registros, los flujos de aprobación y las condiciones de para
 - [Gartner: 40% of Enterprise Apps Will Feature Task-Specific AI Agents by 2026](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025) - Predicción de que el 40% de las aplicaciones empresariales incorporarán agentes de IA específicos para tareas para finales de 2026.
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai) - El 88% utiliza IA de forma habitual en al menos una función empresarial, aproximadamente un tercio la escala, el 23% escala agentes de IA y el 39% se encuentra en fase de experimentación.
 - [Gartner: Over 40% of Agentic AI Projects Will Be Canceled by End of 2027](https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027) - Predicción de que más del 40% de los proyectos de agentes de IA se cancelarán para finales de 2027 debido al aumento de costes, un valor poco claro y una gestión de riesgos inadecuada.
-- [Cor. HP: Seguridad](https://cor-jp.com/security/) - Consulte el enfoque local-first, el registro mínimo, los niveles de confidencialidad, la política de uso de IA y la certificación ISMS (se completó la auditoría de fase 2 en octubre de 2026 y se prevé el registro de la certificación hacia diciembre de 2026).
+- [Cor. HP: Seguridad](https://cor-jp.com/security/) - Consulte el enfoque local-first, el registro mínimo, los niveles de confidencialidad, la política de uso de IA y la certificación ISMS (con certificación obtenida en noviembre de 2026; alcance: «Desarrollo y operación de software por encargo»).

@@ -10,7 +10,7 @@ tags: ["生成AI", "社内ルール", "セキュリティ", "ガバナンス"]
 lang: "en"
 featured: true
 isDraft: false
-translationSourceHash: "7fd67394fcdeb12c96567e8bdf8c1004667438099fd688ec12be2c0ee942ded0"
+translationSourceHash: "b9ecddf43c42a8accb5836a94a26a3fe21c4c402bd31b81e751c035dc1589b39"
 translatedAt: "2026-10-23T05:20:46.686Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -69,4 +69,4 @@ Rules alone are insufficient. They only function effectively when supported by o
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 97% of organizations with AI-related incidents lacked adequate access controls, and 63% lacked an AI governance policy.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Outlines major risks of LLM applications, including Sensitive Information Disclosure, Excessive Agency, and Overreliance.
 - [NIST AI 600-1: Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) - Generative AI profile of the NIST AI RMF 1.0. A reference for incorporating trustworthiness and risk management into design, development, deployment, and evaluation.
-- [Cor. Website: Security](https://cor-jp.com/security/) - View our local-first approach, minimal logging, sensitivity tiers, AI usage policy, and ISMS (Stage 2 audit completed in October 2026, with certification registration expected around December 2026).
+- [Cor. Website: Security](https://cor-jp.com/security/) - View our local-first approach, minimal logging, sensitivity tiers, AI usage policy, and ISMS (certification obtained in November 2026; scope: “Contract development and operation of software”).

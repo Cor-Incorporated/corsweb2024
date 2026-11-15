@@ -10,7 +10,7 @@ tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
 lang: "ko"
 featured: true
 isDraft: false
-translationSourceHash: "2a15c033801a1941e40c576c33fc31e0355648066d1c20d0272c8bc89c9a6b87"
+translationSourceHash: "9bf38640c7e35cf96c29287a7e4d6c7ed8c28f85d2281bd34ff53bb72eba54af"
 translatedAt: "2026-10-23T06:21:26.217Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ A. 계약서, 회의록, 견적서, 사내 문서, 소스 코드 등 외부 서�
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI 관련 인시던트에서 적절한 접근 제어가 없었던 조직 97%, AI 거버넌스 정책이 부재했던 조직 63%.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure, Excessive Agency, Overreliance 등 LLM 애플리케이션의 대표적 리스크 정리.
-- [Cor. 홈페이지: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 10월 2단계 심사를 마치고, 2026년 12월경 인증 등록 전망) 확인.
+- [Cor. 홈페이지: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.
 - [Cor. 홈페이지: AI × CO-CREATION / 사업 개요](https://cor-jp.com/) - Cor.의 사업 영역, Grift, 로컬 LLM·보안 AI, AI 기반 개발, 공창(Co-creation) 메시지 확인.

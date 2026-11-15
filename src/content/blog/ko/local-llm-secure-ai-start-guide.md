@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "セキュアAI", "機密データ"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "b8a873bacfdc469e08f73e92cc6a799d3d436f456d72b95087e2551f396d6ce2"
+translationSourceHash: "8c22ec0697bc125bc4e10a9ca71ca634280eaf925fb9019bb3786827613d44d7"
 translatedAt: "2026-10-23T05:23:04.599Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ Cor.주식회사는 로컬 LLM을 '클라우드 AI보다 우월한 것'으로 �
 
 - [중소기구: 중소기업의 AI 등 활용 실태조사(2026년 3월)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 중소기업의 AI 도입률 20.4%, 도입 검토 18.6%, AI 도입 완료 기업의 생성형 AI 이용 82.6%, 도입 업무는 총무·관리 부문이 최다.
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI 관련 인시던트에서 적절한 접근 제어가 없었던 조직이 97%, AI 거버넌스 정책이 결여된 조직이 63%.
-- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록 전망) 확인.
+- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.
 - [Cor. HP: AI × CO-CREATION / 사업 개요](https://cor-jp.com/) - Cor.의 사업 영역, Grift, 로컬 LLM·보안 AI, AI 주도 개발, 공존 메시지 확인.

@@ -10,7 +10,7 @@ tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
 lang: "zh"
 featured: true
 isDraft: false
-translationSourceHash: "2a15c033801a1941e40c576c33fc31e0355648066d1c20d0272c8bc89c9a6b87"
+translationSourceHash: "9bf38640c7e35cf96c29287a7e4d6c7ed8c28f85d2281bd34ff53bb72eba54af"
 translatedAt: "2026-10-23T06:18:29.689Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ A. 适合希望利用AI处理合同、会议纪要、报价单、内部文档、
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 发生AI相关事件的组织中，97%缺少适当的访问控制，63%缺少AI治理策略。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - 梳理了敏感信息泄露（Sensitive Information Disclosure）、过度代理（Excessive Agency）、过度依赖（Overreliance）等LLM应用的代表性风险。
-- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认了本地优先、最小化日志、机密级别、AI使用方针、ISMS（预计于2026年10月完成第二阶段审核，2026年12月左右完成认证注册）。
+- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认了本地优先、最小化日志、机密级别、AI使用方针、ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。
 - [Cor. HP: AI × CO-CREATION / 业务概况](https://cor-jp.com/) - 确认了Cor.的业务领域、Grift、本地LLM与安全AI、AI驱动开发、共创理念。

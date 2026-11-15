@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "セキュアAI", "機密データ"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "b8a873bacfdc469e08f73e92cc6a799d3d436f456d72b95087e2551f396d6ce2"
+translationSourceHash: "8c22ec0697bc125bc4e10a9ca71ca634280eaf925fb9019bb3786827613d44d7"
 translatedAt: "2026-10-23T05:23:59.668Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ Definir las operaciones objetivo, los datos a utilizar, el nivel de confidencial
 
 - [SMRJ: Encuesta sobre la situación del uso de IA, etc. en PYMES (marzo de 2026)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - Tasa de adopción de IA en PYMES del 20,4 %, en evaluación 18,6 %, uso de IA generativa en empresas con IA implementada del 82,6 %, y las áreas de administración y gestión general como las más habituales en su adopción.
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 97 % de organizaciones sin un control de acceso adecuado en incidentes relacionados con IA, y 63 % de organizaciones sin políticas de gobernanza de IA.
-- [Página web de Cor.: Seguridad](https://cor-jp.com/security/) - Enfoque local-first, registros mínimos, niveles de confidencialidad, políticas de uso de IA y verificación de ISMS (se completó la fase 2 de auditoría en octubre de 2026, y se prevé el registro de certificación hacia diciembre de 2026).
+- [Página web de Cor.: Seguridad](https://cor-jp.com/security/) - Enfoque local-first, registros mínimos, niveles de confidencialidad, políticas de uso de IA y verificación de ISMS (con certificación obtenida en noviembre de 2026; alcance: «Desarrollo y operación de software por encargo»).
 - [Página web de Cor.: AI × CO-CREATION / Descripción general del negocio](https://cor-jp.com/) - Verificación de las áreas de negocio de Cor., Grift, LLMs locales y de IA segura, desarrollo impulsado por IA y mensaje de co-creación.

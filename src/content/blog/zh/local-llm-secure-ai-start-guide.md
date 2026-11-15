@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "セキュアAI", "機密データ"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "b8a873bacfdc469e08f73e92cc6a799d3d436f456d72b95087e2551f396d6ce2"
+translationSourceHash: "8c22ec0697bc125bc4e10a9ca71ca634280eaf925fb9019bb3786827613d44d7"
 translatedAt: "2026-10-23T05:21:59.628Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ Cor.株式会社并不认为本地LLM“优于云端AI”。云端AI非常优秀
 
 - [中小机构: 中小企业AI等利用实际情况调查（2026年3月）](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 中小企业AI导入率20.4%、正在考虑导入18.6%、已导入AI的企业中生成式AI利用率82.6%、导入业务以总务/管理部门最多。
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 在AI相关事件中，97%的组织缺乏适当的访问控制，63%的组织缺乏AI治理政策。
-- [Cor. 官网: 安全](https://cor-jp.com/security/) - 确认本地优先、最小限度日志、机密程度分级、AI利用方针、ISMS（预定于2026年10月完成第二阶段审核，预计2026年12月左右完成认证注册）。
+- [Cor. 官网: 安全](https://cor-jp.com/security/) - 确认本地优先、最小限度日志、机密程度分级、AI利用方针、ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。
 - [Cor. 官网: AI × CO-CREATION / 业务概要](https://cor-jp.com/) - 确认Cor.的业务领域、Grift、本地LLM/安全AI、AI驱动开发、共创理念。
