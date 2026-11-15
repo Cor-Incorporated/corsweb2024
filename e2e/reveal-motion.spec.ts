@@ -382,6 +382,7 @@ test('ページを移っても、演出の監視は前のページの分が外�
     const add = window.addEventListener.bind(window);
     const remove = window.removeEventListener.bind(window);
     window.addEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+      // 数えるのは type が scroll の見張りだけ（同じ関数の capture 違いは区別しない。resize などは数えない）
       if (type === 'scroll') counts.scroll.add(listener);
       add(type, listener, options);
     }) as typeof window.addEventListener;
@@ -407,6 +408,8 @@ test('ページを移っても、演出の監視は前のページの分が外�
     await waitForRevealReady(page);
     const first = await read();
     expect(first.observers, `最初のページの演出の observer の数（${JSON.stringify(first)}）`).toBe(2);
+    // 包みが効いていないと 0 のまま「最初と同じ」になり、外し忘れを見逃す。演出の分が少なくとも 1 個在ること
+    expect(first.scroll, `最初のページの scroll の見張りの数（${JSON.stringify(first)}）`).toBeGreaterThanOrEqual(1);
     const rounds = 4;
     for (let i = 1; i <= rounds; i += 1) {
       // 業種のページへ移り、戻る
