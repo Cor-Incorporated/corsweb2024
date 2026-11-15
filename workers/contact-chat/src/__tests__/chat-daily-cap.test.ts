@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_CHAT_DAILY_MODEL_CALL_LIMIT, chatDailyModelCallLimit, jstDay } from '../daily-cap';
+import { DEFAULT_CHAT_DAILY_MODEL_CALL_LIMIT, chatDailyModelCallLimit, jstDay, reserveDailyModelCall } from '../daily-cap';
 import worker from '../index';
 import { resetRateLimits } from '../security';
 import type { Env, NotificationMessage } from '../types';
@@ -435,6 +435,28 @@ describe('wrangler.toml の上限の設定', () => {
     expect(match, `wrangler.toml の ${env}（${header}）に CHAT_DAILY_MODEL_CALL_LIMIT が無い`).not.toBeNull();
     expect(match?.[1], `wrangler.toml の ${env} の CHAT_DAILY_MODEL_CALL_LIMIT が整数でない`).toMatch(/^\d+$/);
     expect(chatDailyModelCallLimit(match?.[1])).toBe(Number(match?.[1]));
+  });
+});
+
+// 予約できたかは、書いた行の数（meta.changes）で読む。数が読めない結果は、予約できなかった側に倒す。
+describe('予約の結果の読み方', () => {
+  const answering = (result: unknown): D1Database =>
+    ({
+      prepare: () => ({ bind: () => ({ run: async () => result }) }),
+    }) as unknown as D1Database;
+
+  it.each([
+    ['meta が無い', {}],
+    ['meta が無く success だけの', { success: true }],
+    ['meta に changes が無い', { success: true, meta: {} }],
+    ['changes が 0 の', { success: true, meta: { changes: 0 } }],
+  ])('%s結果は、上限（limited）と読む', async (_label, result) => {
+    expect(await reserveDailyModelCall(answering(result), 3, Date.parse('2026-11-17T03:00:00.000Z'))).toBe('limited');
+  });
+
+  it('changes が 1 の結果は、予約できた（reserved）と読む', async () => {
+    const result = { success: true, meta: { changes: 1 } };
+    expect(await reserveDailyModelCall(answering(result), 3, Date.parse('2026-11-17T03:00:00.000Z'))).toBe('reserved');
   });
 });
 
