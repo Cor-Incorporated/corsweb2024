@@ -162,13 +162,15 @@ grep -c '^CREATED' "$log"; grep -c '^DONE apply --mode test' "$log"
 
 ### T5. 顧客を作る
 
-テスト用の値: 顧客コード `cor-test`、社名 `Cor.株式会社（テスト）`、請求先のメール `company@cor-jp.com`、支払い方法 `card`、サービス `xesm`。テストモードでは請求書のメールは送られない（Stripe の文書。README 出典 [34]）。
+テスト用の値: 顧客コード `cor-test`、社名 `Cor.株式会社（テスト）`、請求先のメール `<請求先のメール>`（テストの請求書を受け取る社内のアドレス。実物は、手順を流す人が手元で入れ、非公開の台帳の側に書く）、支払い方法 `card`、サービス `xesm`、Clerk の組織 `<開発の組織の id>`。テストモードでは請求書のメールは送られない（Stripe の文書。README 出典 [34]）。
+
+`<開発の組織の id>` は、Clerk の**開発のインスタンス**で、社内の人だけが入っている試験用の組織の id（`org_` で始まる。英数字と下線だけ）。Clerk の画面の組織の一覧で、その組織を開いて読む（画面の名前と文言は未確認）。お客様や社外の人が入っている組織の id は使わない。E1 の `clerk-sync` が、ここで結んだ組織に試験の `services` を書くため。`--clerk-org` を付けずに作った顧客は、E1・E2 で `STOP: … に clerk_org_id が無い` で止まり、スクリプトはあとから足せない（既存の顧客を書き換えない）。
 
 ```bash
-bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email company@cor-jp.com --payment card --apply --mode test
+bash docs/billing/subscribe.sh customer --code cor-test --name 'Cor.株式会社（テスト）' --email <請求先のメール> --payment card --clerk-org <開発の組織の id> --apply --mode test
 ```
 
-`CREATED customer cus_…（customer_code=cor-test、payment=card、clerk_org_id=なし）` が出ること。`cus_…` の id を控える（台帳には書かない。テストだけ）。以下の `<cus_…>` はこの id。控え忘れたら次の `FOUND` の行で取れる（作った直後は 1 分ほど出ないことがある）:
+`CREATED customer cus_…（customer_code=cor-test、payment=card、clerk_org_id=org_…）` が出ること。前に `cor-test` を `--clerk-org` なしで作っていたら、`NOTE 既存の顧客 cus_… に clerk_org_id が無い。このスクリプトは既存を書き換えない` が出て、組織は結ばれない（止まらない）。この行が出たら、顧客コードを `cor-test2` に変えてもう一度作り、この節から先の `cor-test` を全部 `cor-test2` と読み替える。別の組織の id で作っていたら、`STOP: … の clerk_org_id が違う（期待 …、観測 …）` で止まる。`cus_…` の id を控える（台帳には書かない。テストだけ）。以下の `<cus_…>` はこの id。控え忘れたら次の `FOUND` の行で取れる（作った直後は 1 分ほど出ないことがある）:
 
 ```bash
 bash docs/billing/subscribe.sh find --code cor-test --mode test
