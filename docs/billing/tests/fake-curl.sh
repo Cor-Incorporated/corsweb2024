@@ -225,8 +225,8 @@ resync_invoices() {
   local st="${status_arg:-}" filter='.[$c] // []'
   if [ -n "$st" ]; then filter='.[$c] // [] | map(select((.status // "open") == $st))'; fi
   if [ -n "${start_arg:-}" ]; then
-    # 続きの位置は、同じ状態の 1 ページ目の最後の id でなければならない（本物でも、別の一覧の id を
-    # starting_after に渡すと、見落としか誤りになる）。違えば 400 を返す
+    # 続きの位置は、同じ状態の 1 ページ目の最後の id でなければならない。偽の curl は、別の一覧の id を
+    # starting_after に渡す誤りを試験で見つけるために、違えば 400 を返す（本物の応答は未確認）
     local last
     last="$(jq -r --arg c "$cus" --arg st "$st" "$filter | .[-1].id // \"\"" <<<"$p1")"
     if [ "$start_arg" != "$last" ]; then
