@@ -3,7 +3,7 @@ title: "ローカルLLMとは？機密データを外に出さないAI活用の�
 description: "ローカルLLMの基本、クラウドAIとの違い、導入が向いている業務、PoC前に確認すべきセキュリティと運用要件を解説します。機密データを安全にAI活用したい企業向けの記事です。"
 summary: "ローカルLLMの導入は、性能比較ではなく業務リスクの設計として判断するべきです。外に出したくない情報を使う業務に向いており、PoCの前に対象業務、データ範囲、機密度、権限、評価の方法を決めておかないと、経営判断に使える結果になりません。"
 pubDate: 2026-06-15
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
@@ -63,5 +63,5 @@ Cor.株式会社ではローカルLLMを「クラウドAIより偉いもの」�
 
 - [中小機構: 中小企業のAI等の利活用に係る実態調査（2026年3月）](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 中小企業のAI導入率20.4%、導入検討18.6%、AI導入済み企業の生成AI利用82.6%、導入業務は総務・管理部門が最多。
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI関連インシデントで適切なアクセス制御がなかった組織が97%、AIガバナンスポリシーを欠く組織が63%。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年10月に第2段階審査を終え、2026年12月ごろの認証登録を見込む）を確認。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年11月に認証を取得。対象範囲は「ソフトウエアの受託開発および運用」）を確認。
 - [Cor. HP: AI × CO-CREATION / 事業概要](https://cor-jp.com/) - Cor.の事業領域、Grift、ローカルLLM・セキュアAI、AI駆動開発、共創メッセージを確認。

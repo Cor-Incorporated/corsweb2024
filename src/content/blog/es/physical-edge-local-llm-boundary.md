@@ -3,7 +3,7 @@ title: "Dónde separar la IA de campo y la IA de documentos internos. La decisi�
 description: "La IA de campo que funciona junto a cámaras y sensores, y un LLM local que trata documentos internos, cuidan condiciones distintas. La política de Cor.Inc. es separar los entornos de verificación. Separarlos no es en sí una prueba de seguridad."
 summary: "La IA de campo y la IA de documentos internos pueden configurarse para limitar el envío al exterior. Eso solo no las reúne en el mismo entorno. La política de Cor.Inc. es mantener el entorno de verificación de la inferencia física apartado del entorno que trata documentos internos. Es una decisión de diseño para explicar el alcance de la conexión y el efecto, no una prueba de seguridad."
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "エッジAI", "セキュアAI", "設計"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "d0513b1cfbfaeca13818fefd287ed9de99c213dc2ce077385996d97ce4a8a716"
+translationSourceHash: "70bbefd1309910bf715dfe6d65a73acc60696cb5015e7231462c2c34a20a4cf4"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -93,9 +93,9 @@ La nube también es un modelo de responsabilidad compartida. Los permisos de acc
 
 Al pasar a local se añade la gestión física y la operación de la base. Las líneas que traza la propia empresa aumentan en esa medida. Dejar un estado en el que esas líneas se puedan explicar una a una es lo que Cor.Inc. considera importante.
 
-## Estado de la auditoría
+## Estado de la certificación
 
-Cor.Inc. opera un ISMS. En octubre de 2026 terminó la auditoría de etapa 2 de ISO/IEC 27001. El registro de la certificación se prevé hacia diciembre de 2026. El estado de la auditoría y lo que se verificó en cada sistema se cuentan por separado.
+Cor.Inc. opera un ISMS. En noviembre de 2026 obtuvo la certificación ISO/IEC 27001:2022. El alcance es «Desarrollo y operación de software por encargo». El estado de la certificación y lo que se verificó en cada sistema se cuentan por separado.
 
 ## Alcance de la conexión
 
@@ -109,4 +109,4 @@ Si quiere tratar documentos internos y datos de campo con IA, pero no tiene deci
 
 - [NIST SP 800-207: Zero Trust Architecture](https://csrc.nist.gov/pubs/sp/800/207/final) - la idea de no tratar una posición en la red como confianza implícita (el resumen se comprobó el 29 de octubre de 2026)
 - [AWS: Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/) - un ejemplo de cómo se reparte la responsabilidad en la nube. El reparto cambia según la forma del servicio (comprobado el 29 de octubre de 2026)
-- [Cor.Inc.: Seguridad](https://cor-jp.com/security/) - que se opera un ISMS, que la auditoría de etapa 2 de ISO/IEC 27001 terminó en octubre de 2026 y que el registro de la certificación se prevé hacia diciembre de 2026
+- [Cor.Inc.: Seguridad](https://cor-jp.com/security/) - que se opera un ISMS, que la certificación se obtuvo en noviembre de 2026 (alcance: «Desarrollo y operación de software por encargo»)

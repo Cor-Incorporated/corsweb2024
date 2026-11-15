@@ -3,7 +3,7 @@ title: "사내에서 로컬 추론 API를 쓰기 전에. 인증, 허가 목록, 
 description: "사내에서 로컬 추론 API를 쓰기 전에 인증, 허가 목록, 단말 퇴역을 나누어 설계합니다. 허가 목록이 보여주는 것은 통신을 통과시켜도 되는 상대입니다. 누가 어떤 업무에 써도 되는지는 따로 정합니다."
 summary: "Ollama의 localhost API는 공식 설명에서 인증을 요구하지 않습니다. 허가 목록으로 알 수 있는 것은 통신을 통과시켜도 되는 상대입니다. 그것만으로 누가 어떤 업무에 써도 되는지까지 정해지지는 않습니다. 취약점 대응과 허가 설정의 관리는 어느 한쪽만으로 끝나지 않습니다."
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "confidential-ai-assessment"
@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "Ollama", "情報セキュリティ", "ISMS"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "1cfc6850c3470817cd6d66514c2be11bd1793eeda737c01c8f5359034ae4d502"
+translationSourceHash: "ea0ff87bf0358abf53a3d29130d8f9d1bf8dc9f079d0d50d4d1eeaaef9dc1e44"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -93,7 +93,7 @@ translationModel: "manual-i18n-sync"
 
 ## 함께 보는 범위
 
-Cor.주식회사는 기존 설비를 출발점으로, 로컬에서 처리하는 범위를 함께 봅니다. ISMS 운용 안에서 구성의 선정과 권한, 실효, 로그의 설계를 함께 합니다. ISMS는 2026년 10월에 ISO/IEC 27001 2단계 심사를 마치고, 2026년 12월경에 인증 등록을 예상하고 있습니다.
+Cor.주식회사는 기존 설비를 출발점으로, 로컬에서 처리하는 범위를 함께 봅니다. ISMS 운용 안에서 구성의 선정과 권한, 실효, 로그의 설계를 함께 합니다. ISMS는 2026년 11월에 ISO/IEC 27001:2022 인증을 취득했습니다. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”입니다.
 
 이번 허가 목록 이야기는 그 「실효」와 「로그」의 이야기입니다. 추론 성능뿐만 아니라, 어느 단말이 언제까지 도달해도 되는지를 설명할 수 있는 것도 운용의 조건입니다. 성능 요건을 여기서 부정하는 것은 아닙니다.
 
@@ -107,4 +107,4 @@ Cor.주식회사는 기존 설비를 출발점으로, 로컬에서 처리하는 
 
 - [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - localhost의 로컬 API(포트 11434)는 인증이 필요 없다는 기술(2026년 10월 27일 확인)
 - [Ollama Docs: FAQ](https://docs.ollama.com/faq) - 「How can I expose Ollama on my network?」 항. 기본값은 127.0.0.1의 포트 11434에서 대기하고, 환경 변수 `OLLAMA_HOST`로 대기 주소를 바꿀 수 있다는 기술(2026년 10월 27일 확인)
-- [Cor.주식회사: 보안](https://cor-jp.com/security/) - ISMS를 운용하고 있으며, 2026년 10월에 ISO/IEC 27001 2단계 심사를 마치고, 2026년 12월경에 인증 등록을 예상한다는 점
+- [Cor.주식회사: 보안](https://cor-jp.com/security/) - ISMS를 운용하고 있으며, 2026년 11월에 인증을 취득했다는 점(인증 범위는 “소프트웨어의 수탁 개발 및 운영”)

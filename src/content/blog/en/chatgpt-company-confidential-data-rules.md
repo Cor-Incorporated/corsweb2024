@@ -3,14 +3,14 @@ title: "What Information Can and Cannot Be Entered into ChatGPT at Work: Criteri
 description: "For executives and administrative departments unsure whether they can input contracts, meeting minutes, estimates, or customer information into generative AI, this article explains how to classify confidentiality levels, choose between cloud AI and local LLMs, and establish internal rules."
 summary: "When introducing generative AI in a company, the first thing to decide is not which AI to use, but what information can be shared with external AI. By classifying information into three levels and establishing internal rules regarding prohibited inputs and approved AI tools, companies can shift AI usage from an employee's \"self-responsibility\" to standard corporate operations."
 pubDate: 2026-06-19
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
 lang: "en"
 featured: true
 isDraft: false
-translationSourceHash: "2a15c033801a1941e40c576c33fc31e0355648066d1c20d0272c8bc89c9a6b87"
+translationSourceHash: "9bf38640c7e35cf96c29287a7e4d6c7ed8c28f85d2281bd34ff53bb72eba54af"
 translatedAt: "2026-10-23T06:15:16.865Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ A. They are suitable for companies that want to use AI to handle information the
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 97% of organizations with AI-related incidents lacked proper access controls, and 63% lacked an AI governance policy.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Compiles representative risks of LLM applications, including Sensitive Information Disclosure, Excessive Agency, and Overreliance.
-- [Cor. Website: Security](https://cor-jp.com/security/) - Details local-first, minimal logging, sensitivity tiers, AI usage policy, and ISMS (expecting to complete Stage 2 audit in October 2026, with certification registration anticipated around December 2026).
+- [Cor. Website: Security](https://cor-jp.com/security/) - Details local-first, minimal logging, sensitivity tiers, AI usage policy, and ISMS (certification obtained in November 2026; scope: “Contract development and operation of software”).
 - [Cor. Website: AI × CO-CREATION / Business Overview](https://cor-jp.com/) - Details Cor.'s business domains, Grift, local LLM/secure AI, AI-driven development, and co-creation message.

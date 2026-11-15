@@ -3,14 +3,14 @@ title: "AI 에이전트 도입 전에 결정해야 할 권한·로그·승인 �
 description: "AI 에이전트 도입이 본격화되는 2026년, 업무에 통합하기 전에 결정해 두어야 할 권한 설계, 작업 로그, 사람의 승인 포인트를 해설합니다. PoC로 끝나지 않게 하기 위한 구현 방침입니다."
 summary: "AI 에이전트를 도입하기 전에 결정해야 하는 것은 어떤 에이전트를 사용할지가 아니라 어디까지 맡길지입니다. 권한을 단계별로 나누어 실행 및 외부 전송에는 사람의 승인을 배치하고, 로그와 중지 조건까지 먼저 설계한 기업만이 업무에 통합할 수 있습니다."
 pubDate: 2026-06-12
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["AIエージェント", "権限管理", "ガバナンス"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "5088bc7f3a1f0cc684bc8e0a2c3a1ddcff937480121ed6e95b695fa2c533fcc9"
+translationSourceHash: "0573549c97435774f9b99cd9bb2c5e1a403adac703a0a8a05cc222b11ff1fc4b"
 translatedAt: "2026-10-23T05:22:14.977Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -72,4 +72,4 @@ AI 에이전트는 도입하기만 하면 자동으로 성과가 나오는 기�
 - [Gartner: 40% of Enterprise Apps Will Feature Task-Specific AI Agents by 2026](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025) - 2026년 말까지 엔터프라이즈 애플리케이션의 40%가 작업 특화형 AI 에이전트를 탑재할 것이라는 예측.
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai) - 88%가 최소 1개 이상의 업무에서 AI를 상시 활용 중이며, 약 3분의 1이 확장 적용 중, 23%가 AI 에이전트를 확장 적용, 39%가 실험 단계.
 - [Gartner: Over 40% of Agentic AI Projects Will Be Canceled by End of 2027](https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027) - 비용 증가, 가치 불명확, 리스크 관리 부족으로 인해 2027년 말까지 40% 이상의 AI 에이전트 프로젝트가 중단될 것이라는 예측.
-- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 중요도 티어, AI 이용 방침, ISMS(2026년 10월에 2단계 심사를 완료하고, 2026년 12월경 인증 등록을 예상함) 확인.
+- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 중요도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.

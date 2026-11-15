@@ -3,14 +3,14 @@ title: "¿Qué es el desarrollo impulsado por IA? Cómo crear una estructura de 
 description: "Explicamos el enfoque para no limitar el desarrollo impulsado por IA a la mera generación de código, sino integrarlo con calidad de producción desde la definición de requisitos hasta la revisión, las pruebas y la operación. Un artículo dirigido a empresas que buscan internalizar el desarrollo con IA."
 summary: "En el desarrollo impulsado por IA, hacer que la IA simplemente escriba código no alcanza la calidad de producción. Es fundamental integrar la IA en cada fase del desarrollo y construir una estructura en la que las personas verifiquen con responsabilidad. Si se opta por la internalización, se debe comenzar por áreas donde el alcance del impacto en caso de fallos sea reducido."
 pubDate: 2026-06-11
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "engineering"
 tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "9a3d16400b1cb9c69a48285cb23a2a53681b2d67ba83902903db791ade8ad98d"
+translationSourceHash: "c2ca9a534453dfff6d94cbdb47c3d5a3695f8b147a96a67f863cae644bfbb54d"
 translatedAt: "2026-10-23T06:24:07.015Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -27,7 +27,8 @@ En Cor.Inc., no consideramos el desarrollo impulsado por IA como una «tecnolog�
 >
 > - En GitHub Octoverse 2025, se informa que la IA generativa se está estandarizando en el desarrollo, y que el 80 % de los nuevos desarrolladores utilizó Copilot durante su primera semana en GitHub.
 > - En el mismo informe, se detalla que TypeScript superó a Python y JavaScript en agosto de 2025, convirtiéndose en el lenguaje más utilizado en GitHub.
-> - En el sitio web de Cor., se destacan como propuestas principales una estructura orientada a la calidad y la seguridad, que incluye LLM locales, desarrollo sin fuga de información al exterior y la certificación ISMS (tras completar la auditoría de etapa 2 en octubre de 2026, se prevé el registro de certificación alrededor de diciembre de 2026).
+> - En el sitio web de Cor., se destacan como propuestas principales una estructura orientada a la calidad y la seguridad, que incluye LLM locales y desarrollo sin fuga de información al exterior.
+> - El ISMS de Cor. obtuvo la certificación en noviembre de 2026 (alcance: «Desarrollo y operación de software por encargo»).
 
 ## El desarrollo impulsado por IA va más allá de la generación de código
 
