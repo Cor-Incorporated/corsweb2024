@@ -2,10 +2,13 @@
 // サイト内の問い合わせの入口は、問い合わせページ（/contact、/<lang>/contact）を通さず、Cloudia のチャット（/contact/chat/）へ
 // 直接向ける。行き先は src/config/site.ts の getContactUrl が作る（intent・source・locale を link 自身が運ぶ）。
 // 見るもの:
-// 1. 5 言語の全ページで、問い合わせページへの link（a・area・form・meta refresh）が 0
+// 1. 5 言語の全ページで、問い合わせページへの link（a・area・form・button と input の formaction・meta refresh）が 0。
+//    www の host も同じ site として数える。言語つきのチャットの path（/<lang>/contact/chat/。そのページは無い）も落とす
 // 2. チャットへの link は、どれも source を持ち、locale がそのページの言語
 // 3. 主な入口が、決まった source（と intent）でチャットへ向く
 // 問い合わせページ自身は残している（自分と、言語の切り替えで他の言語の問い合わせページを指す）ので、1 の対象から外す。
+// script の中の文字（location.href = '/contact' など）は HTML の属性ではないので、この試験の範囲の外。
+// 切り戻し（PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false）の build では、入口が問い合わせページを指すので 1〜3 は落ちる作り。
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -15,6 +18,7 @@ import enJson from '../../src/i18n/locales/en.json';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
 const ORIGIN = 'https://cor-jp.com';
+const SAME_SITE_ORIGINS = new Set([ORIGIN, 'https://www.cor-jp.com']);
 const NON_JA = ['en', 'zh', 'ko', 'es'] as const;
 type Locale = 'ja' | (typeof NON_JA)[number];
 
@@ -68,6 +72,7 @@ const LINK_PATTERNS: ReadonlyArray<{ kind: string; pattern: RegExp }> = [
   { kind: 'a', pattern: new RegExp(String.raw`<a\b[^>]*?\shref=${ATTRIBUTE}`, 'gi') },
   { kind: 'area', pattern: new RegExp(String.raw`<area\b[^>]*?\shref=${ATTRIBUTE}`, 'gi') },
   { kind: 'form', pattern: new RegExp(String.raw`<form\b[^>]*?\saction=${ATTRIBUTE}`, 'gi') },
+  { kind: 'formaction', pattern: new RegExp(String.raw`<(?:button|input)\b[^>]*?\sformaction=${ATTRIBUTE}`, 'gi') },
 ];
 const META_REFRESH = new RegExp(String.raw`<meta\b(?=[^>]*http-equiv=["']?refresh)[^>]*?\scontent=${ATTRIBUTE}`, 'gi');
 
@@ -78,8 +83,13 @@ function sameOriginLinks(html: string, pagePath: string): Link[] {
   const push = (kind: string, raw: string) => {
     const value = decode(raw).trim();
     if (!value || /^(?:mailto|tel|javascript|data):/i.test(value) || value.startsWith('#')) return;
-    const url = new URL(value, base);
-    if (url.origin === ORIGIN) links.push({ kind, raw: value, url });
+    let url: URL;
+    try {
+      url = new URL(value, base);
+    } catch {
+      return;
+    }
+    if (SAME_SITE_ORIGINS.has(url.origin)) links.push({ kind, raw: value, url });
   };
   for (const { kind, pattern } of LINK_PATTERNS) {
     for (const match of html.matchAll(pattern)) push(kind, match[1] ?? match[2] ?? match[3] ?? '');
@@ -90,6 +100,9 @@ function sameOriginLinks(html: string, pagePath: string): Link[] {
   }
   return links;
 }
+
+/** 言語つきのチャットの path（/en/contact/chat/ など）。チャットは 1 つの path なので、このページは無い */
+const isLocalizedChatPath = (pathname: string) => /^\/(?:en|zh|ko|es)\/contact\/chat(?:\/|$)/.test(pathname);
 
 const isChatLink = (link: Link) => normalizeSitePath(link.url.pathname) === normalizeSitePath(CLOUDIA_CHAT_PATH);
 
@@ -117,11 +130,13 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(pages.length, 'dist の HTML が少なすぎる').toBeGreaterThan(500);
   });
 
-  it('5 言語の全ページで、問い合わせページへの link が 0（問い合わせページ自身と、この変更の外の記事を除く）', () => {
+  it('5 言語の全ページで、問い合わせページと無いチャットの path への link が 0（問い合わせページ自身と、この変更の外の記事を除く）', () => {
     const found = pages
       .filter((page) => !isContactPagePath(page.pagePath) && !articlePaths.has(page.pagePath))
       .flatMap((page) =>
-        page.links.filter((link) => isContactPagePath(link.url.pathname)).map((link) => `${page.pagePath} → ${link.kind} ${link.raw}`),
+        page.links
+          .filter((link) => isContactPagePath(link.url.pathname) || isLocalizedChatPath(link.url.pathname))
+          .map((link) => `${page.pagePath} → ${link.kind} ${link.raw}`),
       );
     expect(found).toEqual([]);
   });
