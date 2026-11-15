@@ -205,3 +205,38 @@ describe('トップからのリンク先 (#414)', () => {
     expect(readHome(locale)).toMatch(/"@type":\s*"FAQPage"/);
   });
 });
+
+// ヒーローの説明の文（locale の homeHero.subtitle）の br には、パソコンでは効かない前提の class が付いている。
+// Tailwind は locale の json を走査しないので、今はその CSS が出来ず、パソコンでも改行が出る。source のどこかに
+// 同じ class を書くと CSS が出来て、パソコンで改行が消え、minify で落ちた空白のせいで 2 つの文がつながる
+// （en の「documents.Cor.Inc.」）。トップが読む CSS に、その class の規則が無いことを確かめる。
+function brClasses(html: string): string[] {
+  const classes = [...html.matchAll(/<br\b[^>]*\bclass=(?:"([^"]*)"|'([^']*)')/g)].flatMap((m) => (m[1] ?? m[2]).split(/\s+/));
+  return [...new Set(classes.filter(Boolean))];
+}
+
+function stylesheetsOf(html: string): { source: string; css: string }[] {
+  const linked = [...html.matchAll(/<link\b[^>]*>/g)]
+    .map((m) => m[0])
+    .filter((tag) => /\brel=["']?stylesheet\b/.test(tag))
+    .map((tag) => tag.match(/\bhref=["']?([^"'\s>]+)/)?.[1] ?? '')
+    .filter((href) => href.startsWith('/'))
+    .map((href) => ({ source: href, css: readFileSync(path.join(DIST_DIR, href.split(/[?#]/)[0]), 'utf8') }));
+  const inline = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m, i) => ({ source: `<style> の ${i + 1} 個目`, css: m[1] }));
+  return [...linked, ...inline];
+}
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// CSS の class セレクタの形（sm:hidden → .sm\:hidden）
+const cssClassSelector = (name: string) => new RegExp(`\\.${escapeRegExp(name.replace(/[^\w-]/g, (c) => `\\${c}`))}(?![\\w-])`);
+
+describe('ヒーローの説明の文の改行', () => {
+  it.each(LOCALE_KEYS)('%s: 説明の文の br に付いた class の規則が、トップの CSS に無い', (locale) => {
+    const sheets = stylesheetsOf(readHome(locale));
+    expect(sheets.filter((sheet) => !sheet.source.startsWith('<style>')), 'トップが読む CSS の file').not.toHaveLength(0);
+    const found = brClasses(LOCALES[locale].homeHero.subtitle).flatMap((name) =>
+      sheets.filter((sheet) => cssClassSelector(name).test(sheet.css)).map((sheet) => `${name} の規則が ${sheet.source} に在る`),
+    );
+    expect(found, '説明の文の改行がパソコンで消える').toEqual([]);
+  });
+});
