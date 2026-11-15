@@ -664,6 +664,8 @@ bash docs/billing/subscribe.sh hold --customer "${CUS:?空。先に CUS を入�
 
 `HOLD cus_XXXXXXXXXXXX xesm: metadata に印を書いた。Clerk の組織に写す` が出る。Stripe の metadata と Clerk の両方に書くので、書き始める前に両方の鍵を読む（片方だけ書いた状態を作らない）。`clerk_org_id` の無い顧客と、契約の無いサービスは書かない。
 
+手で書いた hold も、毎月の `resync`（E4）が請求書の状態から決め直す。期限の 14 日後を過ぎた払われていない請求書（`open` か `uncollectible`）が無い顧客の hold は、次の `resync` で外れる。ただし、判定できない請求書が在る顧客の hold と、`resync` が組織の id の重なりで止まった月は、変えない（「問題が起きたら」の 2 行）。
+
 ### E3. 払われたら外す（`unhold`）
 
 ```bash
@@ -671,6 +673,8 @@ bash docs/billing/subscribe.sh unhold --customer "${CUS:?空。先に CUS を入
 ```
 
 `UNHOLD cus_XXXXXXXXXXXX xesm: metadata の印を消した。Clerk の組織に写す` が出る。metadata の key を消し（空の値にする）、Clerk の `services` の `hold` を `false` にする。
+
+回収できないとした（`uncollectible`）請求書が期限の 14 日後を過ぎて残っている間は、次の `resync`（E4）が hold を書き直す。外したままにするには、先にその請求書が払われた（`paid`）か、取り消した（`void`）かを確かめる。
 
 ### E4. 毎月の照合（`resync`）
 
@@ -682,8 +686,8 @@ bash docs/billing/subscribe.sh resync --mode live --apply
 
 `RESYNC 顧客 N 件を見る` のあと、顧客ごとに `RESYNC cus_…: Clerk の組織 org_… に services と resync_at を送った`、最後に `RESYNC 完了: 顧客 N 件、hold を書き直した顧客 M 件、Clerk へ送った顧客 K 件（resync_at …）` が出る。
 
-- hold の判定: 請求書の支払いの期限の 14 日後を過ぎても払われていないもの（status が `open` か `uncollectible`。回収できないとした請求書も、払われていないものとして数える）があれば、そのサービスに hold を書く。無ければ外す。`void`（取り消した）と `paid` は数えない。**期限の 14 日後ちょうどの日は、まだ過ぎていない**（その日の翌日から hold）。
-- 顧客の一覧と請求書の一覧は 100 件ずつページを送る（`starting_after`。請求書は `open` と `uncollectible` を別々に読む）。
+- hold の判定: 請求書の支払いの期限の 14 日後を過ぎても払われていないもの（status が `open` か `uncollectible`。回収できないとした請求書も、払われていないものとして数える）があれば、そのサービスに hold を書く。無ければ外す。`void`（取り消した）と `paid` は数えない。**期限の 14 日後ちょうどの日は、まだ過ぎていない**（その日の翌日から hold）。回収できないとした請求書が残る限り、hold は外れない（外れるのは、その請求書が払われて `paid` になるか、取り消して `void` にしたとき）。
+- 顧客の一覧と請求書の一覧は 100 件ずつページを送る（`starting_after`。請求書は `open` と `uncollectible` を別々に読み、状態を替えるときは続きの位置を 1 ページ目に戻す）。ページの上限（1000 ページ）は、2 つの状態で合わせて数える。上限に届くと `STOP: 請求書の一覧のページが 1000 を超えた（顧客 …）。全件を見ていない`（exit 3）で止まる。
 - `clerk_org_id` の無い顧客は Clerk へ送らない（`NOTE … clerk_org_id が無い（Clerk へは送らない）`）。
 - 同じ Clerk の組織を 2 人以上の顧客が持っていれば、下見のあと 1 つも書かずに止まる（`NG 同じ Clerk の組織 org_… を 2 人以上の顧客が持っている: cus_…, cus_…` のあと exit 3）。後の顧客の `services` が前の顧客の分を上書きし、どちらの契約で開け閉めするかが決まらないため。
 
@@ -766,7 +770,8 @@ bash docs/billing/subscribe.sh set-payment --customer "${CUS:?空。先に CUS �
 | `STOP: … に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に送らない`（exit 3） | Clerk の組織と結んでいない顧客 | C0・C2 で `--clerk-org org_…` を付けて顧客を作る。既存の顧客に足すかは寺田（画面） |
 | `STOP: clerk_org_id の形が違う`（exit 3） | 組織の id の打ち間違い | 台帳の `org_…` を確かめる。何も送っていない |
 | `STOP: clerk_org_id=org_… は既に顧客 cus_…（customer_code=…） が使っている。…作らない`（exit 3、customer） | 同じ組織の id を、別の顧客に結ぼうとした | 作っていない。台帳で、その組織がどちらの顧客のものかを決める。違う組織の id を写していたなら、正しい id で打ち直す |
-| `NG 同じ Clerk の組織 org_… を 2 人以上の顧客が持っている: cus_…, cus_…` のあと `STOP: 同じ Clerk の組織を 2 人以上の顧客が持っている`（exit 3、resync） | 2 人の顧客の metadata に、同じ `clerk_org_id` が在る（作った直後で検索をすり抜けた、画面で書き換えた など） | 1 つも書いていない（Stripe にも Clerk にも）。台帳で正しい顧客を決め、もう一方の顧客の `clerk_org_id` を画面で外して（画面の文言は未確認）から、もう一度 `resync` を流す |
+| `NG 同じ Clerk の組織 org_… を 2 人以上の顧客が持っている: cus_…, cus_…` のあと `STOP: 同じ Clerk の組織を 2 人以上の顧客が持っている`（exit 3、resync） | 2 人の顧客の metadata に、同じ `clerk_org_id` が在る（作った直後で検索をすり抜けた、画面で書き換えた など） | 1 つも書いていない（Stripe にも Clerk にも）。台帳で正しい顧客を決め、もう一方の顧客の `clerk_org_id` を画面で外して（画面の文言は未確認）から、もう一度 `resync` を流す。重なりが 1 組でも在ると、その月の `resync` は全員分止まり、ほかの顧客の新しい hold も付かない（止める側に倒した判断）。直すまでの間、超過が確かな顧客は E2 の `hold` で手で止める |
+| `NOTE cus_…: 判定できない払われていない請求書（open か uncollectible）がある（期限が無い・明細にサービスが無い）。この顧客の hold は変えない`（resync） | その顧客の請求書に、期限の無いものか、明細にサービスの無いものが在る | その顧客の hold は、外しも書き足しもしない（止める側に倒した判断。ほかの請求書が確かに超過していても、新しい hold は付かない）。その請求書の期限と明細のサービスを画面で確かめる（画面の文言は未確認）。直すまでの間、超過が確かなら E2 の `hold` で手で止める（この顧客の hold は `resync` が変えないので、手の hold は残る） |
 | `STOP: contract_<サービス>_start が空（形が違う）。Clerk に送らない` / `… が実在する日付ではない`（exit 3） | Customer の metadata の契約の日付が壊れている | 送っていない。`status` で metadata を確かめ、寺田が直す方法を決める |
 | `STOP: … に保存したカードが無い（…）。card にしない（期限の日に払えない）`（exit 3、set-payment） | カードを保存していない | C4 でカードを保存してもらってから、もう一度 |
 | `STOP: Clerk の応答の services が送った値と違う（観測: …）。送ったあとなので戻せない`（exit 3） | Clerk が送った値と違うものを返した | 送ったあとは戻せない。`clerk-sync` の dry-run か Clerk の画面で今の metadata を確かめ、ログを統括へ渡す |
