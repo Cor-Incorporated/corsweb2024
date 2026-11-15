@@ -131,7 +131,7 @@
       {
         "id": "isms",
         "title": "Certificación ISMS obtenida",
-        "body": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029."
+        "body": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia."
       },
       {
         "id": "fukuoka100",
@@ -904,7 +904,7 @@
       },
       {
         "question": "¿Cómo se manejan la seguridad y la privacidad?",
-        "answer": "Incorporamos al diseño los requisitos prácticos: gestión de los datos de entrada, derechos de acceso, registro de operaciones, flujos de aprobación humana, reglas de eliminación y la asignación de responsabilidades operativas. En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029."
+        "answer": "Incorporamos al diseño los requisitos prácticos: gestión de los datos de entrada, derechos de acceso, registro de operaciones, flujos de aprobación humana, reglas de eliminación y la asignación de responsabilidades operativas. En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia."
       },
       {
         "question": "¿Qué es Grift?",
@@ -1495,7 +1495,7 @@
       }
     ],
     "securityTitle": "Seguridad de la información",
-    "securityBody": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029.",
+    "securityBody": "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (ISMS) con el alcance «Desarrollo y operación de software por encargo». El organismo de certificación es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación es válida del 7 de noviembre de 2026 al 7 de noviembre de 2029. Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia.",
     "securityLink": "Ver nuestra política de seguridad",
     "recognitionTitle": "Reconocimientos y vínculos con la comunidad",
     "fukuoka100Body": "Fuimos seleccionados entre las «100 empresas representativas de Fukuoka 2026-2027» de Made In Local.",

@@ -131,7 +131,7 @@
       {
         "id": "isms",
         "title": "ISMS certification obtained",
-        "body": "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029."
+        "body": "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029. It remains valid as long as continued registration is confirmed at the surveillance audits during the validity period."
       },
       {
         "id": "fukuoka100",
@@ -904,7 +904,7 @@
       },
       {
         "question": "How are security and privacy handled?",
-        "answer": "We build practical requirements into the design: input data management, access rights, operation logs, human approval flows, deletion rules, and clear operational responsibility. In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029."
+        "answer": "We build practical requirements into the design: input data management, access rights, operation logs, human approval flows, deletion rules, and clear operational responsibility. In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029. It remains valid as long as continued registration is confirmed at the surveillance audits during the validity period."
       },
       {
         "question": "What is Grift?",
@@ -1495,7 +1495,7 @@
       }
     ],
     "securityTitle": "Information Security",
-    "securityBody": "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029.",
+    "securityBody": "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the scope “Contract development and operation of software.” The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029. It remains valid as long as continued registration is confirmed at the surveillance audits during the validity period.",
     "securityLink": "See our security policy",
     "recognitionTitle": "Recognition & Community Ties",
     "fukuoka100Body": "We were selected for Made In Local's \"Fukuoka's 100 Representative Companies 2026-2027.\"",
