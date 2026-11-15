@@ -1,16 +1,27 @@
 ---
-title: "Completed the Stage 2 Audit for ISO/IEC 27001 (ISMS)"
-description: "On October 7, 2026, Cor.Inc. completed the Stage 2 audit for the international information security standard ISO/IEC 27001 (ISMS). Certification registration is expected around December 2026."
+title: "ISO/IEC 27001:2022 (ISMS) Certification Obtained (November 2026 update)"
+description: "In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification for the contracted development and operation of software. The certification body is SGS Japan (SGS), registration number JP26/00000364, valid from November 7, 2026 to November 7, 2029."
 publishedAt: 2026-10-20
+updatedAt: 2026-11-12
 category: "info"
 tags: ["News", "Information Security", "ISMS"]
 source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "en"
-translationSourceHash: "413bf167fe597944f216927f8d65d891302985864fd067813ed618f90103d8e1"
-translatedAt: "2026-10-23T06:31:46.384Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
+---
+
+## November 2026 update: Certification obtained
+
+In November 2026, Cor.Inc. obtained ISO/IEC 27001:2022 (ISMS) certification. The scope is the contracted development and operation of software.
+
+The certification body is SGS Japan (SGS), and the registration number is JP26/00000364. The certification is valid from November 7, 2026 to November 7, 2029.
+
+The following is the original announcement, published on October 20, 2026, before certification registration.
+
 ---
 
 ## Completion of Stage 2 Audit

@@ -1,16 +1,27 @@
 ---
-title: "Hemos completado la auditoría de fase 2 de la norma ISO/IEC 27001 (SGSI)"
-description: "El 7 de octubre de 2026, Cor.Inc. completó la auditoría de fase 2 del estándar internacional de seguridad de la información ISO/IEC 27001 (SGSI). Se prevé obtener el registro de la certificación alrededor de diciembre de 2026."
+title: "Obtuvimos la certificación ISO/IEC 27001:2022 (SGSI) (actualización de noviembre de 2026)"
+description: "En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI) para el desarrollo y la operación de software por encargo. La entidad certificadora es SGS Japón (SGS), número de registro JP26/00000364, con vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029."
 publishedAt: 2026-10-20
+updatedAt: 2026-11-12
 category: "info"
 tags: ["Avisos", "Seguridad de la información", "SGSI"]
 source: "Cor.Inc."
 isDraft: false
 featured: true
 lang: "es"
-translationSourceHash: "413bf167fe597944f216927f8d65d891302985864fd067813ed618f90103d8e1"
-translatedAt: "2026-10-23T06:33:52.914Z"
-translationModel: "gemini-3.8-flash"
+translationSourceHash: "11a14d7a4140ffa9464b39057d43a8872deb5377145e757967807415e49f84ff"
+translatedAt: "2026-11-12T07:06:38.167Z"
+translationModel: "gemini-3.8-flash + codex-editorial-update"
+---
+
+## Actualización de noviembre de 2026: Certificación obtenida
+
+En noviembre de 2026, Cor.Inc. obtuvo la certificación ISO/IEC 27001:2022 (SGSI). El alcance es el desarrollo y la operación de software por encargo.
+
+La entidad certificadora es SGS Japón (SGS) y el número de registro es JP26/00000364. La certificación tiene vigencia del 7 de noviembre de 2026 al 7 de noviembre de 2029.
+
+A continuación se conserva el anuncio original, publicado el 20 de octubre de 2026, antes del registro de la certificación.
+
 ---
 
 ## Finalización de la auditoría de fase 2
