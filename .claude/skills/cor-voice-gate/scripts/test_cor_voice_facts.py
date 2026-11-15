@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cor_voice_lint as lint  # noqa: E402
 
 AS_OF = date(2026, 11, 12)
+# 記録の validity_condition を文にしたもの（有効期間を書く段落に要る。ISMS の有効期間を書く文の試験は、この文を足す）
+COND = "有効期間中の維持審査にて登録の継続が認められる限り有効です。"
 SKILLS = Path(__file__).resolve().parents[2]
 
 # 公開している業種ページ 5 本の本文（教育・医療・士業・建設・製造）に共通する認証の部分。本文そのものではなく、認証の部分だけ
@@ -174,7 +176,7 @@ class FrontmatterAndValidityTest(unittest.TestCase):
     def test_validity_period_sentence_is_not_a_date_mismatch(self):
         # #527 のニュース本文の文（有効期間は A から B です）。「有効」より後ろの日付は有効期間として数える
         self.assertEqual(errors("認証機関はSGSジャパン、登録番号はJP26/00000364、有効期間は2026年11月7日から2029年11月7日です。\n"), [])
-        self.assertEqual(errors(f"2026年11月7日に ISMS 認証を取得し、有効期間は2026年11月7日から2029年11月7日までです。{self.SC}\n"), [])
+        self.assertEqual(errors(f"2026年11月7日に ISMS 認証を取得し、有効期間は2026年11月7日から2029年11月7日までです。{COND}{self.SC}\n"), [])
         self.assertIn("isms_date_mismatch", errors("有効期間は2026年11月8日から2029年11月7日です。\n"))
         self.assertIn("isms_date_mismatch", errors(f"2026年11月8日に ISMS 認証を取得し、有効期間は2026年11月7日から2029年11月7日までです。{self.SC}\n"))
 
@@ -323,7 +325,7 @@ class ReviewCounterexampleTest(unittest.TestCase):
     PASSING = {
         "年なしの11月7日": "ISMS 認証は11月7日に取得しました。%s\n",
         "2026年11月": "2026年11月に ISMS 認証を取得しました。%s\n",
-        "有効期間の終わりが正しい": "ISMS 認証を取得しています。%s 有効期間は2029年11月7日までです。\n",
+        "有効期間の終わりが正しい": "ISMS 認証を取得しています。%s 有効期間は2029年11月7日までです。" + COND + "\n",
         "否定の限定句": "ISMS を取得しても、完全な防御にはなりません。\n",
         "取得していなかった": "ISMS を取得していなかった頃の話です。\n",
         "範囲が同じ項目": "- ISMS 認証取得済み。%s\n",
@@ -707,6 +709,66 @@ class ReviewFixesTest(unittest.TestCase):
         y, m, d = (int(x) for x in isms["valid_from"].split("-"))
         for label, want in (("登録範囲", isms["scope"]), ("登録日", f"{y} 年 {m} 月 {d} 日")):
             self.assertIn(want, text, f"記録の{label}は「{want}」。docs/story-spine.md に無い（記録: {isms['scope']} / {isms['valid_from']}）")
+
+
+class LimiterAndValidityConditionTest(unittest.TestCase):
+    """限定句は、否定の述語として節の終わりにあるときだけ拡大を打ち消す。有効期間を書く段落には、記録の有効の条件が要る。"""
+
+    SC = "登録範囲は「ソフトウエアの受託開発および運用」です。"
+
+    def over(self, text: str) -> list[str]:
+        return errors(text.replace("%s", self.SC))
+
+    def test_limiter_in_the_middle_of_a_clause_does_not_cancel_the_extension(self):
+        # 限定句の語があっても、意味が逆の文は止める
+        self.assertIn("isms_scope_overreach", self.over("ISMS の認証は、登録範囲外の Grift にも適用されます。%s\n"))
+        self.assertIn("isms_scope_overreach", self.over("ISMS 認証は全社を対象外のない形で取得しています。%s\n"))
+
+    def test_limiter_at_the_end_of_a_clause_still_cancels_it(self):
+        for text in (
+            "ISMS 認証を取得しています。%s Grift は登録範囲外です。\n",
+            "ISMS 認証を取得しています。%s Grift は対象に含まれません。\n",
+            "ISMS 認証を取得しています。%s 認証は AI の回答精度を保証するものではありません。\n",
+            "ISMS を取得しても、完全な防御にはなりません。\n",
+            # 限定句のあとに理由の語（からである・ため）が続く説明の文（ADR の本文にある形）
+            "範囲を併記させるのは、ISMS の認証が製品や AI の回答精度の保証ではないからである。\n",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.over(text), [])
+
+    def test_limiter_with_a_causal_word_still_does_not_cancel(self):
+        self.assertIn("isms_scope_overreach", self.over("ISMS 認証を取得済みなので、Grift は対象外です。%s\n"))
+
+    def test_validity_period_needs_the_condition_in_the_same_paragraph(self):
+        period = "有効期間は2026年11月7日から2029年11月7日です。"
+        base = f"Cor.株式会社は ISMS 認証を取得しています。{self.SC}{period}"
+        self.assertEqual(errors(base), ["isms_validity_condition_missing"])
+        self.assertEqual(errors(base + COND), [])
+        # 条件が次の段落では足りない（同じ段落）。箇条書き・表・引用は 1 行ごとに別の単位
+        self.assertEqual(errors(base + "\n\n" + COND), ["isms_validity_condition_missing"])
+        self.assertEqual(errors(f"- ISMS 認証の{period}{self.SC}"), ["isms_validity_condition_missing"])
+        self.assertEqual(errors(f"- ISMS 認証の{period}{COND}{self.SC}"), [])
+
+    def test_validity_period_of_something_else_is_not_checked(self):
+        # ISMS の語が無い段落の有効期間（クーポン・契約など）は見ない。日付の無い「有効期間中」の文も見ない
+        # （クーポンの日付は、別の規則 isms_date_mismatch が既に見る。ここで見るのは、有効の条件の規則だけ）
+        self.assertNotIn("isms_validity_condition_missing", errors("このクーポンの有効期間は2026年12月31日までです。\n"))
+        self.assertEqual(errors("維持審査は有効期間中に行います。\n"), [])
+
+    def test_archive_block_may_keep_a_validity_period_without_the_condition(self):
+        text = "公開当時の記録です。\n\nISMS の有効期間は2026年11月7日から2029年11月7日です。\n"
+        self.assertEqual(errors(text), ["isms_validity_condition_missing"])
+        self.assertEqual(errors(text, archive=frozenset({3})), [])
+
+    def test_condition_comes_from_the_record_only(self):
+        # 片側変異: 記録の条件を別の文にすると、本文の条件の文は照合に合わず、記録の値を挙げて落ちる
+        base = f"ISMS 認証を取得しています。{self.SC}有効期間は2026年11月7日から2029年11月7日です。{COND}"
+        self.assertEqual(errors(base), [])
+        rec = facts()
+        rec["isms"]["validity_condition"] = "期限まで有効"
+        found = hits(base, record=rec)
+        self.assertIn("isms_validity_condition_missing", [h.rule_id for h in found])
+        self.assertIn("期限まで有効", " ".join(h.message for h in found))
 
 
 if __name__ == "__main__":
