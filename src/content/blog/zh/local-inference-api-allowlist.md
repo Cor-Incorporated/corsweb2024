@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "Ollama", "情報セキュリティ", "ISMS"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "1cfc6850c3470817cd6d66514c2be11bd1793eeda737c01c8f5359034ae4d502"
+translationSourceHash: "ea0ff87bf0358abf53a3d29130d8f9d1bf8dc9f079d0d50d4d1eeaaef9dc1e44"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -93,7 +93,7 @@ translationModel: "manual-i18n-sync"
 
 ## 一起看的范围
 
-Cor.株式会社以现有设备为起点，一起看本地处理的范围。在ISMS的运用中，一起做构成的选定，以及权限、失效和日志的设计。ISMS已于2026年10月完成ISO/IEC 27001第二阶段审查，认证注册预计在2026年12月前后。
+Cor.株式会社以现有设备为起点，一起看本地处理的范围。在ISMS的运用中，一起做构成的选定，以及权限、失效和日志的设计。ISMS已于2026年11月取得ISO/IEC 27001:2022认证。认证范围为“软件的受托开发及运营”。
 
 这次的许可列表，就在「失效」和「日志」这个话题里。除了推理性能，能够说明哪台终端可以到达、到什么时候，也是运用条件。这里并不是否定性能要件。
 
@@ -107,4 +107,4 @@ Cor.株式会社以现有设备为起点，一起看本地处理的范围。在I
 
 - [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - localhost的本地API（端口11434）不需要认证（2026年10月27日确认）
 - [Ollama Docs: FAQ](https://docs.ollama.com/faq) - 「How can I expose Ollama on my network?」一节。默认在127.0.0.1的11434端口监听，可用环境变量 `OLLAMA_HOST` 改变监听地址（2026年10月27日确认）
-- [Cor.株式会社: 安全](https://cor-jp.com/security/) - 在运用ISMS，2026年10月完成ISO/IEC 27001第二阶段审查，认证注册预计在2026年12月前后
+- [Cor.株式会社: 安全](https://cor-jp.com/security/) - 在运用ISMS，2026年11月取得认证（认证范围为“软件的受托开发及运营”）

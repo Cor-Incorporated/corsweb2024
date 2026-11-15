@@ -13,7 +13,7 @@ isDraft: false
 image:
   url: "/images/blog/litellm-update-management-placeholder-20261101.avif"
   alt: "An explanatory illustration showing servers and terminals separated by transparent enclosures"
-translationSourceHash: "e08fb0adc857d2a685cc14e1dee5040ad028eabe960f772028dedcd6b2a9716e"
+translationSourceHash: "53ea0b7860c3d0c451d2cdccb53dba33f2f6a8078a55491de27463de4a4996c7"
 translatedAt: "2026-11-02T11:30:03.652Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -58,7 +58,7 @@ Regarding LiteLLM's private registry, further specifications and whether it will
 
 Cor.Inc. supports organizations in deploying local LLMs within internal and client environments. Along with selecting configurations and defining permissions, revocations, and logs, we believe update ownership, deadlines, and records should also be integrated into the process.
 
-Cor.Inc. operates an ISMS. We completed the ISO/IEC 27001 Stage 2 audit in October 2026 and anticipate certification registration around December 2026.
+Cor.Inc. operates an ISMS. In November 2026, we obtained ISO/IEC 27001:2022 certification. The scope is “Contract development and operation of software.”
 
 For the inference software deployed: who handles updates, how deadlines are set, and where the record of application is kept. We believe these questions should be incorporated into ISMS operations.
 

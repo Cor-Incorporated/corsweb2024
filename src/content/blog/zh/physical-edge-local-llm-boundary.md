@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "エッジAI", "セキュアAI", "設計"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "d0513b1cfbfaeca13818fefd287ed9de99c213dc2ce077385996d97ce4a8a716"
+translationSourceHash: "c0dffc711841c5230198f9379c32de278d15e7037f2cd654c28ab19a60ea875e"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -95,7 +95,7 @@ Cor.株式会社以劈西瓜这类使用身体的任务为题，做物理推理�
 
 ## 审查的状态
 
-Cor.株式会社在运用ISMS。2026年10月完成了ISO/IEC 27001第二阶段审查。认证注册预计在2026年12月前后。审查的状态和各个系统验证了什么，分开说明。
+Cor.株式会社在运用ISMS。2026年11月取得了ISO/IEC 27001:2022认证。认证范围为“软件的受托开发及运营”。认证的状态和各个系统验证了什么，分开说明。
 
 ## 连接的范围
 
@@ -109,4 +109,4 @@ Cor.株式会社在运用ISMS。2026年10月完成了ISO/IEC 27001第二阶段�
 
 - [NIST SP 800-207: Zero Trust Architecture](https://csrc.nist.gov/pubs/sp/800/207/final) - 不把网络上的位置当作默示信任的想法（2026年10月29日确认了概要）
 - [AWS: Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/) - 云的责任分担的一个例子。分担因服务形态而不同（2026年10月29日确认）
-- [Cor.株式会社: 安全](https://cor-jp.com/security/) - 在运用ISMS，2026年10月完成ISO/IEC 27001第二阶段审查，认证注册预计在2026年12月前后
+- [Cor.株式会社: 安全](https://cor-jp.com/security/) - 在运用ISMS，2026年11月取得认证（认证范围为“软件的受托开发及运营”）

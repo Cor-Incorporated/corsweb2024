@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "Ollama", "情報セキュリティ", "ISMS"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "1cfc6850c3470817cd6d66514c2be11bd1793eeda737c01c8f5359034ae4d502"
+translationSourceHash: "ea0ff87bf0358abf53a3d29130d8f9d1bf8dc9f079d0d50d4d1eeaaef9dc1e44"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -93,7 +93,7 @@ If this list is in use, drift is easier to notice. That does not mean every drif
 
 ## What we look at together
 
-Cor.Inc. starts from existing equipment and looks together at the range to process locally. Within ISMS operations, we work together on choosing a setup and on designing permissions, revocation and logs. The ISMS completed the ISO/IEC 27001 stage 2 audit in October 2026, and certification registration is expected around December 2026.
+Cor.Inc. starts from existing equipment and looks together at the range to process locally. Within ISMS operations, we work together on choosing a setup and on designing permissions, revocation and logs. The ISMS obtained ISO/IEC 27001:2022 certification in November 2026. The scope is “Contract development and operation of software.”
 
 This allow-list subject sits in that talk of revocation and logs. Being able to explain which device may reach the API, and until when, is an operating condition in addition to inference performance. Performance requirements are not denied here.
 
@@ -107,4 +107,4 @@ Whose device may reach it, from when, and until when. Being able to explain that
 
 - [Ollama Docs: Authentication](https://docs.ollama.com/api/authentication) - the local API on localhost (port 11434) does not require authentication (checked on 27 October 2026)
 - [Ollama Docs: FAQ](https://docs.ollama.com/faq) - the section "How can I expose Ollama on my network?". By default it listens on 127.0.0.1 port 11434, and the environment variable `OLLAMA_HOST` changes the listen address (checked on 27 October 2026)
-- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated, that the ISO/IEC 27001 stage 2 audit was completed in October 2026, and that certification registration is expected around December 2026
+- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated, that certification was obtained in November 2026 (scope: “Contract development and operation of software”)

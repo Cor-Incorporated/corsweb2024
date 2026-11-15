@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "エッジAI", "セキュアAI", "設計"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "d0513b1cfbfaeca13818fefd287ed9de99c213dc2ce077385996d97ce4a8a716"
+translationSourceHash: "c0dffc711841c5230198f9379c32de278d15e7037f2cd654c28ab19a60ea875e"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -95,7 +95,7 @@ Cor.주식회사에서는 수박 깨기처럼 몸을 쓰는 과제를 소재로 
 
 ## 심사의 상태
 
-Cor.주식회사는 ISMS를 운용하고 있습니다. 2026년 10월에 ISO/IEC 27001 2단계 심사를 마쳤습니다. 인증 등록은 2026년 12월경의 예상입니다. 심사의 상태와, 개별 시스템에서 무엇을 검증했는지는 나누어 전합니다.
+Cor.주식회사는 ISMS를 운용하고 있습니다. 2026년 11월에 ISO/IEC 27001:2022 인증을 취득했습니다. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”입니다. 인증의 상태와, 개별 시스템에서 무엇을 검증했는지는 나누어 전합니다.
 
 ## 연결하는 범위
 
@@ -109,4 +109,4 @@ Cor.주식회사는 ISMS를 운용하고 있습니다. 2026년 10월에 ISO/IEC 
 
 - [NIST SP 800-207: Zero Trust Architecture](https://csrc.nist.gov/pubs/sp/800/207/final) - 네트워크상의 위치를 암묵의 신뢰로 두지 않는 생각(2026년 10월 29일에 개요를 확인)
 - [AWS: Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/) - 클라우드 책임 분담의 한 예. 분담은 서비스 형태에 따라 다름(2026년 10월 29일 확인)
-- [Cor.주식회사: 보안](https://cor-jp.com/security/) - ISMS를 운용하고 있으며, 2026년 10월에 ISO/IEC 27001 2단계 심사를 마치고, 2026년 12월경에 인증 등록을 예상한다는 점
+- [Cor.주식회사: 보안](https://cor-jp.com/security/) - ISMS를 운용하고 있으며, 2026년 11월에 인증을 취득했다는 점(인증 범위는 “소프트웨어의 수탁 개발 및 운영”)

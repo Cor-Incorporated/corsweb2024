@@ -10,7 +10,7 @@ tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "9a3d16400b1cb9c69a48285cb23a2a53681b2d67ba83902903db791ade8ad98d"
+translationSourceHash: "f1d8bb94ebf95feac283a95da2ffef273fd746dc5310cf552ac201eedfe4aecb"
 translatedAt: "2026-10-23T06:21:00.531Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -27,7 +27,8 @@ Cor.주식회사는 AI 기반 개발을 '엔지니어를 줄이는 기술'이 �
 >
 > - GitHub Octoverse 2025에서는 생성형 AI가 개발 표준으로 자리 잡아가고 있으며, 신규 개발자의 80%가 GitHub에서 첫 1주일 이내에 Copilot을 사용했다고 보고하고 있습니다.
 > - 해당 리포트에서는 TypeScript가 2025년 8월에 Python과 JavaScript를 제치고 GitHub에서 가장 많이 사용되는 언어가 되었다고 정리하고 있습니다.
-> - Cor. 홈페이지에서는 로컬 LLM 및 외부로 정보를 유출하지 않는 개발, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록을 전망) 등 품질과 안전성을 중시한 체제를 주요 소구점으로 내세우고 있습니다.
+> - Cor. 홈페이지에서는 로컬 LLM 및 외부로 정보를 유출하지 않는 개발 등 품질과 안전성을 중시한 체제를 주요 소구점으로 내세우고 있습니다.
+> - ISMS는 2026년 11월에 인증을 취득했습니다(인증 범위는 “소프트웨어의 수탁 개발 및 운영”).
 
 ## AI 기반 개발은 코드 생성에 그치지 않는다
 

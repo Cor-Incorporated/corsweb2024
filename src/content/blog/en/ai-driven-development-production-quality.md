@@ -10,7 +10,7 @@ tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "9a3d16400b1cb9c69a48285cb23a2a53681b2d67ba83902903db791ade8ad98d"
+translationSourceHash: "f1d8bb94ebf95feac283a95da2ffef273fd746dc5310cf552ac201eedfe4aecb"
 translatedAt: "2026-10-23T06:14:52.477Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -27,7 +27,8 @@ At Cor.Inc., we do not view AI-driven development as "technology to reduce engin
 >
 > - GitHub Octoverse 2025 reports that generative AI is becoming standardized in development, with 80% of new developers using Copilot within their first week on GitHub.
 > - The same report notes that in August 2025, TypeScript surpassed Python and JavaScript to become the most used language on GitHub.
-> - Cor.'s corporate website highlights an organizational commitment focused on quality and security, including local LLMs, zero-data-leakage development, and ISMS certification (with the Stage 2 audit completed in October 2026, and certification registration expected around December 2026).
+> - Cor.'s corporate website highlights an organizational commitment focused on quality and security, including local LLMs and zero-data-leakage development.
+> - The ISMS was certified in November 2026 (scope: “Contract development and operation of software”).
 
 ## AI-Driven Development Is More Than Just Code Generation
 

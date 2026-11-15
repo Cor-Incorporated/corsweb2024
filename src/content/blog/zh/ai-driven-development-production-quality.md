@@ -10,7 +10,7 @@ tags: ["AI駆動開発", "品質", "開発体制"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "9a3d16400b1cb9c69a48285cb23a2a53681b2d67ba83902903db791ade8ad98d"
+translationSourceHash: "f1d8bb94ebf95feac283a95da2ffef273fd746dc5310cf552ac201eedfe4aecb"
 translatedAt: "2026-10-23T06:18:05.244Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -27,7 +27,8 @@ translationModel: "gemini-3.8-flash"
 >
 > - GitHub Octoverse 2025 报告指出，生成式 AI 正在成为软件开发的标准配置，80% 的新开发者在加入 GitHub 的首周内就使用了 Copilot。
 > - 该报告还总结道，TypeScript 于 2025 年 8 月超越 Python 和 JavaScript，成为 GitHub 上使用最广泛的语言。
-> - Cor. 官网上将本地 LLM、不泄露信息的开发、ISMS（预计于 2026 年 10 月完成第二阶段审核，并在 2026 年 12 月左右完成认证注册）等重视质量与安全性的体制，作为其核心主张。
+> - Cor. 官网上将本地 LLM、不泄露信息的开发等重视质量与安全性的体制，作为其核心主张。
+> - ISMS于2026年11月取得认证（认证范围为“软件的受托开发及运营”）。
 
 ## AI 驱动开发绝非仅止于代码生成
 

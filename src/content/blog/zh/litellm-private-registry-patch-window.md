@@ -13,7 +13,7 @@ isDraft: false
 image:
   url: "/images/blog/litellm-update-management-placeholder-20261101.avif"
   alt: "用透明隔离框区分服务器与终端的说明插图"
-translationSourceHash: "e08fb0adc857d2a685cc14e1dee5040ad028eabe960f772028dedcd6b2a9716e"
+translationSourceHash: "53ea0b7860c3d0c451d2cdccb53dba33f2f6a8078a55491de27463de4a4996c7"
 translatedAt: "2026-11-02T11:30:11.405Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -58,7 +58,7 @@ LiteLLM于2026年10月27日报告了一项举措：先以非公开方式分发�
 
 Cor.株式会社正在为客户在企业内部或自有环境中部署本地LLM提供伴随式支持。在选定架构、确定权限、吊销机制与日志规范的同时，我们希望能将更新的责任人、期限与记录也结合起来一同考虑。
 
-Cor.株式会社正在运维ISMS。已于2026年10月完成ISO/IEC 27001的第二阶段审核，预计将在2026年12月左右完成认证注册。
+Cor.株式会社正在运维ISMS。已于2026年11月取得ISO/IEC 27001:2022认证。认证范围为“软件的受托开发及运营”。
 
 对于引入的推理软件，由谁负责更新、期限如何设定、已应用的事实记录在何处——我们认为应当将这些考量纳入ISMS的运维当中。
 

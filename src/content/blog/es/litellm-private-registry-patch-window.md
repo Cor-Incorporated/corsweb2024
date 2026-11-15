@@ -13,7 +13,7 @@ isDraft: false
 image:
   url: "/images/blog/litellm-update-management-placeholder-20261101.avif"
   alt: "Ilustración explicativa que muestra servidores y terminales separados por recuadros transparentes"
-translationSourceHash: "e08fb0adc857d2a685cc14e1dee5040ad028eabe960f772028dedcd6b2a9716e"
+translationSourceHash: "53ea0b7860c3d0c451d2cdccb53dba33f2f6a8078a55491de27463de4a4996c7"
 translatedAt: "2026-11-02T11:30:36.244Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -58,7 +58,7 @@ En cuanto al registro privado de LiteLLM, las especificaciones futuras o su disp
 
 En Cor.Inc. acompañamos a las empresas a desplegar LLM locales en sus entornos internos o en los de sus clientes. Al seleccionar la configuración y definir permisos, revocaciones y registros de actividad (logs), creemos necesario vincular también a los responsables, plazos y registros de las actualizaciones.
 
-En Cor.Inc. operamos un ISMS. En octubre de 2026 superamos la auditoría de Fase 2 de ISO/IEC 27001, y prevemos el registro de la certificación hacia diciembre de 2026.
+En Cor.Inc. operamos un ISMS. En noviembre de 2026 obtuvimos la certificación ISO/IEC 27001:2022. El alcance es «Desarrollo y operación de software por encargo».
 
 Respecto al software de inferencia implantado: ¿quién se encarga de la actualización?, ¿cómo se determinan los plazos?, ¿dónde queda constancia de que se aplicó? Consideramos que este tipo de preguntas deben incluirse en la operativa del ISMS.
 

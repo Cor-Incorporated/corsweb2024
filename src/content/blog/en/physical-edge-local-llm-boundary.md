@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "エッジAI", "セキュアAI", "設計"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "d0513b1cfbfaeca13818fefd287ed9de99c213dc2ce077385996d97ce4a8a716"
+translationSourceHash: "c0dffc711841c5230198f9379c32de278d15e7037f2cd654c28ab19a60ea875e"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -95,7 +95,7 @@ Going local adds physical management and operation of the platform on top of tha
 
 ## State of the audit
 
-Cor.Inc. operates an ISMS. In October 2026 it completed the ISO/IEC 27001 stage 2 audit. Certification registration is expected around December 2026. The state of the audit and what was verified on each system are told separately.
+Cor.Inc. operates an ISMS. In November 2026 it obtained ISO/IEC 27001:2022 certification. The scope is “Contract development and operation of software.” The state of certification and what was verified on each system are told separately.
 
 ## Range of the connection
 
@@ -109,4 +109,4 @@ If you want to handle internal documents and field data with AI, but the range o
 
 - [NIST SP 800-207: Zero Trust Architecture](https://csrc.nist.gov/pubs/sp/800/207/final) - the idea of not treating a position on the network as implicit trust (the overview was checked on 29 October 2026)
 - [AWS: Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/) - one example of how cloud responsibility is split. The split differs by the form of the service (checked on 29 October 2026)
-- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated, that the ISO/IEC 27001 stage 2 audit was completed in October 2026, and that certification registration is expected around December 2026
+- [Cor.Inc.: Security](https://cor-jp.com/security/) - that an ISMS is operated, that certification was obtained in November 2026 (scope: “Contract development and operation of software”)
