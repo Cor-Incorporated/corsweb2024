@@ -1,4 +1,5 @@
-// 最初の画面（scroll 0）に、5 業種の入口が 5 つとも見えるかを、14 の画面の大きさ × 5 言語で測る。
+// 最初の画面（scroll 0）に、5 業種の入口が 5 つとも見えるかを、14 の画面の大きさ × 5 言語と、パソコンの窓 5 つ
+// （入口が入る言語だけ）で測る。
 //
 // 見える = 要素の上端が 0 以上・下端が画面の高さ以下・左右が画面の幅の中・display が none でない・visibility が hidden でない・
 // 親まで掛けた opacity が 0.9 以上・要素の中の 9 点（横 25%・50%・75% × 縦 上の端から 2px・真ん中・下の端から 2px）が
@@ -19,7 +20,7 @@ import path from 'node:path';
 import { INDUSTRY_SLUGS } from '../src/config/industry-context';
 
 // よくある画面の大きさ。パソコンとタブレットは画面の解像度そのままで、ブラウザの枠とタスクバーを引いていない。
-// 実際の窓はこれより 111〜135px ほど低く、1536×864・1366×768・1280×800・1280×720 の画面の窓では、入口は 5 つとも入らない。
+// 実際の窓はこれより 111〜135px ほど低い。その窓は下の WINDOWS で測る。
 // スマホの 664・667・635・640 は、ブラウザの上下の枠を引いた表示の高さ。320×568 は対象にしない（ja でも 5 つは入らない）。
 const VIEWPORTS = [
   { name: 'pc-1920x1080', width: 1920, height: 1080, mobile: false },
@@ -39,6 +40,17 @@ const VIEWPORTS = [
 ] as const;
 const LOCALES = ['ja', 'en', 'zh', 'ko', 'es'] as const;
 type Locale = (typeof LOCALES)[number];
+
+// ブラウザの枠とタスクバーを引いたパソコンの窓（画面の解像度から 111〜135px 引いた高さ）。入口が 5 つとも入る
+// 言語だけを見る。en・es は説明の文と主ボタンの文が長く、1366×657・1280×665 では入らない。1280×609（1280×720 の
+// 画面の窓）は、どの言語も入らないので対象にしない。
+const WINDOWS = [
+  { name: 'win-1920x953', width: 1920, height: 953, mobile: false, locales: LOCALES },
+  { name: 'win-1536x730', width: 1536, height: 730, mobile: false, locales: LOCALES },
+  { name: 'win-1440x789', width: 1440, height: 789, mobile: false, locales: LOCALES },
+  { name: 'win-1366x657', width: 1366, height: 657, mobile: false, locales: ['ja', 'zh', 'ko'] },
+  { name: 'win-1280x665', width: 1280, height: 665, mobile: false, locales: ['ja', 'zh', 'ko'] },
+] as const;
 
 const OUT_DIR = path.resolve(process.env.FIRST_VIEW_OUT_DIR ?? 'test-results/first-view');
 const ENTRY_SELECTOR = '[data-industry-entry]';
@@ -118,8 +130,9 @@ async function openHome(page: Page, baseURL: string, locale: Locale, { settle }:
   if (settle) await page.waitForTimeout(REVEAL_SETTLE_MS);
 }
 
-for (const viewport of VIEWPORTS) {
+for (const viewport of [...VIEWPORTS, ...WINDOWS]) {
   for (const locale of LOCALES) {
+    if ('locales' in viewport && !(viewport.locales as readonly Locale[]).includes(locale)) continue;
     test(`${viewport.name} ${locale}: 最初の画面に 5 業種の入口とヒーローの h1・主ボタンが見え、押すと業種ページへ進む`, async ({
       browser,
       browserName,
@@ -258,9 +271,10 @@ test('ヘッダーのプルダウンを Escape で閉じると、focus が開い
   }
 });
 
-// 読み込んだ直後に窓の中に在るヒーローの主ボタンが、スクロールを待たずに 1 秒以内に見えること。
-// 演出（data-reveal）は窓の下 12% を除いて見え始めを決めるので、窓が低いと主ボタンが透明のまま残っていた。
-// ブラウザの枠とタスクバーを引いたパソコンの窓（1366×657・1280×609・1536×730）と、上の 14 の大きさで測る。
+// 演出が働き始めてから（reveal-ready が付いてから）1 秒以内に、窓の中に在るヒーローの主ボタンが、スクロールを
+// 待たずに見えること。演出（data-reveal）は窓の下 12% を除いて見え始めを決めるので、窓が低いと主ボタンが透明の
+// まま残っていた。ブラウザの枠とタスクバーを引いたパソコンの窓（1366×657・1280×609・1536×730）と、上の 14 の
+// 大きさで測る。初期化が load からどれだけ遅れるかは、この試験では測らない（最長 10 秒まで待つ）。
 const LOAD_VISIBLE_SIZES = [
   { name: 'win-1366x657', width: 1366, height: 657, mobile: false },
   { name: 'win-1280x609', width: 1280, height: 609, mobile: false },
@@ -271,7 +285,7 @@ const LOAD_VISIBLE_MS = 1000;
 
 for (const size of LOAD_VISIBLE_SIZES) {
   for (const locale of ['ja', 'en'] as const) {
-    test(`${size.name} ${locale}: 読み込みの後 1 秒以内に、窓の中のヒーローの主ボタンが見える`, async ({ browser, browserName }, testInfo) => {
+    test(`${size.name} ${locale}: 演出が働き始めてから 1 秒以内に、窓の中のヒーローの主ボタンが見える`, async ({ browser, browserName }, testInfo) => {
       const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
       expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
       const context = await browser.newContext({

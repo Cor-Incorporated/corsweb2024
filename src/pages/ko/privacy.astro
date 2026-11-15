@@ -78,7 +78,7 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
 
       {
         Array.isArray(p.sections) && p.sections.map((section) => (
-          <section>
+          <section id={'id' in section ? section.id : undefined} class="scroll-mt-24">
             <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{section.title}</h2>
             {Array.isArray(section.body) && section.body.map((para) => <p class="mb-4">{para}</p>)}
             {Array.isArray(section.list) && (
