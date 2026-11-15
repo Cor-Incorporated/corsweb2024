@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015 # 「A が成り立てば ok、そうでなければ ng」の形。ok は必ず 0 を返すので、A が成り立ったときに ng は走らない（結果の報告だけに使う）
 # docs/billing/apply-plans.sh の検査。通信しない（PATH の先頭に偽の curl を置く）。
 # 実行: bash docs/billing/tests/test-apply-plans.sh
 # 確かめること:

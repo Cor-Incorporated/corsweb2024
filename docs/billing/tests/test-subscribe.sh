@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015,SC2086 # 「A が成り立てば ok、そうでなければ ng」の形（ok は必ず 0 を返す）と、「set -- ${c}」の語の分割は意図どおり（値は試験が書いた数字と日付だけ）
 # docs/billing/subscribe.sh の検査（作り方 B: 毎月末の請求書）。通信しない（PATH の先頭に偽の curl を置く）。
 # 実行: bash docs/billing/tests/test-subscribe.sh
 # 確かめること:
@@ -23,6 +24,7 @@ jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", fir
 cp "$HERE/fake-curl.sh" "$WORK/bin/curl"
 chmod +x "$WORK/bin/curl"
 DUMMY_KEY="dummy-key-for-leak-check-7f3a9c"
+CLERK_KEY_DUMMY="sk_test_dummy_for_leak_check_9c2f"
 PASS=0
 FAIL=0
 
@@ -33,10 +35,12 @@ count() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 # run <args...>（環境変数 FAKE_* と KEY はそのまま渡す）→ RC・OUT・LOG
 run() {
   : >"$WORK/log"
-  rm -f "$WORK/log.items"
+  rm -f "$WORK/log.items" "$WORK/log.invcount"
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
-    COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" bash "$BILLING/subscribe.sh" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
+    COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" COR_CLERK_SECRET_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
+    FAKE_STRIPE_KEY="$DUMMY_KEY" FAKE_CLERK_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
+    bash "$BILLING/subscribe.sh" "$@" --plans "${RUN_PLANS:-$PLANS}" </dev/null 2>&1)"
   RC=$?
   set -e
   LOG="$(cat "$WORK/log")"
@@ -51,7 +55,7 @@ expect() {
   local what="$1" rc="$2" npost="$3" text="$4"
   if [ "$RC" -ne "$rc" ]; then ng "$what: rc 期待 $rc 観測 $RC: $OUT"; return; fi
   if [ "$npost" != "-" ] && [ "$(posts)" -ne "$npost" ]; then ng "$what: POST 期待 $npost 観測 $(posts): $(post_seq)"; return; fi
-  if [ "$text" != "-" ] && ! printf '%s' "$OUT" | grep -qF -- "$text"; then ng "$what: 出力に「$text」が無い: $OUT"; return; fi
+  if [ "$text" != "-" ] && ! printf '%s' "$OUT" | grep -qF -- "$text"; then ng "$what: 出力に「${text}」が無い: $OUT"; return; fi
   ok "$what"
 }
 check_arg() { if argv_has "$2"; then ok "$1"; else ng "$1: curl の引数に [$2] が無い"; fi; }
@@ -84,9 +88,9 @@ meta() { jq -nc --arg s "${2:-}" --arg c "${3:-}" --arg e "${4:-}" --arg p "$1" 
 impl="$(sed -n 's/^readonly IMPLEMENTED_BILLING_CLOSING="\(.*\)"$/\1/p' "$BILLING/lib.sh")"
 decl="$(jq -r '.billing.closing' "$PLANS")"
 if [ -n "$impl" ] && [ "$impl" = "$decl" ]; then
-  ok "lib.sh の IMPLEMENTED_BILLING_CLOSING と plans.json の billing.closing が一致（$impl）"
+  ok "lib.sh の IMPLEMENTED_BILLING_CLOSING と plans.json の billing.closing が一致（${impl}）"
 else
-  ng "lib.sh の IMPLEMENTED_BILLING_CLOSING=${impl:-（読めない）}、plans.json の billing.closing=$decl（一致しない）"
+  ng "lib.sh の IMPLEMENTED_BILLING_CLOSING=${impl:-（読めない）}、plans.json の billing.closing=${decl}（一致しない）"
 fi
 
 # 1. dry-run と入力
@@ -224,7 +228,7 @@ printf '%s' "$OUT" | grep -q "^LINE ${WANT_END:0:7} xesm usage_prorated " && ok 
 FAKE_CUST_META="$(meta card 2099-01-01 12)" run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
 expect "終了日が契約の開始日より前なら exit 64" 64 0 "契約の開始日 2099-01-01 より前"
 FAKE_CUST_META="$(meta card "$LAST-15" 12 2099-12-31)" run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
-expect "別の終了日があれば書き換えずに exit 3" 3 0 "別の終了日がある（期待 $WANT_END、観測 2099-12-31）"
+expect "別の終了日があれば書き換えずに exit 3" 3 0 "別の終了日がある（期待 ${WANT_END}、観測 2099-12-31）"
 FAKE_CUST_META="$(meta card "$LAST-15" 12 "$WANT_END")" run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
 expect "同じ終了日なら書かない" 0 0 "OK cancel cus_x xesm: 既に終了日"
 FAKE_CUST_META="$(meta card "$LAST-15" 12)" FAKE_INV_STATE=open run cancel --customer cus_x --service xesm --accepted "$TODAY" --apply --mode test
@@ -286,7 +290,7 @@ expect "invoice は請求書を作り、確定して送る" 0 6 "CHECK ok: 小�
 eq "POST の順は draft → 明細 → finalize → send → 送った記録" "$(post_seq)" "/v1/invoices /v1/invoiceitems /v1/invoiceitems /v1/invoices/in_new/finalize /v1/invoices/in_new/send /v1/customers/cus_x"
 check_arg "送ったことを Customer の metadata に書く" "metadata[invoice_sent]=$LAST:in_new"
 check_arg "請求書は send_invoice" "collection_method=send_invoice"
-check_arg "支払期限は翌月末日 23:59:59 JST（$DUE_LAST）" "due_date=$DUE_LAST"
+check_arg "支払期限は翌月末日 23:59:59 JST（${DUE_LAST}）" "due_date=$DUE_LAST"
 check_arg "auto_advance=false" "auto_advance=false"
 check_arg "保留の明細を取り込まない" "pending_invoice_items_behavior=exclude"
 check_arg "請求書に月を書く" "metadata[billing_month]=$LAST"
@@ -446,7 +450,7 @@ run invoice --customer cus_x --month "$THIS"
 if [ "$TODAY" = "$END_THIS" ]; then
   expect "今月の末日（締めの日）は今月の分を作れる" 0 0 "PLAN invoice"
 else
-  expect "今月の分は締めの日（$END_THIS）より前は exit 64" 64 0 "締めの日（$END_THIS）から作る"
+  expect "今月の分は締めの日（${END_THIS}）より前は exit 64" 64 0 "締めの日（${END_THIS}）から作る"
 fi
 run invoice --customer cus_x --month "$LAST"
 expect "先月の分はいつでも作れる" 0 0 "PLAN invoice"
@@ -487,9 +491,315 @@ SCN=live FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open run mark-paid --customer 
 expect "本番の mark-paid は live と打たなければ何もしない" 64 0 "本番は端末から実行する"
 # 独立レビューの HIGH: 月を取り違えて新しい月を支払い済みにしない（支払い済みは取り消せない）
 FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$TWO_AGO" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
-expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: $TWO_AGO（in_older）"
+expect "前の月の open の請求書があれば mark-paid しない" 3 0 "より前の open の請求書がある: ${TWO_AGO}（in_older）"
 FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_OLDER_OPEN="$THIS" run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
 expect "後の月の open の請求書は止める理由にならない" 0 1 "MARKED_PAID in_open $LAST"
+
+# 18. clerk-sync: 契約の metadata から services を作り、Clerk の組織の public_metadata.services に送る
+CLERK_META="$(jq -c '. + {clerk_org_id: "org_x"}' <<<"$(meta card "$LAST-15" 12)")"
+clerk_calls() { count "$LOG" '^CALL .*/organizations/'; }
+clerk_patches() { count "$LOG" '^CALL PATCH /organizations/'; }
+clerk_state() { if [ -f "$WORK/log.clerk" ]; then jq -c --arg o "${1:-org_x}" '.[$o] // {}' "$WORK/log.clerk"; else printf '{}'; fi; }
+
+FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
+expect "clerk-sync の dry-run は送る services を出す" 0 0 'PLAN services.xesm from='
+eq "clerk-sync の dry-run は Clerk を呼ばない（顧客を読むだけ）" "$(clerk_calls)" "0"
+printf '%s' "$OUT" | grep -qF '"business-dossier":null' && ok "契約の無いサービスは null（Clerk から消す）" || ng "null のサービスが無い: $OUT"
+printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":false}' && ok "契約のサービスは from・until・hold の 3 つを出す" || ng "xesm の形が違う: $OUT"
+printf '%s' "$OUT" | grep -qF 'DONE dry-run' && ok "clerk-sync の dry-run は書かないと出す" || ng "DONE dry-run が無い"
+printf '%s' "$LOG" | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が curl の引数に載った" || ok "Clerk の鍵は curl の引数に載らない"
+CKEY="" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test
+expect "clerk-sync の dry-run は Clerk の鍵が無くても通る（鍵を読まない）" 0 0 'DONE dry-run'
+FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "clerk-sync の apply は組織の metadata に送る" 0 0 'SENT clerk org_x: services を送った'
+eq "clerk-sync は PATCH を 1 回だけ呼ぶ（先に顧客を読む）" "$(clerk_patches)" "1"
+eq "clerk-sync は送る前に組織の metadata を読む（GET → PATCH）" "$(count "$LOG" '^CALL GET /organizations/org_x$')" "1"
+eq "Clerk の呼出しは全部 Clerk の鍵で認証する" "$(count "$LOG" '^STDIN_KEY clerk')" "$(clerk_calls)"
+eq "Stripe の呼出しは全部 Stripe の鍵で認証する" "$(count "$LOG" '^STDIN_KEY stripe')" "$(($(count "$LOG" '^CALL ') - $(clerk_calls)))"
+printf '%s' "$OUT" | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が出力に出た" || ok "Clerk の鍵は出力に出ない"
+printf '%s\n' "$LOG" | grep -qF 'CLERK_BODY {"public_metadata":{"services":' && ok "送る本文は public_metadata.services の形" || ng "送る本文の形が違う: $LOG"
+printf '%s' "$LOG" | grep '^ARGV' | grep -qF "$CLERK_KEY_DUMMY" && ng "Clerk の鍵が curl の引数に載った（apply）" || ok "apply でも Clerk の鍵は curl の引数に載らない"
+printf '%s' "$LOG" | grep -q '^STDIN_AUTH no' && ng "標準入力に鍵の無い呼出しがある" || ok "鍵は全部の呼出しで標準入力から渡る（Clerk も）"
+eq "Clerk の state に xesm が入った" "$(clerk_state | jq -r '.services.xesm.from')" "$LAST-15"
+printf '%s' "$OUT" | grep -qF 'until の null は Clerk の deep merge でキーを消す' && ok "until の null がキーを消すことを NOTE で出す" || ng "until の NOTE が無い: $OUT"
+eq "until の無い契約では until のキーが残らない（from と hold）" "$(clerk_state | jq -r '.services.xesm | has("until")')" "false"
+FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply --clerk-org org_y
+expect "--clerk-org は clerk-sync でだけ使わない（customer 用）" 64 0 "customer でだけ使う"
+FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "clerk_org_id の無い顧客は止まる" 3 0 "clerk_org_id が無い"
+eq "clerk_org_id が無ければ Clerk を呼ばない" "$(clerk_calls)" "0"
+FAKE_CUST_META="$(jq -c '. + {clerk_org_id: "org-bad!"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "clerk_org_id の形が違えば止まる" 3 0 "clerk_org_id の形が違う"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_start: "2026-02-30"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "実在しない開始日は Clerk に送らない" 3 0 "実在する日付ではない"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_start: ""}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "空の開始日は Clerk に送らない（黙って契約なしにしない）" 3 0 "contract_xesm_start が空"
+eq "空の開始日では Clerk を呼ばない" "$(clerk_calls)" "0"
+CKEY="" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "Clerk の鍵が無ければ書かない（端末も無い）" 64 0 "Clerk の鍵が無い"
+eq "Clerk の鍵が無ければ PATCH しない" "$(clerk_patches)" "0"
+SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+expect "本番の clerk-sync は live と打たなければ送らない" 64 0 "本番は端末から実行する"
+# 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+expect "本番の clerk-sync は live と打つ前に止まる" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'NOTE plans.json に無いサービスを Clerk から消す: stale-svc' && ok "確認より前に、消えるキーを出す" || ng "確認より前に消えるキーが出ない: $OUT"
+printf '%s' "$OUT" | grep -qF '"stale-svc":null' && ok "確認より前に、送る本文（null を含む）を出す" || ng "確認より前に本文が出ない: $OUT"
+eq "確認で止まったので Clerk へは送っていない" "$(clerk_patches)" "0"
+FAKE_CLERK_ECHO=wrong FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "Clerk の応答が送った値と違えば exit 3（戻せないことを伝える）" 3 0 "Clerk の応答の services が送った値と違う"
+FAKE_CLERK_STATUS=500 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "Clerk が 500 を返したら exit 4" 4 0 "API エラー"
+# plans.json に無いサービス（昔の名前）も null で消す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "plans.json に無いサービスは null で消す" 0 0 "plans.json に無いサービスを Clerk から消す: stale-svc"
+eq "消したあとの state に stale-svc が無い" "$(clerk_state | jq -r '.services | has("stale-svc")')" "false"
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"stale-svc":null' && ok "本文で stale-svc を null にする" || ng "stale-svc の null が本文に無い: $LOG"
+# deep merge: 契約の無くなったサービスは null で消える（Clerk の既存の metadata に business-dossier がある状態から始める）
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"business-dossier":{"from":"2026-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "既存の services に契約の無いサービスがあれば消す" 0 0 "business-dossier=null"
+eq "消したあとの state に business-dossier が無い" "$(clerk_state | jq -r '"\(has("services")):\(.services | has("business-dossier"))"')" "true:false"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "hold の印を Clerk に写す" 0 0 'hold=true'
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":true' && ok "hold=true を本文で送る" || ng "hold=true が本文に無い: $LOG"
+FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "yes"}' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
+expect "hold の印が true でも false でも空でもなければ送らない" 3 0 "hold が true か false でも空でもない"
+run clerk-sync --customer cus_x
+expect "clerk-sync に --mode が無いと exit 64（顧客を読むため）" 64 0 "--mode test か --mode live が要る"
+run clerk-sync --customer cus_x --service xesm --mode test
+expect "--service は clerk-sync でだけ使わない" 64 0 "contract cancel simulate hold unhold でだけ使う"
+
+# 19. hold / unhold: Customer の metadata の印と、Clerk の services の hold
+HOLD_META="$(jq -c '. + {clerk_org_id: "org_x"}' <<<"$(meta card "$LAST-15" 12)")"
+FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm
+expect "hold の dry-run は書く値を出す" 0 0 "contract_xesm_hold]=true"
+[ -z "$LOG" ] && ok "hold の dry-run は curl を呼ばない" || ng "hold の dry-run が curl を呼んだ"
+rm -f "$WORK/log.clerk"
+FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
+expect "hold は metadata に印を書き、Clerk に写す" 0 1 "HOLD cus_x xesm: metadata に印を書いた"
+eq "hold は Customer の更新 → Clerk の PATCH の順に呼ぶ" "$(printf '%s\n' "$LOG" | grep -E '^CALL (POST /v1/customers|PATCH /organizations)' | paste -sd' ' -)" "CALL POST /v1/customers/cus_x CALL PATCH /organizations/org_x/metadata"
+check_arg "hold は contract_xesm_hold=true を送る" "metadata[contract_xesm_hold]=true"
+eq "hold は Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":true' && ok "Clerk の services に hold=true を写す" || ng "Clerk の本文に hold=true が無い: $LOG"
+eq "Clerk の state の hold が true" "$(clerk_state | jq -r '.services.xesm.hold')" "true"
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "既に hold なら書かない" 0 0 "既に hold（Stripe も Clerk も。書かない）"
+eq "既に hold なら Stripe にも Clerk にも書かない" "$(posts)$(clerk_patches)" "00"
+# 片側だけ書けた状態（Stripe は hold、Clerk は未反映）からのやり直しは、Clerk だけ直す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "Stripe だけ hold のときは Clerk だけ直す" 0 0 "Stripe の metadata は既に hold。Clerk だけ直す"
+eq "片側だけのときは Stripe に書かない" "$(posts)" "0"
+eq "片側だけのときは Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+eq "直したあとの Clerk の hold が true" "$(clerk_state | jq -r '.services.xesm.hold')" "true"
+FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service business-dossier --apply --mode test
+expect "契約の無いサービスは hold にしない" 3 0 "の契約が無い"
+FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "clerk_org_id の無い顧客は hold にしない（Clerk に写せない）" 3 0 "clerk_org_id が無い"
+eq "clerk_org_id が無ければ何も書かない" "$(posts)" "0"
+CKEY="" FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
+expect "Clerk の鍵が無ければ hold にしない（片方だけ書かない）" 64 0 "Clerk の鍵が無い"
+eq "Clerk の鍵が無ければ Stripe にも書かない" "$(posts)" "0"
+rm -f "$WORK/log.clerk"
+SCN=live FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode live
+expect "本番の hold は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata":{"services":' && ok "確認より前に、送る本文を出す" || ng "確認より前に本文が出ない: $OUT"
+printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":true}' && ok "確認より前に、hold=true の本文を出す" || ng "本文の hold が違う: $OUT"
+eq "確認で止まったので Stripe にも書いていない" "$(posts)" "0"
+eq "確認で止まったので Clerk にも送っていない" "$(clerk_patches)" "0"
+# hold を外す: 印を消し、Clerk の hold を false にする
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run unhold --customer cus_x --service xesm --apply --mode test
+expect "unhold は印を消して Clerk の hold を false にする" 0 1 "UNHOLD cus_x xesm: metadata の印を消した"
+check_arg "unhold は空の値で metadata の key を消す" "metadata[contract_xesm_hold]="
+eq "unhold は Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+printf '%s' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":false' && ok "Clerk の services の hold を false にする" || ng "Clerk の本文に hold=false が無い: $LOG"
+eq "Clerk の state の hold が false" "$(clerk_state | jq -r '.services.xesm.hold')" "false"
+printf '%s' "$OUT" | grep -qF 'hold=true' && ng "unhold の出力に hold=true が残った" || ok "unhold の出力に hold=true が残らない"
+rm -f "$WORK/log.clerk"
+FAKE_CUST_META="$HOLD_META" run unhold --customer cus_x --service xesm --apply --mode test
+expect "hold の付いていないサービスは unhold で書かない" 0 0 "既に hold なし（Stripe も Clerk も。書かない）"
+eq "hold の付いていないサービスの unhold は何も書かない" "$(posts)$(clerk_patches)" "00"
+# 逆の片側（Stripe に印が無く、Clerk に hold が残っている）も、Clerk だけ直す
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-11-01","until":null,"hold":true}}}' \
+  FAKE_CUST_META="$HOLD_META" run unhold --customer cus_x --service xesm --apply --mode test
+expect "Clerk だけ hold が残っているときは Clerk だけ直す" 0 0 "Stripe の metadata は既に hold なし。Clerk だけ直す"
+eq "逆の片側でも Stripe に書かない" "$(posts)" "0"
+eq "逆の片側では Clerk に 1 回 PATCH する" "$(clerk_patches)" "1"
+eq "直したあとの Clerk の hold が false" "$(clerk_state | jq -r '.services.xesm.hold')" "false"
+run unhold --customer cus_x --service xesm
+expect "unhold の dry-run は書く値を出す" 0 0 "contract_xesm_hold] を消し"
+[ -z "$LOG" ] && ok "unhold の dry-run は curl を呼ばない" || ng "unhold の dry-run が curl を呼んだ"
+run hold --customer cus_x --service grift --apply --mode test
+expect "知らないサービスは hold で exit 64" 64 0 "--service は"
+run hold --customer cus_x --apply --mode test
+expect "hold には --service が要る" 64 0 "hold には --service が要る"
+run unhold --customer cus_x --month "$LAST"
+expect "--month は hold と unhold で使わない" 64 0 "invoice charge mark-paid でだけ使う"
+
+# 20. resync: 全件の送り直し（resync_at）と hold の判定（期限の 14 日後）。顧客と請求書の一覧はページを送る
+day_ago() {
+  local n="$1"
+  TZ=Asia/Tokyo date -r "$(($(date '+%s') - n * 86400))" '+%Y-%m-%d' 2>/dev/null \
+    || TZ=Asia/Tokyo date -d "@$(($(date '+%s') - n * 86400))" '+%Y-%m-%d'
+}
+due_of() { jst_epoch "$(day_ago "$1") 23:59:59"; }
+RESYNC_P1='[{"id":"cus_a","object":"customer","name":"A","metadata":{"customer_code":"a-co","clerk_org_id":"org_a","contract_xesm_start":"2026-10-01","contract_xesm_devfee_count":"12"}},{"id":"cus_b","object":"customer","name":"B","metadata":{"customer_code":"b-co","clerk_org_id":"org_b","contract_xesm_start":"2026-10-01","contract_xesm_devfee_count":"12"}}]'
+RESYNC_P2='[{"id":"cus_c","object":"customer","name":"C","metadata":{"customer_code":"c-co","clerk_org_id":"org_c","contract_business-dossier_start":"2026-10-01","contract_business-dossier_devfee_count":"12"}}]'
+OPEN_INV="$(jq -c -n --argjson d20 "$(due_of 20)" --argjson d14 "$(due_of 14)" \
+  '{cus_a: [{id: "in_a1", due_date: $d20, service: "xesm"}], cus_b: [{id: "in_b1", due_date: $d14, service: "xesm"}], cus_c: [{id: "in_c1", due_date: $d20, service: "business-dossier"}]}')"
+resync() { FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="${OPEN_INVOICES-$OPEN_INV}" run "$@"; }
+
+run resync
+expect "resync の dry-run は何もしないと出す" 0 "-" "DONE dry-run"
+[ -z "$LOG" ] && ok "resync の dry-run は curl を呼ばない" || ng "resync の dry-run が curl を呼んだ"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+resync resync --apply --mode test
+expect "resync は 3 人の顧客を見る（2 ページ目も見る）" 0 - "RESYNC 顧客 3 件を見る"
+eq "顧客の一覧は 2 ページ読む（100 件目より後を見落とさない）" "$(count "$LOG" '^CALL GET /v1/customers$')" "2"
+check_arg "顧客の一覧の続きは starting_after で取る" "starting_after=cus_b"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "期限の 14 日後を過ぎた open の請求書があるサービスを hold にする" || ng "hold を書いていない: $LOG"
+eq "cus_b は期限の 14 日後ちょうどなので hold にしない（過ぎていない）" "$(count "$LOG" '^CALL POST /v1/customers/cus_b')" "0"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_business-dossier_hold]=true' && ok "2 ページ目の顧客（cus_c）も hold を書く" || ng "cus_c の hold が無い: $LOG"
+eq "Clerk へは clerk_org_id を持つ 3 人に送る" "$(clerk_patches)" "3"
+[ "$(count "$LOG" '^CLERK_BODY')" -eq 3 ] && ok "Clerk への本文は 3 通" || ng "Clerk の本文の数: $(count "$LOG" '^CLERK_BODY')"
+printf '%s\n' "$LOG" | grep '^CLERK_BODY' | grep -qF '"resync_at":"20' && ok "組織の metadata に resync_at を書く" || ng "resync_at が本文に無い: $LOG"
+printf '%s\n' "$LOG" | grep -q '^CLERK_BODY.*"xesm":{"from":"2026-10-01","until":null,"hold":true}' && ok "Clerk の services に hold=true を写す" || ng "Clerk の services の hold が違う: $LOG"
+printf '%s' "$OUT" | grep -qF 'RESYNC 完了: 顧客 3 件、hold を書き直した顧客 2 件、Clerk へ送った顧客 3 件' && ok "resync のまとめを出す" || ng "まとめが違う: $OUT"
+printf '%s' "$OUT" | grep -qF 'RESYNC cus_c: Clerk の組織 org_c' && ok "2 ページ目の顧客にも Clerk へ送ったと出す" || ng "cus_c の Clerk の行が無い: $OUT"
+# 2 回目は hold が既に true なので metadata を書かない（冪等）
+resync resync --apply --mode test
+eq "2 回目は hold を書き直さない（冪等）" "$(count "$LOG" '^CALL POST ')" "0"
+# 払われた（open の請求書が無くなった）ら hold を外す
+OPEN_INVOICES="" resync resync --apply --mode test
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=' && ok "請求書が払われたら hold を外す" || ng "hold を外していない: $LOG"
+printf '%s\n' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":false' && ok "Clerk の services の hold を false にする" || ng "Clerk の hold=false が無い: $LOG"
+# 請求書の一覧も 2 ページ目を見る
+rm -f "$WORK/log.customers"
+OPEN_INVOICES="$(jq -c -n --argjson d0 "$(due_of 0)" '{cus_a: [{id: "in_a0", due_date: $d0, service: "xesm"}], cus_b: []}')"
+OPEN_INVOICES_P2="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a9", due_date: $d20, service: "xesm"}]}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INVOICES" FAKE_OPEN_INVOICES_P2="$OPEN_INVOICES_P2" \
+  run resync --apply --mode test
+expect "請求書の一覧の 2 ページ目も見る" 0 - "RESYNC 完了"
+check_arg "請求書の一覧の続きは starting_after で取る" "starting_after=in_a0"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "2 ページ目の請求書からも hold を決める" || ng "2 ページ目の請求書を見ていない: $LOG"
+# clerk_org_id の無い顧客は Clerk へ送らない
+rm -f "$WORK/log.customers"
+NOORG_P1="$(jq -c '.[0].metadata |= del(.clerk_org_id)' <<<"$RESYNC_P1")"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$NOORG_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode test
+expect "clerk_org_id の無い顧客には Clerk へ送らないと出す" 0 0 "clerk_org_id が無い（Clerk へは送らない）"
+eq "clerk_org_id を持つ顧客にだけ送る" "$(clerk_patches)" "1"
+CKEY="" FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="" run resync --apply --mode test
+expect "Clerk の鍵が無ければ resync は書かない" 64 0 "Clerk の鍵が無い"
+eq "Clerk の鍵が無ければ 1 件も書かない" "$(posts)" "0"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
+expect "本番の resync は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata"' && ok "確認より前に、送る本文を出す（下見）" || ng "確認より前に本文が出ない: $OUT"
+printf '%s' "$OUT" | grep -qF 'RESYNC これから' && ok "確認より前に、何件に書くかを出す" || ng "件数の行が無い: $OUT"
+eq "確認で止まったので Stripe にも Clerk にも書いていない" "$(posts)$(clerk_patches)" "00"
+run resync --customer cus_x
+# 判定できない open の請求書があるときは、その顧客の hold を変えない（外さない）
+rm -f "$WORK/log.customers"
+UNJUDGE="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, no_service: true}, {id: "in_a2", due_date: $d20, service: "xesm"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNJUDGE" run resync --apply --mode test
+expect "明細にサービスが無い請求書があれば、その顧客の hold を変えない" 0 - "この顧客の hold は変えない"
+eq "判定できない顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+# hold 中の顧客で判定できない請求書があるときは、その hold を外さない（fail-open を固定する）
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+HOLDING_P1="$(jq -c '.[0].metadata |= (. + {contract_xesm_hold: "true"})' <<<"$RESYNC_P1")"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+  FAKE_RESYNC=1 FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$UNJUDGE" run resync --apply --mode test
+expect "hold 中の顧客で判定できない請求書があれば、hold を外さない" 0 - "この顧客の hold は変えない"
+eq "hold 中の顧客には unhold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+eq "Clerk の hold も true のまま" "$(clerk_state org_a | jq -r '.services.xesm.hold')" "true"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+NODUE="$(jq -c -n '{cus_a: [{id: "in_a1", due_date: 0, service: "xesm"}], cus_b: [], cus_c: []}')"
+FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}' \
+  FAKE_RESYNC=1 FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$NODUE" run resync --apply --mode test
+expect "hold 中で期限の無い請求書があれば、hold を外さない" 0 - "この顧客の hold は変えない"
+eq "期限が無いときも unhold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+# 期限の無い open の請求書も判定できない（hold を外さない）
+rm -f "$WORK/log.customers"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$NODUE" run resync --apply --mode test
+expect "期限の無い open の請求書があれば、その顧客の hold を変えない" 0 - "この顧客の hold は変えない"
+eq "期限の無い請求書の顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+# paid の請求書は open の一覧に来ない（期限を過ぎていても hold にしない）
+rm -f "$WORK/log.customers"
+PAID="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, service: "xesm", status: "paid"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$PAID" run resync --apply --mode test
+expect "支払い済みの請求書は hold に使わない" 0 - "RESYNC 完了"
+eq "支払い済みの顧客には hold を書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')" "0"
+check_arg "請求書の一覧は status=open で取る" "status=open"
+# 明細が 100 件を超える請求書は、明細もページを送る
+rm -f "$WORK/log.customers"
+MANY="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, lines_count: 150}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$MANY" run resync --apply --mode test
+expect "明細が 100 件を超えても判定できる" 0 - "RESYNC 完了"
+[ "$(count "$LOG" '^CALL GET /v1/invoices/in_a1/lines')" -ge 2 ] && ok "明細は 2 ページ読む（100 件ずつ）" || ng "明細のページ送りをしていない: $(count "$LOG" '^CALL GET /v1/invoices/in_a1/lines') 回"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "101 件目以降の明細からも hold を決める" || ng "明細の 2 ページ目を見ていない: $LOG"
+# 明細の読取が失敗したら止まる（黙って hold を外さない）
+rm -f "$WORK/log.customers"
+FAILINV="$(jq -c -n --argjson d20 "$(due_of 20)" '{cus_a: [{id: "in_a1", due_date: $d20, lines_status: 500}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$FAILINV" run resync --apply --mode test
+expect "明細の読取が失敗したら止まる" 4 - "API エラー"
+eq "明細が読めなければ 1 件も書かない" "$(posts)" "0"
+# 下見の後に請求書が払われたら、適用の直前に気づいて書かない（下見と適用の間の変化）
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+OPEN_AFTER="$(jq -c -n '{cus_a: [], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" FAKE_OPEN_INVOICES_AFTER="$OPEN_AFTER" \
+  run resync --apply --mode test
+expect "下見の後に請求書が払われたら、その顧客は書かない" 0 - "下見の後に請求書の状態が変わった"
+eq "変わった顧客には Stripe にも Clerk にも書かない" "$(count "$LOG" '^CALL POST /v1/customers/cus_a')$(count "$LOG" '^CALL PATCH /organizations/org_a')" "00"
+printf '%s' "$OUT" | grep -qF 'もう一度 resync を流す' && ok "やり直しを促す NOTE を出す" || ng "NOTE が違う: $OUT"
+printf '%s' "$OUT" | grep -qF 'RESYNC 完了: 顧客 3 件' && ok "変わった顧客を飛ばしても、残りの顧客の処理は続ける" || ng "最後まで進んでいない: $OUT"
+run resync --customer cus_x
+expect "resync に --customer は使わない" 64 0 "contract card-setup cancel invoice charge mark-paid status clerk-sync hold unhold set-payment でだけ使う"
+run resync --apply
+expect "resync の --apply には --mode が要る" 64 0 "--apply には --mode"
+
+# 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
+SET_PAY_META="$(meta transfer "$LAST-15" 12)"
+run set-payment --customer cus_x --payment card
+expect "set-payment の dry-run は書く値を出す" 0 0 "metadata[payment]=card"
+[ -z "$LOG" ] && ok "set-payment の dry-run は curl を呼ばない" || ng "set-payment の dry-run が curl を呼んだ"
+FAKE_CUST_META="$SET_PAY_META" FAKE_CUST_PM=pm_default run set-payment --customer cus_x --payment card --apply --mode test
+expect "set-payment は card に変える（保存したカードがある）" 0 1 "SET_PAYMENT cus_x: transfer→card"
+check_arg "set-payment は metadata[payment]=card を送る" "metadata[payment]=card"
+eq "set-payment は請求書を触らない" "$(count "$LOG" '/v1/invoices')" "0"
+printf '%s' "$OUT" | grep -qF '保存したカード pm_default' && ok "card に変えるときは保存したカードを確かめる" || ng "保存したカードの NOTE が無い: $OUT"
+FAKE_CUST_META="$(jq -c '. + {card_setup_session: "cs_old"}' <<<"$SET_PAY_META")" FAKE_CS_STATUS=complete run set-payment --customer cus_x --payment card --apply --mode test
+expect "card-setup で保存したカードでも card に変えられる" 0 1 "SET_PAYMENT cus_x: transfer→card"
+printf '%s' "$OUT" | grep -qF '保存したカード pm_saved' && ok "SetupIntent のカードを使う" || ng "pm_saved の NOTE が無い: $OUT"
+FAKE_CUST_META="$SET_PAY_META" run set-payment --customer cus_x --payment card --apply --mode test
+expect "保存したカードが無ければ card にしない（期限の日に払えない）" 3 0 "保存したカードが無い"
+eq "カードが無ければ何も書かない" "$(posts)" "0"
+FAKE_CUST_META="$(meta card "$LAST-15" 12)" run set-payment --customer cus_x --payment card --apply --mode test
+expect "既に card なら書かない" 0 0 "既に payment=card"
+FAKE_CUST_META="$(meta card "$LAST-15" 12)" run set-payment --customer cus_x --payment transfer --apply --mode test
+expect "card から transfer へも変えられる（カードの確認は要らない）" 0 1 "SET_PAYMENT cus_x: card→transfer"
+check_arg "transfer を送る" "metadata[payment]=transfer"
+run set-payment --customer cus_x --payment cash
+expect "--payment は card か transfer" 64 0 "--payment は card か transfer"
+run set-payment --customer cus_x
+expect "set-payment には --payment が要る" 64 0 "set-payment には --payment が要る"
+run set-payment --payment card
+expect "set-payment には --customer が要る" 64 0 "set-payment には --customer が要る"
+SCN=live FAKE_CUST_META="$SET_PAY_META" FAKE_CUST_PM=pm_default run set-payment --customer cus_x --payment card --apply --mode live
+expect "本番の set-payment は live と打たなければ書かない" 64 0 "本番は端末から実行する"
+run set-payment --customer cus_x --payment card --service xesm
+expect "--service は set-payment で使わない" 64 0 "contract cancel simulate hold unhold でだけ使う"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
