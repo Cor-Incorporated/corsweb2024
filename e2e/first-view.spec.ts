@@ -157,6 +157,14 @@ for (const viewport of VIEWPORTS) {
           const sameRow = Math.abs(cur.top - prev.top) < 12;
           return sameRow ? cur.left < prev.left : cur.top < prev.top;
         });
+        // ヒーローの実績へのリンクは、パソコン用とスマホ用の 2 本。どの大きさでも、見えているのはちょうど 1 本
+        const visibleWorksLinks = await page.evaluate((loc) => {
+          const works = loc === 'ja' ? '/works' : `/${loc}/works`;
+          const hero = document.querySelector('main section');
+          return Array.from(hero?.querySelectorAll<HTMLAnchorElement>('a[href]') ?? []).filter(
+            (a) => a.pathname.replace(/\/+$/, '') === works && a.getClientRects().length > 0 && getComputedStyle(a).visibility !== 'hidden',
+          ).length;
+        }, locale);
         const metrics = await page.evaluate(() => ({
           innerWidth: window.innerWidth,
           innerHeight: window.innerHeight,
@@ -196,6 +204,7 @@ for (const viewport of VIEWPORTS) {
           primaryCta,
           clicks,
           heroFocusOrder,
+          visibleWorksLinks,
         };
         writeFileSync(path.join(OUT_DIR, `${base}.json`), `${JSON.stringify(result, null, 2)}\n`);
 
@@ -207,6 +216,7 @@ for (const viewport of VIEWPORTS) {
         expect.soft(primaryCta?.inFold, `主ボタン: ${JSON.stringify(primaryCta)}`).toBe(true);
         expect.soft(metrics.scrollWidth, '横にはみ出している').toBeLessThanOrEqual(metrics.innerWidth);
         expect.soft(outOfOrder, `ヒーローの Tab の順が見た目の順と違う: ${JSON.stringify(heroFocusOrder)}`).toEqual([]);
+        expect.soft(visibleWorksLinks, 'ヒーローで見えている「実績を見る」の本数').toBe(1);
         for (const click of clicks) {
           expect.soft(click.ok, `${click.id} を押した先: ${click.pathname}`).toBe(true);
         }
