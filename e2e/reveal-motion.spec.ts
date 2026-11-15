@@ -358,3 +358,70 @@ test('再読み込みで、ページの途中の位置から始まっても、�
   }
 });
 
+// ページを移る（View Transitions。文書は入れ替わらない）たびに、演出は前のページの監視を外してから付け直す。
+// 外し忘れると、移るたびに scroll の見張りと observer が増えていく。演出の observer（rootMargin が
+// 「0px 0px <下だけ> 0px」の形）と、window の scroll の見張りの数を、読み込みの前から数える。
+test('ページを移っても、演出の監視は前のページの分が外れ、増えていかない', async ({ browser }, testInfo) => {
+  const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
+  expect(baseURL, 'FIRST_VIEW_BASE_URL か設定の baseURL が要る').toBeTruthy();
+  const context = await browser.newContext({ viewport: { width: 1366, height: 657 } });
+  await context.addInitScript(() => {
+    const counts = { observers: new Set<IntersectionObserver>(), scroll: new Set<unknown>(), loads: 0, documentMark: Math.random() };
+    (window as unknown as { __revealCounts: typeof counts }).__revealCounts = counts;
+    const Native = window.IntersectionObserver;
+    window.IntersectionObserver = class extends Native {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(callback, options);
+        if (/^0px 0px (-12%|\d+px) 0px$/.test(String(options?.rootMargin ?? ''))) counts.observers.add(this);
+      }
+      disconnect() {
+        counts.observers.delete(this);
+        super.disconnect();
+      }
+    };
+    const add = window.addEventListener.bind(window);
+    const remove = window.removeEventListener.bind(window);
+    window.addEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+      if (type === 'scroll') counts.scroll.add(listener);
+      add(type, listener, options);
+    }) as typeof window.addEventListener;
+    window.removeEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => {
+      if (type === 'scroll') counts.scroll.delete(listener);
+      remove(type, listener, options);
+    }) as typeof window.removeEventListener;
+    document.addEventListener('astro:page-load', () => {
+      counts.loads += 1;
+    });
+  });
+  const page = await context.newPage();
+  const read = () =>
+    page.evaluate(() => {
+      const counts = (window as unknown as { __revealCounts: { observers: Set<unknown>; scroll: Set<unknown>; loads: number; documentMark: number } })
+        .__revealCounts;
+      return { observers: counts.observers.size, scroll: counts.scroll.size, loads: counts.loads, documentMark: counts.documentMark, path: location.pathname };
+    });
+  const waitLoads = (n: number) =>
+    page.waitForFunction((count) => (window as unknown as { __revealCounts: { loads: number } }).__revealCounts.loads >= count, n, { timeout: 15_000 });
+  try {
+    await page.goto(new URL('/', baseURL!).toString(), { waitUntil: 'load' });
+    await waitForRevealReady(page);
+    const first = await read();
+    expect(first.observers, `最初のページの演出の observer の数（${JSON.stringify(first)}）`).toBe(2);
+    const rounds = 4;
+    for (let i = 1; i <= rounds; i += 1) {
+      // 業種のページへ移り、戻る
+      await page.locator('[data-industry-entry="medical"]').click();
+      await waitLoads(first.loads + 2 * i - 1);
+      await page.goBack();
+      await waitLoads(first.loads + 2 * i);
+    }
+    await waitForRevealReady(page);
+    const last = await read();
+    expect(last.documentMark, `ページを移る間に文書が入れ替わった（${JSON.stringify({ first, last })}）`).toBe(first.documentMark);
+    expect(last.path, '最後にトップへ戻っていない').toBe('/');
+    expect(last.observers, `${rounds} 往復の後の演出の observer の数（最初 ${first.observers}、後 ${last.observers}）`).toBe(2);
+    expect(last.scroll, `${rounds} 往復の後の scroll の見張りの数（最初 ${first.scroll}、後 ${last.scroll}）`).toBe(first.scroll);
+  } finally {
+    await context.close();
+  }
+});
