@@ -379,7 +379,15 @@ do_customer() {
     existing_customer_ok
     return 0
   fi
-  if [ -n "$OPT_CLERK" ]; then clerk_meta=(--data-urlencode "metadata[clerk_org_id]=$OPT_CLERK"); fi
+  if [ -n "$OPT_CLERK" ]; then
+    # 同じ Clerk の組織に 2 人の顧客を結ばない（resync で後の顧客が前の顧客の services を上書きするため）。
+    # 作った直後の顧客は検索に出るまで 1 分ほどかかるので、すり抜けたものは resync の下見の検査が止める。
+    api_ok "顧客の検索（組織の id）" GET /v1/customers/search --data-urlencode "query=metadata['clerk_org_id']:'$OPT_CLERK'" --data-urlencode "limit=10"
+    if [ "$(jq '.data | length' <<<"$RESP_BODY")" -gt 0 ]; then
+      die 3 "clerk_org_id=$OPT_CLERK は既に顧客 $(jq -r '[.data[] | "\(.id)（customer_code=\(.metadata.customer_code // "-")）"] | join(", ")' <<<"$RESP_BODY") が使っている。同じ組織に 2 人の顧客を結ばないので作らない（台帳で、どちらの顧客の組織かを決める）"
+    fi
+    clerk_meta=(--data-urlencode "metadata[clerk_org_id]=$OPT_CLERK")
+  fi
   api_ok "顧客の作成 POST /v1/customers" POST /v1/customers \
     --data-urlencode "name=$OPT_NAME" \
     --data-urlencode "email=$OPT_EMAIL" \
@@ -881,44 +889,64 @@ invoice_services() {
   INVOICE_SERVICES="$(printf '%s' "$out" | sed '/^$/d' | sort -u)"
 }
 
-# その顧客の、支払いの期限の 14 日後を過ぎても open の請求書が含むサービス（決定 1）。
+# その顧客の、支払いの期限の 14 日後を過ぎても払われていない請求書が含むサービス（決定 1）。
+# 払われていない請求書は、status が open のものと uncollectible（回収できないとした）のもの。
+# uncollectible を数えないと、回収をあきらめた請求書の顧客の hold を、次の resync が外してしまう（開く側に倒れる）。
+# void（取り消した）と paid は数えない。
 # 期限の日（日本時間）の 14 日後を過ぎたものだけ。1 件でもあれば、そのサービスは hold。
-# 判定できない open の請求書（期限が無い・明細にサービスが無い）が 1 枚でもあれば UNKNOWN を返す。
+# 判定できない請求書（期限が無い・明細にサービスが無い）が 1 枚でもあれば UNKNOWN を返す。
 # 呼ぶ側は UNKNOWN のとき、その顧客の hold を変えない（外さない。払われたかどうかを決められないため）。
-# 請求書の一覧も 100 件ずつページを送る。
+# 請求書の一覧も、状態ごとに 100 件ずつページを送る。
 overdue_services() {
-  local cus="$1" today="$2" after="" page more ids id svcs out="" n=0 unknown=0
+  local cus="$1" today="$2" after="" page more ids id svcs out="" n=0 unknown=0 st
   OVERDUE_SERVICES=""
-  while :; do
-    n=$((n + 1))
-    [ "$n" -le 1000 ] || die 3 "請求書の一覧のページが 1000 を超えた（顧客 $cus）。全件を見ていない"
-    if [ -z "$after" ]; then
-      api_ok "open の請求書の一覧" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=open" --data-urlencode "limit=100"
-    else
-      api_ok "open の請求書の一覧（続き）" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=open" --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
-    fi
-    page="$RESP_BODY"
-    # 期限の無い open の請求書は判定できない（hold を外さない）
-    if jq -e '.data[]? | select((.due_date // 0) == 0)' <<<"$page" >/dev/null; then unknown=1; fi
-    ids="$(jq -r --arg t "$today" '.data[]? | select((.due_date // 0) > 0) | select((((.due_date + 1209600) | todate)[0:10]) < $t) | .id' <<<"$page")"
-    while IFS= read -r id; do
-      [ -n "$id" ] || continue
-      invoice_services "$id"
-      svcs="$INVOICE_SERVICES"
-      if [ -z "$svcs" ]; then
-        unknown=1
-        printf 'NOTE 請求書 %s の明細にサービスが無い（hold を決められない）\n' "$id" >&2
-        continue
+  for st in open uncollectible; do
+    after=""
+    while :; do
+      n=$((n + 1))
+      [ "$n" -le 1000 ] || die 3 "請求書の一覧のページが 1000 を超えた（顧客 $cus）。全件を見ていない"
+      if [ -z "$after" ]; then
+        api_ok "$st の請求書の一覧" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=$st" --data-urlencode "limit=100"
+      else
+        api_ok "$st の請求書の一覧（続き）" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=$st" --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
       fi
-      out="$out$svcs"$'\n'
-    done <<<"$ids"
-    more="$(jq -r '.has_more // false' <<<"$page")"
-    [ "$more" = "true" ] || break
-    after="$(jq -r '.data[-1].id // empty' <<<"$page")"
-    [ -n "$after" ] || die 3 "請求書の一覧の続きの位置（starting_after）を読めない。全件を見ていない"
+      page="$RESP_BODY"
+      # 期限の無い請求書（open か uncollectible）は判定できない（hold を外さない）
+      if jq -e '.data[]? | select((.due_date // 0) == 0)' <<<"$page" >/dev/null; then unknown=1; fi
+      ids="$(jq -r --arg t "$today" '.data[]? | select((.due_date // 0) > 0) | select((((.due_date + 1209600) | todate)[0:10]) < $t) | .id' <<<"$page")"
+      while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        invoice_services "$id"
+        svcs="$INVOICE_SERVICES"
+        if [ -z "$svcs" ]; then
+          unknown=1
+          printf 'NOTE 請求書 %s の明細にサービスが無い（hold を決められない）\n' "$id" >&2
+          continue
+        fi
+        out="$out$svcs"$'\n'
+      done <<<"$ids"
+      more="$(jq -r '.has_more // false' <<<"$page")"
+      [ "$more" = "true" ] || break
+      after="$(jq -r '.data[-1].id // empty' <<<"$page")"
+      [ -n "$after" ] || die 3 "請求書の一覧の続きの位置（starting_after）を読めない。全件を見ていない"
+    done
   done
   [ "$unknown" -eq 0 ] || out="$out"$'UNKNOWN\n'
   OVERDUE_SERVICES="$(printf '%s' "$out" | sed '/^$/d' | sort -u)"
+}
+
+# 「cus_… org_…」の行の組で、同じ組織を 2 人以上の顧客が持っていれば止まる（何かを書く前に呼ぶ）。
+# 重なった組織ごとに、持っている顧客の id を全部出してから exit 3。
+check_unique_orgs() {
+  local pairs="$1" dups org who
+  dups="$(printf '%s' "$pairs" | awk 'NF == 2 {print $2}' | sort | uniq -d)"
+  [ -n "$dups" ] || return 0
+  while IFS= read -r org; do
+    [ -n "$org" ] || continue
+    who="$(printf '%s' "$pairs" | awk -v o="$org" '$2 == o {print $1}' | paste -sd ',' - | sed 's/,/, /g')"
+    printf 'NG 同じ Clerk の組織 %s を 2 人以上の顧客が持っている: %s\n' "$org" "$who"
+  done <<<"$dups"
+  die 3 "同じ Clerk の組織を 2 人以上の顧客が持っている（上の NG の行）。どちらの契約で開け閉めするかが決まらないので、何も書かない。台帳で正しい顧客を決め、もう一方の顧客の clerk_org_id を外してから、もう一度 resync を流す"
 }
 
 # 全件の送り直しと hold の判定。顧客ごとに、契約しているサービスの hold を「期限の 14 日後を過ぎても open の
@@ -965,11 +993,11 @@ do_resync() {
         if [ "$want" = "true" ]; then
           kvs="$kvs contract_${svc}_hold=true"
           cond="$cond and (.metadata[\"contract_${svc}_hold\"] == \"true\")"
-          printf 'PLAN hold %s %s: 支払いの期限の 14 日後を過ぎても open の請求書がある\n' "$cus" "$svc"
+          printf 'PLAN hold %s %s: 支払いの期限の 14 日後を過ぎても払われていない請求書（open か uncollectible）がある\n' "$cus" "$svc"
         else
           kvs="$kvs contract_${svc}_hold="
           cond="$cond and ((.metadata[\"contract_${svc}_hold\"] // \"\") == \"\")"
-          printf 'PLAN unhold %s %s: 期限を過ぎた open の請求書が無い（払われたか、まだ期限の 14 日後を過ぎていない）\n' "$cus" "$svc"
+          printf 'PLAN unhold %s %s: 期限を過ぎた払われていない請求書（open か uncollectible）が無い（払われたか、取り消したか、まだ期限の 14 日後を過ぎていない）\n' "$cus" "$svc"
         fi
       done < <(plans_services)
     fi
@@ -1004,6 +1032,13 @@ do_resync() {
     printf 'RESYNC 完了: 顧客 0 件（書くものが無い）\n'
     return 0
   fi
+  # 同じ Clerk の組織を 2 人以上の顧客が持っていれば、1 つも書かずに止まる。送る順で後の顧客の services が
+  # 前の顧客の分を上書きし、どちらの契約で開け閉めするかが顧客の並び順で決まってしまうため。
+  local pairs="" j
+  for ((j = 0; j < n; j++)); do
+    [ -z "${p_org[$j]}" ] || pairs="$pairs${p_cus[$j]} ${p_org[$j]}"$'\n'
+  done
+  check_unique_orgs "$pairs"
   printf 'RESYNC これから %s 件の顧客に書く（Stripe の metadata と、clerk_org_id があれば Clerk の組織）\n' "$n"
   # 2) 確認（1 回。上の下見で見せた内容だけを書く）
   confirm_live
