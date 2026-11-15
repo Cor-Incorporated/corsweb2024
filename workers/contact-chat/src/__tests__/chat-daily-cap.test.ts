@@ -427,10 +427,13 @@ describe('wrangler.toml の上限の設定', () => {
     expect(found, `wrangler.toml の ${env}（${header}）に binding = "DB" が無い`).toBe(true);
   });
 
-  it('本番の vars の上限の値は、上限として読める数', () => {
-    const match = section('[vars]').match(/^CHAT_DAILY_MODEL_CALL_LIMIT = "([^"]*)"$/m);
-    expect(match).not.toBeNull();
-    expect(match?.[1]).toMatch(/^\d+$/);
+  it.each([
+    ['本番（最上位）', '[vars]'],
+    ['preview', '[env.preview.vars]'],
+  ])('%s の vars の上限の値は、上限として読める数', (env, header) => {
+    const match = section(header).match(/^CHAT_DAILY_MODEL_CALL_LIMIT = "([^"]*)"$/m);
+    expect(match, `wrangler.toml の ${env}（${header}）に CHAT_DAILY_MODEL_CALL_LIMIT が無い`).not.toBeNull();
+    expect(match?.[1], `wrangler.toml の ${env} の CHAT_DAILY_MODEL_CALL_LIMIT が整数でない`).toMatch(/^\d+$/);
     expect(chatDailyModelCallLimit(match?.[1])).toBe(Number(match?.[1]));
   });
 });
