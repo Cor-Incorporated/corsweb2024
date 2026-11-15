@@ -19,7 +19,7 @@ const LOCALES: [string, Locale, RegExp, RegExp][] = [
   ['en', en as Locale, /valid from November 7, 2026 to November 7, 2029\./, /remains valid as long as continued registration is confirmed at the surveillance audits during the validity period\./],
   ['zh', zh as Locale, /有效期为2026年11月7日至2029年11月7日。/, /只要在有效期内的监督审核中确认继续注册，认证即保持有效。/],
   ['ko', ko as Locale, /유효 기간은 2026년 11월 7일부터 2029년 11월 7일까지입니다\./, /유효 기간 중의 사후심사에서 등록의 계속이 인정되는 한 유효합니다\./],
-  ['es', es as Locale, /válida del 7 de noviembre de 2026 al 7 de noviembre de 2029\./, /Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento/],
+  ['es', es as Locale, /válida del 7 de noviembre de 2026 al 7 de noviembre de 2029\./, /Se mantiene vigente mientras la continuidad del registro se confirme en las auditorías de seguimiento realizadas durante el período de vigencia\./],
 ];
 
 function validityStrings(locale: Locale): [string, string][] {
