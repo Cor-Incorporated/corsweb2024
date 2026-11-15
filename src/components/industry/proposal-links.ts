@@ -4,6 +4,7 @@
 // 教育は参考資料の欄が無く、本文の近くのリンク（sourceLink）がこの並びを指す。
 // inline は本文と参考資料の説明の中のリンク。'/' で始まるものはサイト内のページで、言語の接頭辞を付ける。
 import { industryContactSource, type IndustrySlug } from '../../config/industry-context';
+import { getContactUrl } from '../../config/site';
 import { getLocalizedUrl, type Locale } from '../../utils/i18n';
 
 export type ProposalLinks = {
@@ -88,11 +89,11 @@ export function isPdfHref(href: string): boolean {
 export const DOCUMENT_DOWNLOAD_HREF: string | null = null;
 
 /**
- * 業種のページの「問い合わせ」の入口。Cloudia の画面（浮きボタンと同じ /contact/chat/）へ、業種の source を付けて進む。
- * 問い合わせページ（/contact）は経由しない。link の形は浮きボタン（CloudiaLauncher）と同じ（iframe 用の embed は付けない）。
- * 暫定。問い合わせの入口の部品ができたら、この関数ごと差し替える。
+ * 業種のページの「問い合わせ」の入口。サイトのほかの入口と同じ getContactUrl（src/config/site.ts）で、業種の source を付ける。
+ * 通常は Cloudia の画面（浮きボタンと同じ /contact/chat/?source=industry-<slug>&locale=<言語>）へ進み、問い合わせページは
+ * 経由しない（iframe 用の embed は付けない）。Cloudia を止めた切り戻しの build（PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false）では、
+ * ほかの入口と同じく、フォームの在る問い合わせページ（/<lang>/contact?source=industry-<slug>）へ進む。
  */
 export function industryInquiryHref(locale: Locale, industry: IndustrySlug): string {
-  const params = new URLSearchParams({ source: industryContactSource(industry), locale });
-  return `/contact/chat/?${params.toString()}`;
+  return getContactUrl(locale, { source: industryContactSource(industry) });
 }
