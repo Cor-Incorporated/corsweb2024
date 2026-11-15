@@ -550,7 +550,7 @@
         },
         {
           "title": "Cor.Inc.: información de la empresa",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)."
         },
         {
           "title": "Cor.Inc.: seguridad de la información",
@@ -857,7 +857,7 @@
         },
         {
           "title": "Información de la empresa (Cor.Inc.)",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)."
         },
         {
           "title": "Seguridad de la información (Cor.Inc.)",
@@ -1198,7 +1198,7 @@
         },
         {
           "title": "Información de la empresa (Cor.Inc.)",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)."
         },
         {
           "title": "Funciones de SiteBox (KENTEM / Kensetsu System Co., ltd.)",
@@ -1507,7 +1507,7 @@
         },
         {
           "title": "Información de la empresa (Cor.Inc.)",
-          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)"
+          "note": "Resumen del registro de la certificación ISMS, basado en el certificado de registro JP26/00000364 emitido por SGS Japón (SGS)."
         }
       ]
     }
@@ -2208,11 +2208,11 @@
     },
     "industryShigyo": {
       "title": "IA para despachos profesionales: documentos y respuestas | Cor.Inc.",
-      "description": "Para despachos de asesores fiscales, abogados y asesores laborales: borradores de respuesta con fuentes comprobables, en local o en la nube, implantados por etapas."
+      "description": "Para despachos de asesores fiscales, abogados y asesores laborales: borradores de respuesta con fuentes comprobables. Diseño local o en la nube e implantación por etapas."
     },
     "industryConstruction": {
       "title": "IA en construcción: menos transcripción de partes de obra | Cor.Inc.",
-      "description": "¿Introduce los mismos datos en el formato de cada contratista principal? Reducimos con IA la transcripción de partes diarios y documentos, manteniendo la revisión humana."
+      "description": "¿Introduce los mismos datos para cada contratista principal? Le ayudamos a automatizar poco a poco la transcripción de partes diarios y documentos, con revisión humana."
     },
     "industryManufacturing": {
       "title": "IA y transmisión de competencias en la industria | Cor.Inc.",
@@ -2220,7 +2220,7 @@
     },
     "industryEducation": {
       "title": "IA y datos para colegios y universidades | Cor.Inc.",
-      "description": "Cor. apoya la IA en colegios y universidades desde el estudio de la situación actual: datos internos, integración con sistemas existentes y LLM local."
+      "description": "Cor. apoya la implantación de la IA en colegios y universidades desde el estudio de la situación actual: datos internos, integración con sistemas existentes y LLM local."
     },
     "home": {
       "title": "Desarrollo de IA y adopción de IA generativa en Fukuoka | Cor.Inc. (LLM local, Grift)",

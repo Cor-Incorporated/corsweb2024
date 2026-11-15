@@ -1373,7 +1373,7 @@
           "strong": "Collect the data AI needs, and pass it on in a form AI can understand."
         },
         {
-          "p": "NEDO, too, identifies poorly organized meaning and relationships in in-company data as a challenge for using AI, and is researching how to prepare such data for use and evaluate it.",
+          "p": "NEDO, too, identifies poorly organized meaning and relationships within in-company data as a challenge for using AI, and is researching how to prepare such data for use and evaluate it.",
           "cite": [
             3
           ]
@@ -2204,15 +2204,15 @@
     },
     "industryMedical": {
       "title": "AI for medical institutions: nursing records, referrals | Cor.Inc.",
-      "description": "For referral letters and nursing and medication summaries: Cor. reviews patient data handling and EMR formats, then designs and builds with you, local LLMs included."
+      "description": "For referral letters, nursing and medication summaries: Cor. reviews patient data handling and EMR formats, then designs and builds with you, including local LLM options."
     },
     "industryShigyo": {
       "title": "AI for licensed professional firms: drafting answers | Cor.Inc.",
-      "description": "For offices of certified public tax accountants, lawyers and labor and social security attorneys: draft answers checkable against past records, adopted step by step."
+      "description": "For offices of certified public tax accountants, lawyers and labor and social security attorneys: step-by-step AI for drafting answers you can check against past records."
     },
     "industryConstruction": {
       "title": "AI for construction | Less re-keying of daily reports | Cor.Inc.",
-      "description": "Same details re-entered for each prime contractor's format? Cor. helps you gradually automate re-keying and drafting of daily reports and documents, keeping human checks."
+      "description": "Same details entered for each prime contractor? Cor. helps you gradually automate re-keying and drafting of daily reports and documents, with human checks and approval."
     },
     "industryManufacturing": {
       "title": "AI for skills transfer in manufacturing | Cor.Inc.",
