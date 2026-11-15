@@ -3,14 +3,14 @@ title: "Why RAG and Internal Knowledge AI Fail: What to Prepare Before Tuning Se
 description: "We explain why internal document search and RAG implementations fail to deliver results, looking from the perspectives of data organization, permissions, evaluation metrics, and operational design. This is a practical guide to keep internal knowledge AI from ending at the PoC stage."
 summary: "The reason internal knowledge AI and RAG hit a wall lies not in the models, but in the pre-implementation design. Before choosing a model, you need to determine the scope of documents to reference, manage version control for the latest updates, establish access permissions, and define evaluation metrics."
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "6f6c220b1a3ba19aed83f8a51bf729478c2e24e640af7526796cdc4cf92836f0"
+translationSourceHash: "f2a31a68ae6f6d1f830985f2139118b8946a054624a5113be6d95f876eeac97d"
 translatedAt: "2026-10-23T06:16:43.606Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -64,4 +64,4 @@ Yes, they can be combined. When handling confidential documents, combining a loc
 - [IPA: DX Trends 2025](https://www.ipa.go.jp/digital/chousa/dx-trend/tbl5kb0000001mn2-att/dx-trend-2025.pdf) - Japan has a lower adoption rate of generative AI initiatives than the US and Germany, with adoption declining for smaller enterprises. Challenges include governance, literacy, and finding use cases.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Outlines major risks of LLM applications, including Sensitive Information Disclosure, Excessive Agency, and Overreliance.
 - [Cor. Website: AI × CO-CREATION / Business Overview](https://cor-jp.com/) - Confirms Cor.'s business domains, Grift, local LLMs and secure AI, AI-driven development, and co-creation messaging.
-- [Cor. Website: Security](https://cor-jp.com/security/) - Confirms local-first architecture, minimal logging, data sensitivity tiers, AI usage policy, and ISMS (scheduled to complete stage 2 audit in October 2026, with certification registration expected around December 2026).
+- [Cor. Website: Security](https://cor-jp.com/security/) - Confirms local-first architecture, minimal logging, data sensitivity tiers, AI usage policy, and ISMS (certification obtained in November 2026; scope: “Contract development and operation of software”).

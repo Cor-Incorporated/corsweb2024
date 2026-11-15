@@ -3,14 +3,14 @@ title: "Permissions, Logs, and Approval Flows to Determine Before Introducing AI
 description: "In 2026, as the adoption of AI agents advances, this article explains the permission design, operation logs, and human approval points that should be determined before integrating them into operations. This implementation policy ensures projects do not end at the PoC stage."
 summary: "What must be decided before introducing AI agents is not which agent to use, but how much to delegate to them. Only companies that design tiered permissions, place human approvals on execution and external transmissions, and plan logs and stopping conditions in advance can successfully integrate them into their operations."
 pubDate: 2026-06-12
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["AIエージェント", "権限管理", "ガバナンス"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "5088bc7f3a1f0cc684bc8e0a2c3a1ddcff937480121ed6e95b695fa2c533fcc9"
+translationSourceHash: "0573549c97435774f9b99cd9bb2c5e1a403adac703a0a8a05cc222b11ff1fc4b"
 translatedAt: "2026-10-23T05:20:17.798Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -72,4 +72,4 @@ Permissions, logs, approval flows, and stop conditions. In particular, when entr
 - [Gartner: 40% of Enterprise Apps Will Feature Task-Specific AI Agents by 2026](https://www.gartner.com/en/newsroom/press-releases/2025-08-26-gartner-predicts-40-percent-of-enterprise-apps-will-feature-task-specific-ai-agents-by-2026-up-from-less-than-5-percent-in-2025) - Prediction that 40% of enterprise applications will feature task-specific AI agents by the end of 2026.
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai) - 88% regularly use AI in at least one business function, approximately one-third are scaling, 23% are scaling AI agents, and 39% are in the experimentation stage.
 - [Gartner: Over 40% of Agentic AI Projects Will Be Canceled by End of 2027](https://www.gartner.com/en/newsroom/press-releases/2025-06-25-gartner-predicts-over-40-percent-of-agentic-ai-projects-will-be-canceled-by-end-of-2027) - Prediction that over 40% of agentic AI projects will be canceled by the end of 2027 due to increasing costs, unclear value, and inadequate risk controls.
-- [Cor. Website: Security](https://cor-jp.com/security/) - Details verified regarding local-first, minimal logging, sensitivity tiers, AI usage policies, and ISMS (Stage 2 audit completed in October 2026, with certification registration expected around December 2026).
+- [Cor. Website: Security](https://cor-jp.com/security/) - Details verified regarding local-first, minimal logging, sensitivity tiers, AI usage policies, and ISMS (certification obtained in November 2026; scope: “Contract development and operation of software”).

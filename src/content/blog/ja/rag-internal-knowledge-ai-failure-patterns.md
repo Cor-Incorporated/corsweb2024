@@ -3,7 +3,7 @@ title: "RAG・社内ナレッジAIが失敗する理由〜検索精度より先�
 description: "社内文書検索・RAG導入で成果が出ない理由を、データ整理、権限、評価指標、運用設計の観点から解説します。社内ナレッジAIをPoCで終わらせないための実践ガイドです。"
 summary: "社内ナレッジAIやRAGが壁に当たる原因は、モデルではなく導入前の設計にあります。モデルを選ぶより先に、参照させる文書の範囲、最新版の管理、権限、評価指標を決める必要があります。"
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]
@@ -61,4 +61,4 @@ PoCを「使えそう」で終わらせず、どの業務の何分を削減す�
 - [IPA: DX動向2025](https://www.ipa.go.jp/digital/chousa/dx-trend/tbl5kb0000001mn2-att/dx-trend-2025.pdf) - 日本は生成AIの取組割合が米国・ドイツより低く、小規模企業ほど取組割合が下がる。課題はガバナンス・リテラシー・用途探索。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure、Excessive Agency、OverrelianceなどLLMアプリの代表的リスクを整理。
 - [Cor. HP: AI × CO-CREATION / 事業概要](https://cor-jp.com/) - Cor.の事業領域、Grift、ローカルLLM・セキュアAI、AI駆動開発、共創メッセージを確認。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年10月に第2段階審査を終え、2026年12月ごろの認証登録を見込む）を確認。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年11月に認証を取得。対象範囲は「ソフトウエアの受託開発および運用」）を確認。
