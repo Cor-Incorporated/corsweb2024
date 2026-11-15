@@ -58,6 +58,7 @@ function openDatabase(): DatabaseSync {
     '0003_contact_session_summary.sql',
     '0004_conversation_excerpt.sql',
     '0005_inquiry_context.sql',
+    '0006_chat_daily_usage.sql',
   ]);
   for (const file of files) {
     db.exec(readFileSync(resolve(migrationsDir, file), 'utf8'));

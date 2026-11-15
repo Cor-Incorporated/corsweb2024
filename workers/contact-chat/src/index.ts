@@ -33,6 +33,7 @@ import {
   verifyTurnstile,
 } from './security';
 import { readJsonBody, type JsonBodyFailure } from './body';
+import { chatDailyModelCallLimit, reserveDailyModelCall } from './daily-cap';
 import { logContactFailure, notificationFailureCode } from './log';
 import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
 import { classifyFromModel, unclassified } from './inquiry-classification';
@@ -362,6 +363,21 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
     provider = getProvider(env);
   } catch {
     return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください' }, 503);
+  }
+
+  // 1 日の呼び出しの上限。model を呼ぶ前に、その日の数を 1 つ予約する。数を読めない・書けないときも呼ばない。
+  if (env.DB) {
+    let decision;
+    try {
+      decision = await reserveDailyModelCall(env.DB, chatDailyModelCallLimit(env.CHAT_DAILY_MODEL_CALL_LIMIT), Date.now());
+    } catch {
+      logContactFailure('daily_cap_unavailable');
+      return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください' }, 503);
+    }
+    if (decision === 'limited') {
+      logContactFailure('daily_cap_reached');
+      return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください' }, 503);
+    }
   }
 
   const system = buildSystemPrompt({ intent: initialIntent, traffic, mode, locale });

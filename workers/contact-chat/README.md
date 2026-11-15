@@ -74,12 +74,34 @@ submit では、分類・業種・path をサーバー側の会話の状態か�
 
 案件の側へ渡す写しは `buildInquiryCaseCopy`（`src/case-copy.ts`）が作る。欄は受付の番号・業種・path・分類・分類の版・作った時刻の 6 つだけで、送る口は無い。
 
+### 1 日の呼び出しの上限（migration `0006_chat_daily_usage.sql`）
+
+チャットの API が model を呼ぶ回数に、1 日（JST の日付）の上限を付ける。上限は vars の `CHAT_DAILY_MODEL_CALL_LIMIT`（既定 300）。
+
+- 数は D1 の `chat_daily_usage`（1 日 1 行。`day`・`model_calls`・`updated_at`。個人の情報は持たない）に置く。
+- model を呼ぶ前に、その日の数を 1 文で 1 つ足す（`src/daily-cap.ts`）。上限に達していれば足さずに、model を呼ばず 503（「AIが一時的に利用できません…」）を返す。数は model を呼んだ回数だけを表す（止めた要求は数えない）。model の呼び出しが失敗しても、足した 1 は残る。
+- start（会話の始まり）は model を呼ばないので数えない。
+- 数を読めない・書けない（D1 の誤り、0006 を当てる前の D1）ときも、model を呼ばず同じ 503 を返す。
+- 上限に当たると記録に `contact-chat:daily_cap_reached`、数を扱えないと `contact-chat:daily_cap_unavailable` を出す。本文・IP・メールは出さない。
+- D1 の binding（`DB`）が無い env では上限を掛けない（会話の保存と同じ扱い）。本番と preview の `wrangler.toml` には `DB` が在る（`src/__tests__/chat-daily-cap.test.ts` が固定する）。
+
+失敗の形: 0006 を当てる前の D1 で新しい版の Worker を動かすと、チャット（2 往復目から）は 503 になる。0005 と同じく、migration を Worker の配備より先に当てる。
+
+その日の数を読む（個人の情報は出ない）:
+
+```bash
+npx wrangler d1 execute cor-contact-chat-prod --remote --json --command "SELECT day, model_calls FROM chat_daily_usage ORDER BY day DESC LIMIT 14"
+```
+
+戻すときは Worker の版だけを戻す。前の版はこの表を読まないので、表は残してよい。
+
 ## 環境変数・シークレット
 
 ### vars（`wrangler.toml` の `[vars]`・非シークレット）
 | 名前 | 既定 | 説明 |
 |------|------|------|
 | `LLM_PROVIDER` | `vertex-gemini` | Cloud Run Gateway経由のVertex Gemini。`anthropic`でロールバック可能 |
+| `CHAT_DAILY_MODEL_CALL_LIMIT` | `300` | 1 日（JST の日付）に model を呼ぶ回数の上限。0 以上の整数。0 はその日は呼ばない。無い・読めない値は `src/daily-cap.ts` の既定の値（300） |
 | `CONTACT_TO_EMAIL` | `cloudia@cor-jp.com` | 問い合わせメールの宛先 |
 | `CONTACT_CC_EMAILS` | `company@cor-jp.com,nagisa.terada@cor-jp.com` | 社内通知のCC（カンマ区切りで配列化） |
 | `CONTACT_CC_EMAIL` | （旧互換） | 旧単一CC。`CONTACT_CC_EMAILS` 未設定時のみ利用 |
@@ -145,7 +167,7 @@ npx wrangler deploy --dry-run
       POST など状態を変えるリクエストは `Origin` が無いと 403 になる（#362）。ブラウザの fetch は
       そのリクエストに `Origin` を付けるので、cor-jp.com 上のウィジェットは通る。`Origin` を
       `https://cor-jp.com` と書いた非ブラウザの呼び出しは、この検査だけでは止まらない。
-- [ ] **D1 の migration を、Worker の配備より先に当てた**（`wrangler d1 migrations apply`。本番の D1 を変えるので、配備の権限を持つ人が流す）。戻すときは Worker の版だけを戻し、足した列は残す。足した列は `NOT NULL DEFAULT ''` で、古い版の SQL は列を名前で書いているため、列が残っていても動く。
+- [ ] **D1 の migration を、Worker の配備より先に当てた**（`wrangler d1 migrations apply`。本番の D1 を変えるので、配備の権限を持つ人が流す）。戻すときは Worker の版だけを戻し、足した列は残す。足した列は `NOT NULL DEFAULT ''` で、古い版の SQL は列を名前で書いているため、列が残っていても動く。足した表（`chat_daily_usage`）も残してよい（前の版は読まない）。
 - [ ] `ANTHROPIC_API_KEY` / `RESEND_API_KEY` を設定済み（未設定だと該当エンドポイントは 503）。
 - [ ] `CONTACT_TO_EMAIL` の宛先、`CONTACT_FROM_EMAIL` のドメインが Resend で検証済み。
 - [ ] **フロントエンド ウィジェットは chat の `reply` を必ず PLAIN TEXT（`textContent`）で描画する。**

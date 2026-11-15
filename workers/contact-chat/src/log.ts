@@ -14,6 +14,8 @@ export const CONTACT_LOG_EVENTS = [
   'notification_failed',
   'body_too_large',
   'body_timeout',
+  'daily_cap_reached',
+  'daily_cap_unavailable',
 ] as const;
 
 export type ContactLogEvent = (typeof CONTACT_LOG_EVENTS)[number];
