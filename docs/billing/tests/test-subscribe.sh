@@ -36,7 +36,7 @@ count() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 # run <args...>（環境変数 FAKE_* と KEY はそのまま渡す）→ RC・OUT・LOG
 run() {
   : >"$WORK/log"
-  rm -f "$WORK/log.items" "$WORK/log.invcount"
+  rm -f "$WORK/log.items" "$WORK/log.invcount" "$WORK/log.custget" "$WORK/log.clerkget"
   set +e
   OUT="$(FAKE_SCENARIO="${SCN:-match}" FAKE_PLANS="$PLANS" FAKE_LOG="$WORK/log" PATH="$WORK/bin:$PATH" \
     COR_BILLING_API_KEY="${KEY-$DUMMY_KEY}" COR_CLERK_SECRET_KEY="${CKEY-$CLERK_KEY_DUMMY}" \
@@ -1027,6 +1027,51 @@ for c in '{"has_more":true}|3' '{}|3' '{"has_more":null}|3' '{"has_more":0}|3' '
   got=$?
   set -e
   eq "check_one_page は答えが ${body} なら exit ${want}" "$got" "$want"
+done
+
+# 20g. 1 つの物を id で読む答えが、読んだつもりの物でなければ、何も書かずに止まる（exit 4）。
+#      顧客（invoice・resync の下見と書く前の読み直し）、Clerk の組織（clerk-sync・hold）。
+#      replay の読み直しは、答えの id が読んだ path の id と違えば止まる（exit 3）
+for sh in other emptyobj wrongobj twojson; do
+  FAKE_CUST_META="$INV_META" FAKE_CUSTGET_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
+  expect "顧客を読む答えが $sh なら、invoice は請求書を作らずに止まる" 4 0 "答えの形が違う"
+done
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+FAKE_RESYNC=1 FAKE_CUSTGET_SHAPE=other FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "resync の下見で顧客を読む答えが別の顧客なら、止まる" 4 0 "答えの形が違う"
+eq "resync の下見で別の顧客の答えなら、Clerk に書かない" "$(clerk_patches)" "0"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+# 下見の 2 回の読取だけを別の顧客の答えにする（書く前の読み直しは正しい答え）。下見の検査が無いと、
+# 別の顧客の metadata で作った本文を送ってしまう
+FAKE_RESYNC=1 FAKE_CUSTGET_SHAPE=other FAKE_CUSTGET_UNTIL=2 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "resync の下見の読取だけが別の顧客の答えでも、止まる" 4 0 "答えの形が違う"
+eq "resync の下見の読取だけが別の顧客でも、Clerk に書かない" "$(clerk_patches)" "0"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+# 下見で 2 人を読んだ後、hold を書く前の読み直し（3 回目の読取。cus_a は期限の 14 日後を過ぎた請求書がある）だけを
+# 別の顧客の答えにする
+FAKE_RESYNC=1 FAKE_CUSTGET_SHAPE=other FAKE_CUSTGET_AFTER=2 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "resync で書く前に顧客を読み直す答えが別の顧客なら、止まる（hold を書かない）" 4 0 "答えの形が違う"
+eq "resync で書く前の読み直しが別の顧客なら、Clerk に書かない" "$(clerk_patches)" "0"
+# replay の読み直しが、別の請求書の答えなら、その請求書に明細を足さない
+FAKE_CUST_META="$INV_META" FAKE_REPLAY=1 FAKE_INVGET_SHAPE=wrongid run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "replay の読み直しの答えの id が違えば、明細を足す前に止まる" 3 1 "今の状態が期待と違う"
+check_no_arg "replay の読み直しが別の請求書でも、その請求書に明細を足さない" "invoice=in_other"
+# hold の前の Clerk の今の値の読取（1 回目）だけを、hold 中の別の組織の答えにする。検査が無いと、決済の側も Clerk も
+# 既に hold と読んで、本当は hold していない組織を直さずに終わる
+rm -f "$WORK/log.clerk"
+FAKE_CLERK_GET_SHAPE=other_hold FAKE_CLERK_GET_UNTIL=1 FAKE_CLERK_META='{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":false}}}' \
+  FAKE_CUST_META="$(jq -c '. + {contract_xesm_hold: "true"}' <<<"$HOLD_META")" run hold --customer cus_x --service xesm --apply --mode test
+expect "hold の前に読む Clerk の答えが別の組織なら、既に hold とは読まずに止まる" 4 0 "答えの形が違う"
+STALE_CLERK='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}'
+for sh in emptyobj other wrongobj nometa; do
+  rm -f "$WORK/log.clerk"
+  FAKE_CLERK_GET_SHAPE=$sh FAKE_CLERK_META="$STALE_CLERK" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+  expect "Clerk の組織を読む答えが $sh なら、clerk-sync は送らずに止まる" 4 0 "答えの形が違う"
+  eq "Clerk の組織を読む答えが $sh なら、clerk-sync は Clerk に書かない" "$(clerk_patches)" "0"
+  rm -f "$WORK/log.clerk"
+  FAKE_CLERK_GET_SHAPE=$sh FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode test
+  expect "Clerk の組織を読む答えが $sh なら、hold は何も書かずに止まる" 4 0 "答えの形が違う"
+  eq "Clerk の組織を読む答えが $sh なら、hold は Clerk に書かない" "$(clerk_patches)" "0"
 done
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない

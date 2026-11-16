@@ -67,7 +67,22 @@ case " $* " in
     fi
     # GET（送る前の読取）は今の状態をそのまま返す
     if [ "$clerk_method" = "GET" ]; then
-      printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$state"
+      # FAKE_CLERK_GET_UNTIL=N なら、N 回目の読取までだけ壊す（後の読取は今の状態を返す）
+      cg=0
+      if [ -f "$FAKE_LOG.clerkget" ]; then cg="$(cat "$FAKE_LOG.clerkget")"; fi
+      cg=$((cg + 1))
+      printf '%s' "$cg" >"$FAKE_LOG.clerkget"
+      gshape="${FAKE_CLERK_GET_SHAPE:-}"
+      if [ -n "${FAKE_CLERK_GET_UNTIL:-}" ] && [ "$cg" -gt "$FAKE_CLERK_GET_UNTIL" ]; then gshape=""; fi
+      case "$gshape" in
+        emptyobj) printf '{}\n\n200' ;;
+        other) printf '{"id":"org_other","object":"organization","public_metadata":{}}\n\n200' ;;
+        # 別の組織の答えで、その組織は hold 中（読んだつもりの組織が hold 中だと読ませる形）
+        other_hold) printf '{"id":"org_other","object":"organization","public_metadata":{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}}\n\n200' ;;
+        wrongobj) printf '{"id":"%s","object":"user","public_metadata":%s}\n\n200' "$clerk_org" "$state" ;;
+        nometa) printf '{"id":"%s","object":"organization"}\n\n200' "$clerk_org" ;;
+        *) printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$state" ;;
+      esac
       exit 0
     fi
     if [ "${FAKE_CLERK_ECHO:-}" = "wrong" ]; then
@@ -142,8 +157,30 @@ fi
 
 # 本文 + 改行 + Idempotent-Replayed の値 + 改行 + HTTP 状態（curl の --write-out と同じ形）。
 # FAKE_REPLAY=1 なら POST の応答を「前回の結果」として返す。
+# 顧客を 1 つ読む答えを壊す（FAKE_CUSTGET_SHAPE。FAKE_CUSTGET_AFTER=N なら N 回目の読取の後から、
+# FAKE_CUSTGET_UNTIL=N なら N 回目の読取まで）
+custget_broken() {
+  local body="$1" cnt=0
+  [ -n "${FAKE_CUSTGET_SHAPE:-}" ] || { printf '%s' "$body"; return 0; }
+  if [ -f "$FAKE_LOG.custget" ]; then cnt="$(cat "$FAKE_LOG.custget")"; fi
+  cnt=$((cnt + 1))
+  printf '%s' "$cnt" >"$FAKE_LOG.custget"
+  if [ "$cnt" -le "${FAKE_CUSTGET_AFTER:-0}" ]; then printf '%s' "$body"; return 0; fi
+  # FAKE_CUSTGET_UNTIL=N なら、N 回目の読取までだけ壊す
+  if [ -n "${FAKE_CUSTGET_UNTIL:-}" ] && [ "$cnt" -gt "$FAKE_CUSTGET_UNTIL" ]; then printf '%s' "$body"; return 0; fi
+  case "$FAKE_CUSTGET_SHAPE" in
+    # 別の顧客の答え（開発費の回数と customer_code が違う）
+    other) jq -c '.id = "cus_other" | .metadata.contract_xesm_devfee_count = "0" | .metadata.customer_code = "other-co"' <<<"$body" ;;
+    emptyobj) printf '{}' ;;
+    wrongobj) jq -c '.object = "list"' <<<"$body" ;;
+    twojson) printf '%s%s' "$body" "$body" ;;
+    *) printf '%s' "$body" ;;
+  esac
+}
+
 respond() {
   local replayed=""
+  if [ "$method:${path%/*}" = "GET:/v1/customers" ] && [ "$path" != "/v1/customers/search" ]; then set -- "$1" "$(custget_broken "$2")"; fi
   if [ "$method" = "POST" ] && [ "${FAKE_REPLAY:-}" = "1" ]; then replayed="true"; fi
   # 実物の curl が値の末尾に CR を残す・大文字で返す場合の形（FAKE_REPLAY_RAW=1）
   if [ "$method" = "POST" ] && [ "${FAKE_REPLAY_RAW:-}" = "1" ]; then replayed=$'True\r'; fi
@@ -363,7 +400,7 @@ customer_json() {
   local m="${FAKE_CUST_META:-}"
   [ -n "$m" ] || m='{"customer_code":"sample-co"}'
   jq -nc --argjson m "$m" --argjson p "$1" --arg pm "${FAKE_CUST_PM:-}" \
-    '{id: "cus_x", object: "customer", name: "テスト", metadata: ($m + $p), invoice_settings: {default_payment_method: (if $pm == "" then null else $pm end)}}'
+    --arg id "${cust_id:-cus_x}" '{id: $id, object: "customer", name: "テスト", metadata: ($m + $p), invoice_settings: {default_payment_method: (if $pm == "" then null else $pm end)}}'
 }
 
 # 顧客の更新: 送られた metadata を足して返す（FAKE_META_ECHO=wrong なら足さずに返す）
@@ -478,7 +515,7 @@ case "$method:$path" in
   GET:/v1/prices) prices ;;
   GET:/v1/customers/search) customer_search ;;
   GET:/v1/customers) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customers_list; else respond 200 '{"object":"list","has_more":false,"data":[]}'; fi ;;
-  GET:/v1/customers/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_get; else respond 200 "$(customer_json '{}')"; fi ;;
+  GET:/v1/customers/*) cust_id="${path#/v1/customers/}"; if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_get; else respond 200 "$(customer_json '{}')"; fi ;;
   POST:/v1/customers) respond 200 '{"id":"cus_new"}' ;;
   POST:/v1/customers/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_update; else customer_update; fi ;;
   GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;

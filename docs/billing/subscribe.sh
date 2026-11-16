@@ -424,6 +424,7 @@ do_customer() {
 # Customer を読み、CUST_JSON に入れる。subscribe.sh customer で作った顧客（metadata.customer_code がある）だけを使う。
 load_customer() {
   api_ok "顧客 $OPT_CUSTOMER の読取" GET "/v1/customers/$OPT_CUSTOMER"
+  check_object_shape "顧客 $OPT_CUSTOMER の読取" customer "$OPT_CUSTOMER"
   CUST_JSON="$RESP_BODY"
   [ "$(jq -r '.deleted // false' <<<"$CUST_JSON")" != "true" ] || die 3 "顧客 $OPT_CUSTOMER は削除されている"
   [ -n "$(cust_meta customer_code)" ] || die 3 "顧客 $OPT_CUSTOMER に metadata.customer_code が無い（subscribe.sh customer で作った顧客を使う）"
@@ -883,9 +884,17 @@ do_set_hold() {
 }
 
 # 組織の services の、そのサービスの hold の今の値（true / false）。Clerk を 1 回読む。
+# Clerk の組織を読んだ答えが、その組織の物かを確かめる（違えば exit 4）。{} や別の組織の答えを読むと、hold が無いと読み、
+# plans.json に無いサービスを消す本文を作らないため。確かめること: object が organization、id が $2、public_metadata が object
+check_clerk_org() {
+  check_object_shape "$1" organization "$2"
+  jq -e '(.public_metadata | type) == "object"' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$1 の答えの形が違う（public_metadata が object でない）。別の物の答えかもしれないので、何も書かない"
+}
 clerk_current_hold() {
   clerk_api GET "/organizations/$1"
   require_ok "Clerk の metadata の読取 GET /organizations/$1"
+  check_clerk_org "Clerk の組織 $1 の読取" "$1"
   jq -r --arg s "$2" '(.public_metadata.services[$s].hold // false)' <<<"$RESP_BODY"
 }
 
@@ -1019,6 +1028,7 @@ do_resync() {
     cus="$(jq -r --argjson i "$i" '.[$i].id' <<<"$all")"
     i=$((i + 1))
     api_ok "顧客 $cus の読取" GET "/v1/customers/$cus"
+    check_object_shape "顧客 $cus の読取" customer "$cus"
     CUST_JSON="$RESP_BODY"
     if [ "$(jq -r '.deleted // false' <<<"$CUST_JSON")" = "true" ]; then
       printf 'NOTE %s は削除されている（飛ばす）\n' "$cus"
@@ -1121,6 +1131,7 @@ do_resync() {
         continue
       fi
       api_ok "顧客 $cus の読取" GET "/v1/customers/$cus"
+      check_object_shape "顧客 $cus の読取" customer "$cus"
       CUST_JSON="$RESP_BODY"
       local -a kv_list=()
       for kv in ${p_kvs[$i]}; do kv_list+=("$kv"); done
@@ -1189,6 +1200,7 @@ clerk_build_payload() {
   local org="$1" extra="${2:-}" names stale
   clerk_api GET "/organizations/$org"
   require_ok "Clerk の metadata の読取 GET /organizations/$org"
+  check_clerk_org "Clerk の組織 $org の読取" "$org"
   names="$(plans_services | jq -R -s 'split("\n") | map(select(length > 0))')"
   stale="$(jq -c --argjson names "$names" '[(.public_metadata.services // {}) | keys[] | select(. as $k | $names | index($k) | not)]' <<<"$RESP_BODY")"
   CLERK_SERVICES="$(clerk_services_json | jq -c --argjson stale "$stale" '. + ($stale | map({key: ., value: null}) | from_entries)')"

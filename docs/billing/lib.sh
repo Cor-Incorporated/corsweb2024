@@ -111,12 +111,14 @@ api() {
 # check_replay <説明> <GET のパス> <今の状態として正しい条件（jq）> <観測として出す値（jq）> [GET の引数 ...]
 # 正しければ RESP_BODY は読み直した結果になる。違えば止まる。
 check_replay() {
-  local what="$1" path="$2" cond="$3" shown="$4"
+  local what="$1" path="$2" cond="$3" shown="$4" rid
   shift 4
   [ "$RESP_REPLAYED" = "true" ] || return 0
+  # 読み直した答えが、読んだ path の物（同じ id）かも確かめる。別の物の答えなら、その id に明細を足すなどの誤りになる
+  rid="${path##*/}"
   printf 'NOTE %s: 24 時間以内に同じ内容で送った要求の、前回の結果が返った（Idempotent-Replayed）。今の状態を読み直す\n' "$what"
   api_ok "$what の読み直し" GET "$path" "$@"
-  jq -e "$cond" <<<"$RESP_BODY" >/dev/null \
+  jq -e --arg id "$rid" "($cond) and .id == \$id" <<<"$RESP_BODY" >/dev/null \
     || die 3 "$what: 前回の結果が返ったが、今の状態が期待と違う（観測: $(jq -c "$shown" <<<"$RESP_BODY")）。何も変わっていない。24 時間以上あけて実行し直すか、status で確かめる"
 }
 
@@ -151,6 +153,16 @@ check_list_shape() {
     and all(.[0].data[]; type == "object" and (.id | type) == "string" and (.id | test($re)))
   ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
     die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、data が配列、has_more が真偽値、どの要素にも空でない id、のどれかが無い）。全部を読めないので、何も書かない"
+}
+
+# 1 つの物を id で読んだ答えが、読んだつもりの物かを確かめる。JSON がちょうど 1 つ、object が $2、id が $3。
+# 別の物の答えをそのまま使うと、その物の metadata で請求書を作る・別の組織の状態で本文を作るため（違えば exit 4）。
+check_object_shape() {
+  local what="$1" want="$2" id="$3"
+  jq -e -s --arg o "$want" --arg id "$id" '
+    length == 1 and (.[0] | type) == "object" and .[0].object == $o and .[0].id == $id
+  ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、id が $id、のどれかが無い）。別の物の答えかもしれないので、何も書かない"
 }
 
 # 1 ページだけを読んで決める所で、check_list_shape の後に呼ぶ。has_more が true なら、読んでいない続きに
