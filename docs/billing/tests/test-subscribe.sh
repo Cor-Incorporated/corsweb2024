@@ -1016,6 +1016,17 @@ for f in lib.sh subscribe.sh apply-plans.sh; do
   done
 done
 [ -z "$unchecked" ] && ok "一覧と検索を読む ${nreads} か所は、どれも答えの形を確かめる" || ng "答えの形を確かめずに一覧か検索を読む所:${unchecked}"
+# check_one_page を直に叩く: has_more が真偽値の false のときだけ通る。true・欠け・null・数の 0・文字列の "false"・
+# JSON が 2 つ続く答えは exit 3（呼ぶ所の前の check_list_shape に頼らず、この関数だけでも、続きが在るかもしれない答えを通さない）
+for c in '{"has_more":true}|3' '{}|3' '{"has_more":null}|3' '{"has_more":0}|3' '{"has_more":"false"}|3' '{"has_more":false}{"has_more":true}|3' '{"has_more":false}|0'; do
+  body="${c%|*}"
+  want="${c##*|}"
+  set +e
+  bash -c '. "$1/lib.sh"; RESP_BODY="$2"; check_one_page 試験' _ "$BILLING" "$body" >/dev/null 2>&1
+  got=$?
+  set -e
+  eq "check_one_page は答えが ${body} なら exit ${want}" "$got" "$want"
+done
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"
