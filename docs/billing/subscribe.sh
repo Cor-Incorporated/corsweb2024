@@ -349,13 +349,20 @@ print_plan() {
     clerk-sync) printf 'PLAN clerk-sync: %s の clerk_org_id の組織に、契約の metadata から作った services を PATCH で送る（deep merge。契約の無いサービスは null で消す）。dry-run は顧客を読むだけで、Clerk の鍵は読まない\n' "$OPT_CUSTOMER" ;;
     hold) printf 'PLAN hold: %s の %s を止める（metadata[contract_%s_hold]=true を書き、Clerk の組織の services の hold も true にする）。書き込みを止め、閲覧は残る（決定 1）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
     unhold) printf 'PLAN unhold: %s の %s の hold を外す（metadata[contract_%s_hold] を消し、Clerk の組織の services の hold を false にする）\n' "$OPT_CUSTOMER" "$s" "$s" ;;
-    resync) printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く（plans.json に無いサービスは各組織の metadata から消える。顧客ごとの本文は送る前に出す）。同じ回で、請求書の支払いの期限の 14 日後を過ぎても払われていないもの（open か uncollectible）から hold を決めて書き直す（決定 1）\n' ;;
+    resync)
+      if [ "$OPT_PREVIEW" -eq 1 ]; then
+        printf 'PLAN resync --preview: --apply と同じ下見（全部の顧客と組織を読み、重なりと請求書の期限を確かめる）をして、書く先の組織と送る本文を出す。何も書かない（Clerk にも resync_at にも hold にも書かない）\n'
+      else
+        printf 'PLAN resync: clerk_org_id を持つ全部の顧客の services を Clerk に送り直し、resync_at を書く（plans.json に無いサービスは各組織の metadata から消える。顧客ごとの本文は送る前に出す）。同じ回で、請求書の支払いの期限の 14 日後を過ぎても払われていないもの（open か uncollectible）から hold を決めて書き直す（決定 1）\n'
+      fi ;;
     set-payment) printf 'PLAN set-payment: %s の支払い方法を %s にする（metadata[payment]=%s）。card へ変えるときは保存したカードがあることを確かめる。発行済みの請求書は変えない（次の締めから効く）\n' "$OPT_CUSTOMER" "$OPT_PAYMENT" "$OPT_PAYMENT" ;;
   esac
 }
 
 do_find() {
   api_ok "顧客の検索" GET /v1/customers/search --data-urlencode "query=metadata['customer_code']:'$OPT_CODE'" --data-urlencode "limit=10"
+  check_list_shape "顧客の検索（customer_code）" search_result '^cus_'
+  check_one_page "顧客の検索（customer_code）"
   jq -r '.data[] | "FOUND \(.id) customer_code=\(.metadata.customer_code) name=\(.name) payment=\(.metadata.payment // "-")"' <<<"$RESP_BODY"
   printf 'DONE find: %s 件（作った直後は検索に出るまで最大 1 分ほどかかる）\n' "$(jq '.data | length' <<<"$RESP_BODY")"
 }
@@ -384,6 +391,8 @@ do_customer() {
   local n
   local -a clerk_meta=()
   api_ok "顧客の検索" GET /v1/customers/search --data-urlencode "query=metadata['customer_code']:'$OPT_CODE'" --data-urlencode "limit=10"
+  check_list_shape "顧客の検索（customer_code）" search_result '^cus_'
+  check_one_page "顧客の検索（customer_code）"
   n="$(jq '.data | length' <<<"$RESP_BODY")"
   [ "$n" -le 1 ] || die 3 "customer_code=$OPT_CODE の顧客が $n 件ある: $(jq -r '[.data[].id] | join(", ")' <<<"$RESP_BODY")（1 件のはず）"
   if [ "$n" -eq 1 ]; then
@@ -394,6 +403,8 @@ do_customer() {
     # 同じ Clerk の組織に 2 人の顧客を結ばない（resync で後の顧客が前の顧客の services を上書きするため）。
     # 作った直後の顧客は検索に出るまで 1 分ほどかかるので、すり抜けたものは resync の下見の検査が止める。
     api_ok "顧客の検索（組織の id）" GET /v1/customers/search --data-urlencode "query=metadata['clerk_org_id']:'$OPT_CLERK'" --data-urlencode "limit=10"
+    check_list_shape "顧客の検索（組織の id）" search_result '^cus_'
+    check_one_page "顧客の検索（組織の id）"
     if [ "$(jq '.data | length' <<<"$RESP_BODY")" -gt 0 ]; then
       die 3 "clerk_org_id=$OPT_CLERK は既に顧客 $(jq -r '[.data[] | "\(.id)（customer_code=\(.metadata.customer_code // "-")）"] | join(", ")' <<<"$RESP_BODY") が使っている。同じ組織に 2 人の顧客を結ばないので作らない（台帳で、どちらの顧客の組織かを決める）"
     fi
@@ -517,8 +528,12 @@ find_month_invoice() {
   local filter='[.data[] | select(.metadata.billing_month == $m and .metadata.managed_by == $mb)]'
   api_ok "請求書の検索" GET /v1/invoices/search \
     --data-urlencode "query=customer:\"$OPT_CUSTOMER\" AND metadata[\"billing_month\"]:\"$ym\"" --data-urlencode "limit=10"
+  check_list_shape "請求書の検索" search_result '^in_'
+  check_one_page "請求書の検索"
   a="$(jq -c --arg m "$ym" --arg mb "$MANAGED_BY" "$filter" <<<"$RESP_BODY")"
   api_ok "請求書の一覧" GET /v1/invoices --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "limit=100"
+  check_list_shape "請求書の一覧" list '^in_'
+  check_one_page "請求書の一覧"
   b="$(jq -c --arg m "$ym" --arg mb "$MANAGED_BY" "$filter" <<<"$RESP_BODY")"
   INV_JSON="$(jq -cn --argjson a "$a" --argjson b "$b" '$a + $b | unique_by(.id)')"
   n="$(jq 'length' <<<"$INV_JSON")"
@@ -703,6 +718,8 @@ do_invoice() {
 refuse_older_open() {
   local older
   api_ok "open の請求書の一覧" GET /v1/invoices --data-urlencode "customer=$OPT_CUSTOMER" --data-urlencode "status=open" --data-urlencode "limit=100"
+  check_list_shape "open の請求書の一覧" list '^in_'
+  check_one_page "open の請求書の一覧"
   older="$(jq -r --arg m "$OPT_MONTH" --arg mb "$MANAGED_BY" '[.data[] | select(.metadata.managed_by == $mb and (.metadata.billing_month // "") < $m and (.metadata.billing_month // "") != "") | "\(.metadata.billing_month)（\(.id)）"] | join(" ")' <<<"$RESP_BODY")"
   [ -z "$older" ] || die 3 "$OPT_CUSTOMER には $OPT_MONTH より前の open の請求書がある: ${older}。入金がどの月の分かを台帳で確かめ、古い月から --month に入れる。何もしていない"
 }
@@ -792,8 +809,7 @@ check_org_not_shared() {
   local org="$1" others
   api_ok "顧客の検索（組織の id）" GET /v1/customers/search --data-urlencode "query=metadata['clerk_org_id']:'$org'" --data-urlencode "limit=10"
   # 数える前に答えの形を確かめる。形が違うのに「ほかの顧客は居ない」と読むと、守りが書く側に倒れる。
-  jq -e '.object == "search_result" and (.data | type) == "array" and all(.data[]; (.id | type) == "string")' <<<"$RESP_BODY" >/dev/null 2>&1 ||
-    die 4 "顧客の検索（組織の id）の答えの形が違う（object が search_result、data が配列、どの要素にも文字列の id、のどれかが無い）。ほかの顧客を数えられないので、何も書かない"
+  check_list_shape "顧客の検索（組織の id）" search_result '^cus_'
   [ "$(jq -r '.has_more' <<<"$RESP_BODY")" != "true" ] ||
     die 3 "clerk_org_id=$org を持つ顧客が 10 件を超える（検索の続きが在る）。全部を見ていないので、何も書かない"
   others="$(jq -r --arg me "$OPT_CUSTOMER" '[.data[] | select(.id != $me) | .id] | join(", ")' <<<"$RESP_BODY")"
@@ -884,9 +900,10 @@ list_all_customers() {
     else
       api_ok "顧客の一覧（続き）" GET /v1/customers --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
     fi
+    check_list_shape "顧客の一覧" list '^cus_'
     page="$RESP_BODY"
-    all="$(jq -c -n --argjson a "$all" --argjson b "$(jq -c '.data // []' <<<"$page")" '$a + $b')"
-    more="$(jq -r '.has_more // false' <<<"$page")"
+    all="$(jq -c -n --argjson a "$all" --argjson b "$(jq -c '.data' <<<"$page")" '$a + $b')"
+    more="$(jq -r '.has_more' <<<"$page")"
     [ "$more" = "true" ] || break
     after="$(jq -r '.data[-1].id // empty' <<<"$page")"
     [ -n "$after" ] || die 3 "顧客の一覧の続きの位置（starting_after）を読めない。全件を見ていない"
@@ -907,9 +924,10 @@ invoice_services() {
     else
       api_ok "請求書 $id の明細（続き）" GET "/v1/invoices/$id/lines" --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
     fi
+    check_list_shape "請求書 $id の明細" list
     lpage="$RESP_BODY"
-    out="$out$(jq -r '.data[]? | .metadata.service // empty' <<<"$lpage")"$'\n'
-    lmore="$(jq -r '.has_more // false' <<<"$lpage")"
+    out="$out$(jq -r '.data[] | .metadata.service // empty' <<<"$lpage")"$'\n'
+    lmore="$(jq -r '.has_more' <<<"$lpage")"
     [ "$lmore" = "true" ] || break
     after="$(jq -r '.data[-1].id // empty' <<<"$lpage")"
     [ -n "$after" ] || die 3 "請求書 $id の明細の続きの位置（starting_after）を読めない。全件を見ていない"
@@ -940,10 +958,12 @@ overdue_services() {
       else
         api_ok "$st の請求書の一覧（続き）" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=$st" --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
       fi
+      # 形が違うのに「超過が無い」と読むと、hold を外す側に倒れる
+      check_list_shape "$st の請求書の一覧（顧客 $cus）" list '^in_'
       page="$RESP_BODY"
       # 期限の無い請求書（open か uncollectible）は判定できない（hold を外さない）
-      if jq -e '.data[]? | select((.due_date // 0) == 0)' <<<"$page" >/dev/null; then unknown=1; fi
-      ids="$(jq -r --arg t "$today" '.data[]? | select((.due_date // 0) > 0) | select((((.due_date + 1209600) | todate)[0:10]) < $t) | .id' <<<"$page")"
+      if jq -e '.data[] | select((.due_date // 0) == 0)' <<<"$page" >/dev/null; then unknown=1; fi
+      ids="$(jq -r --arg t "$today" '.data[] | select((.due_date // 0) > 0) | select((((.due_date + 1209600) | todate)[0:10]) < $t) | .id' <<<"$page")"
       while IFS= read -r id; do
         [ -n "$id" ] || continue
         invoice_services "$id"
@@ -955,7 +975,7 @@ overdue_services() {
         fi
         out="$out$svcs"$'\n'
       done <<<"$ids"
-      more="$(jq -r '.has_more // false' <<<"$page")"
+      more="$(jq -r '.has_more' <<<"$page")"
       [ "$more" = "true" ] || break
       after="$(jq -r '.data[-1].id // empty' <<<"$page")"
       [ -n "$after" ] || die 3 "請求書の一覧の続きの位置（starting_after）を読めない。全件を見ていない"
@@ -1059,6 +1079,11 @@ do_resync() {
   done
   n="${#p_cus[@]}"
   if [ "$n" -eq 0 ]; then
+    if [ "$OPT_PREVIEW" -eq 1 ]; then
+      printf 'PREVIEW 書く先の Clerk の組織 0 件: なし\n'
+      printf 'DONE preview: 何も書いていない（Stripe にも Clerk にも）。書くのは --apply のとき\n'
+      return 0
+    fi
     printf 'RESYNC 完了: 顧客 0 件（書くものが無い）\n'
     return 0
   fi
@@ -1073,7 +1098,7 @@ do_resync() {
   if [ "$OPT_PREVIEW" -eq 1 ]; then
     local orgs
     orgs="$(printf '%s' "$pairs" | awk 'NF == 2 {print $2}')"
-    printf 'PREVIEW 書く先の Clerk の組織 %s 件: %s\n' "$(printf '%s' "$orgs" | grep -c . || true)" "$(printf '%s' "$orgs" | paste -sd ',' - | sed 's/,/, /g')"
+    printf 'PREVIEW 書く先の Clerk の組織 %s 件: %s\n' "$(printf '%s' "$orgs" | grep -c . || true)" "$(if [ -n "$orgs" ]; then printf '%s' "$orgs" | paste -sd ',' - | sed 's/,/, /g'; else printf 'なし'; fi)"
     printf 'DONE preview: 何も書いていない（Stripe にも Clerk にも）。書くのは --apply のとき\n'
     return 0
   fi
@@ -1294,7 +1319,8 @@ main() {
   case "$CMD" in customer | find | status) ;; *) require_implemented_billing ;; esac
   validate_inputs
   if [ "$CMD" = "simulate" ]; then do_simulate; return 0; fi
-  if [ -n "$MODE" ]; then printf 'mode: %s --mode %s\n' "$CMD" "$MODE"; else printf 'mode: %s dry-run（通信しない・鍵を読まない）\n' "$CMD"; fi
+  if [ "$OPT_PREVIEW" -eq 1 ]; then printf 'mode: %s --mode %s --preview（読むだけ。書かない）\n' "$CMD" "$MODE"
+  elif [ -n "$MODE" ]; then printf 'mode: %s --mode %s\n' "$CMD" "$MODE"; else printf 'mode: %s dry-run（通信しない・鍵を読まない）\n' "$CMD"; fi
   print_plan
   case "$CMD" in
     find | status) ;;

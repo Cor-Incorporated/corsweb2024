@@ -206,6 +206,7 @@ ensure_tax_rate() {
   key="$(jq -r '.id' <<<"$want")"
   api GET /v1/tax_rates --data-urlencode "active=true" --data-urlencode "limit=100"
   require_ok "税率の一覧 GET /v1/tax_rates"
+  check_list_shape "税率の一覧" list '^txr_'
   [ "$(jq -r '.has_more' <<<"$RESP_BODY")" != "true" ] || die 3 "有効な税率が 100 件を超える。手で確かめてから実行する"
   matches="$(jq -c --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)]' <<<"$RESP_BODY")"
   n="$(jq 'length' <<<"$matches")"
@@ -276,6 +277,8 @@ ensure_price() {
   currency="$(jq -r '.currency' "$PLANS")"
   api GET /v1/prices --data-urlencode "lookup_keys[]=$lk" --data-urlencode "limit=10"
   require_ok "価格 $lk の読取 GET /v1/prices"
+  check_list_shape "価格 $lk の検索" list '^price_'
+  check_one_page "価格 $lk の検索"
   if [ "$(jq '.data | length' <<<"$RESP_BODY")" -ge 1 ]; then
     diff="$(jq -r --argjson w "$want" --arg cur "$currency" '.data[0] as $o | [
       (if $o.unit_amount != $w.unit_amount_jpy_excl_tax then "unit_amount 期待 \($w.unit_amount_jpy_excl_tax) 観測 \($o.unit_amount)" else empty end),
