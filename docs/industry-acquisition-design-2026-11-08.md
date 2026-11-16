@@ -39,6 +39,8 @@ corsweb2024 のこの作業で読んだ範囲。
 - 通常フォームは `CLOUDIA_CONTACT_PRIMARY_ENABLED` が真のとき描画しない。フラグを戻すと `ContactForm` が戻る。非常口として残している。
   - 同じフラグ（`PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED`）は、サイトの問い合わせの入口の link にも効く（`src/config/site.ts` の `getContactUrl` と、それを通る業種のページの入口）。真のときは Cloudia のチャット（`/contact/chat/`）へ直接向け、false の build ではフォームの在る問い合わせページ（`/<lang>/contact`）へ向ける。
   - 浮きボタン（`CloudiaLauncher`）は、このフラグではなく別のフラグ `PUBLIC_CLOUDIA_LAUNCHER_ENABLED` で止める。Cloudia を止めて切り戻すときは、両方を false にして build し直す。
+  - 2 つの旗は、build を動かす process の環境変数で渡す（例: `PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false PUBLIC_CLOUDIA_LAUNCHER_ENABLED=false npm run build`。workflow なら `env` に書く）。記事の本文の link を書き換える部品（`src/utils/rehype-contact-links.ts`）は `astro.config.mjs` から読み込まれるので、旗を process の環境変数からも読む。この渡し方で、記事の本文の link が書かれたとおり問い合わせページを指すことを確かめた（2026-11-16）。旗を `.env` の file にだけ書く渡し方は試していない。この部品に値が届かず、記事の本文の link だけがチャットへ向くおそれがあるので、切り戻しには使わない。
+  - 切り戻しの build で `npm run test:dist` を流すと、`contact-links`・`service-pages`・`industry-pages` の試験と、`contact-regression` の読み込みが落ちる。2026-11-16 の測定（旗を 2 つとも false、カレンダーあり）では 107 本と file 1 つだった。チャットと浮きボタンへ向いていることを確かめる試験なので、作りどおりの失敗であって、壊れたのではない。切り戻しでは、問い合わせページにフォームが出ることと、ヘッダー・フッター・業種のボタン・記事の本文の link が問い合わせページを指すことを確かめる。
 - `Calendar.astro` は `PUBLIC_GCAL_ID` があるときの閲覧用 embed である。予約の作成、空きの確保、Meet の発行、tl;dv への参加は、このファイルには無い。
   - フッターの会社の列に、問い合わせページのカレンダーの区画（`#contact-calendar`）へ直接向ける link が 1 本ある（`src/config/site.ts` の `getContactCalendarUrl`、`source=footer-calendar`）。カレンダーが無い build では描かない。切り戻しの build でも同じ所へ向ける（カレンダーは所在地の下、フォームの上に在る）。
   - 問い合わせページ自身を除くと、サイト内から問い合わせページへ向く link は、この 1 本だけにする（記事の本文に書かれた問い合わせページへの link は、build の時にチャットへ書き換える）。`tests/build-output/contact-links.test.ts` が、区画が在る build では各ページに 1 本、無い build では 0 本であることを数える。
