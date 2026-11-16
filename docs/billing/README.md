@@ -9,12 +9,12 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | ファイル | 中身 |
 |---|---|
 | [plans.json](plans.json) | 商品・価格・税率の宣言（機械可読）。金額は税別の円 |
-| [apply-plans.sh](apply-plans.sh) | plans.json を読んで Stripe に冪等に作る。既定は dry-run（通信しない・鍵を読まない） |
+| [apply-plans.sh](apply-plans.sh) | plans.json を読んで Stripe に冪等に作る。既定は dry-run（通信しない・鍵を読まない）。`--check --mode test|live` は、作るときと同じに読んで照らすだけで、書かない（無い物は `MISSING` と出す） |
 | [subscribe.sh](subscribe.sh) | 顧客 1 社の契約と毎月末の請求書（1C 章の作り方 B）。`customer`・`find`・`contract`・`card-setup`・`cancel`・`invoice`・`charge`・`mark-paid`・`simulate`・`status`・`clerk-sync`・`hold`・`unhold`・`resync`・`set-payment`。既定は dry-run |
 | [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
 | [contract/](contract/) | 権利（`services`）の判定の見本と試験ベクトル。`judge.sh`（jq。`--services-json`・`--service`・`--date` で 4 つの結果を 1 行。形の違う行は `closed` を 1 行出して exit 0 にし、理由を標準エラーに 1 行。exit 64 は引数・`--date`・ファイルの使い方の誤りだけ）・`entitlement-vectors.json`（判定表の境界 55 件。うち 24 件は、形の違う行など fail closed を縛るために足した行。bd と XESM の試験もこれを読む）・`verify-sample.mjs`（Clerk のトークンの検証の見本。R1・R2） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 54 項目、`test-subscribe.sh` 469 項目、`test-entitlement-vectors.sh` 103 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 69 項目、`test-subscribe.sh` 481 項目、`test-entitlement-vectors.sh` 103 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -204,7 +204,7 @@ ADR-0028 で足した 4 つの操作。手順の全文は runbook E1〜E6。
 |---|---|---|
 | `clerk-sync --customer <cus_…>` | 契約・解約を書いたあと | 契約の metadata から `services` を作り、Clerk の組織の `public_metadata.services` に送る。契約の無いサービスは `null` で消す（ADR 2 節） |
 | `hold` / `unhold --customer <cus_…> --service <サービス>` | 支払いが遅れたとき・払われたとき | `contract_<サービス>_hold=true` を書き、Clerk にも写す。`hold` は書き込みだけを止め、閲覧は残す（決定 1） |
-| `resync` | 毎月の照合 | `clerk_org_id` を持つ全部の顧客の `services` を送り直し、`resync_at` を書く。同じ回で、請求書の支払いの期限の 14 日後を過ぎても払われていないもの（status が `open` か `uncollectible`）から `hold` を決めて書き直す（決定 1。`void` と `paid` は数えない）。同じ Clerk の組織を 2 人以上の顧客が持っていれば、1 つも書かずに止まり、重なった顧客の id を出す |
+| `resync` | 毎月の照合 | `clerk_org_id` を持つ全部の顧客の `services` を送り直し、`resync_at` を書く。同じ回で、請求書の支払いの期限の 14 日後を過ぎても払われていないもの（status が `open` か `uncollectible`）から `hold` を決めて書き直す（決定 1。`void` と `paid` は数えない）。同じ Clerk の組織を 2 人以上の顧客が持っていれば、1 つも書かずに止まり、重なった顧客の id を出す。`--preview --mode test|live` は、ここまで（読む・重なりを数える）をして、書く先の組織の id と送る本文を出すだけで、書かない |
 | `set-payment --customer <cus_…> --payment card|transfer` | 段階 5（請求書払いからカードへ移す） | `metadata.payment` を変える。発行済みの請求書は変えない（次の締めから効く）。`card` へ変えるときは保存したカードがあることを確かめる |
 
 `clerk-sync` は契約・解約・`hold` のあとに自動では走らない（片方だけ失敗して状態がずれるのを避けるため）。変えたら 1 回だけ実行する。写し忘れは `resync` が直す。

@@ -20,7 +20,7 @@ crons = ["*/15 * * * *"]
 
 # 公開可能な設定値（非シークレット）。
 [vars]
-# LLM プロバイダ。既定は 'vertex-gemini'。将来 'anthropic' / 'self-hosted' を追加できる抽象化済み。
+# LLM プロバイダ。'vertex-gemini'（既定。Cloud Run の Gateway 経由）か 'anthropic'。ほかの値は 503（src/llm.ts の getProvider）。
 LLM_PROVIDER = "vertex-gemini"
 GOOGLE_CLOUD_PROJECT = "cor-jp-web"
 GOOGLE_CLOUD_LOCATION = "global"

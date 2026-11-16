@@ -40,6 +40,8 @@ corsweb2024 のこの作業で読んだ範囲。
   - 同じフラグ（`PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED`）は、サイトの問い合わせの入口の link にも効く（`src/config/site.ts` の `getContactUrl` と、それを通る業種のページの入口）。真のときは Cloudia のチャット（`/contact/chat/`）へ直接向け、false の build ではフォームの在る問い合わせページ（`/<lang>/contact`）へ向ける。
   - 浮きボタン（`CloudiaLauncher`）は、このフラグではなく別のフラグ `PUBLIC_CLOUDIA_LAUNCHER_ENABLED` で止める。Cloudia を止めて切り戻すときは、両方を false にして build し直す。
 - `Calendar.astro` は `PUBLIC_GCAL_ID` があるときの閲覧用 embed である。予約の作成、空きの確保、Meet の発行、tl;dv への参加は、このファイルには無い。
+  - フッターの会社の列に、問い合わせページのカレンダーの区画（`#contact-calendar`）へ直接向ける link が 1 本ある（`src/config/site.ts` の `getContactCalendarUrl`、`source=footer-calendar`）。カレンダーが無い build では描かない。切り戻しの build でも同じ所へ向ける（カレンダーは所在地の下、フォームの上に在る）。
+  - 問い合わせページ自身を除くと、サイト内から問い合わせページへ向く link は、この 1 本だけにする（記事の本文に書かれた問い合わせページへの link は、build の時にチャットへ書き換える）。`tests/build-output/contact-links.test.ts` が、区画が在る build では各ページに 1 本、無い build では 0 本であることを数える。
 - 会社紹介資料は `COMPANY_DECK_URL` の直リンク（Google スライドの閲覧）。入力も通知も無い。
 
 資料請求フォーム、予約、cor-os の案件記録を、全システムの不在とは書かない。このターンで見たのは corsweb2024 のページ、`src/config/site.ts`、`src/config/contact.ts`、`workers/contact-chat` の所在（問い合わせ通知の入口があることまで）。cor-os のリポジトリは開いていない。添付の照合は、corsweb2024 の develop と cloudia の main、および既定ブランチの code search で、資料請求と予約の URL は見当たらなかった、と書いている。code search の外や未読のリポジトリは要確認。
