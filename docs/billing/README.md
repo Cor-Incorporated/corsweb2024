@@ -14,7 +14,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
 | [contract/](contract/) | 権利（`services`）の判定の見本と試験ベクトル。`judge.sh`（jq。`--services-json`・`--service`・`--date` で 4 つの結果を 1 行。形の違う行は `closed` を 1 行出して exit 0 にし、理由を標準エラーに 1 行。exit 64 は引数・`--date`・ファイルの使い方の誤りだけ）・`entitlement-vectors.json`（判定表の境界 55 件。うち 24 件は、形の違う行など fail closed を縛るために足した行。bd と XESM の試験もこれを読む）・`verify-sample.mjs`（Clerk のトークンの検証の見本。R1・R2） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 89 項目、`test-subscribe.sh` 581 項目、`test-entitlement-vectors.sh` 103 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 120 項目、`test-subscribe.sh` 682 項目、`test-entitlement-vectors.sh` 103 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -211,7 +211,9 @@ ADR-0028 で足した 4 つの操作。手順の全文は runbook E1〜E6。
 
 `resync` の hold は、回収できないとした請求書が残る限り外れない。外れるのは、その請求書が払われて `paid` になるか、取り消して `void` にしたとき。請求書の一覧のページの上限（1000 ページ）は、2 つの状態で合わせて数える。
 
-1 つの Clerk の組織に結ぶ顧客は 1 人だけにする。`customer --clerk-org` は、同じ組織の id を持つ顧客が既にいれば作らない（作った直後の顧客は検索に出るまで 1 分ほどかかるので、すり抜けたものは `resync` の下見の検査が止める）。`hold`・`unhold`・`clerk-sync` も、同じ組織の id を持つ顧客がほかにいれば、何も書かずに止まる（exit 3）。検索の答えの形が違うとき（exit 4）と、10 件を超えて続きが在るとき（exit 3）も、ほかの顧客を数えられないので止まる。顧客の検索・顧客の一覧・請求書の一覧と明細・価格の検索も、読む前に答えの形を確かめ、違えば何も書かずに止まる（exit 4。`lib.sh` の `check_list_shape`）。この 3 つは、その顧客の契約だけから組織の `services` を作って送るので、そのまま書くと、もう一方の顧客のサービスを `null` で消してしまう。この検査も検索を使うので、組織の id を書いた直後の重なりはすり抜けることがある（runbook E2）。
+1 つの Clerk の組織に結ぶ顧客は 1 人だけにする。`customer --clerk-org` は、同じ組織の id を持つ顧客が既にいれば作らない（作った直後の顧客は検索に出るまで 1 分ほどかかるので、すり抜けたものは `resync` の下見の検査が止める）。`hold`・`unhold`・`clerk-sync` も、同じ組織の id を持つ顧客がほかにいれば、何も書かずに止まる（exit 3）。検索の答えの形が違うとき（exit 4）と、10 件を超えて続きが在るとき（exit 3）も、ほかの顧客を数えられないので止まる。この 3 つは、その顧客の契約だけから組織の `services` を作って送るので、そのまま書くと、もう一方の顧客のサービスを `null` で消してしまう。この検査も検索を使うので、組織の id を書いた直後の重なりはすり抜けることがある（runbook E2）。
+
+一覧と検索の答えは、読む前に形を確かめる（`lib.sh` の `check_list_shape`）。形が違えば、何も書かずに止まる（exit 4）。形が違うのに 0 件と読むと、作る・書く・hold を外す・支払い済みにする側に進むため。1 ページだけを読んで決める所（顧客の検索、その月の請求書の検索と一覧、open の請求書の一覧、税率の一覧、価格の検索）は、続きが在る（`has_more` が true）答えでも止まる（exit 3）。`data` が空でも、読んでいない続きに同じものが在りうるため。
 
 ## 6. 解約 → 入口を閉じる
 

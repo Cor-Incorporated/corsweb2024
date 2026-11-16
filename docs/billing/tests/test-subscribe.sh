@@ -891,6 +891,8 @@ eq "resync --preview は Stripe にも Clerk にも書かない" "$(posts)$(cler
 printf '%s' "$OUT" | grep -qF 'RESYNC cus_c → Clerk の組織 org_c: 送る本文は次のとおり' && ok "resync --preview は顧客ごとの送る本文を出す（2 ページ目の顧客も）" || ng "送る本文の行が無い: $OUT"
 printf '%s' "$OUT" | grep -qF 'PLAN hold cus_a xesm' && ok "resync --preview は hold の判定も出す" || ng "hold の判定の行が無い: $OUT"
 printf '%s' "$OUT" | grep -qF 'DONE preview: 何も書いていない' && ok "resync --preview は DONE preview の行で終わる" || ng "DONE preview の行が無い: $OUT"
+printf '%s\n' "$OUT" | sed -n 1p | grep -qF 'mode: resync --mode test --preview（読むだけ。書かない）' && ok "resync --preview は、1 行目から読むだけと出す" || ng "preview の 1 行目: $(printf '%s\n' "$OUT" | sed -n 1p)"
+printf '%s' "$OUT" | grep -qF 'PLAN resync --preview:' && ! printf '%s' "$OUT" | grep -qF 'resync_at を書く' && ok "resync --preview の PLAN は、書くとは言わない" || ng "preview の PLAN の行: $(printf '%s\n' "$OUT" | grep '^PLAN resync' || true)"
 FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode test
 expect "resync --preview も、組織の重なりで止まる" 3 0 "同じ Clerk の組織 org_a を 2 人以上の顧客が持っている"
 SCN=live FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode live
@@ -943,6 +945,68 @@ for sh in dataobj emptyid hasmore_missing hasmore_num twojson twovalid; do
   expect "組織の検索の答えが $sh なら、clerk-sync は止まる" 4 0 "答えの形が違う"
   eq "組織の検索の答えが $sh なら、clerk-sync は Clerk に書かない" "$(clerk_patches)" "0"
 done
+
+# 20f. 請求書（invoice・mark-paid）・税率・find の読む所も、同じ形の検査を通す（data が {} でも 0 件と読まない）。
+#      1 ページだけを読んで決める所は、has_more が true なら、空でも「無い」とは読まずに止まる（exit 3）
+for sh in $SHAPES idform; do
+  FAKE_CUST_META="$INV_META" FAKE_INVSEARCH_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
+  expect "請求書の検索の答えが $sh なら、invoice は下書きを作らずに止まる" 4 0 "答えの形が違う"
+  FAKE_CUST_META="$INV_META" FAKE_INVLIST_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
+  expect "請求書の一覧の答えが $sh なら、invoice は下書きを作らずに止まる" 4 0 "答えの形が違う"
+  FAKE_CUST_META="$INV_META" FAKE_TAX_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
+  expect "税率の一覧の答えが $sh なら、invoice は下書きを作らずに止まる" 4 0 "答えの形が違う"
+  FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_INVOPEN_SHAPE=$sh run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+  expect "open の請求書の一覧の答えが $sh なら、mark-paid は支払い済みにせずに止まる" 4 0 "答えの形が違う"
+  FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_INVLIST_SHAPE=$sh run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+  expect "請求書の一覧の答えが $sh なら、mark-paid は支払い済みにせずに止まる" 4 0 "答えの形が違う"
+  FAKE_SEARCH_SHAPE=$sh run find --code sample-co --mode test
+  expect "顧客の検索の答えが $sh なら、find は件数を出さずに止まる" 4 0 "答えの形が違う"
+done
+# id の頭が違う顧客・請求書（cus_ でない顧客、in_ でない請求書）は、resync でも読まずに止まる
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+FAKE_RESYNC=1 FAKE_CUST_SHAPE=idform FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "顧客の一覧の id が cus_ で始まらなければ、resync は止まる" 4 0 "答えの形が違う"
+eq "顧客の一覧の id が違えば、resync は Clerk に書かない" "$(clerk_patches)" "0"
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+FAKE_RESYNC=1 FAKE_INV_SHAPE=idform FAKE_CUST_PAGE1="$HOLDING_P1" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode test
+expect "請求書の一覧の id が in_ で始まらなければ、resync は止まる（hold を決めない）" 4 0 "答えの形が違う"
+eq "請求書の一覧の id が違えば、resync は Clerk に書かない" "$(clerk_patches)" "0"
+FAKE_SEARCH_SHAPE=idform run customer --code sample-co --name テスト株式会社 --email billing@example.test --payment card --apply --mode test
+expect "customer_code の検索の id が cus_ で始まらなければ、customer は作らない" 4 0 "答えの形が違う"
+# 続きが在るのに空の答え（has_more が true、data が []）
+H="続きが在る（has_more が true）"
+FAKE_SEARCH_SHAPE=hasmore_true_empty run customer --code sample-co --name テスト株式会社 --email billing@example.test --payment card --apply --mode test
+expect "customer_code の検索に続きが在れば、空でも customer は作らない" 3 0 "$H"
+FAKE_SEARCH_ORG=hasmore_true_empty run customer --code sample-co --name テスト株式会社 --email billing@example.test --payment card --clerk-org org_new --apply --mode test
+expect "組織の id の検索に続きが在れば、空でも customer --clerk-org は作らない" 3 0 "$H"
+FAKE_SEARCH_SHAPE=hasmore_true_empty run find --code sample-co --mode test
+expect "顧客の検索に続きが在れば、find は 0 件と出さない" 3 0 "$H"
+FAKE_CUST_META="$INV_META" FAKE_INVSEARCH_SHAPE=hasmore_true_empty run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "請求書の検索に続きが在れば、invoice は 2 枚目の下書きを作りうるので止まる" 3 0 "$H"
+FAKE_CUST_META="$INV_META" FAKE_INVLIST_SHAPE=hasmore_true_empty run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "請求書の一覧に続きが在れば、invoice は止まる" 3 0 "$H"
+FAKE_CUST_META="$INV_META" FAKE_TAX_SHAPE=hasmore_true_empty run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "税率の一覧に続きが在れば、invoice は止まる" 3 0 "$H"
+FAKE_CUST_META="$TR_META" FAKE_INV_STATE=open FAKE_INVOPEN_SHAPE=hasmore_true_empty run mark-paid --customer cus_x --month "$LAST" --paid-on "$TODAY" --apply --mode test
+expect "open の請求書の一覧に続きが在れば、mark-paid は古い月を見落としうるので止まる" 3 0 "$H"
+# 一覧と検索を読む所は、どれも続く 4 行（注釈の行は数えない）の中に check_list_shape がある
+# （読む所を足して検査を忘れると、file と行を挙げて落ちる）
+list_reads() {
+  grep -nE 'GET "?/v1/(customers/search|invoices/search|customers|invoices|prices|tax_rates)"?([[:space:]]|$)|GET "/v1/invoices/[^"]*/lines"' "$1" |
+    grep -vE '^[0-9]+:[[:space:]]*#|printf|PLAN |require_ok' | cut -d: -f1 || true
+}
+unchecked=""
+nreads=0
+for f in lib.sh subscribe.sh apply-plans.sh; do
+  lines="$(list_reads "$BILLING/$f")"
+  [ -n "$lines" ] || ng "$f に一覧と検索を読む所が 1 つも見つからない（探す形が古い）"
+  for n in $lines; do
+    nreads=$((nreads + 1))
+    sed -n "$((n + 1)),$((n + 10))p" "$BILLING/$f" |
+      awk '!/^[[:space:]]*#/ { k++; if (k <= 4 && /check_list_shape/) hit = 1 } END { exit !hit }' || unchecked="$unchecked $f:$n"
+  done
+done
+[ -z "$unchecked" ] && ok "一覧と検索を読む ${nreads} か所は、どれも答えの形を確かめる" || ng "答えの形を確かめずに一覧か検索を読む所:${unchecked}"
 
 # 21. set-payment（段階 5）: 支払い方法を変える。発行済みの請求書は変えない
 SET_PAY_META="$(meta transfer "$LAST-15" 12)"

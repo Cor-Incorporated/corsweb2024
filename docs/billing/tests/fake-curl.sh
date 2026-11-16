@@ -164,6 +164,10 @@ malformed_body() {
     hasmore_num) printf '{"object":"%s","has_more":1,"data":[]}' "$2" ;;
     twojson) printf '{"object":"%s","has_more":false,"data":null}{"object":"%s","has_more":false,"data":[]}' "$2" "$2" ;;
     twovalid) printf '{"object":"%s","has_more":false,"data":[]}{"object":"%s","has_more":false,"data":[]}' "$2" "$2" ;;
+    # 続きが在るのに空（食い違った答え）。1 ページだけを読む所は「無い」と読まずに止まる
+    hasmore_true_empty) printf '{"object":"%s","has_more":true,"data":[]}' "$2" ;;
+    # id の頭が違う（顧客は cus_、請求書は in_、税率は txr_、価格は price_ のはず）。期限は過ぎた日にしておく
+    idform) printf '{"object":"%s","has_more":false,"data":[{"id":"xx_1","due_date":1,"metadata":{}}]}' "$2" ;;
     *) printf '{"object":"%s","has_more":false,"data":[]}' "$2" ;;
   esac
 }
@@ -175,6 +179,7 @@ balance() {
 }
 
 tax_rates() {
+  if [ -n "${FAKE_TAX_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_TAX_SHAPE" list)"; return 0; fi
   case "$FAKE_SCENARIO" in
     empty | livemismatch) respond 200 '{"object":"list","data":[],"has_more":false}' ;;
     *) respond 200 "$(jq -c '{object: "list", has_more: false, data: [.tax_rate | {id: "txr_fake", percentage, inclusive, country, tax_type, metadata: {plan_key: .id}}]}' "$FAKE_PLANS")" ;;
@@ -337,7 +342,7 @@ customer_search() {
         wrongobj) respond 200 '{"object":"list","data":[]}' ;;
         # 続きが在る（limit を超える）。全部を見ていないので止まる
         more) respond 200 '{"object":"search_result","has_more":true,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
-        dataobj | emptyid | hasmore_missing | hasmore_num | twojson | twovalid) respond 200 "$(malformed_body "$FAKE_SEARCH_ORG" search_result)" ;;
+        dataobj | emptyid | hasmore_missing | hasmore_num | twojson | twovalid | hasmore_true_empty | idform) respond 200 "$(malformed_body "$FAKE_SEARCH_ORG" search_result)" ;;
         *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
       esac
       return 0
@@ -398,6 +403,7 @@ found_invoices() {
 }
 
 invoice_search() {
+  if [ -n "${FAKE_INVSEARCH_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INVSEARCH_SHAPE" search_result)"; return 0; fi
   local m
   m="$(printf '%s' "$query_arg" | sed -n 's/.*billing_month"\]:"\([0-9-]*\)".*/\1/p')"
   case "${FAKE_INV_WHERE:-both}" in
@@ -406,8 +412,11 @@ invoice_search() {
   esac
 }
 
-# FAKE_OLDER_OPEN=YYYY-MM なら、一覧にその月の open の請求書（in_older）も足す
+# FAKE_OLDER_OPEN=YYYY-MM なら、一覧にその月の open の請求書（in_older）も足す。
+# 答えの形は、status の付いた一覧（mark-paid の古い月の検査）を FAKE_INVOPEN_SHAPE、付かない一覧を FAKE_INVLIST_SHAPE で壊す
 invoice_list() {
+  if [ -n "${status_arg:-}" ] && [ -n "${FAKE_INVOPEN_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INVOPEN_SHAPE" list)"; return 0; fi
+  if [ -z "${status_arg:-}" ] && [ -n "${FAKE_INVLIST_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INVLIST_SHAPE" list)"; return 0; fi
   local data
   data="$(found_invoices "${FAKE_INV_MONTH:-none}")"
   if [ -n "${FAKE_OLDER_OPEN:-}" ]; then

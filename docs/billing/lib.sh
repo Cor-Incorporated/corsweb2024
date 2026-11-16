@@ -153,6 +153,13 @@ check_list_shape() {
     die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、data が配列、has_more が真偽値、どの要素にも空でない id、のどれかが無い）。全部を読めないので、何も書かない"
 }
 
+# 1 ページだけを読んで決める所で、check_list_shape の後に呼ぶ。has_more が true なら、読んでいない続きに
+# 同じものが在りうる（data が空でも「無い」とは読めない）ので、作る・書く前に止まる（exit 3）。
+check_one_page() {
+  [ "$(jq -r '.has_more' <<<"$RESP_BODY")" = "false" ] ||
+    die 3 "$1 の答えに続きが在る（has_more が true）。全部を読んでいないので、何も書かない"
+}
+
 read_key() {
   if [ -n "${COR_BILLING_API_KEY:-}" ]; then
     API_KEY="$COR_BILLING_API_KEY"
@@ -222,6 +229,8 @@ confirm_live() {
 price_id_by_lookup() {
   local lk="$1" id
   api_ok "価格 $lk の読取 GET /v1/prices" GET /v1/prices --data-urlencode "lookup_keys[]=$lk" --data-urlencode "limit=10"
+  check_list_shape "価格 $lk の検索" list '^price_'
+  check_one_page "価格 $lk の検索"
   id="$(jq -r '.data[0].id // empty' <<<"$RESP_BODY")"
   [ -n "$id" ] || die 3 "価格 $lk が無い。先に apply-plans.sh --apply --mode $MODE を実行する"
   printf '%s' "$id"
@@ -232,6 +241,8 @@ tax_rate_id() {
   local key n
   key="$(jq -r '.tax_rate.id' "$PLANS")"
   api_ok "税率の一覧 GET /v1/tax_rates" GET /v1/tax_rates --data-urlencode "active=true" --data-urlencode "limit=100"
+  check_list_shape "税率の一覧" list '^txr_'
+  check_one_page "税率の一覧"
   n="$(jq --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)] | length' <<<"$RESP_BODY")"
   [ "$n" -eq 1 ] || die 3 "metadata.plan_key=$key の税率が $n 件（1 件のはず）。先に apply-plans.sh --apply --mode $MODE を実行する"
   jq -r --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)][0].id' <<<"$RESP_BODY"

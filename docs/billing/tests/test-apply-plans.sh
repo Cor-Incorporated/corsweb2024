@@ -134,12 +134,27 @@ KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --apply --mode test
 [ -z "$LOG" ] && ok "使い方の誤りでは curl を呼ばない" || ng "使い方の誤りで curl を呼んだ: $LOG"
 
 # 5c. 価格の検索の答えの形: HTTP 200 でも形が違えば、作らずに止まる（exit 4）。--apply でも --check でも
-for sh in nodata datanull dataobj noid emptyid empty wrongobj hasmore_missing hasmore_num twojson twovalid; do
+for sh in nodata datanull dataobj noid emptyid empty wrongobj hasmore_missing hasmore_num twojson twovalid idform; do
   FAKE_PRICE_SHAPE=$sh KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --apply --mode test
   [ "$RC" -eq 4 ] && no_write && printf '%s' "$OUT" | grep -q '答えの形が違う' && ok "価格の検索の答えが $sh なら、apply は作らずに止まる" || ng "価格の検索が $sh の apply rc=$RC: $(printf '%s\n' "$LOG" | grep -E '^(CALL POST|WRITE_REFUSED)' | head -3 || true)"
   FAKE_PRICE_SHAPE=$sh FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --mode test
   [ "$RC" -eq 4 ] && no_write && printf '%s' "$OUT" | grep -q '答えの形が違う' && ok "価格の検索の答えが $sh なら、check も止まる" || ng "価格の検索が $sh の check rc=$RC: $OUT"
 done
+
+# 税率の一覧の答えの形も同じ（data が {} を 0 件と読むと、税率を作る側に進む）
+for sh in nodata datanull dataobj noid emptyid empty wrongobj hasmore_missing hasmore_num twojson twovalid idform; do
+  FAKE_TAX_SHAPE=$sh KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --apply --mode test
+  [ "$RC" -eq 4 ] && no_write && printf '%s' "$OUT" | grep -q '答えの形が違う' && ok "税率の一覧の答えが $sh なら、apply は作らずに止まる" || ng "税率の一覧が $sh の apply rc=$RC: $(printf '%s\n' "$LOG" | grep -E '^(CALL POST|WRITE_REFUSED)' | head -3 || true)"
+  FAKE_TAX_SHAPE=$sh FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --mode test
+  [ "$RC" -eq 4 ] && no_write && printf '%s' "$OUT" | grep -q '答えの形が違う' && ok "税率の一覧の答えが $sh なら、check も止まる" || ng "税率の一覧が $sh の check rc=$RC: $OUT"
+done
+# 続きが在るのに空の答え（has_more が true、data が []）は、「無い」と読まずに止まる（exit 3）
+FAKE_PRICE_SHAPE=hasmore_true_empty KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --apply --mode test
+[ "$RC" -eq 3 ] && no_write && printf '%s' "$OUT" | grep -q '続きが在る（has_more が true）' && ok "価格の検索に続きが在れば、空でも apply は価格を作らない" || ng "価格の検索に続きが在る apply rc=$RC: $(printf '%s\n' "$LOG" | grep -E '^(CALL POST|WRITE_REFUSED)' | head -3 || true)"
+FAKE_PRICE_SHAPE=hasmore_true_empty FAKE_NO_WRITE=1 KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --check --mode test
+[ "$RC" -eq 3 ] && no_write && ! printf '%s' "$OUT" | grep -q '^MISSING price' && ok "価格の検索に続きが在れば、check も MISSING と出さずに止まる" || ng "価格の検索に続きが在る check rc=$RC: $OUT"
+FAKE_TAX_SHAPE=hasmore_true_empty KEY_FOR_RUN="$DUMMY_KEY" run match "$PLANS" --apply --mode test
+[ "$RC" -eq 3 ] && no_write && ok "税率の一覧に続きが在れば、空でも apply は税率を作らない" || ng "税率の一覧に続きが在る apply rc=$RC: $OUT"
 
 # 鍵が無いと止まる（端末も無い）
 KEY_FOR_RUN="" run empty "$PLANS" --apply --mode test
