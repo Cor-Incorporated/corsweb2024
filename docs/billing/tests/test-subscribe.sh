@@ -328,8 +328,9 @@ expect "明細の無い下書きには明細を足して送る" 0 5 "INVOICE in_
 FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft FAKE_DRAFT_SUBTOTAL=10000 FAKE_DRAFT_LINES=1 run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "途中までの下書きは確定しない" 3 0 "確定しない"
 # 請求書を 1 つ読む答えの形が違えば、明細を数えずに止まる（exit 4）。lines が無い答えを 0 行と読むと、
-# 明細の在る下書きに同じ明細をもう一度足してしまう。形 = JSON が 1 つ、object が invoice、id が読んだ id、lines.data が配列
-for sh in emptyobj nolines linesnull linesdataobj wrongid wrongobj twojson empty; do
+# 明細の在る下書きに同じ明細をもう一度足してしまう。形 = JSON が 1 つ、object が invoice、id が読んだ id、lines.data が配列、
+# lines.has_more が false、lines.total_count が在れば lines.data の数と同じ（数が食い違う答えも 0 行と読ませうる）
+for sh in emptyobj nolines linesnull linesdataobj wrongid wrongobj twojson empty tc0 tcstr hasmore_empty hasmore_full nohasmore; do
   FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft FAKE_DRAFT_SUBTOTAL=18000 FAKE_DRAFT_LINES=2 FAKE_INVGET_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
   expect "明細の在る下書きを読む答えが $sh なら、明細を足さずに止まる" 4 0 "答えの形が違う"
   FAKE_CUST_META="$INV_META" FAKE_INVGET_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test

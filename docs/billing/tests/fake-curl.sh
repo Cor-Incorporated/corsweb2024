@@ -387,7 +387,7 @@ inv_json() {
     '{id: $id, object: "invoice", customer: "cus_x", status: $st, subtotal: $sub, total: ($sub + ($sub / 10 | floor)),
       amount_paid: (if $st == "paid" then ($sub + ($sub / 10 | floor)) else 0 end),
       total_taxes: [{amount: ($sub / 10 | floor)}], due_date: $due, hosted_invoice_url: "https://invoice.example.test/i/\($id)",
-      lines: {object: "list", total_count: $n, data: []}, metadata: {billing_month: $m, managed_by: $mb}}'
+      lines: {object: "list", has_more: false, total_count: $n, data: [range(0; $n) | {id: "il_\(.)", object: "line_item"}]}, metadata: {billing_month: $m, managed_by: $mb}}'
 }
 
 # 同じ月の請求書: FAKE_INV_STATE（none|draft|open|paid|void|two）を、FAKE_INV_WHERE（both|search|list）に返す。
@@ -441,6 +441,12 @@ invoice_get() {
     nolines) body="$(jq -c 'del(.lines)' <<<"$body")" ;;
     linesnull) body="$(jq -c '.lines = null' <<<"$body")" ;;
     linesdataobj) body="$(jq -c '.lines.data = {} | .lines.total_count = 0' <<<"$body")" ;;
+    # 明細の数が食い違う形（total_count が 0・文字列、続きが在る、has_more が無い）。どれも明細を 0 行と読ませうる
+    tc0) body="$(jq -c '.lines.total_count = 0' <<<"$body")" ;;
+    tcstr) body="$(jq -c '.lines.total_count = "0"' <<<"$body")" ;;
+    hasmore_empty) body="$(jq -c '.lines.data = [] | .lines.has_more = true | del(.lines.total_count)' <<<"$body")" ;;
+    hasmore_full) body="$(jq -c '.lines.has_more = true | del(.lines.total_count)' <<<"$body")" ;;
+    nohasmore) body="$(jq -c 'del(.lines.has_more)' <<<"$body")" ;;
     wrongid) body="$(jq -c '.id = "in_other"' <<<"$body")" ;;
     wrongobj) body="$(jq -c '.object = "list"' <<<"$body")" ;;
     twojson) body="$body$body" ;;
