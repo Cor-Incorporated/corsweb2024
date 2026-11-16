@@ -155,8 +155,9 @@ check_list_shape() {
 
 # 1 ページだけを読んで決める所で、check_list_shape の後に呼ぶ。has_more が true なら、読んでいない続きに
 # 同じものが在りうる（data が空でも「無い」とは読めない）ので、作る・書く前に止まる（exit 3）。
+# 通すのは、JSON がちょうど 1 つで、has_more が真偽値の false のときだけ（欠け・null・文字列の "false" も止める）。
 check_one_page() {
-  [ "$(jq -r '.has_more' <<<"$RESP_BODY")" = "false" ] ||
+  jq -e -s 'length == 1 and .[0].has_more == false' <<<"$RESP_BODY" >/dev/null 2>&1 ||
     die 3 "$1 の答えに続きが在る（has_more が true）。全部を読んでいないので、何も書かない"
 }
 
