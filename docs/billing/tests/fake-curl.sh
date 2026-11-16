@@ -433,7 +433,20 @@ invoice_get() {
   local id="${path#/v1/invoices/}" sub n
   sub=$((${FAKE_DRAFT_SUBTOTAL:-0} + $(item_sum) + ${FAKE_SUBTOTAL_BUMP:-0}))
   n=$((${FAKE_DRAFT_LINES:-0} + $(item_count)))
-  respond 200 "$(inv_json "$id" "${FAKE_INV_GET_STATUS:-draft}" "-" "$sub" "$n")"
+  local body
+  body="$(inv_json "$id" "${FAKE_INV_GET_STATUS:-draft}" "-" "$sub" "$n")"
+  # 答えの形を壊す（FAKE_INVGET_SHAPE）。lines の無い形は、明細を 0 行と読ませる形
+  case "${FAKE_INVGET_SHAPE:-}" in
+    emptyobj) body='{}' ;;
+    nolines) body="$(jq -c 'del(.lines)' <<<"$body")" ;;
+    linesnull) body="$(jq -c '.lines = null' <<<"$body")" ;;
+    linesdataobj) body="$(jq -c '.lines.data = {} | .lines.total_count = 0' <<<"$body")" ;;
+    wrongid) body="$(jq -c '.id = "in_other"' <<<"$body")" ;;
+    wrongobj) body="$(jq -c '.object = "list"' <<<"$body")" ;;
+    twojson) body="$body$body" ;;
+    empty) body='' ;;
+  esac
+  respond 200 "$body"
 }
 
 invoice_action() {
