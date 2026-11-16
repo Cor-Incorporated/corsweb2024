@@ -8,7 +8,9 @@
 // 1b. その 1 本は、カレンダーの区画が在る build では各ページに 1 本、無い build では 0 本
 // 2. チャットへの link は、どれも source を持ち、locale がそのページの言語
 // 3. 主な入口が、決まった source（と intent）でチャットへ向く
-// 4. hash を持つサイト内の link は、path を末尾の / まで書く（本番は / 付きへ転送し、ページ遷移の間に hash が落ちる）
+// 4. 記事の本文（Markdown）に書かれた問い合わせページへの link も、そのページの言語のチャットへ向く
+//    （本文と訳は `/contact?…` のまま。build の時に src/utils/rehype-contact-links.ts が書き換える）
+// 5. hash を持つサイト内の link は、path を末尾の / まで書く（本番は / 付きへ転送し、ページ遷移の間に hash が落ちる）
 // 問い合わせページ自身は残している（自分と、言語の切り替えで他の言語の問い合わせページを指す）ので、1 の対象から外す。
 // script の中の文字（location.href = '/contact' など）は HTML の属性ではないので、この試験の範囲の外。
 // 切り戻し（PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false）の build では、入口が問い合わせページを指すので 1〜3 は落ちる作り。
@@ -21,22 +23,12 @@ import jaJson from '../../src/i18n/locales/ja.json';
 import enJson from '../../src/i18n/locales/en.json';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
+const BLOG_JA_DIR = path.resolve('src/content/blog/ja');
 const ORIGIN = 'https://cor-jp.com';
 const SAME_SITE_ORIGINS = new Set([ORIGIN, 'https://www.cor-jp.com']);
 // host の末尾にドットが付いた URL（cor-jp.com.）は同じ site として数えない（今の dist には無い。在れば外への link として素通りする）
 const NON_JA = ['en', 'zh', 'ko', 'es'] as const;
 type Locale = 'ja' | (typeof NON_JA)[number];
-
-// 記事の本文（Markdown）の中の、問い合わせページへの link。この変更の外で、記事を直す変更で外す。
-// 記事を直したら、ここからも外す（下の「まだ持つ」の試験が、外し忘れを落とす）。
-const ARTICLES_OUTSIDE_THIS_CHANGE = [
-  'ai-business-case-ringi-document',
-  'ai-development-estimate-knowledge-asset',
-  'complete-markdown-guide',
-] as const;
-const articlePaths = new Set(
-  ARTICLES_OUTSIDE_THIS_CHANGE.flatMap((slug) => [`/blog/${slug}/`, ...NON_JA.map((locale) => `/${locale}/blog/${slug}/`)]),
-);
 
 // フッターから、問い合わせページのカレンダーの区画（代表の公開スケジュール）へ直接向ける 1 本
 // （src/config/site.ts の getContactCalendarUrl、src/components/contact/Calendar.astro の id）。
@@ -114,6 +106,24 @@ function sameOriginLinks(html: string, pagePath: string): Link[] {
   return links;
 }
 
+/** 記事の本文（frontmatter と code を除く）に書かれた、同じ site の問い合わせページへの link の intent（無ければ null） */
+function bodyContactIntents(markdown: string): Array<string | null> {
+  const body = markdown
+    .replace(/^---\n[\s\S]*?\n---\n/, '')
+    .replace(/^(```+|~~~+)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, '')
+    .replace(/`[^`\n]*`/g, '');
+  return [...body.matchAll(/\]\(\s*<?([^)\s>]+)/g)]
+    .flatMap((match) => {
+      try {
+        return [new URL(match[1], ORIGIN)];
+      } catch {
+        return [];
+      }
+    })
+    .filter((url) => url.origin === ORIGIN && isContactPagePath(url.pathname))
+    .map((url) => url.searchParams.get('intent'));
+}
+
 /** 言語つきのチャットの path（/en/contact/chat/ など）。チャットは 1 つの path なので、このページは無い */
 const isLocalizedChatPath = (pathname: string) => /^\/(?:en|zh|ko|es)\/contact\/chat(?:\/|$)/.test(pathname);
 
@@ -170,9 +180,9 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(pages.length, 'dist の HTML が少なすぎる').toBeGreaterThan(500);
   });
 
-  it('5 言語の全ページで、問い合わせページと無いチャットの path への link が 0（問い合わせページ自身と、この変更の外の記事と、カレンダーの区画への 1 本を除く）', () => {
+  it('5 言語の全ページで、問い合わせページと無いチャットの path への link が 0（問い合わせページ自身と、カレンダーの区画への 1 本を除く。記事の本文の link も含む）', () => {
     const found = pages
-      .filter((page) => !isContactPagePath(page.pagePath) && !articlePaths.has(page.pagePath))
+      .filter((page) => !isContactPagePath(page.pagePath))
       .flatMap((page) =>
         page.links
           .filter((link) => !isCalendarLinkFor(page.locale)(link))
@@ -180,6 +190,42 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
           .map((link) => `${page.pagePath} → ${link.kind} ${link.raw}`),
       );
     expect(found).toEqual([]);
+  });
+
+  // ja の記事の本文（code の外）に、問い合わせページへの link を書いた記事。記事の名前は持たず、本文から数える。
+  const articlesWithBodyLinks = existsSync(BLOG_JA_DIR)
+    ? readdirSync(BLOG_JA_DIR)
+        .filter((name) => /\.mdx?$/.test(name))
+        .map((name) => ({
+          slug: name.replace(/\.mdx?$/, ''),
+          intents: bodyContactIntents(readFileSync(path.join(BLOG_JA_DIR, name), 'utf8')),
+        }))
+        .filter((article) => article.intents.length > 0)
+    : [];
+
+  it('本文に問い合わせページへの link を書いた記事が在る（下の試験が空振りしない）', () => {
+    expect(articlesWithBodyLinks.length).toBeGreaterThan(0);
+  });
+
+  it.each(articlesWithBodyLinks)('記事の本文の link: $slug（5 言語のページで、その言語のチャットへ・元の intent を保つ）', ({ slug, intents }) => {
+    const localized = ['ja', ...NON_JA].map((locale) => (locale === 'ja' ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`));
+    const problems = localized
+      .filter((pagePath) => byPath.has(pagePath))
+      .flatMap((pagePath) => {
+        const page = byPath.get(pagePath)!;
+        const fromArticle = page.links.filter(isChatLink).filter((link) => link.url.searchParams.get('source') === `blog/${slug}`);
+        const count = (intent: string | null) =>
+          fromArticle.filter((link) => link.url.searchParams.get('intent') === intent).length;
+        const wanted = new Map<string | null, number>();
+        for (const intent of intents) wanted.set(intent, (wanted.get(intent) ?? 0) + 1);
+        return [
+          // 本文の link と、本文の下の相談の箱（BlogCta）の 1 本
+          ...(fromArticle.length === intents.length + 1 ? [] : [`${pagePath}: blog/${slug} の link が ${fromArticle.length} 本（本文 ${intents.length} + 箱 1 のはず）`]),
+          ...fromArticle.filter((link) => link.url.searchParams.get('locale') !== page.locale).map((link) => `${pagePath}: locale が違う ${link.raw}`),
+          ...[...wanted].filter(([intent, n]) => count(intent) < n).map(([intent, n]) => `${pagePath}: intent=${intent} が ${count(intent)} 本（本文に ${n} 本）`),
+        ];
+      });
+    expect(problems).toEqual([]);
   });
 
   // カレンダーは PUBLIC_GCAL_ID がある build にだけ在る（CI はカレンダーなしと、ダミーの ID のカレンダーありの 2 回 build する）。
@@ -206,13 +252,6 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
         : [`${page.pagePath}（${page.locale}）: ${have} 本（期待 ${want} 本）${strays.length ? ` / 行き先の違う link ${strays.join(' ')}` : ''}`];
     });
     expect(wrong).toEqual([]);
-  });
-
-  it('この変更の外の記事は、まだ問い合わせページへの link を持つ（記事を直したら、表から外す）', () => {
-    const stale = [...articlePaths].filter(
-      (pagePath) => !(byPath.get(pagePath)?.links ?? []).some((link) => isContactPagePath(link.url.pathname)),
-    );
-    expect(stale, 'dist に無いか、もう問い合わせページへの link が無い記事').toEqual([]);
   });
 
   it('チャットへの link は、どれも source を持ち、locale がそのページの言語', () => {
