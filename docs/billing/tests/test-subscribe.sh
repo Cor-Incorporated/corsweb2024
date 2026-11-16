@@ -8,7 +8,8 @@
 #   2. 鍵の値が出力にも curl の引数にも出ない。モード違いでは POST しない（exit 3）。本番は live と打たなければ書かない
 #   3. 日付と金額の計算を、実装と別に書いた値で確かめる（README 1C 章の例: 11/15 開始・4/5 終了 → 日割り 1,666、
 #      残りの期間分 68,334、開発費の残り 48,000。初月は 1 か月分。12 か月目の末日より後の終了日では残り 0。開発費 0 回）
-#   4. 請求書: draft → 明細 → 小計の照合 → finalize → send の順。同じ月の 2 枚目は作らない。小計が違えば確定しない
+#   4. 請求書: draft → 明細 → 小計の照合 → finalize → send の順。同じ月の 2 枚目は作らない。小計が違えば確定しない。
+#      請求書を 1 つ読む答えの形が違えば、明細を数えずに止まる（明細の在る下書きに、同じ明細を足さない）
 #   5. charge: 振込の顧客・期限前・カードなしは払わない
 #   6. 前の形（same_day_advance）の plans.json の写しでは、新しいサブコマンドはテストモードでも本番でも止まる
 set -euo pipefail
@@ -326,6 +327,14 @@ FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft run invoice --customer cus_x --m
 expect "明細の無い下書きには明細を足して送る" 0 5 "INVOICE in_draft"
 FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft FAKE_DRAFT_SUBTOTAL=10000 FAKE_DRAFT_LINES=1 run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "途中までの下書きは確定しない" 3 0 "確定しない"
+# 請求書を 1 つ読む答えの形が違えば、明細を数えずに止まる（exit 4）。lines が無い答えを 0 行と読むと、
+# 明細の在る下書きに同じ明細をもう一度足してしまう。形 = JSON が 1 つ、object が invoice、id が読んだ id、lines.data が配列
+for sh in emptyobj nolines linesnull linesdataobj wrongid wrongobj twojson empty; do
+  FAKE_CUST_META="$INV_META" FAKE_INV_STATE=draft FAKE_DRAFT_SUBTOTAL=18000 FAKE_DRAFT_LINES=2 FAKE_INVGET_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
+  expect "明細の在る下書きを読む答えが $sh なら、明細を足さずに止まる" 4 0 "答えの形が違う"
+  FAKE_CUST_META="$INV_META" FAKE_INVGET_SHAPE=$sh run invoice --customer cus_x --month "$LAST" --apply --mode test
+  expect "確定の前に読む答えが $sh なら、確定せずに止まる（下書きと明細 2 行の後）" 4 3 "答えの形が違う"
+done
 FAKE_CUST_META="$(meta card)" run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "契約の無い顧客には作らない" 3 0 "契約が無い"
 FAKE_CUST_META="$(meta card "$NEXT-01" 12)" run invoice --customer cus_x --month "$LAST" --apply --mode test

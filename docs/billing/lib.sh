@@ -160,6 +160,18 @@ check_one_page() {
     die 3 "$1 の答えに続きが在る（has_more が true）。全部を読んでいないので、何も書かない"
 }
 
+# 1 つの請求書を読んだ答えの形を、明細を数える前に確かめる。形が違えば止まる（exit 4）。
+# lines が無いのに明細を 0 行と読むと、明細の在る下書きに、同じ明細をもう一度足すため。確かめること:
+# JSON がちょうど 1 つ、object が invoice、id が $2、lines.data が配列。
+check_invoice_shape() {
+  local what="$1" id="$2"
+  jq -e -s --arg id "$id" '
+    length == 1 and (.[0] | type) == "object" and .[0].object == "invoice" and .[0].id == $id
+    and (.[0].lines.data | type) == "array"
+  ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$what の答えの形が違う（JSON が 1 つ、object が invoice、id が $id、lines.data が配列、のどれかが無い）。明細を数えられないので、何も書かない"
+}
+
 read_key() {
   if [ -n "${COR_BILLING_API_KEY:-}" ]; then
     API_KEY="$COR_BILLING_API_KEY"

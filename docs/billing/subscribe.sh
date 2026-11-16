@@ -616,6 +616,7 @@ add_items() {
 finish_invoice() {
   local inv="$1" sub n
   api_ok "請求書の読取" GET "/v1/invoices/$inv"
+  check_invoice_shape "請求書 $inv の読取" "$inv"
   sub="$(jq -r '.subtotal // "-"' <<<"$RESP_BODY")"
   n="$(jq -r '.lines.total_count // (.lines.data | length)' <<<"$RESP_BODY")"
   [ "$sub" = "$LINES_TOTAL" ] && [ "$n" = "$LINES_N" ] \
@@ -670,6 +671,7 @@ resume_invoice() {
   printf 'NOTE %s 分の下書き %s がある（前回が途中で止まった）。続きから行う\n' "$OPT_MONTH" "$id"
   confirm_live
   api_ok "下書きの読取" GET "/v1/invoices/$id"
+  check_invoice_shape "下書き $id の読取" "$id"
   n="$(jq -r '.lines.total_count // (.lines.data | length)' <<<"$RESP_BODY")"
   if [ "$n" = "0" ]; then
     local txr
