@@ -21,7 +21,7 @@ const faqJsonLd = buildFaqPageJsonLd(questions);
 <script type="application/ld+json" is:inline set:html={safeJsonLd(faqJsonLd)} />
 
 <section class="py-16 sm:py-20">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div class="grid gap-12 lg:grid-cols-3 lg:gap-8">
       <div>
         <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">{t.faq.title}</h2>

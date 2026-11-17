@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -226,7 +226,347 @@ function buildSummary(observations: AuditObservation[], routeCount: number): str
   return `${lines.join('\n')}\n`;
 }
 
-test.describe.configure({ mode: 'serial' });
+// 広い画面で、page の型ごとに main の箱の位置を見る。
+// - LP の page: main の container の左端・右端が header の container と揃う（rail = 80rem）。
+// - 読み物の page: main の中の .mx-auto の箱が 48rem の列に揃い、画面の中央に在る。
+// あわせて、main の中の table が横 scroll の wrapper の幅を埋めているかも見る
+//（罫線が page の半分で切れて見えないように）。
+const LAYOUT_RAIL_VIEWPORTS = [
+  { name: 'desktop-1440', width: 1440, height: 900 },
+  { name: 'desktop-1920', width: 1920, height: 1080 },
+] as const;
+
+const LP_RAIL_ROUTES = ['/services/ai-development/', '/en/'] as const;
+const READING_RAIL_ROUTES = [
+  '/industries/medical/',
+  '/security/',
+  '/blog/ai-development-estimate-knowledge-asset/',
+  '/legal/tokushoho/',
+  '/company/',
+] as const;
+
+const RAIL_TOLERANCE_PX = 2;
+const READING_MAX_WIDTH_PX = 768;
+
+type RailMeasurement = {
+  name: string;
+  left: number;
+  right: number;
+  width: number;
+};
+
+async function settlePage(page: Page, route: string): Promise<void> {
+  await page.goto(route, { waitUntil: 'load', timeout: 60_000 });
+  await page.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+        scroll-behavior: auto !important;
+      }
+      html.js [data-reveal] {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    `,
+  });
+  await page.evaluate(async () => {
+    await (document as Document & { fonts?: FontFaceSet }).fonts?.ready;
+  });
+}
+
+async function measureLayout(page: Page) {
+  return page.evaluate(() => {
+    const describe = (element: Element): string => {
+      const className = Array.from(element.classList)
+        .filter((name) => name.startsWith('max-w-') || name === 'mx-auto' || name === 'prose')
+        .slice(0, 3)
+        .join('.');
+      return `${element.tagName.toLowerCase()}${className ? `.${className}` : ''}`;
+    };
+    const contentBox = (element: Element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+      const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+      return {
+        left: rect.left + paddingLeft,
+        right: rect.right - paddingRight,
+        width: rect.width - paddingLeft - paddingRight,
+      };
+    };
+
+    const headerContainer = document.querySelector('header .mx-auto');
+    const header = headerContainer
+      ? { name: `header ${describe(headerContainer)}`, ...contentBox(headerContainer) }
+      : null;
+
+    const seen = new Set<Element>();
+    const rails: RailMeasurement[] = [];
+    const add = (element: Element) => {
+      if (seen.has(element)) return;
+      seen.add(element);
+      if (element.closest('[hidden], [aria-hidden="true"], template, script, style')) return;
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden') return;
+      const box = contentBox(element);
+      if (box.width <= 0) return;
+      rails.push({ name: describe(element), ...box });
+    };
+
+    document.querySelectorAll('main .mx-auto').forEach(add);
+    document.querySelectorAll('main .prose').forEach(add);
+
+    const tables = Array.from(document.querySelectorAll('main table')).map((table) => ({
+      width: table.getBoundingClientRect().width,
+      parentClientWidth: table.parentElement ? table.parentElement.clientWidth : 0,
+    }));
+
+    return { header, rails, tables, center: document.documentElement.clientWidth / 2 };
+  });
+}
+
+function railRows(reference: RailMeasurement, rails: readonly RailMeasurement[]): string {
+  return [reference, ...rails]
+    .map(
+      (rail) =>
+        `  ${rail.name}: left=${rail.left.toFixed(1)} right=${rail.right.toFixed(1)} width=${rail.width.toFixed(1)}`,
+    )
+    .join('\n');
+}
+
+test('main content rails follow the page type on wide screens', async ({ page }) => {
+  test.setTimeout(240_000);
+  const failures: string[] = [];
+
+  for (const viewport of LAYOUT_RAIL_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of LP_RAIL_ROUTES) {
+      await settlePage(page, route);
+      const result = await measureLayout(page);
+      if (!result.header) {
+        failures.push(`${viewport.name} ${route}: header の container が見つからない`);
+        continue;
+      }
+      const mismatched = result.rails.filter(
+        (rail) =>
+          Math.abs(rail.left - result.header!.left) > RAIL_TOLERANCE_PX ||
+          Math.abs(rail.right - result.header!.right) > RAIL_TOLERANCE_PX,
+      );
+      if (mismatched.length > 0) {
+        failures.push(
+          `${viewport.name} ${route}: ${mismatched.length} rail(s) differ from header by more than ${RAIL_TOLERANCE_PX}px\n${railRows(result.header, result.rails)}`,
+        );
+      }
+      const narrowTables = result.tables.filter((table) => table.width < table.parentClientWidth - 2);
+      if (narrowTables.length > 0) {
+        const example = narrowTables[0];
+        failures.push(
+          `${viewport.name} ${route}: ${narrowTables.length} table(s) narrower than the scroll wrapper (e.g. width=${example.width.toFixed(1)} < parent clientWidth - 2=${(example.parentClientWidth - 2).toFixed(1)})`,
+        );
+      }
+    }
+
+    for (const route of READING_RAIL_ROUTES) {
+      await settlePage(page, route);
+      const result = await measureLayout(page);
+      if (result.rails.length === 0) {
+        failures.push(`${viewport.name} ${route}: main の中に .mx-auto の箱が無い`);
+        continue;
+      }
+      const first = result.rails[0];
+      const misaligned = result.rails.filter(
+        (rail) =>
+          Math.abs(rail.left - first.left) > RAIL_TOLERANCE_PX || Math.abs(rail.right - first.right) > RAIL_TOLERANCE_PX,
+      );
+      if (misaligned.length > 0) {
+        failures.push(
+          `${viewport.name} ${route}: ${misaligned.length} box(es) do not share the reading column\n${railRows(first, result.rails)}`,
+        );
+      }
+      const offCenter = result.rails.filter(
+        (rail) => Math.abs(rail.left + rail.width / 2 - result.center) > RAIL_TOLERANCE_PX,
+      );
+      if (offCenter.length > 0) {
+        failures.push(
+          `${viewport.name} ${route}: ${offCenter.length} box(es) are off the screen center by more than ${RAIL_TOLERANCE_PX}px (center=${result.center.toFixed(1)})\n${railRows(first, result.rails)}`,
+        );
+      }
+      const tooWide = result.rails.filter((rail) => rail.width > READING_MAX_WIDTH_PX + 0.5);
+      if (tooWide.length > 0) {
+        failures.push(
+          `${viewport.name} ${route}: ${tooWide.length} box(es) wider than ${READING_MAX_WIDTH_PX}px\n${railRows(first, result.rails)}`,
+        );
+      }
+      const narrowTables = result.tables.filter((table) => table.width < table.parentClientWidth - 2);
+      if (narrowTables.length > 0) {
+        const example = narrowTables[0];
+        failures.push(
+          `${viewport.name} ${route}: ${narrowTables.length} table(s) narrower than the scroll wrapper (e.g. width=${example.width.toFixed(1)} < parent clientWidth - 2=${(example.parentClientWidth - 2).toFixed(1)})`,
+        );
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`main content rails do not follow the page type:\n${failures.join('\n\n')}`);
+  }
+});
+
+// 題の塊と文が、意味の区切りでだけ折れているかを見る（docs/design/layout-rules.md の R1・R2）。
+// 幅 1440 と 1920 の業種別の page。空振りしないよう、.lb-sentence と h1 が無ければ落とす。
+const LINE_BREAK_VIEWPORTS = [
+  { name: 'desktop-1440', width: 1440, height: 900 },
+  { name: 'desktop-1920', width: 1920, height: 1080 },
+] as const;
+
+const LINE_BREAK_ROUTES = ['/industries/medical/', '/industries/construction/'] as const;
+
+test('industry headings and sentences break at meaning boundaries (line breaks)', async ({ page }) => {
+  test.setTimeout(240_000);
+  const failures: string[] = [];
+
+  for (const viewport of LINE_BREAK_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of LINE_BREAK_ROUTES) {
+      await settlePage(page, route);
+      const issues = await page.evaluate(() => {
+        const failures: string[] = [];
+
+        const lineCount = (element: Element): number => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+          // inline-block の中の文字は、同じ行でも top が数 px ずれて 2 つの rect になる。
+          // 行の間隔（line-height）より十分小さい 8px を同じ行とみなす。
+          const tops: number[] = [];
+          for (const rect of rects) {
+            if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
+          }
+          range.detach();
+          return tops.length;
+        };
+
+        // 折り返さない時の幅。箱より長い塊を「確かめる対象」から除くために使う。
+        const unwrappedWidth = (element: Element): number => {
+          const clone = element.cloneNode(true) as HTMLElement;
+          clone.style.position = 'absolute';
+          clone.style.visibility = 'hidden';
+          clone.style.whiteSpace = 'nowrap';
+          clone.style.maxWidth = 'none';
+          clone.style.width = 'auto';
+          clone.style.display = 'inline-block';
+          element.parentElement?.appendChild(clone);
+          const width = clone.getBoundingClientRect().width;
+          clone.remove();
+          return width;
+        };
+
+        const parentWidth = (element: Element): number =>
+          element.parentElement ? (element.parentElement as HTMLElement).clientWidth : document.documentElement.clientWidth;
+
+        const heading = document.querySelector('h1');
+        if (!heading) failures.push('h1 が無い');
+
+        const h1Clauses = Array.from(document.querySelectorAll('h1 .lb-clause'));
+        if (h1Clauses.length < 2) {
+          failures.push(`h1 の塊が ${h1Clauses.length} 個（2 個以上のはず）: ${heading?.textContent?.trim() ?? ''}`);
+        }
+
+        const headingClauses = Array.from(document.querySelectorAll('h1 .lb-clause, h2 .lb-clause'));
+        if (headingClauses.length === 0) failures.push('題の塊（.lb-clause）が 1 つも無い');
+        for (const clause of headingClauses) {
+          const box = parentWidth(clause);
+          if (unwrappedWidth(clause) > box + 1) continue; // 箱より長い塊は除く
+          const lines = lineCount(clause);
+          if (lines !== 1) {
+            failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
+          }
+        }
+
+        const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
+        if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
+        for (const sentence of sentences) {
+          const paragraph = sentence.closest('p') ?? sentence.parentElement;
+          if (!paragraph) continue;
+          const style = window.getComputedStyle(paragraph);
+          const fontSize = Number.parseFloat(style.fontSize) || 16;
+          const width = (paragraph as HTMLElement).clientWidth;
+          const text = (sentence.textContent ?? '').replace(/\s+/g, '');
+          const chars = Array.from(text).length;
+          if (chars === 0) continue;
+          const columnChars = width / fontSize;
+          if (chars <= columnChars + 1e-6 && lineCount(sentence) !== 1) {
+            failures.push(
+              `文が 1 行に収まらない（${chars} 字 / 列 ${columnChars.toFixed(1)} 字）: ${text.slice(0, 40)}`,
+            );
+          }
+        }
+
+        const bodyBoxes = Array.from(
+          document.querySelectorAll('main [data-proposal-hero] p.type-copy, main [data-proposal-body] p.type-copy, main [data-proposal-cta] p'),
+        );
+        for (const paragraph of bodyBoxes) {
+          const style = window.getComputedStyle(paragraph);
+          const fontSize = Number.parseFloat(style.fontSize) || 16;
+          const width = (paragraph as HTMLElement).clientWidth;
+          if (width > fontSize * 40 + 1) {
+            failures.push(
+              `本文の箱が 40 字を超える（${width.toFixed(1)}px > ${(fontSize * 40).toFixed(1)}px）: ${(paragraph.textContent ?? '').slice(0, 40)}`,
+            );
+          }
+        }
+
+        return failures;
+      });
+      failures.push(...issues.map((issue) => `${viewport.name} ${route}: ${issue}`));
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`line breaks are not at meaning boundaries:\n${failures.join('\n')}`);
+  }
+});
+
+// 幅 390 で、横の scroll が出ず、塊が箱からはみ出さないことを見る。
+test('reading column has no horizontal overflow on mobile (line breaks)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const failures: string[] = [];
+
+  for (const route of LINE_BREAK_ROUTES) {
+    await settlePage(page, route);
+    const issues = await page.evaluate(() => {
+      const failures: string[] = [];
+      const root = document.documentElement;
+      const scrollWidth = Math.max(root.scrollWidth, document.body?.scrollWidth ?? 0);
+      if (scrollWidth > root.clientWidth + 2) {
+        failures.push(`横 scroll が出る（scrollWidth=${scrollWidth} > clientWidth=${root.clientWidth}）`);
+      }
+
+      const clauses = Array.from(document.querySelectorAll('.lb-clause'));
+      if (clauses.length === 0) failures.push('.lb-clause が 1 つも無い');
+      for (const clause of clauses) {
+        const box = clause.parentElement?.getBoundingClientRect();
+        const rect = clause.getBoundingClientRect();
+        if (!box) continue;
+        if (rect.left < box.left - 1 || rect.right > box.right + 1) {
+          failures.push(`塊が箱からはみ出す: ${(clause.textContent ?? '').slice(0, 30)}`);
+        }
+      }
+      return failures;
+    });
+    failures.push(...issues.map((issue) => `mobile-390 ${route}: ${issue}`));
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`reading column overflows on mobile:\n${failures.join('\n')}`);
+  }
+});
 
 test('production pages do not have hard responsive text failures', async ({ page }) => {
   const routes = discoverRoutes();

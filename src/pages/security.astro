@@ -12,7 +12,7 @@ const t = getTranslations(currentLocale);
   description={t.meta.security.description}
   title={t.meta.security.title}
 >
-  <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+  <div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
     <div class="flex flex-col gap-4 pb-16 text-start sm:pb-20">
       <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{t.security.title}</h1>
       <p class="type-copy text-base italic text-primary-950/70 dark:text-primary-200/70">{t.security.tagline}</p>
@@ -107,5 +107,6 @@ const t = getTranslations(currentLocale);
       { label: t.security.ctas.secondary, href: getContactUrl(currentLocale, { source: 'security' }) },
       { label: t.security.ctas.tertiary, href: getLocalizedUrl('/privacy', currentLocale) }
     ]}
+    width="reading"
   />
 </Layout>

@@ -65,7 +65,7 @@ const localizedCopies = Object.fromEntries(
   <main
     data-cloudia-unavailable-page
     data-unavailable-copies={JSON.stringify(localizedCopies)}
-    class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6"
+    class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6 lg:max-w-content"
   >
     <h1 data-cloudia-unavailable-title class="text-3xl font-medium tracking-tight sm:text-4xl">{copy.title}</h1>
     <p data-cloudia-unavailable-message class="max-w-lg text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">{copy.body}</p>
