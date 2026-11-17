@@ -1,5 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
+import LbHeading from '../../../components/common/LbHeading.astro';
 import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
 ---
@@ -9,7 +10,7 @@ import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
   description="Divulgaciones legales requeridas bajo la Ley de Transacciones Comerciales Específicas de Japón. Incluye información del vendedor, términos de pago, entrega y políticas de devolución."
 >
   <div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-    <h1 class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">Aviso Legal</h1>
+    <LbHeading as="h1" class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text="Aviso Legal" />
 
     <p class="mb-6 rounded-md border border-primary-900/15 bg-primary-900/[0.03] px-4 py-3 text-sm dark:border-primary-300/15 dark:bg-primary-300/[0.04]">Este aviso se rige por las leyes de Japón. La versión en japonés es el texto auténtico. Esta traducción al español se ofrece únicamente a título informativo.</p>
 
