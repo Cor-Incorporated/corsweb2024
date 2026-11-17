@@ -50,7 +50,7 @@ const availableLocales = await blogIndexLocales((d) => d.tags.includes(tag), pag
 ---
 
 <Layout title={pageTitle} description={pageDescription} availableLocales={availableLocales}>
-  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 lg:max-w-content">
     <BlogArchiveHeader
       eyebrow="标签"
       title={`#${tag}`}
@@ -63,7 +63,7 @@ const availableLocales = await blogIndexLocales((d) => d.tags.includes(tag), pag
     <BlogCategoryNav />
 
     <!-- Blog Posts Grid -->
-    <div class="mx-auto flex max-w-5xl flex-col gap-4">
+    <div class="mx-auto flex max-w-5xl flex-col gap-4 lg:max-w-content">
       {page.data.length > 0 ? (
         page.data.map(post => (
           <PostCard post={post} variant="feed" />

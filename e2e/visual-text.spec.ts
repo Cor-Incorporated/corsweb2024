@@ -226,6 +226,136 @@ function buildSummary(observations: AuditObservation[], routeCount: number): str
   return `${lines.join('\n')}\n`;
 }
 
+// 広い画面で、main の中の節（container）の左端・右端が header の container と揃っているかを見る。
+// 幅を決める値が 1 つにまとまっていれば、どの page でも同じ左端・右端になる。
+const LAYOUT_RAIL_VIEWPORTS = [
+  { name: 'desktop-1440', width: 1440, height: 900 },
+  { name: 'desktop-1920', width: 1920, height: 1080 },
+] as const;
+
+const LAYOUT_RAIL_ROUTES = [
+  '/industries/medical/',
+  '/security/',
+  '/blog/ai-development-estimate-knowledge-asset/',
+  '/legal/tokushoho/',
+  '/company/',
+  '/services/ai-development/',
+  '/en/',
+] as const;
+
+type RailMeasurement = {
+  name: string;
+  left: number;
+  right: number;
+  width: number;
+};
+
+const RAIL_TOLERANCE_PX = 2;
+
+test('main content rails align with the header container on wide screens', async ({ page }) => {
+  test.setTimeout(180_000);
+  const failures: string[] = [];
+
+  for (const viewport of LAYOUT_RAIL_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of LAYOUT_RAIL_ROUTES) {
+      await page.goto(route, { waitUntil: 'load', timeout: 60_000 });
+      await page.addStyleTag({
+        content: `
+          *, *::before, *::after {
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+            scroll-behavior: auto !important;
+          }
+          html.js [data-reveal] {
+            opacity: 1 !important;
+            transform: none !important;
+          }
+        `,
+      });
+      await page.evaluate(async () => {
+        await (document as Document & { fonts?: FontFaceSet }).fonts?.ready;
+      });
+
+      const result = await page.evaluate(() => {
+        const describe = (element: Element): string => {
+          const className = Array.from(element.classList)
+            .filter((name) => name.startsWith('max-w-') || name === 'mx-auto' || name === 'prose')
+            .slice(0, 3)
+            .join('.');
+          return `${element.tagName.toLowerCase()}${className ? `.${className}` : ''}`;
+        };
+        const contentBox = (element: Element) => {
+          const style = window.getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+          const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+          return {
+            left: rect.left + paddingLeft,
+            right: rect.right - paddingRight,
+            width: rect.width - paddingLeft - paddingRight,
+          };
+        };
+
+        const headerContainer = document.querySelector('header .mx-auto');
+        if (!headerContainer) return { reference: null, rails: [] as RailMeasurement[] };
+        const reference: RailMeasurement = {
+          name: `header ${describe(headerContainer)}`,
+          ...contentBox(headerContainer),
+        };
+
+        const seen = new Set<Element>();
+        const rails: RailMeasurement[] = [];
+        const add = (element: Element) => {
+          if (seen.has(element)) return;
+          seen.add(element);
+          if (element.closest('[hidden], [aria-hidden="true"], template, script, style')) return;
+          const style = window.getComputedStyle(element);
+          if (style.display === 'none' || style.visibility === 'hidden') return;
+          const box = contentBox(element);
+          if (box.width <= 0) return;
+          rails.push({ name: describe(element), ...box });
+        };
+
+        document.querySelectorAll('main .mx-auto').forEach(add);
+        document.querySelectorAll('main .prose').forEach(add);
+
+        return { reference, rails };
+      });
+
+      if (!result.reference) {
+        failures.push(`${viewport.name} ${route}: header の container が見つからない`);
+        continue;
+      }
+
+      const mismatched = result.rails.filter(
+        (rail) =>
+          Math.abs(rail.left - result.reference!.left) > RAIL_TOLERANCE_PX ||
+          Math.abs(rail.right - result.reference!.right) > RAIL_TOLERANCE_PX,
+      );
+
+      if (mismatched.length > 0) {
+        const rows = [result.reference, ...result.rails]
+          .map(
+            (rail) =>
+              `  ${rail.name}: left=${rail.left.toFixed(1)} right=${rail.right.toFixed(1)} width=${rail.width.toFixed(1)}`,
+          )
+          .join('\n');
+        failures.push(
+          `${viewport.name} ${route}: ${mismatched.length} rail(s) differ from header by more than ${RAIL_TOLERANCE_PX}px\n${rows}`,
+        );
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`main content rails are not aligned:\n${failures.join('\n\n')}`);
+  }
+});
+
 test.describe.configure({ mode: 'serial' });
 
 test('production pages do not have hard responsive text failures', async ({ page }) => {

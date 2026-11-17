@@ -16,11 +16,11 @@ const { heading, lead, ctas } = Astro.props;
 ---
 
 <section class="py-16 sm:py-20">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div
       class="flex flex-col items-center gap-8 rounded-3xl bg-primary-500/10 px-6 py-12 text-center dark:bg-primary-400/10 sm:px-12 sm:py-16"
     >
-      <div class="flex max-w-2xl flex-col gap-4">
+      <div class="flex max-w-2xl flex-col gap-4 lg:max-w-content">
         <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-3xl">{heading}</h2>
         {lead && (
           <p class="text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">{lead}</p>

@@ -1,0 +1,17 @@
+/* 本文・部品の幅を決める 1 つの値。header / footer の container（max-w-7xl = 80rem）に合わせる。
+   値を変えるときはこの 1 行だけを変える（Tailwind の max-w-content が参照する）。 */
+:root {
+  --content-width: 80rem;
+}
+
+/* ヒーローの背景（ぼかした光）が節の終わりで切り落とされて線に見えないよう、下へ自然に消す。 */
+.motion-bg {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 75%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 75%);
+}
+
+/* Tailwind 3.3 には text-balance の utility が無いため、class を書いてある所（意図）を有効にする。
+   本文の最終行に 1〜2 文字だけ残るのを防ぐ。 */
+main .type-copy.text-balance {
+  text-wrap: balance;
+}
