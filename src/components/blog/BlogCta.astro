@@ -6,6 +6,8 @@
 import { blogCtaSource, resolveBlogCtaIntent } from '../../config/blog-cta';
 import { COMPANY_DECK_URL, getContactUrl, type ContactIntent } from '../../config/site';
 import { findServiceByIntent, formatServiceLinkLabel, getServiceUrl } from '../../config/services';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 import { getCurrentLocale, getTranslations, type Locale } from '../../utils/i18n';
 
 interface Props {
@@ -107,8 +109,8 @@ const serviceLink = relatedService
   data-testid="blog-cta"
   data-intent={intent}
 >
-  <h2 id="blog-cta-heading" class="text-xl font-bold text-stone-900 dark:text-stone-100">{copy.heading}</h2>
-  <p class="mt-3 text-base leading-8 text-stone-700 dark:text-stone-300">{copy.leads[intent] ?? copy.defaultLead}</p>
+  <LbHeading as="h2" id="blog-cta-heading" class="text-xl font-bold text-stone-900 dark:text-stone-100" text={copy.heading} />
+  <LbText class="mt-3 text-base leading-8 text-stone-700 dark:text-stone-300" text={copy.leads[intent] ?? copy.defaultLead} />
   <div class="mt-5 flex flex-col gap-3 sm:flex-row">
     <a
       href={href}

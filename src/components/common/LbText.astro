@@ -1,0 +1,52 @@
+---
+// 本文の文と塊の印（docs/design/layout-rules.md の R1）。
+// mode="sentences" は文（span.lb-sentence）と塊（span.lb-clause）、mode="clauses" は塊だけを出す。
+// 文字列（text）を受ける。link を含む文は parts で渡す（link の途中では切らない）。
+// 日本語・中国語だけ文に分ける。ほかの言語の本文は分けない（題は LbHeading が塊に分ける）。
+// 文字は 1 字も変えず、HTML は escape する。
+import { groupClauses, groupSentences, isCjkLocale, type InlinePart } from '../../utils/line-breaks';
+import { getCurrentLocale } from '../../utils/i18n';
+
+interface Props {
+  text?: string;
+  parts?: readonly InlinePart[];
+  mode?: 'sentences' | 'clauses';
+  as?: 'p' | 'span' | 'div';
+  class?: string;
+}
+
+const { text, parts, mode = 'sentences', as: Tag = 'p', class: className } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const input: InlinePart[] = parts && parts.length > 0 ? [...parts] : text ? [{ text }] : [];
+const linkClass =
+  'font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600';
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const renderPart = (part: InlinePart) =>
+  part.href
+    ? `<a href="${escapeHtml(part.href)}" class="${linkClass}"${part.external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(part.text)}</a>`
+    : escapeHtml(part.text);
+const renderClause = (clause: InlinePart[]) => clause.map(renderPart).join('');
+
+let html: string;
+if (mode === 'sentences' && isCjkLocale(locale)) {
+  html = groupSentences(input, locale)
+    .map(
+      (sentence) =>
+        `<span class="lb-sentence">${sentence
+          .map((clause) => `<span class="lb-clause">${renderClause(clause)}</span>`)
+          .join('')}</span>`,
+    )
+    .join('');
+} else if (mode === 'clauses') {
+  html = groupClauses(input, locale)
+    .map((clause) => `<span class="lb-clause">${renderClause(clause)}</span>`)
+    .join('');
+} else {
+  html = input.map(renderPart).join('');
+}
+const classes = `${className ?? ''} lb-text`.trim();
+---
+
+<Tag class={classes}><Fragment set:html={html} /></Tag>

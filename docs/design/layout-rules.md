@@ -22,17 +22,23 @@
 
 ### R1. 行は、意味の区切りで替える
 
-- 本文: 文の終わり（「。」「！」「？」）で行を替える。1 文が 1 行。
+- 本文: 文の終わり（「。」「！」「？」）で行を替える。1 文が 1 行。括弧の中の句点では、文を替えない。丸括弧の中の読点では、行を替えない（題は、長い括弧を折るため、括弧の中でも読点の後で替えてよい）。
 - 1 行に収まらない長い文: 読点（「、」）の後で替える。読点の無い長い文は、文節の区切りで折る（`word-break: auto-phrase`）。
 - 短い出だし（5 字以下。「まずは、」「一方で、」「AIで、」など）の後では替えない。次の塊と続ける。
 - 題（h1〜h3・CTA の見出し）: 読点・句点の後でだけ替える。字数を等分する折り方（`text-wrap: balance`）に任せない。
 - 閉じ括弧（」』）)と脚注の印は、前の文に付ける。行の頭に置かない。
+- 閉じの無い開き括弧の後ろは、文の終わりまで行を替えない（字は欠かさず、落ちない）。
+- 表・code block・数式・link card・脚注の一覧には印を付けない。住所・電話番号・日付の行にも印を付けない。
+- 書き手が手で改行（`<br>`）を入れた題は、その改行をそのまま使う（印を重ねない）。
 - この決まりは日本語と中国語に当てる。英語などは、本文の折り返しを browser に任せ、題だけ区切り（`,` `:` `—`）で切る。
 
 ### R2. 1 行は、全角 40 字まで
 
 - 本文の箱の幅は、全角 40 字ぶん（`40em`。18px なら 720px）まで。
 - それより広い箱に、本文をそのまま流さない。
+- 読み物の本文（記事・規約・方針・会社情報）の文字は 18px。狭い画面（640px 未満）は 16px のままでよい。
+- 定義の並び（`dt`・`dd`）も本文と同じ大きさ（18px。狭い画面は 16px）。
+- 表の中の文字の大きさは、本文と別に決めてよい（変えない）。
 
 ### R3. 列は画面の中央。揃えは、1 つの塊に 1 つ
 
@@ -50,6 +56,7 @@
 - 幅の値は 2 つだけ。`--content-width`（80rem。rail）と `--reading-width`（48rem。読み物の列）。値は 1 か所に置く。
 - 文と塊の区切りは、build の時に印を付ける。文 = `span`（`display: block`）、読点までの塊 = `span`（`display: inline-block`）。折り返しは CSS だけで決まる。画面の側の script で測らない。
 - 題も同じ塊の印を使う。
+- link を中に持つ短い題は、`LbHeading` で包まない（読点を含まない題だけ）。
 - 文（本文・見出し・法務の表記）は 1 字も変えない。変えるのは、印と class だけ。
 
 ## 5. 確かめ
@@ -57,14 +64,17 @@
 - 機械（e2e。幅 1440・1920・390）:
   1. 読み物の page で、`main` の中の箱の左右の端が列と揃い、列が画面の中央に在る（2px 以内）。
   2. 題の塊（読点までの 1 つ）が、広い画面で 2 行に割れていない。
-  3. 列の字数に収まる長さの文が、1 行に収まっている。
+  3. 折り返さない時の文の幅が列に収まる文が、1 行に収まっている（字数では決めない。font によって字の幅が違うため）。
   4. 本文の箱の幅が `40em` を超えない。
+- page 内 link の試験が見るのは、同じ page の中の `#id` だけ。別の page への `/path/#id` は見ない。
 - 目: 幅 1440 と 390 の画面の写しを PR に貼り、題と文の切れ方を人が見る。
 
 ## 6. この repo での実装の場所
 
 - 幅の値: `src/styles/content-width.css`（`--content-width` と `--reading-width`）、`tailwind.config.cjs`（`max-w-content` と `max-w-reading`）
 - 文と塊の印: `src/utils/line-breaks.ts`（`splitSentences` / `splitClauses` / `groupSentences` / `groupClauses`）と `src/utils/__tests__/line-breaks.test.ts`
+- 読み物の page の文と題の部品: `src/components/common/LbText.astro`（`mode="sentences"` / `"clauses"`）・`src/components/common/LbHeading.astro`
+- Markdown の本文の印: `src/utils/rehype-line-breaks.ts`（`astro.config.mjs` の `rehypePlugins` の最後）と `src/utils/__tests__/rehype-line-breaks.test.ts`
 - 業種別の page: `src/components/industry/ProposalPage.astro`・`ProposalBlocks.astro`・`ProposalInline.astro`・`ProposalHeading.astro`・`IndustryPaths.astro`・`ProposalSources.astro`
 - 行の CSS: `src/styles/content-width.css` の `.lb-sentence` / `.lb-clause` / `.lb-heading`
 - 確かめ: `e2e/visual-text.spec.ts`

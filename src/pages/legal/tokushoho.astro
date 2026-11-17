@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import LbHeading from '../../components/common/LbHeading.astro';
+import LbText from '../../components/common/LbText.astro';
 import { ORGANIZATION_NAMES } from '../../config/organization';
 
 ---
@@ -9,11 +11,16 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
   description={`${ORGANIZATION_NAMES.ja}の特定商取引法に基づくビジネス情報開示ページ。所在地・連絡先・支払方法などの法定事項を記載しています。`}
 >
   <div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-    <h1 class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">特定商取引法に基づく表記</h1>
+    <LbHeading as="h1" class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text="特定商取引法に基づく表記" />
 
-    <p class="mb-8 text-base leading-[1.8] text-primary-950/80 dark:text-primary-200/80">
-      本ページには、月額サービスおよび受託開発などの役務に関する表記と、会社所有の中古機材を販売する際の表記を分けて記載しています。中古機材の売却条件は、<a href="#used-equipment" class="underline hover:no-underline">中古機材の売却について</a>をご覧ください。
-    </p>
+    <LbText
+      class="mb-8 text-base leading-[1.8] text-primary-950/80 dark:text-primary-200/80 sm:text-lg"
+      parts={[
+        { text: '本ページには、月額サービスおよび受託開発などの役務に関する表記と、会社所有の中古機材を販売する際の表記を分けて記載しています。中古機材の売却条件は、' },
+        { text: '中古機材の売却について', href: '#used-equipment' },
+        { text: 'をご覧ください。' },
+      ]}
+    />
 
     <div class="overflow-x-auto">
     <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
@@ -27,7 +34,7 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
     </table>
     </div>
 
-    <h2 class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl">月額・受託サービスについて</h2>
+    <LbHeading as="h2" class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl" text="月額・受託サービスについて" />
 
     <div class="overflow-x-auto">
     <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
@@ -54,11 +61,12 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
     </table>
     </div>
 
-    <h2 id="used-equipment" class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl">中古機材の売却について</h2>
+    <LbHeading as="h2" id="used-equipment" class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl" text="中古機材の売却について" />
 
-    <p class="mb-6 text-base leading-[1.8] text-primary-950/80 dark:text-primary-200/80">
-      本セクションは、会社所有の中古機器を販売する場合に適用されます。商品・販売価格・販売数量・配送方法は、販売のつど、告知および決済ページに表示します。月額サービスおよび受託開発などの役務の条件は、上の「月額・受託サービスについて」をご覧ください。
-    </p>
+    <LbText
+      class="mb-6 text-base leading-[1.8] text-primary-950/80 dark:text-primary-200/80 sm:text-lg"
+      text="本セクションは、会社所有の中古機器を販売する場合に適用されます。商品・販売価格・販売数量・配送方法は、販売のつど、告知および決済ページに表示します。月額サービスおよび受託開発などの役務の条件は、上の「月額・受託サービスについて」をご覧ください。"
+    />
 
     <div class="overflow-x-auto">
     <table class="min-w-[42rem] w-full table-auto border-collapse text-left">

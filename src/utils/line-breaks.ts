@@ -1,7 +1,9 @@
 // 文と塊の区切りを、build の時に決める純粋な関数。
 // 決まりは docs/design/layout-rules.md の R1。文字は 1 字も変えず、元の文字を切り出すだけ。
-// - 日本語・中国語は「。」「！」「？」で文に分ける。直後の閉じ括弧（」』）)）は前の文に付ける。
-// - 日本語は「、」、中国語は「，」「、」の後で塊に分ける。5 字以下の出だしは次の塊と続ける。
+// - 日本語・中国語は「。」「！」「？」で文に分ける。括弧の中の句点では分けない。
+//   直後の閉じ括弧（」』）)）は前の文に付ける。
+// - 日本語は「、」、中国語は「，」「、」の後で塊に分ける。丸括弧・角括弧の中の読点では分けない。
+//   5 字以下の出だしは次の塊と続ける。
 // - 英語などの題は「, 」「: 」「 — 」の後で塊に分ける。本文を分けるかは呼び出し側が決める。
 
 export type InlinePart = {
@@ -18,7 +20,19 @@ export type InlineSentence = InlineClause[];
 
 const CJK_LOCALES = new Set(['ja', 'zh']);
 const SENTENCE_END = new Set(['。', '！', '？']);
+const OPENING = new Set(['（', '(', '「', '『', '【', '〔', '［', '[']);
 const CLOSING = new Set(['」', '』', '）', ')']);
+const CLOSING_ALL = new Set(['）', ')', '」', '』', '】', '〕', '］', ']']);
+/** 塊の区切りを作らない括弧（丸括弧・角括弧）。かぎ括弧は含めない。 */
+const SQUARE_PAIRS = new Map([
+  ['（', '）'],
+  ['(', ')'],
+  ['【', '】'],
+  ['〔', '〕'],
+  ['［', '］'],
+  ['[', ']'],
+]);
+const SQUARE_CLOSING = new Map([...SQUARE_PAIRS].map(([open, close]) => [close, open] as const));
 
 function languageOf(locale: string): string {
   return (locale.toLowerCase().split(/[-_]/)[0] ?? '').trim();
@@ -28,33 +42,51 @@ export function isCjkLocale(locale: string): boolean {
   return CJK_LOCALES.has(languageOf(locale));
 }
 
-/** 文の終わりの直後（閉じ括弧を含む）の位置。 */
+/** 文の終わりの直後（閉じ括弧を含む）の位置。括弧の中の句点は文の終わりにしない。 */
 function sentenceEnds(text: string, locale: string): number[] {
   if (!isCjkLocale(locale)) return [];
   const ends: number[] = [];
+  let depth = 0;
   for (let i = 0; i < text.length; i += 1) {
-    if (!SENTENCE_END.has(text[i])) continue;
-    let end = i + 1;
-    while (end < text.length && CLOSING.has(text[end])) end += 1;
-    ends.push(end);
-    i = end - 1;
+    const char = text[i];
+    if (SENTENCE_END.has(char) && depth === 0) {
+      let end = i + 1;
+      while (end < text.length && CLOSING.has(text[end])) end += 1;
+      ends.push(end);
+      i = end - 1;
+      continue;
+    }
+    if (OPENING.has(char)) depth += 1;
+    else if (CLOSING_ALL.has(char)) depth = Math.max(0, depth - 1);
   }
   return ends;
 }
 
-/** 区切りの文字（列）の直後の位置。文末の区切りは塊を作らないので除く。 */
-function afterDelimiter(text: string, delimiters: readonly string[]): number[] {
+/**
+ * 区切りの文字（列）の直後の位置。文末の区切りは塊を作らないので除く。
+ * 丸括弧・角括弧の中の読点では塊を作らない（かぎ括弧の中の読点では作る）。
+ */
+function afterDelimiter(text: string, delimiters: readonly string[], suppressInsideBrackets = true): number[] {
   const ends: number[] = [];
+  const openCounts = new Map<string, number>();
+  const isSuppressed = (): boolean => [...openCounts.values()].some((count) => count > 0);
   let i = 0;
   while (i < text.length) {
     const delimiter = delimiters.find((candidate) => text.startsWith(candidate, i));
-    if (!delimiter) {
-      i += 1;
+    if (delimiter) {
+      const end = i + delimiter.length;
+      if (end < text.length && !(suppressInsideBrackets && isSuppressed())) ends.push(end);
+      i = end;
       continue;
     }
-    const end = i + delimiter.length;
-    if (end < text.length) ends.push(end);
-    i = end;
+    const char = text[i];
+    const open = SQUARE_CLOSING.get(char);
+    if (open) {
+      openCounts.set(open, Math.max(0, (openCounts.get(open) ?? 0) - 1));
+    } else if (SQUARE_PAIRS.has(char)) {
+      openCounts.set(char, (openCounts.get(char) ?? 0) + 1);
+    }
+    i += 1;
   }
   return ends;
 }
@@ -67,11 +99,11 @@ function mergeShortLead(text: string, ends: number[]): number[] {
   return [...lead].length <= 5 ? ends.slice(1) : ends;
 }
 
-function clauseEnds(text: string, locale: string): number[] {
+function clauseEnds(text: string, locale: string, suppressInsideBrackets = true): number[] {
   const language = languageOf(locale);
-  if (language === 'ja') return mergeShortLead(text, afterDelimiter(text, ['、']));
-  if (language === 'zh') return mergeShortLead(text, afterDelimiter(text, ['，', '、']));
-  return afterDelimiter(text, [', ', ': ', ' — ']);
+  if (language === 'ja') return mergeShortLead(text, afterDelimiter(text, ['、'], suppressInsideBrackets));
+  if (language === 'zh') return mergeShortLead(text, afterDelimiter(text, ['，', '、'], suppressInsideBrackets));
+  return afterDelimiter(text, [', ', ': ', ' — '], suppressInsideBrackets);
 }
 
 function rangesFromEnds(text: string, ends: number[]): Array<[number, number]> {
@@ -172,6 +204,6 @@ export function groupClauses(parts: readonly InlinePart[], locale: string): Inli
   if (!isCjkLocale(locale)) return groups(clean, snapCuts(clean, clauseEnds(text, locale)));
   return groups(clean, snapCuts(clean, sentenceEnds(text, locale))).flatMap((sentence) => {
     const sentenceText = sentence.map((part) => part.text).join('');
-    return groups(sentence, snapCuts(sentence, clauseEnds(sentenceText, locale)));
+    return groups(sentence, snapCuts(sentence, clauseEnds(sentenceText, locale, false)));
   });
 }
