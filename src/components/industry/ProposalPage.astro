@@ -9,6 +9,7 @@ import { industryContactSource } from '../../config/industry-context';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import IndustryPaths from './IndustryPaths.astro';
 import ProposalBlocks from './ProposalBlocks.astro';
+import ProposalHeading from './ProposalHeading.astro';
 import ProposalInline from './ProposalInline.astro';
 import ProposalSources from './ProposalSources.astro';
 import { DOCUMENT_DOWNLOAD_HREF, PROPOSAL_LINKS, industryInquiryHref } from './proposal-links';
@@ -46,13 +47,11 @@ const ctaParagraphs = page.cta.body.flatMap((block) => {
 
 <section class="relative isolate overflow-hidden pb-12 pt-16 sm:pb-16 sm:pt-24" data-proposal-hero>
   <div class="motion-bg" aria-hidden="true"></div>
-  <div class="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 lg:max-w-content">
+  <div class="relative z-10 mx-auto max-w-reading px-4 sm:px-6 lg:px-8">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
       {page.eyebrow}
     </p>
-    <h1 class="mt-6 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
-      {page.title}
-    </h1>
+    <ProposalHeading as="h1" text={page.title} class="mt-6 text-3xl font-semibold leading-tight tracking-tight sm:text-5xl" />
     <div class="mt-8">
       <ProposalBlocks blocks={page.lead} industry={industry} page={page} />
     </div>
@@ -60,7 +59,7 @@ const ctaParagraphs = page.cta.body.flatMap((block) => {
 </section>
 
 <div class="pb-16 sm:pb-24" data-proposal-body>
-  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 lg:max-w-content">
+  <div class="mx-auto max-w-reading px-4 sm:px-6 lg:px-8">
     <ProposalBlocks blocks={page.sections} industry={industry} page={page} />
   </div>
 </div>
@@ -68,12 +67,12 @@ const ctaParagraphs = page.cta.body.flatMap((block) => {
 <IndustryPaths industry={industry} />
 
 <section class="py-16 sm:py-24">
-  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 lg:max-w-content">
+  <div class="mx-auto max-w-reading px-4 sm:px-6 lg:px-8">
     <div class="flex flex-col gap-6 rounded-3xl bg-[#2d4a6b] px-6 py-12 text-white sm:px-12 sm:py-16" data-proposal-cta>
-      <h2 class="text-balance text-3xl font-medium tracking-tight sm:text-4xl">{page.cta.title}</h2>
+      <ProposalHeading as="h2" text={page.cta.title} class="text-3xl font-medium tracking-tight sm:text-4xl" />
       {
         ctaParagraphs.map((paragraph) => (
-          <p class="text-pretty text-lg leading-relaxed text-white/80"><ProposalInline value={paragraph} industry={industry} /></p>
+          <p class="text-pretty text-lg leading-relaxed text-white/80"><ProposalInline value={paragraph} industry={industry} mode="sentences" /></p>
         ))
       }
       <a

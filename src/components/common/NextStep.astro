@@ -10,13 +10,19 @@ interface Props {
   heading: string;
   lead?: string;
   ctas: Cta[];
+  // 読み物の page では列（48rem）に揃える。既定は LP の今までの幅。
+  width?: 'content' | 'reading';
 }
 
-const { heading, lead, ctas } = Astro.props;
+const { heading, lead, ctas, width = 'content' } = Astro.props;
+const containerClass =
+  width === 'reading'
+    ? 'mx-auto max-w-reading px-4 sm:px-6 lg:px-8'
+    : 'mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8';
 ---
 
 <section class="py-16 sm:py-20">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
+  <div class={containerClass}>
     <div
       class="flex flex-col items-center gap-8 rounded-3xl bg-primary-500/10 px-6 py-12 text-center dark:bg-primary-400/10 sm:px-12 sm:py-16"
     >

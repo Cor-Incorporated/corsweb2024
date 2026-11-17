@@ -9,6 +9,7 @@ module.exports = {
     extend: {
       maxWidth: {
         content: 'var(--content-width)',
+        reading: 'var(--reading-width)',
       },
       colors: {
         primary: colors.stone,

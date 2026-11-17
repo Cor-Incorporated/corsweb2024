@@ -2,6 +2,7 @@
    値を変えるときはこの 1 行だけを変える（Tailwind の max-w-content が参照する）。 */
 :root {
   --content-width: 80rem;
+  --reading-width: 48rem;
 }
 
 /* ヒーローの背景（ぼかした光）が節の終わりで切り落とされて線に見えないよう、下へ自然に消す。 */
@@ -14,4 +15,23 @@
    本文の最終行に 1〜2 文字だけ残るのを防ぐ。 */
 main .type-copy.text-balance {
   text-wrap: balance;
+}
+
+/* 行を替える印（src/utils/line-breaks.ts が付ける）。
+   文は 1 行ずつ置き、塊の間だけで折る。塊が箱より長い時は、塊の中で折り返す
+   （word-break: auto-phrase は h1〜h3・p の今の定義が効く）。 */
+.lb-sentence {
+  display: block;
+}
+
+.lb-clause {
+  display: inline-block;
+  max-width: 100%;
+  /* 塊が箱より長い時、最後の行に 1 字だけ残らないようにする（主に中国語）。 */
+  text-wrap: pretty;
+}
+
+/* 塊を持つ題は、字数を等分する折り方（text-wrap: balance）を止める。 */
+.lb-heading {
+  text-wrap: wrap;
 }

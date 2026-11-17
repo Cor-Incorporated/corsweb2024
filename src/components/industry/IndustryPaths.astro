@@ -38,7 +38,7 @@ const otherIndustries = industryRowsInOrder(t.homeIndustries.rows, `${currentLoc
 ---
 
 <nav class="pb-4 sm:pb-8" aria-label={t.nav.services} data-industry-paths={source}>
-  <div class="mx-auto flex max-w-2xl flex-col gap-8 px-4 sm:px-6 lg:max-w-content lg:px-8">
+  <div class="mx-auto flex max-w-reading flex-col gap-8 px-4 sm:px-6 lg:px-8">
     <div class="flex flex-col gap-4">
       <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{t.nav.services}</h2>
       <ul class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -62,7 +62,7 @@ const otherIndustries = industryRowsInOrder(t.homeIndustries.rows, `${currentLoc
           <h2 class="text-2xl font-medium tracking-tight sm:text-3xl">{common.relatedWorksTitle}</h2>
           <a
             href={getLocalizedUrl(`/works/${namedCaseSlug}`, currentLocale)}
-            class="inline-flex min-h-12 max-w-3xl scroll-mb-28 items-center break-words text-base font-medium text-primary-950 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-50 lg:max-w-content"
+            class="inline-flex min-h-12 scroll-mb-28 items-center break-words text-base font-medium text-primary-950 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-50"
           >
             {namedCase.data.title}
           </a>
