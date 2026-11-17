@@ -1,6 +1,8 @@
 ---
 import { getCurrentLocale, getTranslations, emphasizeKyousou } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const t = getTranslations(getCurrentLocale(Astro.url));
 ---
@@ -13,10 +15,14 @@ const t = getTranslations(getCurrentLocale(Astro.url));
     <div class="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
       <div class="flex max-w-3xl flex-col gap-6 lg:max-w-content">
         <p class="text-sm font-medium uppercase tracking-wide text-primary-600 dark:text-primary-400">{t.aboutPage.kicker}</p>
-        <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl lg:text-5xl" set:html={emphasizeKyousou(t.aboutPage.title)} />
-        <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
-          {t.aboutPage.lead}
-        </p>
+        {/* 「きょうそう」を含む文は emphasizeKyousou の HTML を set:html で出す（印を付けない。
+            それ以外は普通の文字列なので LbHeading で塊の印を付ける） */}
+        {t.aboutPage.title.includes('「きょうそう」') ? (
+          <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl lg:text-5xl" set:html={emphasizeKyousou(t.aboutPage.title)} />
+        ) : (
+          <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl lg:text-5xl" text={t.aboutPage.title} />
+        )}
+        <LbText class="type-copy max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.aboutPage.lead} />
       </div>
       <Fukuoka100Emblem variant="portrait" imgClass="h-40 w-auto sm:h-48" class="shrink-0 self-start lg:self-center" />
     </div>

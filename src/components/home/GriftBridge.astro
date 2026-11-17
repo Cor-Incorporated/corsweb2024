@@ -1,6 +1,8 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import { getGriftUrl, GRIFT_CLI_GITHUB_URL } from '../../config/site';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const t = getTranslations(getCurrentLocale(Astro.url));
 
@@ -23,18 +25,14 @@ const comments = bridge.terminalComments;
         >
           {bridge.eyebrow}
         </p>
-        <h2 class="text-2xl font-medium tracking-tight sm:text-4xl">
-          {bridge.title}
-        </h2>
-        <p class="text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
-          {bridge.description}
-        </p>
+        <LbHeading as="h2" class="text-2xl font-medium tracking-tight sm:text-4xl" text={bridge.title} />
+        <LbText class="max-w-[40em] text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg" text={bridge.description} />
         <ul class="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           {
             bridge.promises.map((item) => (
               <li class="rounded-2xl bg-primary-500/10 px-4 py-3 dark:bg-primary-400/10 sm:p-4">
-                <p class="text-base font-medium">{item.title}</p>
-                <p class="mt-1 text-sm text-primary-950/70 dark:text-primary-200/70">{item.body}</p>
+                <LbText class="text-base font-medium" text={item.title} />
+                <LbText class="mt-1 text-sm text-primary-950/70 dark:text-primary-200/70" text={item.body} />
               </li>
             ))
           }
@@ -57,9 +55,7 @@ const comments = bridge.terminalComments;
             {bridge.ctaGithub}
           </a>
         </div>
-        <p class="text-sm text-primary-950/70 dark:text-primary-200/70">
-          {bridge.note}
-        </p>
+        <LbText class="max-w-[40em] text-sm text-primary-950/70 dark:text-primary-200/70" text={bridge.note} />
       </div>
 
       <!-- CLI の使い方の例（コマンドは翻訳しない。コメントだけ各言語） -->

@@ -1,6 +1,8 @@
 ---
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -44,12 +46,8 @@ if (showCalendar) {
     <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
       <div class="flex flex-col gap-8">
         <div class="text-center">
-          <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">
-            {t.calendar.title}
-          </h2>
-          <p class="mt-4 text-lg text-primary-950/70 dark:text-primary-200/70">
-            {t.calendar.description}
-          </p>
+          <LbHeading as="h2" class="text-3xl font-medium tracking-tight sm:text-4xl" text={t.calendar.title} />
+          <LbText class="mx-auto mt-4 max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.calendar.description} />
         </div>
         
         <div class="mx-auto w-full max-w-4xl lg:max-w-content">
@@ -72,9 +70,7 @@ if (showCalendar) {
           
           <!-- カレンダー下部の説明 -->
           <div class="mt-6 text-center">
-            <p class="text-sm text-primary-950/60 dark:text-primary-200/60">
-              {t.calendar.note}
-            </p>
+            <LbText class="mx-auto max-w-[40em] text-sm text-primary-950/60 dark:text-primary-200/60" text={t.calendar.note} />
           </div>
         </div>
       </div>

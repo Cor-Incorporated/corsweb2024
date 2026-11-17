@@ -2,6 +2,8 @@
 import type { CollectionEntry } from 'astro:content';
 import { getCurrentLocale } from '../../utils/i18n';
 import CategoryBadge from './CategoryBadge.astro';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 interface Props {
   post: CollectionEntry<'blog'> | {
@@ -91,13 +93,9 @@ const articleClass = variant === 'feed'
           </span>
         </div>
 
-        <h2 class="line-clamp-2 text-balance text-xl font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300">
-          {title}
-        </h2>
+        <LbHeading as="h2" class="line-clamp-2 text-balance text-xl font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300" text={title} />
 
-        <p class="line-clamp-2 text-pretty text-sm leading-6 text-stone-600 dark:text-stone-300 sm:text-base sm:leading-7">
-          {description}
-        </p>
+        <LbText class="line-clamp-2 text-pretty text-sm leading-6 text-stone-600 dark:text-stone-300 sm:text-base sm:leading-7" text={description} />
 
         {tags.length > 0 && (
           <div class="relative z-20 mt-auto flex flex-wrap items-center gap-2">
@@ -137,13 +135,13 @@ const articleClass = variant === 'feed'
           </time>
         </div>
 
-        <h3 class={`${variant === 'compact' ? 'text-base' : 'text-lg'} mb-2 line-clamp-2 text-balance font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300`}>
-          {title}
-        </h3>
+        <LbHeading
+          as="h3"
+          class={`${variant === 'compact' ? 'text-base' : 'text-lg'} mb-2 line-clamp-2 text-balance font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300`}
+          text={title}
+        />
 
-        <p class="mb-4 line-clamp-3 flex-1 text-pretty text-sm leading-6 text-stone-600 dark:text-stone-300">
-          {description}
-        </p>
+        <LbText class="mb-4 line-clamp-3 flex-1 text-pretty text-sm leading-6 text-stone-600 dark:text-stone-300" text={description} />
 
         {tags.length > 0 && (
           <div class="mt-auto flex flex-wrap items-center gap-1.5 pt-2">

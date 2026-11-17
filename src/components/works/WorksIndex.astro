@@ -2,6 +2,8 @@
 import NextStep from '../common/NextStep.astro';
 import { getContactUrl, resolveExternalHref } from '../../config/site';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 // /works（ja）と /[lang]/works（非ja）で共有する本体。表示言語は URL から判定するため、
 // 呼び出し側は Layout の meta を渡すだけでよい（マークアップの二重管理を避ける）。
@@ -40,15 +42,11 @@ const moreHref = t.works.moreHref.startsWith('/')
 
 <div class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-content lg:px-8">
   <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12 lg:max-w-content">
-    <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{t.works.title}</h1>
-    <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
-      {t.works.intro}
-    </p>
+    <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={t.works.title} />
+    <LbText class="type-copy max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.works.intro} />
   </div>
 
-  <p class="type-copy mb-12 max-w-3xl text-sm text-primary-950/50 dark:text-primary-200/50 lg:max-w-content">
-    {t.works.note}
-  </p>
+  <LbText class="type-copy mb-12 max-w-[40em] text-sm text-primary-950/50 dark:text-primary-200/50" text={t.works.note} />
 
   <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {
@@ -62,7 +60,8 @@ const moreHref = t.works.moreHref.startsWith('/')
         const body = (
           <>
             <div class="flex items-center gap-2">{tag}</div>
-            <h2 class="type-heading text-lg font-medium tracking-tight">{item.name}</h2>
+            <LbHeading as="h2" class="type-heading text-lg font-medium tracking-tight" text={item.name} />
+            {/* card の説明は card 全体を覆う <a> の中にあり、link の文字以外も包むため印を付けない */}
             <p class="type-copy text-base text-primary-950/70 dark:text-primary-200/70">
               {item.description}
             </p>
