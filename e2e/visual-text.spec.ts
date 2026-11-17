@@ -841,6 +841,86 @@ test('line-break marks keep their computed styles (line breaks)', async ({ page 
   }
 });
 
+// 幅 390 の狭い画面では、本文は文の終わり（句点）でだけ行を替える（docs/design/layout-rules.md の R1）。
+// 文の中の塊（.lb-sentence > .lb-clause）は通常の折り方に戻り、文は印の無い普通の文字として
+// 流した時と同じ行数になる。題の塊（.lb-heading .lb-clause）は、狭い画面でも読点で切る。
+test('narrow screens break body text at sentence ends only (line breaks)', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const failures: string[] = [];
+
+  for (const route of [...LINE_BREAK_ROUTES, ...READING_LINE_BREAK_ROUTES]) {
+    await settlePage(page, route);
+    await page.evaluate(installLineBreakProbe);
+    const issues = await page.evaluate(() => {
+      const failures: string[] = [];
+      const probe = window.__lineBreakProbe;
+      if (!probe) return ['折り返しを測る関数が仕込まれていない'];
+      const displayOf = (element: Element): string => window.getComputedStyle(element).display;
+
+      const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
+      if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
+      for (const sentence of sentences) {
+        if (displayOf(sentence) !== 'block') {
+          failures.push(`文の display が ${displayOf(sentence)}（block のはず）: ${(sentence.textContent ?? '').slice(0, 30)}`);
+          break;
+        }
+      }
+
+      const bodyClauses = Array.from(document.querySelectorAll('.lb-sentence > .lb-clause'));
+      if (bodyClauses.length === 0) failures.push('文の中の塊（.lb-sentence > .lb-clause）が 1 つも無い');
+      for (const clause of bodyClauses) {
+        if (displayOf(clause) !== 'inline') {
+          failures.push(`文の中の塊の display が ${displayOf(clause)}（inline のはず）: ${(clause.textContent ?? '').slice(0, 30)}`);
+          break;
+        }
+      }
+
+      const headingClauses = Array.from(document.querySelectorAll('.lb-heading .lb-clause'));
+      if (headingClauses.length === 0) failures.push('題の塊（.lb-heading .lb-clause）が 1 つも無い');
+      for (const clause of headingClauses) {
+        if (displayOf(clause) !== 'inline-block') {
+          failures.push(`題の塊の display が ${displayOf(clause)}（inline-block のはず）: ${(clause.textContent ?? '').slice(0, 30)}`);
+          break;
+        }
+      }
+
+      // 形で見る: 文ごとに、印ありの行数が、印を外して同じ箱に流した時の行数と同じか。
+      // 複製は不可視にして元の文の直前に置き（同じ幅で折る）、測り終えたら必ず消す。
+      const mismatchedTexts: string[] = [];
+      for (const sentence of sentences) {
+        const text = (sentence.textContent ?? '').replace(/\s+/g, '');
+        if (text.length === 0) continue;
+        const markedLines = probe.lineCount(sentence);
+        const clone = sentence.cloneNode(true) as HTMLElement;
+        for (const clause of Array.from(clone.querySelectorAll('.lb-clause'))) {
+          (clause as ChildNode).replaceWith(...Array.from(clause.childNodes));
+        }
+        clone.style.visibility = 'hidden';
+        sentence.parentElement?.insertBefore(clone, sentence);
+        const plainLines = probe.lineCount(clone);
+        clone.remove();
+        if (markedLines !== plainLines) {
+          mismatchedTexts.push(
+            `文の行数が通常の折り方と違う（印あり ${markedLines} 行 / 印なし ${plainLines} 行）: ${text.slice(0, 30)}`,
+          );
+        }
+      }
+      if (mismatchedTexts.length > 0) {
+        failures.push(...mismatchedTexts.slice(0, 50));
+        if (mismatchedTexts.length > 50) failures.push(`ほか ${mismatchedTexts.length - 50} 文も同様に違う`);
+      }
+
+      return failures;
+    });
+    failures.push(...issues.map((issue) => `mobile-390 ${route}: ${issue}`));
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`narrow screens must break body text at sentence ends only:\n${failures.join('\n')}`);
+  }
+});
+
 // 全部の .lb-sentence で、開きの括弧と閉じの括弧の数が同じ（業種別と読み物の両方）。
 // 揃わない文は、page と文の頭 30 字を出す。
 const BRACKET_PAIRS = [
