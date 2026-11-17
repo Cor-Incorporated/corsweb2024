@@ -435,25 +435,34 @@ declare global {
 }
 
 function installLineBreakProbe(): void {
+  // 行の数は、要素の高さを行の高さで割って数える。inline の code は、同じ行でも
+  // 上下の padding で Range の top が 9px ずれる事があり、top を 8px でまとめる数え方だと
+  // 1 行を 2 行と誤る。手で入れた <br> は折り返しではないので、その数だけ引く。
   const lineCount = (element: Element): number => {
+    const manualBreaks = element.querySelectorAll('br').length;
+    const style = window.getComputedStyle(element);
+    const lineHeight = Number.parseFloat(style.lineHeight);
+    const height = element.getBoundingClientRect().height;
+    if (Number.isFinite(lineHeight) && lineHeight > 0 && height > 0) {
+      return Math.max(1, Math.round(height / lineHeight) - manualBreaks);
+    }
     const range = document.createRange();
     range.selectNodeContents(element);
     const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-    // inline-block の中の文字は、同じ行でも top が数 px ずれて 2 つの rect になる。
-    // 行の間隔（line-height）より十分小さい 8px を同じ行とみなす。
     const tops: number[] = [];
     for (const rect of rects) {
       if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
     }
     range.detach();
-    return tops.length;
+    return Math.max(1, tops.length - manualBreaks);
   };
 
   // 折り返さない時の幅。複製を不可視・nowrap で親に置いて測り、終わったら必ず消す
-  // （元の要素の見た目は変えない）。複製は DOM を写すので、中の code・英数字の字幅も
-  // そのまま測れる。font の違いは、この幅と箱の幅を比べる所にだけ現れる。
+  // （元の要素の見た目は変えない）。手で入れた <br> は、折り返さない時の幅を測るため
+  // 空白に置き換える（<br> を残すと、複製の幅が長い方の行だけになる）。
   const unwrappedWidth = (element: Element): number => {
     const clone = element.cloneNode(true) as HTMLElement;
+    for (const br of Array.from(clone.querySelectorAll('br'))) br.replaceWith(' ');
     clone.style.position = 'absolute';
     clone.style.visibility = 'hidden';
     clone.style.whiteSpace = 'nowrap';
@@ -477,7 +486,9 @@ function installLineBreakProbe(): void {
     const paddingRight = Number.parseFloat(style.paddingRight) || 0;
     const borderLeft = Number.parseFloat(style.borderLeftWidth) || 0;
     const borderRight = Number.parseFloat(style.borderRightWidth) || 0;
-    return parent.getBoundingClientRect().width - paddingLeft - paddingRight - borderLeft - borderRight;
+    return (
+      parent.getBoundingClientRect().width - paddingLeft - paddingRight - borderLeft - borderRight
+    );
   };
 
   // 折り返さない時の幅が箱より 1px 以上小さい文だけを「1 行のはず」とし、2 行以上なら落とす。
@@ -498,8 +509,13 @@ function installLineBreakProbe(): void {
       const lines = lineCount(sentence);
       if (lines !== 1) {
         const chars = Array.from(text).length;
+        const style = window.getComputedStyle(sentence);
+        const lineHeight = Number.parseFloat(style.lineHeight);
+        const height = sentence.getBoundingClientRect().height;
+        const lineHeightText =
+          Number.isFinite(lineHeight) && lineHeight > 0 ? `${lineHeight.toFixed(1)}px` : '取れない';
         failures.push(
-          `文が 1 行に収まらない（幅 ${nowrapWidth.toFixed(1)}px / 箱 ${box.toFixed(1)}px、${chars} 字）: ${text.slice(0, 40)}`,
+          `文が 1 行に収まらない（${lines} 行 = 高さ ${height.toFixed(1)}px ÷ 行 ${lineHeightText}。幅 ${nowrapWidth.toFixed(1)}px / 箱 ${box.toFixed(1)}px、${chars} 字）: ${text.slice(0, 40)}`,
         );
       }
     }
@@ -561,7 +577,14 @@ test('industry headings and sentences break at meaning boundaries (line breaks)'
           if (probe.unwrappedWidth(clause) > box + 1) continue; // 箱より長い塊は除く
           const lines = probe.lineCount(clause);
           if (lines !== 1) {
-            failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
+            const style = window.getComputedStyle(clause);
+            const lineHeight = Number.parseFloat(style.lineHeight);
+            const height = clause.getBoundingClientRect().height;
+            const lineHeightText =
+              Number.isFinite(lineHeight) && lineHeight > 0 ? `${lineHeight.toFixed(1)}px` : '取れない';
+            failures.push(
+              `題の塊が ${lines} 行に割れている（高さ ${height.toFixed(1)}px ÷ 行 ${lineHeightText}）: ${(clause.textContent ?? '').slice(0, 40)}`,
+            );
           }
         }
 
@@ -654,7 +677,15 @@ test('page-internal links point to an id on the same page', async ({ page }) => 
       for (const link of Array.from(document.querySelectorAll('main a[href^="#"]'))) {
         const href = link.getAttribute('href') ?? '';
         if (href === '#') continue;
-        const id = decodeURIComponent(href.slice(1));
+        const raw = href.slice(1);
+        // % を含む壊れた href は decodeURIComponent が投げる。例外で試験を止めず、
+        // 生の文字列のまま id を引く（encode されていない #id も同じ所で拾える）。
+        let id = raw;
+        try {
+          id = decodeURIComponent(raw);
+        } catch {
+          id = raw;
+        }
         if (!id) continue;
         if (document.getElementById(id)) continue;
         missing.push(href);
@@ -726,7 +757,14 @@ test('reading pages break headings and sentences at meaning boundaries (line bre
           if (probe.unwrappedWidth(clause) > box + 1) continue;
           const lines = probe.lineCount(clause);
           if (lines !== 1) {
-            failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
+            const style = window.getComputedStyle(clause);
+            const lineHeight = Number.parseFloat(style.lineHeight);
+            const height = clause.getBoundingClientRect().height;
+            const lineHeightText =
+              Number.isFinite(lineHeight) && lineHeight > 0 ? `${lineHeight.toFixed(1)}px` : '取れない';
+            failures.push(
+              `題の塊が ${lines} 行に割れている（高さ ${height.toFixed(1)}px ÷ 行 ${lineHeightText}）: ${(clause.textContent ?? '').slice(0, 40)}`,
+            );
           }
         }
 
