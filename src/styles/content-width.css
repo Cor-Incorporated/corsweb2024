@@ -31,8 +31,13 @@ main .type-copy.text-balance {
   text-wrap: pretty;
 }
 
-/* 塊を持つ題は、字数を等分する折り方（text-wrap: balance）を止める。 */
-.lb-heading {
+/* 塊を持つ題は、字数を等分する折り方（text-wrap: balance）を止める。
+   layout の `h1, h2, h3, .type-heading { text-wrap: balance }` より強い形で書く
+   （出る順番に頼らない）。 */
+h1.lb-heading,
+h2.lb-heading,
+h3.lb-heading,
+.type-heading.lb-heading {
   text-wrap: wrap;
 }
 
