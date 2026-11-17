@@ -5,3 +5,7 @@
 # 52d05ba の docs/billing/plans.json 12 行目: 税率の識別子（tax_rate の "key"）。秘密ではない。
 # 項目名は id に改めた。この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
 52d05baef4fb354728ca1c12b199a3aecd43df98:docs/billing/plans.json:generic-api-key:12
+#
+# 8b2367d の workers/contact-chat/src/__tests__/storage.test.ts 133 行目: 試験の冪等の key（idempotencyKey の "idempotency-1"）。秘密ではない。
+# この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
+8b2367d6739642105fc6696f570408ef53f80945:workers/contact-chat/src/__tests__/storage.test.ts:generic-api-key:133
