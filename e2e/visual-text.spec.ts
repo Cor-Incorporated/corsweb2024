@@ -842,8 +842,9 @@ test('line-break marks keep their computed styles (line breaks)', async ({ page 
 });
 
 // 幅 390 の狭い画面では、本文は文の終わり（句点）でだけ行を替える（docs/design/layout-rules.md の R1）。
-// 文の中の塊（.lb-sentence > .lb-clause）は通常の折り方に戻り、文は印の無い普通の文字として
-// 流した時と同じ行数になる。題の塊（.lb-heading .lb-clause）は、狭い画面でも読点で切る。
+// 文の中の塊（.lb-sentence の子孫の .lb-clause。link などを挟んで直下に無い物も含む）は通常の折り方に
+// 戻り、文は印の無い普通の文字として流した時と同じ行の切り方（各行の文字）になる。
+// 題の塊（.lb-heading .lb-clause）は、狭い画面でも読点で切る。
 test('narrow screens break body text at sentence ends only (line breaks)', async ({ page }) => {
   test.setTimeout(300_000);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -867,8 +868,8 @@ test('narrow screens break body text at sentence ends only (line breaks)', async
         }
       }
 
-      const bodyClauses = Array.from(document.querySelectorAll('.lb-sentence > .lb-clause'));
-      if (bodyClauses.length === 0) failures.push('文の中の塊（.lb-sentence > .lb-clause）が 1 つも無い');
+      const bodyClauses = Array.from(document.querySelectorAll('.lb-sentence .lb-clause'));
+      if (bodyClauses.length === 0) failures.push('文の中の塊（.lb-sentence .lb-clause）が 1 つも無い');
       for (const clause of bodyClauses) {
         if (displayOf(clause) !== 'inline') {
           failures.push(`文の中の塊の display が ${displayOf(clause)}（inline のはず）: ${(clause.textContent ?? '').slice(0, 30)}`);
@@ -885,24 +886,65 @@ test('narrow screens break body text at sentence ends only (line breaks)', async
         }
       }
 
-      // 形で見る: 文ごとに、印ありの行数が、印を外して同じ箱に流した時の行数と同じか。
-      // 複製は不可視にして元の文の直前に置き（同じ幅で折る）、測り終えたら必ず消す。
+      // 形で見る: 文ごとに、印ありの行の切り方（各行の文字）が、印を外して同じ箱に流した時と同じか。
+      // 行の数だけの比べは、同じ行数でも折れる場所が違う文（子孫の塊が inline-block のまま残った文）を
+      // 見逃す。複製から外す印は子孫の全部とし、複製は不可視にして元の文の直前に置き（同じ幅で折り）、
+      // 測り終えたら必ず消す。
+      const segmenter =
+        typeof (Intl as unknown as { Segmenter?: unknown }).Segmenter === 'function'
+          ? new ((Intl as unknown as { Segmenter: new (_locale: string, options: { granularity: string }) => { segment: (value: string) => Iterable<{ segment: string }> } }).Segmenter)(
+              document.documentElement.lang || navigator.language || 'ja',
+              { granularity: 'grapheme' },
+            )
+          : null;
+      const lineTextsOf = (element: Element): string[] => {
+        const rows: { y: number; chars: string[] }[] = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node) {
+          const text = node.textContent ?? '';
+          let offset = 0;
+          for (const grapheme of segmenter ? [...segmenter.segment(text)].map((item) => item.segment) : Array.from(text)) {
+            const next = offset + grapheme.length;
+            if (grapheme.trim() !== '') {
+              const range = document.createRange();
+              range.setStart(node, offset);
+              range.setEnd(node, next);
+              const rect = range.getBoundingClientRect();
+              range.detach();
+              if (rect.width > 0 && rect.height > 0) {
+                const y = (rect.top + rect.bottom) / 2;
+                let row = rows.find((candidate) => Math.abs(candidate.y - y) <= 4);
+                if (!row) {
+                  row = { y, chars: [] };
+                  rows.push(row);
+                }
+                row.chars.push(grapheme);
+              }
+            }
+            offset = next;
+          }
+          node = walker.nextNode();
+        }
+        rows.sort((a, b) => a.y - b.y);
+        return rows.map((row) => row.chars.join('').replace(/\s+/g, ' ').trim());
+      };
       const mismatchedTexts: string[] = [];
       for (const sentence of sentences) {
         const text = (sentence.textContent ?? '').replace(/\s+/g, '');
         if (text.length === 0) continue;
-        const markedLines = probe.lineCount(sentence);
+        const markedLines = lineTextsOf(sentence);
         const clone = sentence.cloneNode(true) as HTMLElement;
         for (const clause of Array.from(clone.querySelectorAll('.lb-clause'))) {
           (clause as ChildNode).replaceWith(...Array.from(clause.childNodes));
         }
         clone.style.visibility = 'hidden';
         sentence.parentElement?.insertBefore(clone, sentence);
-        const plainLines = probe.lineCount(clone);
+        const plainLines = lineTextsOf(clone);
         clone.remove();
-        if (markedLines !== plainLines) {
+        if (markedLines.join('\n') !== plainLines.join('\n')) {
           mismatchedTexts.push(
-            `文の行数が通常の折り方と違う（印あり ${markedLines} 行 / 印なし ${plainLines} 行）: ${text.slice(0, 30)}`,
+            `文の行の切り方が通常の折り方と違う（印あり ${markedLines.length} 行 / 印なし ${plainLines.length} 行）: ${text.slice(0, 30)}\n          印あり: ${markedLines.join(' / ')}\n          印なし: ${plainLines.join(' / ')}`,
           );
         }
       }
