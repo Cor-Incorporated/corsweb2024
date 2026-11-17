@@ -1,0 +1,42 @@
+---
+import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+import { industryRowsInOrder } from '../../config/industry-context';
+
+const currentLocale = getCurrentLocale(Astro.url);
+const t = getTranslations(currentLocale);
+// 並びは src/config/industry-context.ts の INDUSTRY_SLUGS。locale の行と食い違うと build を止める。
+const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIndustries`);
+
+// ヒーローの主ボタンの下に置く、既存の業種ページへの入口（ProblemHero.astro の中）。
+// 最初の画面（scroll 0）に 5 つとも入ることを e2e/first-view.spec.ts が 4 つの画面の大きさ × 5 言語で測る。
+// 文言は homeIndustries の見出しの小さな文字と業種名だけ。各業種のテーマはトップの業種の欄（IndustryList）にある。
+// h2 は付けない。本文の見出し順は IndustryList 以降のまま（tests/build-output/home-page.test.ts）。
+// data-reveal は付けない。画面の下 12% に入った要素は演出が始まらず、透明のまま残るため。
+---
+
+<nav
+  id="home-industry-entry"
+  class="flex w-full flex-col items-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3"
+  data-home-industry-entry
+  aria-label={t.homeIndustries.eyebrow}
+>
+  <p class="text-xs font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400 sm:text-sm">
+    {t.homeIndustries.eyebrow}
+  </p>
+  <ul class="flex max-w-3xl flex-wrap justify-center gap-1.5 sm:gap-2">
+    {
+      rows.map((row) => (
+        <li>
+          <a
+            href={getLocalizedUrl(row.link, currentLocale)}
+            data-industry-entry={row.slug}
+            class="inline-flex min-h-[36px] items-center gap-1 rounded-full border border-primary-900/15 bg-primary-50/80 px-3 text-[13px] font-medium text-primary-950 transition hover:border-primary-900/30 hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:border-primary-300/20 dark:bg-primary-950/60 dark:text-primary-100 dark:hover:bg-primary-400/10 dark:focus-visible:outline-[#d5e4f2] sm:min-h-[40px] sm:px-4 sm:text-sm"
+          >
+            {row.industry}
+            <span aria-hidden="true" class="hidden text-[#2d4a6b] dark:text-[#d5e4f2] sm:inline">→</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

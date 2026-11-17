@@ -3,7 +3,7 @@ title: "How to Create an Approval Request for AI Adoption: Explaining Cost-Effec
 description: "We explain how to organize the purpose, KPIs, costs, risks, and estimate rationales required to get internal approval for AI adoption. This article is for professionals looking to explain AI implementation within their company."
 summary: "Approval request documents for AI adoption should not focus on \"what AI can do,\" but should instead be written starting from the operational challenge to be solved, the scope, expected benefits, risks, and the decision deadline. It is essential to cover six key elements—purpose, scope, KPIs, costs, risks, and next decisions—and rather than hiding risks, clearly demonstrate how they will be managed. The discussion of the estimation-support web app is kept as what was published at the time."
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"
@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "920061b7d86bdf66d604741a1728886a0dffb8d3cbc49b84d401458918f35038"
+translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -79,4 +79,4 @@ Figures are based on public materials verified as of June 20, 2026.
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-2025) - Online survey from 25 June to 29 July 2025. 1,993 respondents in 105 countries. 88% regularly use AI in at least one business function; about one-third have scaled; 23% have scaled AI agents; 39% are in the experimental phase.
 - [SMRJ: Survey on the Actual Conditions of AI Utilization, etc. by SMEs (March 2026)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 20.4% SME AI adoption rate; 18.6% considering adoption; 82.6% of companies that have introduced AI use generative AI; general affairs and administrative departments are the most common areas of adoption.
 - [Grift LP](https://griftai.org/) - On the landing page at the time of publication: matching of GitHub track records with market rates, 5–10 AI interview sessions, comparison reports, and the alpha-stage market research of that time. This is not a description of the current offering.
-- [Cor. Website: Security](https://cor-jp.com/security/) - Verified local-first approach, minimal logging, confidentiality tiers, AI usage policy, and ISMS (completed stage 2 audit in October 2026, with certification registration expected around December 2026).
+- [Cor. Website: Security](https://cor-jp.com/security/) - Verified local-first approach, minimal logging, confidentiality tiers, AI usage policy, and ISMS (certification obtained in November 2026; scope: “Contract development and operation of software”).

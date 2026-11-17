@@ -124,14 +124,34 @@ export type ContactUrlOptions = {
   source?: string;
 };
 
-/** Cor /contact への locale + intent 付き URL */
+/**
+ * 問い合わせの入口を Cloudia のチャットへ向けるか。build 時の旗 PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED（既定は真）。
+ * src/config/contact.ts の CLOUDIA_CONTACT_PRIMARY_ENABLED と同じ旗で、false は Cloudia が止まったときの切り戻し
+ * （問い合わせページにフォームが出る）。両方の値がそろうことは src/config/__tests__/site.test.ts が照らす。
+ * 呼ばれた時に読む（astro.config から読み込まれる部品も使うので、読み込みの時には env に触らない）。
+ */
+export function isContactChatPrimary(): boolean {
+  return import.meta.env?.PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED !== 'false';
+}
+
+/**
+ * サイト内の問い合わせの入口の URL。
+ * 通常は Cloudia のチャット（/contact/chat/）へ直接向け、問い合わせページ（/contact、/<lang>/contact）は通さない。
+ * path は言語で変えず、言語は locale で渡す（浮きボタン CloudiaLauncher と業種のページと同じ形）。
+ * 枠の中で開くための embed は付けない（枠の中で開くのは浮きボタンだけ）。
+ * 切り戻し（isContactChatPrimary() が偽）の build では、フォームの在る問い合わせページ（/<lang>/contact?intent&source）へ向ける。
+ */
 export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): string {
-  const base = getLocalizedUrl('/contact', locale);
   const params = new URLSearchParams();
   if (opts.intent) params.set('intent', opts.intent);
   if (opts.source) params.set('source', opts.source);
-  const qs = params.toString();
-  return qs ? `${base}?${qs}` : base;
+  if (!isContactChatPrimary()) {
+    const base = getLocalizedUrl('/contact', locale);
+    const query = params.toString();
+    return query ? `${base}?${query}` : base;
+  }
+  params.set('locale', locale);
+  return `/contact/chat/?${params.toString()}`;
 }
 
 /**
@@ -212,4 +232,22 @@ export function isWithinFukuoka100DisplayPeriod(now: Date): boolean {
 /** 福岡100選エンブレムを表示してよいか（明示フラグ AND 掲載期間内）。 */
 export function isFukuoka100EmblemVisible(now: Date = new Date()): boolean {
   return FUKUOKA100_EMBLEM_ENABLED && isWithinFukuoka100DisplayPeriod(now);
+}
+
+/** フッターから、問い合わせページのカレンダーの区画（代表の公開スケジュール）へ向ける link の source。 */
+export const CONTACT_CALENDAR_SOURCE = 'footer-calendar';
+
+/** カレンダーの区画の id（src/components/contact/Calendar.astro の section）。 */
+export const CONTACT_CALENDAR_ANCHOR = 'contact-calendar';
+
+/**
+ * 問い合わせページのカレンダーの区画への URL（その言語の問い合わせページ）。
+ * カレンダーを見て打ち合わせの日を探す人のための 1 本で、旗によらず問い合わせページへ向ける
+ * （切り戻しの build でも、カレンダーは所在地の下・フォームの上に在る）。
+ * カレンダーは PUBLIC_GCAL_ID がある build にだけ在るので、link を描くかは呼ぶ側が CONTACT_CALENDAR_VISIBLE で決める。
+ * path は末尾の / まで書く。/contact は Firebase Hosting が /contact/ へ転送し、ページ遷移（ViewTransitions）の間に
+ * hash（#contact-calendar）が落ちて、区画に着かない。
+ */
+export function getContactCalendarUrl(locale: Locale): string {
+  return `${getLocalizedUrl('/contact/', locale)}?source=${CONTACT_CALENDAR_SOURCE}#${CONTACT_CALENDAR_ANCHOR}`;
 }

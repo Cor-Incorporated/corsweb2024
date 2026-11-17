@@ -3,14 +3,14 @@ title: "公司中可以与不可以输入ChatGPT的信息——机密数据AI应
 description: "面向犹豫是否可将合同、会议纪要、报价单、客户信息输入生成式AI的管理者和管理部门，讲解机密级别划分方式、云端AI与本地LLM的区别使用以及完善公司内部规章制度的要点。"
 summary: "在公司中使用生成式AI时，最先需要决定的并非使用哪款AI，而是哪些信息可以提供给外部AI。将信息分为3个级别，并通过公司内部规章制度明确禁止输入的信息以及可使用的AI工具等，即可将AI应用从“个人自负其责”转变为“公司规范化运营”。"
 pubDate: 2026-06-19
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "情報セキュリティ", "ChatGPT", "ローカルLLM"]
 lang: "zh"
 featured: true
 isDraft: false
-translationSourceHash: "2a15c033801a1941e40c576c33fc31e0355648066d1c20d0272c8bc89c9a6b87"
+translationSourceHash: "9bf38640c7e35cf96c29287a7e4d6c7ed8c28f85d2281bd34ff53bb72eba54af"
 translatedAt: "2026-10-23T06:18:29.689Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ A. 适合希望利用AI处理合同、会议纪要、报价单、内部文档、
 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 发生AI相关事件的组织中，97%缺少适当的访问控制，63%缺少AI治理策略。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - 梳理了敏感信息泄露（Sensitive Information Disclosure）、过度代理（Excessive Agency）、过度依赖（Overreliance）等LLM应用的代表性风险。
-- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认了本地优先、最小化日志、机密级别、AI使用方针、ISMS（预计于2026年10月完成第二阶段审核，2026年12月左右完成认证注册）。
+- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认了本地优先、最小化日志、机密级别、AI使用方针、ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。
 - [Cor. HP: AI × CO-CREATION / 业务概况](https://cor-jp.com/) - 确认了Cor.的业务领域、Grift、本地LLM与安全AI、AI驱动开发、共创理念。

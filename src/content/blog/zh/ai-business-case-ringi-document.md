@@ -3,7 +3,7 @@ title: "AI引入立项审批资料编写指南｜阐明成本效益、风险与�
 description: "本文解析为通过AI引入的内部立项审批所必需的目的、KPI、成本、风险及报价依据的梳理方法。适合需要在公司内部说明AI引入方案的负责人阅读。"
 summary: "AI引入的立项审批资料不应写成“AI能做什么”，而应从要解决的业务课题、适用范围、预期效果、风险及决策期限入手。备齐目的、适用范围、KPI、费用、风险、后续决策这6个项目，并且不隐瞒风险、明确展示如何管理风险至关重要。"
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"
@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "920061b7d86bdf66d604741a1728886a0dffb8d3cbc49b84d401458918f35038"
+translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -79,4 +79,4 @@ AI引入的效果并不局限于缩减作业时间。提案速度、决策质量
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-2025) - 2025年6月25日至7月29日的在线调查。105个国家的回答者1,993人。88%在至少一项业务中常规使用AI，约三分之一实现规模化，23%实现AI Agent规模化，39%处于实验阶段。
 - [中小机构: 中小企业AI等利用实际情况调查（2026年3月）](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 中小企业AI引入率20.4%，探讨引入占18.6%，已引入AI的企业中生成式AI利用率达82.6%，引入业务最多的是总务及管理部门。
 - [Grift LP](https://griftai.org/) - 在发布当时的LP上确认了GitHub业绩与市场行情的比对、5至10次AI访谈、对比报告、当时的Alpha版市场调查。这不是对现在提供形态的说明。
-- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认了本地优先、最小化日志、机密层级、AI使用方针、ISMS（2026年10月完成第二阶段审核，预计2026年12月左右完成认证注册）。
+- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认了本地优先、最小化日志、机密层级、AI使用方针、ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。

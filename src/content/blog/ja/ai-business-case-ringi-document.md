@@ -3,7 +3,7 @@ title: "AI導入の稟議資料の作り方｜費用対効果・リスク・見�
 description: "AI導入の社内稟議を通すために必要な目的、KPI、コスト、リスク、見積根拠の整理方法を解説します。AI導入を社内で説明したい担当者向けの記事です。"
 summary: "AI導入の稟議資料は、「AIで何ができます」ではなく、解く業務課題、対象範囲、期待効果、リスク、判断期限から書くべきです。目的、対象範囲、KPI、費用、リスク、次の判断の6項目をそろえ、リスクは隠さずにどう管理するかを示すことが重要です。見積支援のWebアプリの話は、公開当時の内容として残しています。"
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"
@@ -76,4 +76,4 @@ AIの機能ではなく、解く業務課題、対象範囲、KPI、費用、リ
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-2025) - 2025年6月25日〜7月29日のオンライン調査。105カ国の回答者1,993人。88%が少なくとも1業務でAIを定常利用、約3分の1がスケール、23%がAIエージェントをスケール、39%が実験段階。
 - [中小機構: 中小企業のAI等の利活用に係る実態調査（2026年3月）](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 中小企業のAI導入率20.4%、導入検討18.6%、AI導入済み企業の生成AI利用82.6%、導入業務は総務・管理部門が最多。
 - [Grift LP](https://griftai.org/) - 公開当時のLPで、GitHub実績と市場相場の照合、5〜10回のAIヒアリング、比較レポート、当時アルファ版の市場調査等を確認した。現在の提供形態の説明ではありません。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年10月に第2段階審査を終え、2026年12月ごろの認証登録を見込む）を確認。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年11月に認証を取得。対象範囲は「ソフトウエアの受託開発および運用」）を確認。

@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { TrafficReading } from './industry-context';
+import { trafficPromptLine } from './industry-context';
 import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env } from './types';
 import { CONTACT_INTENTS } from './types';
 import { COMPANY_KNOWLEDGE } from './company-knowledge';
@@ -21,7 +23,9 @@ class AnthropicProvider implements LlmProvider {
   constructor(private readonly apiKey: string) {}
 
   async chat(system: string, messages: ChatMessage[]): Promise<string> {
-    const client = new Anthropic({ apiKey: this.apiKey });
+    // 1 日の呼び出しの上限は、model を呼ぶ前に 1 つ予約する（daily-cap.ts）。SDK の自動の呼び直しは、
+    // 予約 1 つで HTTP の要求を複数にするので使わない（失敗はそのまま返し、呼ぶ側が 503 にする）。
+    const client = new Anthropic({ apiKey: this.apiKey, maxRetries: 0 });
     const response = await client.messages.create({
       model: DEFAULT_MODEL,
       max_tokens: MAX_OUTPUT_TOKENS,
@@ -81,9 +85,15 @@ export function getProvider(env: Env): LlmProvider {
   const provider = (env.LLM_PROVIDER || 'vertex-gemini').toLowerCase();
   switch (provider) {
     case 'vertex-gemini':
+      // 1 日の上限の数を予約する前に止めるため、Gateway の設定が無ければここで投げる（anthropic の鍵と同じ形）。
+      // 確かめ方は VertexGeminiProvider.chat と同じ（前後の空白を除いて空なら無い）。
+      if (!env.VERTEX_GATEWAY_URL?.trim() || !env.VERTEX_GATEWAY_SECRET?.trim()) {
+        throw new Error('LLM が未設定です（VERTEX_GATEWAY_URL・VERTEX_GATEWAY_SECRET）');
+      }
       return new VertexGeminiProvider(env);
     case 'anthropic':
-      if (!env.ANTHROPIC_API_KEY) {
+      // vertex-gemini と同じく、前後の空白を除いて空なら無いと見る（空白だけの鍵で予約し、外へ送らないため）。
+      if (!env.ANTHROPIC_API_KEY?.trim()) {
         throw new Error('LLM が未設定です（ANTHROPIC_API_KEY）');
       }
       return new AnthropicProvider(env.ANTHROPIC_API_KEY);
@@ -158,7 +168,8 @@ export const SYSTEM_PROMPT = [
  */
 export function buildSystemPrompt(opts: {
   intent?: ContactIntent | '';
-  source?: string;
+  /** 正規化済みの読み。生の source 文字列は渡さない。 */
+  traffic?: TrafficReading;
   mode?: ChatMode;
   locale?: ChatLocale;
 } = {}): string {
@@ -213,8 +224,6 @@ export function buildSystemPrompt(opts: {
       'Do not invent keys outside the official list.',
     );
   }
-  if (opts.source) {
-    parts.push(`Traffic source tag (for internal routing only, do not read aloud unless asked): "${opts.source}".`);
-  }
+  parts.push('', '# Source tag (server-provided, trusted)', trafficPromptLine(opts.traffic ?? { kind: 'other', stored: '' }));
   return parts.join('\n');
 }

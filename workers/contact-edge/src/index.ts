@@ -1,3 +1,5 @@
+import { renderUnavailablePage, unavailablePageLocale } from './unavailable';
+
 export interface Env {
   CONTACT_ORIGIN?: string;
   CLOUDIA_PAGES_ORIGIN?: string;
@@ -54,16 +56,38 @@ function isSuccessfulStatic(response: Response): boolean {
   return response.status >= 200 && response.status < 400;
 }
 
+function isChatDocumentPath(pathname: string): boolean {
+  return pathname === `${CHAT_PREFIX}/` || pathname === AMBASSADOR_PATH;
+}
+
+// Cloudia の画面も、サイトの代わりのページも配れないときの応答。
+// 文書の要求には、その場で「受け付けられない」と分かるページを 503 で返す。/contact/ へは戻さない
+// （/contact/ の主ボタンも同じ /contact/chat/ を開くので、戻すと同じ所を回る。#352）。
+// URL と query はそのまま残り、読み込み直せば同じ文脈で試し直せる。資産の要求は短い 503 の text のまま。
+function unavailableResponse(request: Request): Response {
+  const url = new URL(request.url);
+  if (!isChatDocumentPath(url.pathname)) {
+    return new Response('Cloudia is temporarily unavailable.', {
+      status: 503,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
+  const headers = responseHeaders(
+    new Response(null, { headers: { 'content-type': 'text/html; charset=utf-8' } }),
+    true,
+  );
+  // script も外の資源も読まない。枠（同じ origin）から読める形は今の HTML の応答と同じに保つ。
+  headers.set(
+    'content-security-policy',
+    "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; default-src 'none'; style-src 'unsafe-inline'",
+  );
+  const body = request.method === 'HEAD' ? null : renderUnavailablePage(unavailablePageLocale(url.searchParams.getAll('locale')));
+  return new Response(body, { status: 503, headers });
+}
+
 function fallbackResponse(request: Request, response: Response): Response {
   if (response.status < 400) return response;
-  const url = new URL(request.url);
-  if (url.pathname === `${CHAT_PREFIX}/`) {
-    return Response.redirect(new URL('/contact/', url).toString(), 302);
-  }
-  return new Response('Cloudia is temporarily unavailable.', {
-    status: 503,
-    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
-  });
+  return unavailableResponse(request);
 }
 
 export async function fetchContactEdge(request: Request, env: Env): Promise<Response> {
@@ -106,13 +130,7 @@ export async function fetchContactEdge(request: Request, env: Env): Promise<Resp
   try {
     return fallbackResponse(request, await fetchOrigin(pagesRequest, firebase, false));
   } catch {
-    if (new URL(request.url).pathname === `${CHAT_PREFIX}/`) {
-      return Response.redirect(new URL('/contact/', request.url).toString(), 302);
-    }
-    return new Response('Cloudia is temporarily unavailable.', {
-      status: 503,
-      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
-    });
+    return unavailableResponse(request);
   }
 }
 

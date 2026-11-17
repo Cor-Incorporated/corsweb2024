@@ -3,7 +3,7 @@ title: "현장의 AI와 사내 문서의 AI를 어디서 나눌까. Cor.주식�
 description: "카메라와 센서 가까이에서 움직이는 현장 AI와, 사내 문서를 다루는 로컬 LLM은 중시하는 조건이 다릅니다. Cor.주식회사는 검증 환경을 나누는 방침입니다. 나눈 것 자체가 안전의 증명은 아닙니다."
 summary: "현장 AI와 사내 문서 AI는 둘 다 외부 전송을 줄이는 구성을 고를 수 있습니다. 그것만으로 같은 환경에 모으지는 않습니다. Cor.주식회사는 피지컬 추론의 검증 환경을 사내 문서를 다루는 환경과 떼어 두는 방침입니다. 이것은 연결 범위와 영향을 설명하기 위한 설계 판단이지, 안전의 증명은 아닙니다."
 pubDate: 2026-10-28
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "エッジAI", "セキュアAI", "設計"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "d0513b1cfbfaeca13818fefd287ed9de99c213dc2ce077385996d97ce4a8a716"
+translationSourceHash: "70bbefd1309910bf715dfe6d65a73acc60696cb5015e7231462c2c34a20a4cf4"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -93,9 +93,9 @@ Cor.주식회사에서는 수박 깨기처럼 몸을 쓰는 과제를 소재로 
 
 로컬로 하면 거기에 기반의 물리적 관리와 운용까지 더해집니다. 자사에서 긋는 선이 그만큼 늘어납니다. 그 선을 하나씩 설명할 수 있는 상태로 두는 것. Cor.주식회사에서는 그곳을 소중히 합니다.
 
-## 심사의 상태
+## 인증의 상태
 
-Cor.주식회사는 ISMS를 운용하고 있습니다. 2026년 10월에 ISO/IEC 27001 2단계 심사를 마쳤습니다. 인증 등록은 2026년 12월경의 예상입니다. 심사의 상태와, 개별 시스템에서 무엇을 검증했는지는 나누어 전합니다.
+Cor.주식회사는 ISMS를 운용하고 있습니다. 2026년 11월에 ISO/IEC 27001:2022 인증을 취득했습니다. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”입니다. 인증의 상태와, 개별 시스템에서 무엇을 검증했는지는 나누어 전합니다.
 
 ## 연결하는 범위
 
@@ -109,4 +109,4 @@ Cor.주식회사는 ISMS를 운용하고 있습니다. 2026년 10월에 ISO/IEC 
 
 - [NIST SP 800-207: Zero Trust Architecture](https://csrc.nist.gov/pubs/sp/800/207/final) - 네트워크상의 위치를 암묵의 신뢰로 두지 않는 생각(2026년 10월 29일에 개요를 확인)
 - [AWS: Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/) - 클라우드 책임 분담의 한 예. 분담은 서비스 형태에 따라 다름(2026년 10월 29일 확인)
-- [Cor.주식회사: 보안](https://cor-jp.com/security/) - ISMS를 운용하고 있으며, 2026년 10월에 ISO/IEC 27001 2단계 심사를 마치고, 2026년 12월경에 인증 등록을 예상한다는 점
+- [Cor.주식회사: 보안](https://cor-jp.com/security/) - ISMS를 운용하고 있으며, 2026년 11월에 인증을 취득했다는 점(인증 범위는 “소프트웨어의 수탁 개발 및 운영”)

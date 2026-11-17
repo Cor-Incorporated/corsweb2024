@@ -3,7 +3,7 @@ title: "Cómo elaborar una propuesta de aprobación interna para la adopción de
 description: "Explicamos cómo estructurar el propósito, los KPI, los costos, los riesgos y la justificación de las estimaciones necesarios para obtener la aprobación interna de la adopción de IA. Un artículo dirigido a los responsables que desean explicar la adopción de IA en su empresa."
 summary: "En la documentación de propuesta para la adopción de IA, en lugar de centrarse en «qué puede hacer la IA», se debe partir del problema operativo a resolver, el alcance, los efectos esperados, los riesgos y el plazo para la toma de decisiones. Es fundamental reunir seis elementos —propósito, alcance, KPI, costos, riesgos y la siguiente decisión— y, lejos de ocultar los riesgos, mostrar cómo se gestionarán."
 pubDate: 2026-06-13
-updatedDate: 2026-10-29
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "contract-dev"
@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "920061b7d86bdf66d604741a1728886a0dffb8d3cbc49b84d401458918f35038"
+translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -79,4 +79,4 @@ Las cifras se basan en materiales públicos verificados a fecha del 20 de junio 
 - [McKinsey: The State of AI: Global Survey 2025](https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-2025): encuesta en línea del 25 de junio al 29 de julio de 2025. 1.993 respuestas en 105 países. El 88 % utiliza IA con regularidad en al menos una tarea, cerca de un tercio la escala, el 23 % escala agentes de IA y el 39 % se encuentra en fase de experimentación.
 - [SMRJ: Encuesta sobre la situación del uso y aprovechamiento de la IA y afines en las pymes (marzo de 2026)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf): tasa de adopción de IA en pymes del 20,4 %, consideración de adopción del 18,6 %, uso de IA generativa en el 82,6 % de las empresas con IA ya adoptada, y la mayor adopción se concentró en los departamentos de administración y gestión general.
 - [Página de destino de Grift](https://griftai.org/): en la página de entonces se confirmó el cotejo del historial de GitHub con los precios de mercado, entrevistas asistidas por IA de 5 a 10 sesiones, informes comparativos y estudios de mercado que entonces estaban en versión alfa. No describe la oferta actual.
-- [Sitio web de Cor.: Seguridad](https://cor-jp.com/security/): se confirmó el enfoque *local-first*, el registro mínimo, los niveles de confidencialidad, la política de uso de IA y el ISMS (tras haber completado la auditoría de etapa 2 en octubre de 2026, se prevé el registro de la certificación hacia diciembre de 2026).
+- [Sitio web de Cor.: Seguridad](https://cor-jp.com/security/): se confirmó el enfoque *local-first*, el registro mínimo, los niveles de confidencialidad, la política de uso de IA y el ISMS (con certificación obtenida en noviembre de 2026; alcance: «Desarrollo y operación de software por encargo»).

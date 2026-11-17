@@ -3,14 +3,14 @@ title: "RAG与企业知识库AI失败的原因：在追求检索精度之前更�
 description: "从数据整理、权限、评估指标和运营设计的角度，解析企业内部文档检索与RAG引入后未见成效的原因。这是一份旨在避免企业知识库AI止步于PoC的实用指南。"
 summary: "企业知识库AI和RAG陷入瓶颈的原因不在于模型，而在于引入前的设计。在挑选模型之前，需要先明确供参考的文档范围、最新版本管理、权限设置以及评估指标。"
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "6f6c220b1a3ba19aed83f8a51bf729478c2e24e640af7526796cdc4cf92836f0"
+translationSourceHash: "f2a31a68ae6f6d1f830985f2139118b8946a054624a5113be6d95f876eeac97d"
 translatedAt: "2026-10-23T06:19:49.246Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -64,4 +64,4 @@ RAG是通过参考企业内部文档来生成回答的机制。换言之，如�
 - [IPA: DX动向2025](https://www.ipa.go.jp/digital/chousa/dx-trend/tbl5kb0000001mn2-att/dx-trend-2025.pdf) - 日本在生成式AI方面的实践比例低于美国和德国，且企业规模越小，实践比例越低。面临的课题在于治理、素养以及应用场景探索。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - 梳理了敏感信息泄露（Sensitive Information Disclosure）、过度授权（Excessive Agency）、过度依赖（Overreliance）等LLM应用的代表性风险。
 - [Cor. HP: AI × CO-CREATION / 业务概况](https://cor-jp.com/) - 确认Cor.的业务领域、Grift、本地LLM与安全AI、AI驱动开发、共创理念。
-- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认本地优先、最小化日志、机密级别划分、AI使用方针、ISMS（预计于2026年10月完成第二阶段审核，并预计于2026年12月左右完成认证注册）。
+- [Cor. HP: 安全](https://cor-jp.com/security/) - 确认本地优先、最小化日志、机密级别划分、AI使用方针、ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。

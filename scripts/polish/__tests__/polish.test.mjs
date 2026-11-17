@@ -114,7 +114,8 @@ describe('場面の決定', () => {
   });
 });
 
-describe('検査', () => {
+// 各 it が lint の python3 を呼ぶ（scanGuardrails）ので、負荷のある環境でも落ちないよう上限を長めにとる
+describe('検査', { timeout: 30_000 }, () => {
   it('会社の文章の僕は不合格、代表の文章の僕は合格', () => {
     const box = sandbox();
     const company = box.write('src/content/blog/ja/co.md', { category: 'ai' }, '僕は試しに書きました。');
@@ -300,7 +301,8 @@ describe('実ファイル', () => {
       expect(parseDocument(readFileSync(path.join(ROOT, item.rel), 'utf8')).data.category).toBe('founder');
     }
     expect(packet.yomiyasu).toEqual({ docType: 'article', reader: 'informed', stance: '説明' });
-  });
+    // 子プロセスの python3（lint）を呼ぶので、負荷のある環境でも落ちないよう上限を長めにとる
+  }, 30_000);
 
   it('同じ内容の別ファイルを最終稿にしても、yomiyasu まで含めて完了になる', () => {
     const finalPath = path.join(dir, 'news-static-v1.final.md');
@@ -323,7 +325,7 @@ describe('実ファイル', () => {
     expect(result.complete).toBe(true);
     expect(result.scene).toBe('company');
     expect(result.yomiyasu.status).toBe('ran');
-  });
+  }, 30_000);
 });
 
 describe('入口', () => {

@@ -560,3 +560,42 @@ describe('Grift copy names both audiences (ADR-0022 revision 2026-10-26)', () =>
     expect(offending, 'ja Grift copy mentions 合否 or 選考').toEqual([]);
   });
 });
+
+// 法人番号と適格請求書発行事業者の登録番号は、会社概要の同じ表に 5 言語とも同じ値で載せる。
+// 値は 1 か所ずつ。片方の locale だけ直すと、どの locale の・期待の値と実際の値が違うかで落ちる。
+describe('company profile lists the corporate number and the qualified invoice issuer registration number', () => {
+  const CORPORATE_NUMBER = '6290001104162';
+  const INVOICE_REGISTRATION_NUMBER = 'T6290001104162';
+  // 足す位置の目印にする「事業内容」の項目名。5 言語とも今の label をそのまま使う。
+  const BUSINESS_LABEL: Record<Locale, string> = {
+    ja: '事業内容',
+    en: 'Business',
+    zh: '业务内容',
+    ko: '사업 내용',
+    es: 'Actividad',
+  };
+
+  it.each(LOCALES)('locale %s places both company IDs once, after the business item', (locale) => {
+    const profile = getTranslations(locale).companyPage.profile;
+    const values = profile.map((row) => row.value).join(' | ');
+    const businessIndex = profile.findIndex((row) => row.label === BUSINESS_LABEL[locale]);
+    expect(
+      businessIndex,
+      `${locale}: 「事業内容」の要素が見つかりません（label=${BUSINESS_LABEL[locale]}）。実際の label: ${profile
+        .map((row) => row.label)
+        .join(' | ')}`,
+    ).toBeGreaterThanOrEqual(0);
+
+    for (const expected of [CORPORATE_NUMBER, INVOICE_REGISTRATION_NUMBER]) {
+      const indexes = profile.flatMap((row, index) => (row.value === expected ? [index] : []));
+      expect(
+        indexes.length,
+        `${locale}: 値 ${expected} の要素が ${indexes.length} 個あります（1 個であるべき）。実際の値: ${values}`,
+      ).toBe(1);
+      expect(
+        indexes[0],
+        `${locale}: 値 ${expected} の要素（位置 ${indexes[0]}）が「事業内容」（位置 ${businessIndex}）より前にあります`,
+      ).toBeGreaterThan(businessIndex);
+    }
+  });
+});

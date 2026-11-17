@@ -3,7 +3,7 @@ title: "로컬 LLM이란? 기밀 데이터를 외부에 유출하지 않는 AI �
 description: "로컬 LLM의 기본, 클라우드 AI와의 차이점, 도입에 적합한 업무, PoC 전에 확인해야 할 보안 및 운영 요건을 설명합니다. 기밀 데이터를 안전하게 AI로 활용하고자 하는 기업을 위한 글입니다."
 summary: "로컬 LLM 도입은 성능 비교가 아닌 업무 리스크 설계 차원에서 판단해야 합니다. 외부에 노출하고 싶지 않은 정보를 사용하는 업무에 적합하며, PoC 전에 대상 업무, 데이터 범위, 기밀도, 권한, 평가 방법을 결정해 두지 않으면 경영 판단에 활용할 수 있는 결과를 얻을 수 없습니다."
 pubDate: 2026-06-15
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 ctaIntent: "local-llm-poc"
@@ -11,7 +11,7 @@ tags: ["ローカルLLM", "セキュアAI", "機密データ"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "b8a873bacfdc469e08f73e92cc6a799d3d436f456d72b95087e2551f396d6ce2"
+translationSourceHash: "8c22ec0697bc125bc4e10a9ca71ca634280eaf925fb9019bb3786827613d44d7"
 translatedAt: "2026-10-23T05:23:04.599Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -66,5 +66,5 @@ Cor.주식회사는 로컬 LLM을 '클라우드 AI보다 우월한 것'으로 �
 
 - [중소기구: 중소기업의 AI 등 활용 실태조사(2026년 3월)](https://www.smrj.go.jp/research_case/questionnaire/fbrion0000002pjw-att/202603_AI_point.pdf) - 중소기업의 AI 도입률 20.4%, 도입 검토 18.6%, AI 도입 완료 기업의 생성형 AI 이용 82.6%, 도입 업무는 총무·관리 부문이 최다.
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI 관련 인시던트에서 적절한 접근 제어가 없었던 조직이 97%, AI 거버넌스 정책이 결여된 조직이 63%.
-- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록 전망) 확인.
+- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.
 - [Cor. HP: AI × CO-CREATION / 사업 개요](https://cor-jp.com/) - Cor.의 사업 영역, Grift, 로컬 LLM·보안 AI, AI 주도 개발, 공존 메시지 확인.

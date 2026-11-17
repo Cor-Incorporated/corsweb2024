@@ -9,7 +9,6 @@ import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFile
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { scanForViolations } from './blog-guardrails.mjs';
 
 export const MARKER = '<!-- cor-content-advisory -->';
 const MAX_BYTES = 256 * 1024;
@@ -25,14 +24,18 @@ export function inspectMarkdown(text, { execute = spawnSync } = {}) {
   try {
     writeFileSync(file, text);
     const lint = execute('python3', ['-I', '.claude/skills/yomiyasu/scripts/yomiyasu_lint.py', '--json', '--doc-type', 'article', '--fail-on', 'warn', file], { encoding: 'utf8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024 });
-    const blog = execute(process.execPath, ['scripts/blog-guardrails.mjs', file], { encoding: 'utf8', timeout: 30_000, maxBuffer: 1024 * 1024 });
+    // blog:check の結果は、子プロセスの --json を使う（同じ記事に scanForViolations を直接もう 1 度呼ぶと、lint の python3 をもう 1 回起動する）
+    const blog = execute(process.execPath, ['scripts/blog-guardrails.mjs', '--json', file], { encoding: 'utf8', timeout: 30_000, maxBuffer: 1024 * 1024 });
     if (lint.error || blog.error || ![0, 1].includes(lint.status) || ![0, 1].includes(blog.status)) throw new Error('tool-failed');
     let parsed;
     try { parsed = JSON.parse(lint.stdout); } catch { throw new Error('lint-json-invalid'); }
     if (parsed.format !== 'yomiyasu-lint' || !Array.isArray(parsed.findings)) throw new Error('lint-json-invalid');
+    let violations;
+    try { violations = JSON.parse(blog.stdout); } catch { throw new Error('blog-json-invalid'); }
+    if (!Array.isArray(violations)) throw new Error('blog-json-invalid');
     return [
       ...parsed.findings.map((finding) => ({ tool: 'yomiyasu', line: finding.line, rule: finding.rule })),
-      ...scanForViolations(text).map((finding) => ({ tool: 'blog:check', line: finding.line, rule: finding.name })),
+      ...violations.map((finding) => ({ tool: 'blog:check', line: finding.line, rule: finding.name })),
     ];
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }

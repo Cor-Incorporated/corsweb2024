@@ -5,8 +5,12 @@ yomiyasu_check.py（nanaism/yomiyasu v2.1.3 の同梱。手を加えない）が
 規則の本文は cor-voice/SKILL.md にあり、ここには判定の型と、どの節から来たかだけを置く。
 検査の結果は候補で、意味の保持や読みやすさの合格ではない。
 
+ISMS など「いまの事実」は、固定の禁止語ではなく cor-voice/references/facts.json の記録と照合する（ADR-0029）。
+記録が読めないときは fact_record_invalid の error で止まり、古い規則へは戻らない。
+
 使い方:
-  cor_voice_lint.py check [--scene company|founder|tech|mail|founder-x] [--json] [--fail-on error|warn] FILE...
+  cor_voice_lint.py check [--scene company|founder|tech|mail|founder-x] [--json] [--fail-on error|warn]
+                          [--as-of YYYY-MM-DD] [--archive START-END ...] FILE...
   cor_voice_lint.py stats [--json] FILE...
 
 終了コード: 0 = --fail-on に当たらなかった / 1 = 当たった / 2 = 使い方か入力の誤り
@@ -18,7 +22,9 @@ import json
 import re
 import statistics
 import sys
+import unicodedata
 from dataclasses import asdict, dataclass
+from datetime import date
 from pathlib import Path
 
 SCENES = ("company", "founder", "tech", "mail", "founder-x")
@@ -44,7 +50,6 @@ NOT_FOUNDER_X = ("company", "founder", "tech", "mail")
 # 公開を止める決まり（ADR とサイトの表現ルール）は error、文体の型は warn。
 RULES: tuple[Rule, ...] = (
     _rule("trial_word", "error", r"試行(?!錯誤)", "「試行」は使わない。紹介会社・採用担当向けは「テスト導入（PoC）」、CTA は「自社でテストしてみる」", "cor-voice §6 / ADR-0022"),
-    _rule("isms_obtained", "error", r"(ISMS|27001)[^。\n]{0,30}(取得済|認証取得|取得しました|を取得し)|(取得済|認証取得)[^。\n]{0,30}(ISMS|27001)", "ISMS は「第2段階審査を終え、2026年12月ごろの認証登録を見込んでいる」まで", "cor-voice §6 / ADR-0007"),
     _rule("evidence_copy", "error", r"証拠は盛れない", "「証拠は盛れない」は使わない。「経歴の説明に、確かめられる根拠を。」", "cor-voice §6A-4"),
     _rule("seven_x_metric", "error", r"(?<![\d.])7\s*倍[^。\n]{0,40}(生産性|開発速度|納品量)|(生産性|開発速度|納品量)[^。\n]{0,40}(?<![\d.])7\s*倍", "「7倍」は GitHub のコントリビュート数。生産性・開発速度・納品量と結びつけない", "cor-voice §6A-4"),
     _rule("company_name", "error", r"Cor\.?\s?[Ii]nc\b|(?<![.．])Cor株式会社|コル株式会社|コア株式会社", "社名は「Cor.株式会社」", "cor-voice §6 / ADR-0007"),
@@ -127,7 +132,403 @@ def _without_meta_mentions(line: str) -> str:
     return META_MENTION.sub("", line)
 
 
-def check_text(text: str, scene: str) -> list[Hit]:
+# ---- 事実の記録（facts.json）との照合 ----
+# 「いまの事実」を固定の禁止語で止めると、事実が変わったとき（2026-11-07 の ISMS 登録）に正しい文まで止まる。
+# そこで、記録と照合して通す。記録に無い・範囲を広げる・状態や数字や日付が違う・古い状態の説明は止める。
+
+FACTS_PATH = Path(__file__).resolve().parents[2] / "cor-voice" / "references" / "facts.json"
+FACT_STATUSES = ("unconfirmed", "audit_completed", "registration_expected", "registered", "suspended", "withdrawn", "expired")
+ISMS_REQUIRED_KEYS = (
+    "id", "subject", "status", "standard", "registration_number", "scope", "issuer", "valid_from", "valid_to",
+    "validity_condition", "confirmed_on", "evidence", "allowed_claims", "forbidden_extensions", "recheck", "history",
+    "scope_limiting_phrases", "stale_state_phrases", "stale_state_phrases_any_context", "stale_state_phrases_unless_completed",
+    "decision_records",
+)
+# 公開の記録に置く欄の allow-list（この 3 欄だけ）。ほかの欄は置かない。根拠の記録は repo の外で管理し、id で対応づける
+DECISION_KEYS = ("id", "decided_at", "summary")
+FACT_SOURCE = "cor-voice §6 / references/facts.json / ADR-0029"
+
+
+class FactRecordError(Exception):
+    """facts.json が読めない、壊れている、必須のキーが無い。"""
+
+
+DAY_FORM = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _iso_date(value: object, key: str) -> date:
+    """YYYY-MM-DD の日だけ。fromisoformat は 20261112・2026-W46-4 も受け入れるので、形を先に見る。"""
+    try:
+        if not isinstance(value, str) or not DAY_FORM.fullmatch(value):
+            raise ValueError(value)
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise FactRecordError(f"facts.json の {key} が YYYY-MM-DD ではありません（観測した値: {value!r}）") from exc
+
+
+def _validate_isms(rec: dict) -> dict:
+    missing = [k for k in ISMS_REQUIRED_KEYS if k not in rec]
+    if missing:
+        raise FactRecordError(f"facts.json の isms に必須のキーがありません: {', '.join(missing)}")
+    if rec["status"] not in FACT_STATUSES:
+        raise FactRecordError(f"facts.json の isms.status が不明です: {rec['status']!r}（{' / '.join(FACT_STATUSES)}）")
+    for key in ("registration_number", "scope", "issuer"):
+        if not isinstance(rec[key], str) or not rec[key].strip():
+            raise FactRecordError(f"facts.json の isms.{key} が空です")
+    for key in ("scope_limiting_phrases", "stale_state_phrases", "stale_state_phrases_any_context", "stale_state_phrases_unless_completed"):
+        if not isinstance(rec[key], list) or not all(isinstance(v, str) and v for v in rec[key]):
+            raise FactRecordError(f"facts.json の isms.{key} が文字列の配列ではありません")
+    groups = rec["forbidden_extensions"]
+    if (
+        not isinstance(groups, list) or not groups
+        or not all(isinstance(g, dict) and isinstance(g.get("terms"), list) and g["terms"] and all(isinstance(x, str) and x for x in g["terms"]) for g in groups)
+    ):
+        raise FactRecordError(f"facts.json の isms.forbidden_extensions が {{label, terms（文字列の配列）}} の配列ではありません（観測した値: {groups!r}）"[:400])
+    _validate_decisions(rec["decision_records"])
+    _iso_date(rec["valid_from"], "isms.valid_from")
+    _iso_date(rec["valid_to"], "isms.valid_to")
+    return rec
+
+
+def _validate_decisions(records: object) -> None:
+    """決定の記録は、id・決めた日（日だけ）・決まりの中身の 3 つの欄だけを持つ。3 つ以外の欄があるとき、3 つのどれかが無いときは止める。"""
+    if not isinstance(records, list) or not records:
+        raise FactRecordError("facts.json の isms.decision_records が空です（id・decided_at・summary が要る）")
+    seen: list[str] = []
+    for i, rec in enumerate(records):
+        if not isinstance(rec, dict):
+            raise FactRecordError(f"facts.json の isms.decision_records[{i}] がオブジェクトではありません")
+        observed = sorted(rec)
+        if observed != sorted(DECISION_KEYS):
+            raise FactRecordError(
+                f"facts.json の isms.decision_records[{i}] の欄は {'・'.join(DECISION_KEYS)} の 3 つだけです（観測した欄: {', '.join(observed) or 'なし'}）"
+            )
+        blank = [k for k in DECISION_KEYS if not (isinstance(rec[k], str) and rec[k].strip())]
+        if blank:
+            observed_values = ", ".join(f"{k}={rec[k]!r}" for k in blank)
+            raise FactRecordError(f"facts.json の isms.decision_records[{i}] の {', '.join(blank)} が空か文字列ではありません（観測した値: {observed_values}）")
+        _iso_date(rec["decided_at"], f"isms.decision_records[{i}].decided_at")
+        seen.append(rec["id"])
+    dup = sorted({x for x in seen if seen.count(x) > 1})
+    if dup:
+        raise FactRecordError(f"facts.json の isms.decision_records に id の重複があります: {', '.join(dup)}")
+
+
+def load_facts(path: Path | None = None) -> dict:
+    """記録を読んで検証する。返すのは {"isms": 記録, "unrecorded": 記録に無い認証の名前, "acquisition": 取得の表明の語彙}。"""
+    target = path or FACTS_PATH
+    try:
+        raw = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        raise FactRecordError(f"{target.name} を読めません: {exc}") from exc
+    if not isinstance(raw, dict) or not isinstance(raw.get("facts"), list):
+        raise FactRecordError(f"{target.name} に facts の配列がありません")
+    isms = [f for f in raw["facts"] if isinstance(f, dict) and f.get("id") == "isms"]
+    if len(isms) != 1:
+        raise FactRecordError(f"{target.name} に id が isms の記録が {len(isms)} 件あります（1 件だけにする）")
+    names = (raw.get("unrecorded_certifications") or {}).get("names")
+    if not isinstance(names, list) or not names or not all(isinstance(n, str) and n for n in names):
+        raise FactRecordError(f"{target.name} の unrecorded_certifications.names が文字列の配列ではありません")
+    acquisition = (raw.get("acquisition_patterns") or {}).get("patterns")
+    if not isinstance(acquisition, list) or not acquisition or not all(isinstance(n, str) and n for n in acquisition):
+        raise FactRecordError(f"{target.name} の acquisition_patterns.patterns が文字列の配列ではありません")
+    try:
+        re.compile("|".join(acquisition))
+    except re.error as exc:
+        raise FactRecordError(f"{target.name} の acquisition_patterns.patterns が正規表現として使えません: {exc}") from exc
+    return {"isms": _validate_isms(isms[0]), "unrecorded": names, "acquisition": acquisition}
+
+
+def _nfkc(text: str) -> str:
+    """全角の英数字・記号（ＩＳＭＳ、２０２６、／）を半角にそろえる。行番号は変わらない。"""
+    return unicodedata.normalize("NFKC", text)
+
+
+@dataclass(frozen=True)
+class Vocab:
+    """記録から作る検出の道具。lint と scripts/blog-guardrails.mjs が同じ記録を読む。"""
+    acquired: re.Pattern[str]
+    claim: re.Pattern[str]
+    cert: re.Pattern[str]
+    scope: str
+    number: str
+
+
+ISMS_WORD = r"(?:ISMS|27001|情報セキュリティマネジメントシステム)"
+CAUSAL = re.compile(r"なので|だから|ことから|ゆえ|のため")
+# 年なし（11月7日）、2026/11/7 も日付として照合する。和暦・英語の日付は照合しない（限界。ADR-0029）
+DATE_RE = re.compile(r"(?:(\d{4})年)?(\d{1,2})月(?:(\d{1,2})日)?|(\d{4})/(\d{1,2})/(\d{1,2})")
+DATE_LABEL = re.compile(r"(?:初回登録日|登録日|取得日|認証取得日|認証登録日|登録年月日|(?:取得|登録)は)[ 　]*[：:]?[ 　]*(?=\d{4}年|\d{1,2}月|\d{4}/)")
+NUMBER_RE = re.compile(r"JP\d{2}/\d{3,}|登録番号[ 　]*[：:]?[ 　]*([A-Za-z]{0,3}\d{2}/\d+)")
+CERT_WINDOW = 24  # 認証名と取得の動詞の間に許す文字数
+
+
+def _name_pattern(name: str) -> str:
+    """認証名の表記ゆれ（空白の有無、「/IEC」の有無）を許す正規表現。ISO/IEC 27017 → ISO27017 も同じ名前。"""
+    out = []
+    for ch in _nfkc(name).replace("/IEC", "\x00"):
+        out.append(r"\s?" if ch == " " else "(?:/IEC)?" if ch == "\x00" else re.escape(ch))
+    return "".join(out)
+
+
+def build_vocab(record: dict) -> Vocab:
+    acquired = "(?:" + "|".join(_nfkc(p) for p in record["acquisition"]) + ")"
+    names = "(?:" + "|".join(_name_pattern(n) for n in sorted(record["unrecorded"], key=len, reverse=True)) + ")"
+    rec = record["isms"]
+    return Vocab(
+        acquired=re.compile(acquired),
+        claim=re.compile(rf"{ISMS_WORD}[^。\n]{{0,40}}{acquired}|{acquired}[^。\n]{{0,40}}{ISMS_WORD}"),
+        cert=re.compile(rf"{names}[^。\n]{{0,{CERT_WINDOW}}}{acquired}|{acquired}[^。\n]{{0,{CERT_WINDOW}}}{names}", re.I),
+        scope=_nfkc(rec["scope"]),
+        number=_nfkc(rec["registration_number"]),
+    )
+
+
+def _fact_hit(rule_id: str, line: int, text: str, message: str) -> Hit:
+    return Hit(rule_id, "error", line, text.strip()[:120], message, FACT_SOURCE)
+
+
+def _sentences(lines: list[str]):
+    """(行番号, 文)。使わない語の説明（『取得済み』とは書きません）は落とす。文は「。」で切る。"""
+    for no, raw in enumerate(lines, 1):
+        for part in re.split(r"(?<=。)", _without_meta_mentions(raw)):
+            if part.strip():
+                yield no, part
+
+
+def _paragraph_ids(lines: list[str]) -> list[int]:
+    """行ごとの段落番号（空行で区切る）。空行は -1。"""
+    ids, current, inside = [], -1, False
+    for line in lines:
+        if line.strip():
+            current += 0 if inside else 1
+            inside = True
+            ids.append(current)
+        else:
+            inside = False
+            ids.append(-1)
+    return ids
+
+
+def _cert_unverified_hits(lines: list[str], vocab: Vocab) -> list[Hit]:
+    return [
+        _fact_hit("cert_unverified", no, sent, "facts.json に事実の記録が無い認証を、取得済みと書いています。記録を足す（一次資料と ADR が先）か、書かない")
+        for no, sent in _sentences(lines) if vocab.cert.search(sent)
+    ]
+
+
+def _status_hits(claims: list[tuple[int, str]], rec: dict, as_of: date) -> list[Hit]:
+    # 有効期間の外は止める。内側でも、維持審査の結果・範囲変更・停止等は status で表す（期限まで無条件に有効とは扱わない）
+    start, end = date.fromisoformat(rec["valid_from"]), date.fromisoformat(rec["valid_to"])
+    reason = ""
+    if rec["status"] != "registered":
+        reason = f"記録の status は {rec['status']!r} で、registered ではありません"
+    elif not start <= as_of <= end:
+        reason = f"検査日 {as_of} が記録の有効期間 {start}〜{end} の外です"
+    return [_fact_hit("isms_status_mismatch", no, sent, f"ISMS の認証取得を現在の事実として書いていますが、{reason}") for no, sent in claims] if reason else []
+
+
+# 「見出しだけの行」: Markdown の見出し行（# で始まる）か、太字だけで出来た 1 行（**…** だけ）。
+# 決まり（2026-11-12、decision_records の isms-heading-2026-11-12）: 見出しだけの行は、空行を 1 つまで挟んだ直後の段落と 1 つに数える。ADR-0029 を見る
+HEADING_ONLY = re.compile(r"^\s*(?:#{1,6}\s|\*\*[^*\n]+\*\*\s*$)")
+# 見出しの直後の段落として数えない block（見出し、箇条書き、表、引用）
+NOT_A_PARAGRAPH = re.compile(r"^\s*(?:#{1,6}\s|\*\*[^*\n]+\*\*\s*$|[-*+]\s|\d+[.)]\s|\||>)")
+
+
+def _scope_group(idx: int, lines: list[str], ids: list[int]) -> list[int]:
+    """取得の文がある行の idx と「1 つのまとまり」に数える行。通常は同じ段落（直後の段落は数えない。SNS を含む）。
+    見出しだけの行は、空行を 1 つまで挟んだ直後の段落と 1 つに数える。2 つ先の段落、見出しの下に段落が無い形、
+    箇条書き・表・引用は数えない。"""
+    group = [i for i, pid in enumerate(ids) if pid == ids[idx] and lines[i].strip()]
+    if group != [idx] or not HEADING_ONLY.match(lines[idx]):
+        return group
+    nxt = idx + 1
+    if nxt < len(lines) and not lines[nxt].strip():
+        nxt += 1  # 空行は 1 つまで
+    if nxt >= len(lines) or not lines[nxt].strip() or NOT_A_PARAGRAPH.match(lines[nxt]):
+        return group
+    return group + [i for i, pid in enumerate(ids) if pid == ids[nxt] and lines[i].strip()]
+
+
+def _scope_missing_hits(claims: list[tuple[int, str]], lines: list[str], vocab: Vocab) -> list[Hit]:
+    ids, hits = _paragraph_ids(lines), []
+    for no, sent in claims:
+        if not any(vocab.scope in lines[i] for i in _scope_group(no - 1, lines, ids)):
+            hits.append(_fact_hit("isms_scope_missing", no, sent, f"ISMS の取得を書く文と同じ段落に、登録範囲「{vocab.scope}」が要ります（記録の scope。見出しだけの行は、空行 1 つまで挟んだ直後の段落と 1 つに数える）"))
+    return hits
+
+
+# 述語で終わる読点（「保証し、」「であり、」「ですが、」）は節の切れ目。「個別製品、AIの回答精度、」のような並べる読点は切れ目にしない
+CLAUSE_BREAK = re.compile(r"(?<=[しりてでがずくいれび])、|(?<=ます)、|(?<=です)、")
+
+
+# 限定句のあとに続いてよい形（節の終わり）。言い切り（です・ます）、となります・としています、節を切る語（であり・で・が。
+# CLAUSE_BREAK で切った節の終わり）、理由（からである・ため・ので）。語のあとに別の語が続く形（「含まれません（注）」など）は含めない
+LIMITER_TAIL = (
+    r"(?:です|でした|ます|である|だ"
+    r"|となります|になります|となる|になる|としています|としております|とします|とする"
+    r"|であり|で|が"
+    r"|から(?:です|である|だ)?|ため(?:です)?|ので)?"
+    r"[。.！!]?[）)」]?\s*$"
+)
+
+
+def _limits_at_clause_end(clause: str, limiters: list[str]) -> bool:
+    """限定句（「ものではありません」「対象外」「含まれません」など）が、否定の述語として節の終わりにあるか。
+    節の途中の語（「登録範囲外の Grift にも適用されます」「全社を対象外のない形で…」）は、拡大を打ち消さない。"""
+    tail = clause.rstrip()
+    return any(re.search(re.escape(p) + LIMITER_TAIL, tail) for p in limiters)
+
+
+def _overreach_units(lines: list[str]) -> list[int]:
+    """行ごとの「拡大を見る単位」。通常の段落は 1 つに数える。箇条書き・表・引用・見出しは、1 行ごとに別の単位にする
+    （参考資料の一覧で、別の項目の語を ISMS の項目に結びつけない）。空行は -1。"""
+    ids, units = _paragraph_ids(lines), []
+    for i, line in enumerate(lines):
+        units.append(-1 if ids[i] < 0 else (-(i + 2) if NOT_A_PARAGRAPH.match(line) else ids[i]))
+    return units
+
+
+def _overreach_hits(lines: list[str], rec: dict) -> list[Hit]:
+    """ISMS の語がある単位（同じ段落）の文が、記録の forbidden_extensions の語を含むとき止める（ISMS の文とは別の文に
+    書いた「だから当社の AI は誤回答しません」も止める）。限定句（「〜ものではありません」）が打ち消すのは、
+    その限定句と同じ節の語だけで、限定句が否定の述語として節の終わりにあるときに限る（「全社の安全性を保証し、これは AI の精度保証を
+    意味しません」の前半は打ち消されない。「登録範囲外の Grift にも適用されます」のように節の途中にある語は打ち消さない）。"""
+    hits = []
+    limiters = [_nfkc(p) for p in rec["scope_limiting_phrases"]]
+    units, sentences = _overreach_units(lines), list(_sentences(lines))
+    with_isms = {units[no - 1] for no, sent in sentences if re.search(ISMS_WORD, sent)}
+    for no, sent in sentences:
+        if units[no - 1] not in with_isms:
+            continue
+        for clause in CLAUSE_BREAK.split(sent):
+            found = [(g.get("label", "?"), t) for g in rec["forbidden_extensions"] for t in map(_nfkc, g["terms"]) if t in clause]
+            if found and not (_limits_at_clause_end(clause, limiters) and not CAUSAL.search(sent)):
+                label, term = found[0]
+                hits.append(_fact_hit("isms_scope_overreach", no, sent, f"ISMS の表明を登録範囲「{rec['scope']}」の外へ広げています（{label}: 「{term}」）。範囲を限った文にする（同じ段落に ISMS の語がある文は、別の文でも見る）"))
+                break
+    return hits
+
+
+def _number_hits(lines: list[str], vocab: Vocab) -> list[Hit]:
+    hits = []
+    for no, sent in _sentences(lines):
+        for m in NUMBER_RE.finditer(sent):
+            value = m.group(1) or m.group(0)
+            if value.upper() != vocab.number.upper():
+                hits.append(_fact_hit("isms_number_mismatch", no, sent, f"登録番号が記録と違います（本文 {value}、記録 {vocab.number}）"))
+    return hits
+
+
+def _in_validity_context(sent: str, m: re.Match) -> bool:
+    """有効期間の日付。「有効期間は A から B です」のように、「有効」より後ろの日付はすべて有効期間として数える。"""
+    valid_at = sent.find("有効")
+    return bool(
+        (0 <= valid_at < m.start())
+        or re.search(r"まで|[〜~]", sent[m.end():m.end() + 4])
+        or re.search(r"[〜~]\s*$", sent[max(0, m.start() - 12):m.start()])
+    )
+
+
+def _is_other_event(sent: str, m: re.Match, vocab: Vocab) -> bool:
+    """審査・確認・受領など、取得とは別の出来事の日付（「10 月に審査を終え、11 月 7 日に取得」の 10 月）。
+    日付を含む節（読点・句点で区切る）に、別の出来事の語があり、取得の語が無いときだけ。「第2段階審査を2026年10月7日に終え」のように
+    審査の語が日付の前にある形も、同じ節なので別の出来事として数える。取得の語と同じ節の日付（「審査を経て11月8日に取得」）は数えない。"""
+    start = max(sent.rfind("、", 0, m.start()), sent.rfind("。", 0, m.start())) + 1
+    tail = re.split(r"[、。]", sent[m.end():], maxsplit=1)[0]
+    clause = sent[start:m.end()] + tail
+    return bool(re.search(r"審査|確認|受領|通知|申請|予定", clause)) and not vocab.acquired.search(clause)
+
+
+def _same_date(m: re.Match, want: date) -> bool:
+    year, month, day = (m.group(1), m.group(2), m.group(3)) if m.group(2) else (m.group(4), m.group(5), m.group(6))
+    if year is not None and int(year) != want.year:
+        return False
+    return int(month) == want.month and (day is None or int(day) == want.day)
+
+
+def _date_hits(lines: list[str], rec: dict, vocab: Vocab, archive_lines: frozenset[int]) -> list[Hit]:
+    start, end, hits = date.fromisoformat(rec["valid_from"]), date.fromisoformat(rec["valid_to"]), []
+    for no, sent in _sentences(lines):
+        if no in archive_lines:
+            continue  # 日付つきの過去の記録（--archive の範囲）は、登録前の予定日（「2026年12月ごろ」）も含めて許す
+        acquired = vocab.acquired.search(sent) and re.search(rf"認証|{ISMS_WORD}", sent)
+        if not (acquired or DATE_LABEL.search(sent) or re.search(r"有効期間|有効期限", sent)):
+            continue
+        found = list(DATE_RE.finditer(sent))
+        candidates = [d for d in found if not _is_other_event(sent, d, vocab)]
+        # 取得日として使える日付が 1 つも残らず取得の動詞はある文は、曖昧なので全部を照合する（見落とすより書き直させる）
+        for m in candidates or (found if vocab.acquired.search(sent) else []):
+            allowed = (start, end) if _in_validity_context(sent, m) else (start,)
+            if not any(_same_date(m, d) for d in allowed):
+                hits.append(_fact_hit("isms_date_mismatch", no, sent, f"取得・登録・有効期間の日付が記録と違います（本文 {m.group(0)}、記録 {rec['valid_from']}〜{rec['valid_to']}）。確認した日を取得日にしない"))
+    return hits
+
+
+VALIDITY_WORDS = re.compile(r"有効期間|有効期限")
+
+
+def _validity_condition_hits(lines: list[str], rec: dict, archive_lines: frozenset[int]) -> list[Hit]:
+    """ISMS の語がある単位（同じ段落。箇条書き・表・引用は 1 行）で、有効期間の日付を書く文があるとき、同じ単位に
+    記録の validity_condition（「有効期間中の維持審査にて登録の継続が認められる限り有効」）が要る。期限まで無条件に有効とは書かない。"""
+    condition = _nfkc(rec["validity_condition"])
+    units, hits = _overreach_units(lines), []
+    with_isms = {units[i] for i, line in enumerate(lines) if units[i] != -1 and re.search(ISMS_WORD, line)}  # -1 は空行
+    for no, sent in _sentences(lines):
+        if no in archive_lines or units[no - 1] not in with_isms:
+            continue
+        if not (VALIDITY_WORDS.search(sent) and DATE_RE.search(sent)):
+            continue
+        if not any(condition in line for i, line in enumerate(lines) if units[i] == units[no - 1]):
+            hits.append(_fact_hit("isms_validity_condition_missing", no, sent, f"ISMS の有効期間を書く文と同じ段落に、有効の条件「{rec['validity_condition']}」が要ります（記録の validity_condition。期限まで無条件に有効とは書かない）"))
+    return hits
+
+
+def _stale_hits(lines: list[str], rec: dict, archive_lines: frozenset[int], vocab: Vocab) -> list[Hit]:
+    if rec["status"] != "registered":
+        return []
+    hits = []
+    for no, sent in _sentences(lines):
+        if no in archive_lines:
+            continue
+        phrases = lambda key: [p for p in map(_nfkc, rec[key]) if p in sent]  # noqa: E731
+        strong = phrases("stale_state_phrases") if re.search(rf"認証|{ISMS_WORD}", sent) else []
+        strong += phrases("stale_state_phrases_any_context")  # #527 が文脈なしで止めていた句を弱めない
+        weak = phrases("stale_state_phrases_unless_completed") if re.search(ISMS_WORD, sent) and not vocab.acquired.search(sent) else []
+        if strong or weak:
+            hits.append(_fact_hit("isms_stale_state", no, sent, f"記録の status は registered（{rec['valid_from']} 登録）なのに、古い状態（「{(strong or weak)[0]}」）を現在の説明として書いています。日付つきの過去の記録は archive ブロックに入れる"))
+    return hits
+
+
+def fact_hits(lines: list[str], facts: dict | None, as_of: date, archive_lines: frozenset[int]) -> list[Hit]:
+    """facts.json との照合。記録が読めないときは fact_record_invalid で止め、旧規則へは戻らない。"""
+    try:
+        record = facts if facts is not None else load_facts()
+        vocab = build_vocab(record)
+    except (FactRecordError, re.error) as exc:
+        return [_fact_hit("fact_record_invalid", 1, str(exc), "事実の記録 facts.json が使えません。直すまで ISMS などの現在の事実を検査できません（固定の旧規則へは戻りません）")]
+    rec, lines = record["isms"], [_nfkc(line) for line in lines]
+    claims = [(no, sent) for no, sent in _sentences(lines) if vocab.claim.search(sent)]
+    return [
+        *_cert_unverified_hits(lines, vocab),
+        *_status_hits(claims, rec, as_of),
+        *_scope_missing_hits(claims, lines, vocab),
+        *_overreach_hits(lines, rec),
+        *_number_hits(lines, vocab),
+        *_date_hits(lines, rec, vocab, archive_lines),
+        *_stale_hits(lines, rec, archive_lines, vocab),
+        *_validity_condition_hits(lines, rec, archive_lines),
+    ]
+
+
+def check_facts_text(text: str, facts: dict | None = None, as_of: date | None = None, archive_lines: frozenset[int] = frozenset()) -> list[Hit]:
+    """事実の照合（fact_hits）だけを当てる。文体の規則は当てない。scripts/blog-guardrails.mjs が、記事に対して呼ぶ。"""
+    return sorted(fact_hits(masked_lines(text, keep_blocks=True), facts, as_of or date.today(), archive_lines), key=lambda h: (h.line, h.rule_id))
+
+
+def check_text(text: str, scene: str, facts: dict | None = None, as_of: date | None = None, archive_lines: frozenset[int] = frozenset()) -> list[Hit]:
+    """facts は load_facts() の形（試験で差し替える）。as_of は検査日（既定は今日）。archive_lines は過去の記録として
+    古い状態の説明を許す行（日付つきの過去の記録・引用）。"""
     lines = masked_lines(text)
     block_lines = masked_lines(text, keep_blocks=True)
     hits: list[Hit] = []
@@ -137,6 +538,7 @@ def check_text(text: str, scene: str) -> list[Hit]:
         found, matches = _rule_hits(rule, block_lines if rule.level == "error" else lines)
         if matches >= rule.min_count:
             hits.extend(found)
+    hits.extend(fact_hits(block_lines, facts, as_of or date.today(), archive_lines))
     hits.extend(_first_person_mix(lines))
     hits.extend(_length_hits(text, scene))
     return sorted(hits, key=lambda h: (h.line, h.rule_id))
@@ -277,11 +679,38 @@ def _print_check(path: str, hits: list[Hit]) -> None:
         print(f"    > {h.text}")
 
 
+def _archive_lines(specs: list[str]) -> frozenset[int]:
+    lines: set[int] = set()
+    for spec in specs:
+        m = re.fullmatch(r"(\d+)-(\d+)", spec)
+        if not m or int(m.group(1)) > int(m.group(2)):
+            print(f"cor_voice_lint: --archive は START-END（行番号、START <= END）で指定します: {spec}", file=sys.stderr)
+            sys.exit(2)
+        lines.update(range(int(m.group(1)), int(m.group(2)) + 1))
+    return frozenset(lines)
+
+
+def _day(value: str) -> date:
+    if not DAY_FORM.fullmatch(value):
+        raise ValueError(value)
+    return date.fromisoformat(value)
+
+
+def _as_of(value: str | None) -> date:
+    try:
+        return _day(value) if value else date.today()
+    except ValueError:
+        print(f"cor_voice_lint: --as-of は YYYY-MM-DD で指定します: {value}", file=sys.stderr)
+        sys.exit(2)
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     failed = False
     report = {}
+    as_of, archive = _as_of(args.as_of), _archive_lines(args.archive)
     for path in args.files:
-        hits = check_text(_read(path), args.scene)
+        text = _read(path)
+        hits = check_facts_text(text, as_of=as_of, archive_lines=archive) if args.only_facts else check_text(text, args.scene, as_of=as_of, archive_lines=archive)
         report[path] = [asdict(h) for h in hits]
         levels = {"error": {"error"}, "warn": {"error", "warn"}}.get(args.fail_on, set())
         failed = failed or any(h.level in levels for h in hits)
@@ -311,6 +740,9 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--scene", choices=SCENES, default="company", help="場面（cor-voice §2）。既定は company")
     check.add_argument("--fail-on", choices=("error", "warn", "none"), default="error")
     check.add_argument("--json", action="store_true")
+    check.add_argument("--as-of", help="検査日（YYYY-MM-DD）。facts.json の有効期間と比べる。既定は今日")
+    check.add_argument("--archive", action="append", default=[], metavar="START-END", help="日付つきの過去の記録として、古い状態の説明を許す行の範囲（何度でも）")
+    check.add_argument("--only-facts", action="store_true", help="事実の照合（facts.json）だけを当てる。文体の規則は当てない（blog-guardrails.mjs が使う）")
     check.add_argument("files", nargs="+")
     stats = sub.add_parser("stats", help="文長・語尾・読点・段落などの統計")
     stats.add_argument("--json", action="store_true")

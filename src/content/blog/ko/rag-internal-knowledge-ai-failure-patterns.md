@@ -3,14 +3,14 @@ title: "RAG·사내 지식 AI가 실패하는 이유 ~ 검색 정확도보다 �
 description: "사내 문서 검색 및 RAG 도입에서 성과가 나지 않는 이유를 데이터 정리, 권한, 평가 지표, 운영 설계의 관점에서 설명합니다. 사내 지식 AI를 PoC로 끝내지 않기 위한 실천 가이드입니다."
 summary: "사내 지식 AI나 RAG가 장벽에 부딪히는 원인은 모델이 아니라 도입 전 설계에 있습니다. 모델을 선택하기에 앞서 참조시킬 문서의 범위, 최신 버전 관리, 권한, 평가 지표를 결정해야 합니다."
 pubDate: 2026-06-16
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["RAG", "社内ナレッジ", "AI導入"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "6f6c220b1a3ba19aed83f8a51bf729478c2e24e640af7526796cdc4cf92836f0"
+translationSourceHash: "f2a31a68ae6f6d1f830985f2139118b8946a054624a5113be6d95f876eeac97d"
 translatedAt: "2026-10-23T06:22:51.712Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -64,4 +64,4 @@ PoC를 '쓸 만해 보인다' 정도로 끝내지 말고, 어떤 업무의 몇 �
 - [IPA: DX 동향 2025](https://www.ipa.go.jp/digital/chousa/dx-trend/tbl5kb0000001mn2-att/dx-trend-2025.pdf) - 일본은 생성형 AI 도입 비율이 미국·독일보다 낮으며, 소규모 기업일수록 도입 비율이 낮아짐. 과제는 거버넌스, 리터러시, 활용처 발굴.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure(민감 정보 유출), Excessive Agency(과도한 에이전시), Overreliance(과도한 의존) 등 LLM 애플리케이션의 대표적 리스크 정리.
 - [Cor. 공식 웹사이트: AI × CO-CREATION / 사업 개요](https://cor-jp.com/) - Cor.의 사업 영역, Grift, 로컬 LLM·시큐어 AI, AI 기반 개발, 공창(Co-creation) 메시지 확인.
-- [Cor. 공식 웹사이트: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록 전망) 확인.
+- [Cor. 공식 웹사이트: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인.

@@ -59,13 +59,18 @@ describe('サービスのページ（5 言語 × 3）', () => {
     for (const service of SERVICE_PAGES) {
       const url = getServiceUrl(service, locale);
 
-      it(`${url}: 最後の CTA が intent 付きで /contact（Cloudia）へつながる`, () => {
+      it(`${url}: 最後の CTA が intent・source・locale 付きで Cloudia のチャットへつながる（問い合わせページは通さない）`, () => {
         const html = read(pageFile(url));
         const cta = element(html, /<a\b([^>]*data-service-cta[^>]*)>/, 'CTA（data-service-cta）');
-        const contact = locale === 'ja' ? '/contact' : `/${locale}/contact`;
-        expect(hrefs(cta)).toEqual([
-          `${contact}?intent=${service.intent}&source=${getServiceContactSource(service)}`,
-        ]);
+        const found = hrefs(cta);
+        expect(found).toHaveLength(1);
+        const target = new URL(found[0], 'https://example.test');
+        expect({
+          path: target.pathname,
+          intent: target.searchParams.get('intent'),
+          source: target.searchParams.get('source'),
+          locale: target.searchParams.get('locale'),
+        }).toEqual({ path: '/contact/chat', intent: service.intent, source: getServiceContactSource(service), locale });
       });
 
       it(`${url}: canonical・5 言語の hreflang・Service の構造化データ・専用の OG 画像がある`, () => {

@@ -19,7 +19,7 @@ export type ServicePage = {
   key: ServiceKey;
   /** `/services/<slug>`。ja はロケールの接頭辞なし、ほかは `/<lang>/services/<slug>` */
   slug: string;
-  /** 最後の CTA が /contact（Cloudia）へ渡す相談の種類 */
+  /** 最後の CTA が Cloudia のチャットへ渡す相談の種類 */
   intent: ContactIntent;
   /** 「関係する実績・事例」に出す cases コレクションの slug（言語ディレクトリを除いた名前）。並びのとおりに出す */
   relatedCaseSlugs: readonly string[];
