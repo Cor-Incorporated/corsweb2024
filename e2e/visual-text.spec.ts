@@ -416,6 +416,93 @@ test('main content rails follow the page type on wide screens', async ({ page })
   }
 });
 
+// 文が 1 行に収まるかを、字数ではなく実際の幅で見る。
+// font の違う環境（CI の Linux など）では、同じ字数でも英数字や等幅の字の幅が広い。
+// 字数で決めると、実際には箱に収まらない文を「1 行のはず」と誤って数える。
+// この関数を page.evaluate で仕込み、業種別の page と読み物の page の試験で使い回す。
+type LineBreakProbe = {
+  lineCount: (element: Element) => number;
+  unwrappedWidth: (element: Element) => number;
+  contentWidth: (element: Element) => number;
+  sentenceFailures: () => string[];
+};
+
+declare global {
+  interface Window {
+    __lineBreakProbe?: LineBreakProbe;
+  }
+}
+
+function installLineBreakProbe(): void {
+  const lineCount = (element: Element): number => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+    // inline-block の中の文字は、同じ行でも top が数 px ずれて 2 つの rect になる。
+    // 行の間隔（line-height）より十分小さい 8px を同じ行とみなす。
+    const tops: number[] = [];
+    for (const rect of rects) {
+      if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
+    }
+    range.detach();
+    return tops.length;
+  };
+
+  // 折り返さない時の幅。複製を不可視・nowrap で親に置いて測り、終わったら必ず消す
+  // （元の要素の見た目は変えない）。複製は DOM を写すので、中の code・英数字の字幅も
+  // そのまま測れる。font の違いは、この幅と箱の幅を比べる所にだけ現れる。
+  const unwrappedWidth = (element: Element): number => {
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.style.position = 'absolute';
+    clone.style.visibility = 'hidden';
+    clone.style.whiteSpace = 'nowrap';
+    clone.style.maxWidth = 'none';
+    clone.style.width = 'auto';
+    clone.style.display = 'inline-block';
+    element.parentElement?.appendChild(clone);
+    const width = clone.getBoundingClientRect().width;
+    clone.remove();
+    return width;
+  };
+
+  // 文を置く箱（親）の中身の幅。padding には文字が流れないので除く。
+  const contentWidth = (element: Element): number => {
+    const parent = element.parentElement;
+    if (!parent) return document.documentElement.clientWidth;
+    const style = window.getComputedStyle(parent);
+    const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+    const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+    return (parent as HTMLElement).clientWidth - paddingLeft - paddingRight;
+  };
+
+  // 折り返さない時の幅が箱に収まる文だけを「1 行のはず」とし、2 行以上なら落とす。
+  // 箱より広い文は折り返して当然なので対象から外す。1px でも広ければ browser は折り返すので、
+  // 境界を「許す」と、読点で折れる長い文（例: /security/ の 53 字の文は 705.0px / 箱 704.0px）を
+  // 「1 行のはず」と誤って数えてしまう。丸めの許容は、箱の幅を測る側（contentWidth）で持つ。
+  const sentenceFailures = (): string[] => {
+    const failures: string[] = [];
+    const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
+    if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
+    for (const sentence of sentences) {
+      const text = (sentence.textContent ?? '').replace(/\s+/g, '');
+      if (text.length === 0) continue;
+      const box = contentWidth(sentence);
+      const nowrapWidth = unwrappedWidth(sentence);
+      if (nowrapWidth > box) continue;
+      const lines = lineCount(sentence);
+      if (lines !== 1) {
+        const chars = Array.from(text).length;
+        failures.push(
+          `文が 1 行に収まらない（幅 ${nowrapWidth.toFixed(1)}px / 箱 ${box.toFixed(1)}px、${chars} 字）: ${text.slice(0, 40)}`,
+        );
+      }
+    }
+    return failures;
+  };
+
+  window.__lineBreakProbe = { lineCount, unwrappedWidth, contentWidth, sentenceFailures };
+}
+
 // 題の塊と文が、意味の区切りでだけ折れているかを見る（docs/design/layout-rules.md の R1・R2）。
 // 幅 1440 と 1920 の業種別の page。空振りしないよう、.lb-sentence と h1 が無ければ落とす。
 const LINE_BREAK_VIEWPORTS = [
@@ -434,40 +521,11 @@ test('industry headings and sentences break at meaning boundaries (line breaks)'
 
     for (const route of LINE_BREAK_ROUTES) {
       await settlePage(page, route);
+      await page.evaluate(installLineBreakProbe);
       const issues = await page.evaluate(() => {
         const failures: string[] = [];
-
-        const lineCount = (element: Element): number => {
-          const range = document.createRange();
-          range.selectNodeContents(element);
-          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-          // inline-block の中の文字は、同じ行でも top が数 px ずれて 2 つの rect になる。
-          // 行の間隔（line-height）より十分小さい 8px を同じ行とみなす。
-          const tops: number[] = [];
-          for (const rect of rects) {
-            if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
-          }
-          range.detach();
-          return tops.length;
-        };
-
-        // 折り返さない時の幅。箱より長い塊を「確かめる対象」から除くために使う。
-        const unwrappedWidth = (element: Element): number => {
-          const clone = element.cloneNode(true) as HTMLElement;
-          clone.style.position = 'absolute';
-          clone.style.visibility = 'hidden';
-          clone.style.whiteSpace = 'nowrap';
-          clone.style.maxWidth = 'none';
-          clone.style.width = 'auto';
-          clone.style.display = 'inline-block';
-          element.parentElement?.appendChild(clone);
-          const width = clone.getBoundingClientRect().width;
-          clone.remove();
-          return width;
-        };
-
-        const parentWidth = (element: Element): number =>
-          element.parentElement ? (element.parentElement as HTMLElement).clientWidth : document.documentElement.clientWidth;
+        const probe = window.__lineBreakProbe;
+        if (!probe) return ['折り返しを測る関数が仕込まれていない'];
 
         const heading = document.querySelector('h1');
         if (!heading) failures.push('h1 が無い');
@@ -480,32 +538,15 @@ test('industry headings and sentences break at meaning boundaries (line breaks)'
         const headingClauses = Array.from(document.querySelectorAll('h1 .lb-clause, h2 .lb-clause'));
         if (headingClauses.length === 0) failures.push('題の塊（.lb-clause）が 1 つも無い');
         for (const clause of headingClauses) {
-          const box = parentWidth(clause);
-          if (unwrappedWidth(clause) > box + 1) continue; // 箱より長い塊は除く
-          const lines = lineCount(clause);
+          const box = probe.contentWidth(clause);
+          if (probe.unwrappedWidth(clause) > box + 1) continue; // 箱より長い塊は除く
+          const lines = probe.lineCount(clause);
           if (lines !== 1) {
             failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
           }
         }
 
-        const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
-        if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
-        for (const sentence of sentences) {
-          const paragraph = sentence.closest('p') ?? sentence.parentElement;
-          if (!paragraph) continue;
-          const style = window.getComputedStyle(paragraph);
-          const fontSize = Number.parseFloat(style.fontSize) || 16;
-          const width = (paragraph as HTMLElement).clientWidth;
-          const text = (sentence.textContent ?? '').replace(/\s+/g, '');
-          const chars = Array.from(text).length;
-          if (chars === 0) continue;
-          const columnChars = width / fontSize;
-          if (chars <= columnChars + 1e-6 && lineCount(sentence) !== 1) {
-            failures.push(
-              `文が 1 行に収まらない（${chars} 字 / 列 ${columnChars.toFixed(1)} 字）: ${text.slice(0, 40)}`,
-            );
-          }
-        }
+        failures.push(...probe.sentenceFailures());
 
         const bodyBoxes = Array.from(
           document.querySelectorAll('main [data-proposal-hero] p.type-copy, main [data-proposal-body] p.type-copy, main [data-proposal-cta] p'),
@@ -590,67 +631,24 @@ test('reading pages break headings and sentences at meaning boundaries (line bre
 
     for (const route of READING_LINE_BREAK_ROUTES) {
       await settlePage(page, route);
+      await page.evaluate(installLineBreakProbe);
       const issues = await page.evaluate(() => {
         const failures: string[] = [];
-
-        const lineCount = (element: Element): number => {
-          const range = document.createRange();
-          range.selectNodeContents(element);
-          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-          const tops: number[] = [];
-          for (const rect of rects) {
-            if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
-          }
-          range.detach();
-          return tops.length;
-        };
-
-        const unwrappedWidth = (element: Element): number => {
-          const clone = element.cloneNode(true) as HTMLElement;
-          clone.style.position = 'absolute';
-          clone.style.visibility = 'hidden';
-          clone.style.whiteSpace = 'nowrap';
-          clone.style.maxWidth = 'none';
-          clone.style.width = 'auto';
-          clone.style.display = 'inline-block';
-          element.parentElement?.appendChild(clone);
-          const width = clone.getBoundingClientRect().width;
-          clone.remove();
-          return width;
-        };
-
-        const parentWidth = (element: Element): number =>
-          element.parentElement ? (element.parentElement as HTMLElement).clientWidth : document.documentElement.clientWidth;
+        const probe = window.__lineBreakProbe;
+        if (!probe) return ['折り返しを測る関数が仕込まれていない'];
 
         const headingClauses = Array.from(document.querySelectorAll('main h1 .lb-clause, main h2 .lb-clause, main h3 .lb-clause'));
         if (headingClauses.length === 0) failures.push('題の塊（.lb-clause）が 1 つも無い');
         for (const clause of headingClauses) {
-          const box = parentWidth(clause);
-          if (unwrappedWidth(clause) > box + 1) continue;
-          const lines = lineCount(clause);
+          const box = probe.contentWidth(clause);
+          if (probe.unwrappedWidth(clause) > box + 1) continue;
+          const lines = probe.lineCount(clause);
           if (lines !== 1) {
             failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
           }
         }
 
-        const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
-        if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
-        for (const sentence of sentences) {
-          const paragraph = sentence.closest('p') ?? sentence.parentElement;
-          if (!paragraph) continue;
-          const style = window.getComputedStyle(paragraph);
-          const fontSize = Number.parseFloat(style.fontSize) || 16;
-          const width = (paragraph as HTMLElement).clientWidth;
-          const text = (sentence.textContent ?? '').replace(/\s+/g, '');
-          const chars = Array.from(text).length;
-          if (chars === 0) continue;
-          const columnChars = width / fontSize;
-          if (chars <= columnChars + 1e-6 && lineCount(sentence) !== 1) {
-            failures.push(
-              `文が 1 行に収まらない（${chars} 字 / 列 ${columnChars.toFixed(1)} 字）: ${text.slice(0, 40)}`,
-            );
-          }
-        }
+        failures.push(...probe.sentenceFailures());
 
         // 読み物の本文の箱が 40 字を超えない（R2）。表・脚注・著者の箱・要点の箱・出典の一覧は本文ではない。
         const bodyBoxes = Array.from(document.querySelectorAll('main .prose > p, main p.lb-text'));
