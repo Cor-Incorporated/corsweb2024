@@ -1,8 +1,9 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { getCurrentLocale } from '../../utils/i18n';
+import { groupClauses } from '../../utils/line-breaks';
 import CategoryBadge from './CategoryBadge.astro';
-import LbHeading from '../common/LbHeading.astro';
+import LbClauses from '../common/LbClauses.astro';
 import LbText from '../common/LbText.astro';
 
 interface Props {
@@ -26,6 +27,13 @@ interface Props {
 const { post, variant = 'card' } = Astro.props;
 const { title, description, pubDate, author, category, tags, image } = post.data;
 const currentLocale = getCurrentLocale(Astro.url);
+
+// 題の行の決まり（layout-rules.md の R1）は読点の後で塊に分ける事。card の題は
+// text-balance と line-clamp で折り方を決めているため、塊に分かれない題（読点が
+// 無い題など）にまで lb-heading を付けると balance が止まって、最後の行に 1〜2 字
+// だけ残る事がある。塊が 2 つ以上に分かれる題だけ印を付ける。
+const titleClauses = groupClauses([{ text: title }], currentLocale);
+const titleIsMarked = titleClauses.length >= 2;
 
 const localeMap = {
   ja: 'ja-JP',
@@ -93,7 +101,9 @@ const articleClass = variant === 'feed'
           </span>
         </div>
 
-        <LbHeading as="h2" class="line-clamp-2 text-balance text-xl font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300" text={title} />
+        <h2 class:list={['line-clamp-2 text-balance text-xl font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300', titleIsMarked && 'lb-heading']}>
+          {titleIsMarked ? <LbClauses text={title} /> : title}
+        </h2>
 
         <LbText class="line-clamp-2 text-pretty text-sm leading-6 text-stone-600 dark:text-stone-300 sm:text-base sm:leading-7" text={description} />
 
@@ -135,11 +145,9 @@ const articleClass = variant === 'feed'
           </time>
         </div>
 
-        <LbHeading
-          as="h3"
-          class={`${variant === 'compact' ? 'text-base' : 'text-lg'} mb-2 line-clamp-2 text-balance font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300`}
-          text={title}
-        />
+        <h3 class:list={[`${variant === 'compact' ? 'text-base' : 'text-lg'} mb-2 line-clamp-2 text-balance font-semibold leading-snug text-stone-950 transition-colors duration-150 group-hover:text-blue-700 dark:text-stone-50 dark:group-hover:text-blue-300`, titleIsMarked && 'lb-heading']}>
+          {titleIsMarked ? <LbClauses text={title} /> : title}
+        </h3>
 
         <LbText class="mb-4 line-clamp-3 flex-1 text-pretty text-sm leading-6 text-stone-600 dark:text-stone-300" text={description} />
 
