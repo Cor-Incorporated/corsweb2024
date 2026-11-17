@@ -11,15 +11,56 @@ describe('splitSentences', () => {
     },
     {
       name: '文の終わりの直後の閉じ括弧は前の文に付ける',
-      text: '「今日は行きます。」明日は休みます。',
+      text: 'これは例です。）明日は休みます。',
       locale: 'ja',
-      expected: ['「今日は行きます。」', '明日は休みます。'],
+      expected: ['これは例です。）', '明日は休みます。'],
     },
     {
       name: '中国語も文の終わりで分ける',
       text: '必要な情報は電子カルテにある。書式もある。',
       locale: 'zh',
       expected: ['必要な情報は電子カルテにある。', '書式もある。'],
+    },
+    {
+      name: '丸括弧の中の句点では文を分けない（法務の文）',
+      text: 'Cor.株式会社（以下「当社」といいます。）は、当社が取り扱う個人情報の重要性を認識し、適正に取り扱います。当社は、以下の方針に基づき個人情報を保護します。',
+      locale: 'ja',
+      expected: [
+        'Cor.株式会社（以下「当社」といいます。）は、当社が取り扱う個人情報の重要性を認識し、適正に取り扱います。',
+        '当社は、以下の方針に基づき個人情報を保護します。',
+      ],
+    },
+    {
+      name: '丸括弧の中の句点では文を分けない（基本方針の文は 1 文）',
+      text: 'Cor.株式会社（以下、「当社」という。）は、「競争ではなく共創を通じて未来を切り拓き、幸福な社会を実現する」という経営理念のもと、事業を展開しています。',
+      locale: 'ja',
+      expected: [
+        'Cor.株式会社（以下、「当社」という。）は、「競争ではなく共創を通じて未来を切り拓き、幸福な社会を実現する」という経営理念のもと、事業を展開しています。',
+      ],
+    },
+    {
+      name: 'かぎ括弧の中の句点では文を分けない',
+      text: '彼は「行きます。」と言った。次の日に来た。',
+      locale: 'ja',
+      expected: ['彼は「行きます。」と言った。', '次の日に来た。'],
+    },
+    {
+      name: '「！」「？」で終わる文も分ける',
+      text: '本当ですか？はい、そうです！また会いましょう。',
+      locale: 'ja',
+      expected: ['本当ですか？', 'はい、そうです！', 'また会いましょう。'],
+    },
+    {
+      name: '文の終わりに続く閉じ括弧は前の文に付ける（全角）',
+      text: 'これは例です。）次の文です。',
+      locale: 'ja',
+      expected: ['これは例です。）', '次の文です。'],
+    },
+    {
+      name: '文の終わりに続く閉じ括弧は前の文に付ける（半角）',
+      text: 'これは例です。)次の文です。',
+      locale: 'ja',
+      expected: ['これは例です。)', '次の文です。'],
     },
     {
       name: '英語の本文は分けない',
@@ -71,6 +112,45 @@ describe('splitClauses', () => {
       expected: ['医療機関のAI導入を，', '記録の整理から。'],
     },
     {
+      name: '丸括弧の中の読点では塊を切らない（法務の文）',
+      text: 'Cor.株式会社（以下「当社」といいます。）は、当社が取り扱う個人情報の重要性を認識し、適正に取り扱います。',
+      locale: 'ja',
+      expected: [
+        'Cor.株式会社（以下「当社」といいます。）は、',
+        '当社が取り扱う個人情報の重要性を認識し、',
+        '適正に取り扱います。',
+      ],
+    },
+    {
+      name: '丸括弧の中の読点では切らず、かぎ括弧の中の読点では切る',
+      text: 'Cor.株式会社（以下、「当社」という。）は、「競争ではなく共創を通じて未来を切り拓き、幸福な社会を実現する」という経営理念のもと、事業を展開しています。',
+      locale: 'ja',
+      expected: [
+        'Cor.株式会社（以下、「当社」という。）は、',
+        '「競争ではなく共創を通じて未来を切り拓き、',
+        '幸福な社会を実現する」という経営理念のもと、',
+        '事業を展開しています。',
+      ],
+    },
+    {
+      name: '角括弧の中の読点でも塊を切らない',
+      text: '補足【これは、一つの塊です。】の後で、続けます。',
+      locale: 'ja',
+      expected: ['補足【これは、一つの塊です。】の後で、', '続けます。'],
+    },
+    {
+      name: '短い出だしは最初の 2 つだけを 1 つにし、2 つ目以降は続けない',
+      text: 'はい、いいえ、はい。',
+      locale: 'ja',
+      expected: ['はい、いいえ、', 'はい。'],
+    },
+    {
+      name: '英語の題は「: 」と「 — 」の後でも分ける',
+      text: 'Grift: from git history — a record of work.',
+      locale: 'en',
+      expected: ['Grift: ', 'from git history — ', 'a record of work.'],
+    },
+    {
       name: '英語の題は「, 」の後で分ける',
       text: 'Reliable AI, from records to documents.',
       locale: 'en',
@@ -84,6 +164,35 @@ describe('splitClauses', () => {
     },
   ])('$name', ({ text, locale, expected }) => {
     expect(splitClauses(text, locale)).toEqual(expected);
+  });
+});
+
+describe('括弧を含む文', () => {
+  const examples = [
+    'Cor.株式会社（以下「当社」といいます。）は、当社が取り扱う個人情報の重要性を認識し、適正に取り扱います。当社は、以下の方針に基づき個人情報を保護します。',
+    'Cor.株式会社（以下、「当社」という。）は、「競争ではなく共創を通じて未来を切り拓き、幸福な社会を実現する」という経営理念のもと、事業を展開しています。',
+    '彼は「行きます。」と言った。次の日に来た。',
+    'これは例です。）次の文です。',
+    '補足【これは、一つの塊です。】の後で、続けます。',
+  ];
+
+  it.each(examples)('塊を繋いだ文字が元と同じ: %s', (text) => {
+    expect(splitSentences(text, 'ja').join('')).toBe(text);
+    expect(splitClauses(text, 'ja').join('')).toBe(text);
+    const sentences = groupSentences([{ text }], 'ja');
+    expect(sentences.map((sentence) => sentence.map((clause) => clause.map((part) => part.text).join('')).join('')).join('')).toBe(
+      text,
+    );
+  });
+
+  it('法務の文の最初の塊は、括弧を閉じた後の読点で切れる', () => {
+    const text =
+      'Cor.株式会社（以下「当社」といいます。）は、当社が取り扱う個人情報の重要性を認識し、適正に取り扱います。';
+    const sentences = groupSentences([{ text }], 'ja');
+    expect(sentences).toHaveLength(1);
+    expect(sentences[0].map((clause) => clause.map((part) => part.text).join(''))[0]).toBe(
+      'Cor.株式会社（以下「当社」といいます。）は、',
+    );
   });
 });
 
@@ -127,6 +236,16 @@ describe('groupClauses', () => {
     expect(clauses.map((clause) => clause.map((part) => part.text).join(''))).toEqual([
       '医療機関のAI導入を、',
       '記録の整理と書類づくりから。',
+    ]);
+  });
+
+  it('題は、長い括弧を折るため、括弧の中の読点でも切る', () => {
+    const clauses = groupClauses([{ text: '(2) 员工（含董事、兼职、定期合同、实习生）' }], 'zh');
+    expect(clauses.map((clause) => clause.map((part) => part.text).join(''))).toEqual([
+      '(2) 员工（含董事、',
+      '兼职、',
+      '定期合同、',
+      '实习生）',
     ]);
   });
 
