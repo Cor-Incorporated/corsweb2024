@@ -31,6 +31,24 @@ main .type-copy.text-balance {
   text-wrap: pretty;
 }
 
+/* 狭い画面（幅 640px 未満。本文の文字を 16px にする Tailwind の sm と同じ境）では、
+   本文は文の終わり（句点）でだけ行を替える（docs/design/layout-rules.md の R1）。
+   文の中の塊を通常の折り方に戻し、文に text-wrap: pretty を当てて
+   最後の行に 1〜2 字だけ残るのを減らす。塊は .lb-sentence の子孫すべてに当てる
+   （link などを挟んで直下に無い塊も、文の中の塊だから同様に流す）。
+   題の塊（.lb-heading の中の .lb-clause）は .lb-sentence の中に無いので
+   inline-block のまま（題は狭い画面でも読点で切る）。 */
+@media not all and (min-width: 640px) {
+  .lb-sentence .lb-clause {
+    display: inline;
+    max-width: none;
+  }
+
+  .lb-sentence {
+    text-wrap: pretty;
+  }
+}
+
 /* 塊を持つ題は、字数を等分する折り方（text-wrap: balance）を止める。
    layout の `h1, h2, h3, .type-heading { text-wrap: balance }` より強い形で書く
    （出る順番に頼らない）。 */
