@@ -425,6 +425,7 @@ type LineBreakProbe = {
   unwrappedWidth: (element: Element) => number;
   contentWidth: (element: Element) => number;
   sentenceFailures: () => string[];
+  judgedCount: () => number;
 };
 
 declare global {
@@ -465,22 +466,26 @@ function installLineBreakProbe(): void {
     return width;
   };
 
-  // 文を置く箱（親）の中身の幅。padding には文字が流れないので除く。
+  // 文を置く箱（親）の中身の幅。文字が流れるのは padding と border の内側だけなので、
+  // 親の矩形から左右の padding と border を引く。clientWidth は整数に丸めて返すので使わない
+  // （丸めた値と、折り返さない時の幅の小数が、境界でどちらにも転ぶ）。
   const contentWidth = (element: Element): number => {
     const parent = element.parentElement;
     if (!parent) return document.documentElement.clientWidth;
     const style = window.getComputedStyle(parent);
     const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
     const paddingRight = Number.parseFloat(style.paddingRight) || 0;
-    return (parent as HTMLElement).clientWidth - paddingLeft - paddingRight;
+    const borderLeft = Number.parseFloat(style.borderLeftWidth) || 0;
+    const borderRight = Number.parseFloat(style.borderRightWidth) || 0;
+    return parent.getBoundingClientRect().width - paddingLeft - paddingRight - borderLeft - borderRight;
   };
 
-  // 折り返さない時の幅が箱に収まる文だけを「1 行のはず」とし、2 行以上なら落とす。
-  // 箱より広い文は折り返して当然なので対象から外す。1px でも広ければ browser は折り返すので、
-  // 境界を「許す」と、読点で折れる長い文（例: /security/ の 53 字の文は 705.0px / 箱 704.0px）を
-  // 「1 行のはず」と誤って数えてしまう。丸めの許容は、箱の幅を測る側（contentWidth）で持つ。
+  // 折り返さない時の幅が箱より 1px 以上小さい文だけを「1 行のはず」とし、2 行以上なら落とす。
+  // 箱との差が 1px 未満の文は、丸めでどちらにも転ぶので判定から外す（箱より広い文も、
+  // 折り返して当然なので同じく外す）。判定した文が 0 個の route は、測り方が空振りしているので落とす。
   const sentenceFailures = (): string[] => {
     const failures: string[] = [];
+    let judged = 0;
     const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
     if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
     for (const sentence of sentences) {
@@ -488,7 +493,8 @@ function installLineBreakProbe(): void {
       if (text.length === 0) continue;
       const box = contentWidth(sentence);
       const nowrapWidth = unwrappedWidth(sentence);
-      if (nowrapWidth > box) continue;
+      if (nowrapWidth > box - 1) continue;
+      judged += 1;
       const lines = lineCount(sentence);
       if (lines !== 1) {
         const chars = Array.from(text).length;
@@ -497,10 +503,23 @@ function installLineBreakProbe(): void {
         );
       }
     }
+    if (judged === 0) failures.push('「1 行のはず」と判定した文が 0 個（幅の測り方が空振りしている）');
     return failures;
   };
 
-  window.__lineBreakProbe = { lineCount, unwrappedWidth, contentWidth, sentenceFailures };
+  // route ごとに「1 行のはず」と判定した文の数（報告用。合否は sentenceFailures が見る）。
+  const judgedCount = (): number => {
+    let judged = 0;
+    for (const sentence of Array.from(document.querySelectorAll('.lb-sentence'))) {
+      const text = (sentence.textContent ?? '').replace(/\s+/g, '');
+      if (text.length === 0) continue;
+      if (unwrappedWidth(sentence) > contentWidth(sentence) - 1) continue;
+      judged += 1;
+    }
+    return judged;
+  };
+
+  window.__lineBreakProbe = { lineCount, unwrappedWidth, contentWidth, sentenceFailures, judgedCount };
 }
 
 // 題の塊と文が、意味の区切りでだけ折れているかを見る（docs/design/layout-rules.md の R1・R2）。
@@ -621,6 +640,69 @@ const READING_LINE_BREAK_ROUTES = [
   '/legal/tokushoho/',
   '/company/',
 ] as const;
+
+// 業種別と読み物の試験が回る page の全部で、page の中の link（href="#…"）の飛び先の id が
+// 同じ page に在るかを見る。# だけの link は飛び先を持たないので除く。
+test('page-internal links point to an id on the same page', async ({ page }) => {
+  test.setTimeout(120_000);
+  const failures: string[] = [];
+
+  for (const route of [...LINE_BREAK_ROUTES, ...READING_LINE_BREAK_ROUTES]) {
+    await settlePage(page, route);
+    const missing = await page.evaluate(() => {
+      const missing: string[] = [];
+      for (const link of Array.from(document.querySelectorAll('main a[href^="#"]'))) {
+        const href = link.getAttribute('href') ?? '';
+        if (href === '#') continue;
+        const id = decodeURIComponent(href.slice(1));
+        if (!id) continue;
+        if (document.getElementById(id)) continue;
+        missing.push(href);
+      }
+      return Array.from(new Set(missing));
+    });
+    failures.push(...missing.map((href) => `${route}: 飛び先の id が無い ${href}`));
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`page-internal links have no target:\n${failures.join('\n')}`);
+  }
+});
+
+// Markdown の記事の本文の箱（.prose）の中の p に、文の印（.lb-sentence）が在るかを見る。
+// plugin を astro.config.mjs の rehypePlugins から外すと、記事の題・lead の印は残るのに
+// 本文だけ印が消えるので、この試験が落ちる。
+const MARKDOWN_BODY_ROUTES = [
+  { route: '/blog/ai-development-estimate-knowledge-asset/', label: 'blog ja' },
+  { route: '/zh/blog/ai-development-estimate-knowledge-asset/', label: 'blog zh' },
+  { route: '/news/news-static-v1/', label: 'news ja' },
+  { route: '/works/grift/', label: 'works ja' },
+] as const;
+
+test('markdown body paragraphs carry line-break marks (line breaks)', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const failures: string[] = [];
+
+  for (const { route, label } of MARKDOWN_BODY_ROUTES) {
+    await settlePage(page, route);
+    const result = await page.evaluate(() => {
+      const prose = document.querySelector('main .prose');
+      if (!prose) return { paragraphs: 0, marked: 0 };
+      const paragraphs = Array.from(prose.querySelectorAll('p'));
+      const marked = paragraphs.filter((paragraph) => paragraph.querySelector('.lb-sentence')).length;
+      return { paragraphs: paragraphs.length, marked };
+    });
+    if (result.paragraphs === 0) failures.push(`${label} ${route}: 本文の箱（.prose）の中に p が無い`);
+    else if (result.marked === 0) {
+      failures.push(`${label} ${route}: 本文の p ${result.paragraphs} 個のどれにも .lb-sentence が無い`);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`markdown body paragraphs have no line-break marks:\n${failures.join('\n')}`);
+  }
+});
 
 test('reading pages break headings and sentences at meaning boundaries (line breaks)', async ({ page }) => {
   test.setTimeout(300_000);
