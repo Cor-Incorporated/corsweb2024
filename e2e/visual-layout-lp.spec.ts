@@ -1,8 +1,12 @@
 import { test, type Page } from '@playwright/test';
 
+import { installLineBreakProbe } from './helpers/line-break-probe';
+
 // LP と一覧の page（top・about・サービス・contact・実績・お知らせ・blog）の、配置と改行の決まり
 // （docs/design/layout-rules.md の R1・R2）を見る。手本は e2e/visual-text.spec.ts の
 // 「line breaks」の試験（待ち方・animation を止める・許す幅は同じ）。
+// 幅を測る関数と「1 行のはず」の決め（幅が箱より 1px 以上小さい物だけ判定。判定した文が
+// 0 個の route は落とす）は e2e/helpers/line-break-probe.ts を共用する。
 const LP_ROUTES = [
   '/',
   '/about/',
@@ -54,60 +58,11 @@ test('LP headings and sentences break at meaning boundaries (LP line breaks)', a
 
     for (const route of [...LP_ROUTES, ...LP_ZH_ROUTES]) {
       await settlePage(page, route);
+      await page.evaluate(installLineBreakProbe);
       const issues = await page.evaluate(() => {
         const failures: string[] = [];
-
-        const lineCount = (element: Element): number => {
-          const range = document.createRange();
-          range.selectNodeContents(element);
-          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-          // inline-block の中の文字は、同じ行でも top が数 px ずれて 2 つの rect になる。
-          // 行の間隔（line-height）より十分小さい 8px を同じ行とみなす。
-          const tops: number[] = [];
-          for (const rect of rects) {
-            if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
-          }
-          range.detach();
-          return tops.length;
-        };
-
-        // 折り返さない時の幅。同じ要素を nowrap にした複製を作って測り、すぐ消す
-        // （元の要素の見た目は変えない）。「1 行のはず」を字数でなく実際の幅で決める:
-        // OS ごとに font の幅が違い、同じ字数でも幅が変わるため。width は max-content で
-        // 測る（auto だと複製が箱の幅に切り詰められ、本当の幅より小さく出る事がある）。
-        const unwrappedWidth = (element: Element): number => {
-          const clone = element.cloneNode(true) as HTMLElement;
-          clone.style.position = 'absolute';
-          clone.style.visibility = 'hidden';
-          clone.style.whiteSpace = 'nowrap';
-          clone.style.maxWidth = 'none';
-          clone.style.display = 'inline-block';
-          clone.style.width = 'max-content';
-          element.parentElement?.appendChild(clone);
-          const width = clone.getBoundingClientRect().width;
-          clone.remove();
-          return width;
-        };
-
-        // 箱（要素の中身の幅。padding は引く）。inline の要素（span の中の span など）は
-        // 幅が 0 なので、幅を持つ block の祖先まで上がってから測る。見えていない要素
-        // （閉じた開閉の中など）は 0 のまま返る。
-        const contentBoxWidth = (element: Element): number => {
-          let current: Element | null = element;
-          while (current && current !== document.documentElement) {
-            const style = window.getComputedStyle(current);
-            if (!style.display.startsWith('inline')) {
-              const width = (current as HTMLElement).clientWidth;
-              if (width > 0) {
-                return width - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
-              }
-            }
-            current = current.parentElement;
-          }
-          return 0;
-        };
-
-        const clauseBoxWidth = (element: Element): number => contentBoxWidth(element.parentElement ?? element);
+        const probe = window.__lineBreakProbe;
+        if (!probe) return ['折り返しを測る関数が仕込まれていない'];
 
         // 塊の span だけを持つ（手書きの <br> や set:html の HTML を含まない）題。
         const plainMarkedHeadings = Array.from(
@@ -134,42 +89,16 @@ test('LP headings and sentences break at meaning boundaries (LP line breaks)', a
           );
         }
 
-        // 塊の 1 つ 1 つは 1 行（折り返さない時の幅が箱より長い塊は除く。許す幅 2px。
-        // 見えていない塊（幅 0）は対象外）。
-        const headingClauses = Array.from(
-          document.querySelectorAll('main h1 .lb-clause, main h2 .lb-clause, main h3 .lb-clause'),
-        );
+        // 題の塊 1 つ 1 つは 1 行（helper と同じ決め: 幅が箱より 1px 以上小さい塊だけ判定。
+        // 箱との差が 1px 未満の物・箱より広い物・見えていない物（幅 0）は判定から外す）。
+        const clauseSelector = 'main h1 .lb-clause, main h2 .lb-clause, main h3 .lb-clause';
+        const headingClauses = Array.from(document.querySelectorAll(clauseSelector));
         if (headingClauses.length === 0) failures.push('題の塊（.lb-clause）が 1 つも無い');
-        for (const clause of headingClauses) {
-          const unwrapped = unwrappedWidth(clause);
-          if (unwrapped <= 0) continue;
-          const box = clauseBoxWidth(clause);
-          if (unwrapped > box + 2) continue;
-          const lines = lineCount(clause);
-          if (lines !== 1) {
-            failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
-          }
-        }
+        failures.push(...probe.clauseFailures(clauseSelector));
 
-        // main の中に文の印が 1 つ以上在る。折り返さない時の幅が箱（文を入れる要素の
-        // 中身の幅）に収まる文は 1 行（許す幅 2px）。見えていない文（閉じた開閉の中など・
-        // 行が測れない）は対象外。字数は落ちた時の文に出すだけ。
-        const sentences = Array.from(document.querySelectorAll('main .lb-sentence'));
-        if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
-        for (const sentence of sentences) {
-          const text = (sentence.textContent ?? '').replace(/\s+/g, '');
-          if (text.length === 0) continue;
-          const lines = lineCount(sentence);
-          if (lines === 0) continue;
-          const box = contentBoxWidth(sentence);
-          const unwrapped = unwrappedWidth(sentence);
-          if (unwrapped <= box + 2 && lines !== 1) {
-            const fontSize = Number.parseFloat(window.getComputedStyle(sentence).fontSize) || 16;
-            failures.push(
-              `文が 1 行に収まらない（折り返さない時 ${unwrapped.toFixed(1)}px / 箱 ${box.toFixed(1)}px・${Array.from(text).length} 字 / 列 ${(box / fontSize).toFixed(1)} 字）: ${text.slice(0, 40)}`,
-            );
-          }
-        }
+        // main の中の文は、箱に収まる物が 1 行（helper と同じ決め。判定した文が 0 個の
+        // route は落とす）。字数は落ちた時の文に出すだけ。
+        failures.push(...probe.sentenceFailures('main .lb-sentence'));
 
         // 節の題のすぐ下の説明の段落（card の中でない物）の箱は、全角 40 字まで（R2）。
         // card（一覧の card・実績の card）と表・箇条書き・定義・読み物の部品は、card の幅のまま。
@@ -195,7 +124,7 @@ test('LP headings and sentences break at meaning boundaries (LP line breaks)', a
         if (inInteractive > 0) failures.push(`表・button・a の中に .lb-sentence が ${inInteractive} 個`);
 
         // 文ごとに、括弧の対の数が同じ。
-        for (const sentence of sentences) {
+        for (const sentence of Array.from(document.querySelectorAll('main .lb-sentence'))) {
           const text = sentence.textContent ?? '';
           const pairs: Array<[string, string]> = [
             ['（', '）'],
