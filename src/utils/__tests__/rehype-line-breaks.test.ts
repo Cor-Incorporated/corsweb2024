@@ -176,4 +176,32 @@ describe('rehypeLineBreaks', () => {
     expect(findAll(tree, (node) => node.properties?.className?.toString().includes('lb-sentence')).length).toBeGreaterThanOrEqual(2);
     expect(textContent(tree)).toBe('必要な情報は電子カルテにある。書式もある。');
   });
+
+  // li は、直下の文だけを持つ時は li 自身を包み、中に p や入れ子の list を持つ時は li を包まず
+  // 中の p・li を変換する（印を二重にしない）。
+  it('li の直下の文・中の p・入れ子の list に、二重にせず印を付ける', () => {
+    const isSentence = (node: Node): boolean => node.properties?.className?.toString().includes('lb-sentence') ?? false;
+    const directTextList = h('ul', [h('li', [t('直下の文です。次の文です。')])]);
+    runTree(directTextList, '/repo/src/content/blog/ja/a.md');
+    expect(findAll(directTextList, isSentence)).toHaveLength(2);
+    expect(textContent(directTextList)).toBe('直下の文です。次の文です。');
+
+    const paragraphList = h('ul', [h('li', [h('p', [t('段落の文です。')])])]);
+    runTree(paragraphList, '/repo/src/content/blog/ja/a.md');
+    expect(findAll(paragraphList, isSentence)).toHaveLength(1);
+    expect(findAll(paragraphList, (node) => node.tagName === 'p' && findAll(node, isSentence).length === 1)).toHaveLength(1);
+    expect(textContent(paragraphList)).toBe('段落の文です。');
+
+    const nestedList = h('ul', [
+      h('li', [h('p', [t('外の文です。')]), h('ul', [h('li', [t('入れ子の文です。')])])]),
+    ]);
+    runTree(nestedList, '/repo/src/content/blog/ja/a.md');
+    const sentences = findAll(nestedList, isSentence);
+    expect(sentences).toHaveLength(2);
+    expect(textContent(sentences[0])).toBe('外の文です。');
+    expect(textContent(sentences[1])).toBe('入れ子の文です。');
+    // 印の中に印（二重）が無い
+    expect(findAll(nestedList, (node) => isSentence(node) && findAll(node, isSentence).length > 1)).toHaveLength(0);
+    expect(textContent(nestedList)).toBe('外の文です。入れ子の文です。');
+  });
 });

@@ -194,6 +194,18 @@ describe('括弧を含む文', () => {
       'Cor.株式会社（以下「当社」といいます。）は、',
     );
   });
+
+  // 閉じの無い開き括弧の後ろは、今は文の終わりまで行を替えない（深さが 0 に戻らないため）。
+  // 字を欠かさず、落ちず、後ろを勝手に切らない事だけを留める。
+  it('閉じの無い開き括弧の後ろは、文の終わりまで切らず、文字を欠かさない', () => {
+    const text = 'これは例です（未定です。次の文です。';
+    expect(splitSentences(text, 'ja')).toEqual([text]);
+    expect(splitClauses(text, 'ja')).toEqual([text]);
+    const sentences = groupSentences([{ text }], 'ja');
+    expect(sentences).toHaveLength(1);
+    expect(sentences[0]).toHaveLength(1);
+    expect(sentences[0][0].map((part) => part.text).join('')).toBe(text);
+  });
 });
 
 describe('groupSentences', () => {
