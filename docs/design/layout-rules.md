@@ -27,12 +27,16 @@
 - 短い出だし（5 字以下。「まずは、」「一方で、」「AIで、」など）の後では替えない。次の塊と続ける。
 - 題（h1〜h3・CTA の見出し）: 読点・句点の後でだけ替える。字数を等分する折り方（`text-wrap: balance`）に任せない。
 - 閉じ括弧（」』）)と脚注の印は、前の文に付ける。行の頭に置かない。
+- 表・code block・数式・link card・脚注の一覧には印を付けない。住所・電話番号・日付の行にも印を付けない。
+- 書き手が手で改行（`<br>`）を入れた題は、その改行をそのまま使う（印を重ねない）。
 - この決まりは日本語と中国語に当てる。英語などは、本文の折り返しを browser に任せ、題だけ区切り（`,` `:` `—`）で切る。
 
 ### R2. 1 行は、全角 40 字まで
 
 - 本文の箱の幅は、全角 40 字ぶん（`40em`。18px なら 720px）まで。
 - それより広い箱に、本文をそのまま流さない。
+- 読み物の本文（記事・規約・方針・会社情報）の文字は 18px。狭い画面（640px 未満）は 16px のままでよい。
+- 表の中の文字の大きさは、本文と別に決めてよい（変えない）。
 
 ### R3. 列は画面の中央。揃えは、1 つの塊に 1 つ
 
@@ -65,6 +69,8 @@
 
 - 幅の値: `src/styles/content-width.css`（`--content-width` と `--reading-width`）、`tailwind.config.cjs`（`max-w-content` と `max-w-reading`）
 - 文と塊の印: `src/utils/line-breaks.ts`（`splitSentences` / `splitClauses` / `groupSentences` / `groupClauses`）と `src/utils/__tests__/line-breaks.test.ts`
+- 読み物の page の文と題の部品: `src/components/common/LbText.astro`（`mode="sentences"` / `"clauses"`）・`src/components/common/LbHeading.astro`
+- Markdown の本文の印: `src/utils/rehype-line-breaks.ts`（`astro.config.mjs` の `rehypePlugins` の最後）と `src/utils/__tests__/rehype-line-breaks.test.ts`
 - 業種別の page: `src/components/industry/ProposalPage.astro`・`ProposalBlocks.astro`・`ProposalInline.astro`・`ProposalHeading.astro`・`IndustryPaths.astro`・`ProposalSources.astro`
 - 行の CSS: `src/styles/content-width.css` の `.lb-sentence` / `.lb-clause` / `.lb-heading`
 - 確かめ: `e2e/visual-text.spec.ts`

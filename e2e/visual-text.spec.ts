@@ -568,6 +568,173 @@ test('reading column has no horizontal overflow on mobile (line breaks)', async 
   }
 });
 
+
+// 読み物の page（blog・お知らせ・実績・security・privacy・特商法・会社情報）にも、R1・R2 の見方を当てる。
+// 手本の業種別の page の試験と同じ見方。ただし短い題は 1 つの塊なので、h1 の塊の数は問わない。
+const READING_LINE_BREAK_ROUTES = [
+  '/blog/ai-development-estimate-knowledge-asset/',
+  '/news/news-static-v1/',
+  '/works/grift/',
+  '/security/',
+  '/privacy/',
+  '/legal/tokushoho/',
+  '/company/',
+] as const;
+
+test('reading pages break headings and sentences at meaning boundaries (line breaks)', async ({ page }) => {
+  test.setTimeout(300_000);
+  const failures: string[] = [];
+
+  for (const viewport of LINE_BREAK_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+    for (const route of READING_LINE_BREAK_ROUTES) {
+      await settlePage(page, route);
+      const issues = await page.evaluate(() => {
+        const failures: string[] = [];
+
+        const lineCount = (element: Element): number => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+          const tops: number[] = [];
+          for (const rect of rects) {
+            if (!tops.some((top) => Math.abs(top - rect.top) <= 8)) tops.push(rect.top);
+          }
+          range.detach();
+          return tops.length;
+        };
+
+        const unwrappedWidth = (element: Element): number => {
+          const clone = element.cloneNode(true) as HTMLElement;
+          clone.style.position = 'absolute';
+          clone.style.visibility = 'hidden';
+          clone.style.whiteSpace = 'nowrap';
+          clone.style.maxWidth = 'none';
+          clone.style.width = 'auto';
+          clone.style.display = 'inline-block';
+          element.parentElement?.appendChild(clone);
+          const width = clone.getBoundingClientRect().width;
+          clone.remove();
+          return width;
+        };
+
+        const parentWidth = (element: Element): number =>
+          element.parentElement ? (element.parentElement as HTMLElement).clientWidth : document.documentElement.clientWidth;
+
+        const headingClauses = Array.from(document.querySelectorAll('main h1 .lb-clause, main h2 .lb-clause, main h3 .lb-clause'));
+        if (headingClauses.length === 0) failures.push('題の塊（.lb-clause）が 1 つも無い');
+        for (const clause of headingClauses) {
+          const box = parentWidth(clause);
+          if (unwrappedWidth(clause) > box + 1) continue;
+          const lines = lineCount(clause);
+          if (lines !== 1) {
+            failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
+          }
+        }
+
+        const sentences = Array.from(document.querySelectorAll('.lb-sentence'));
+        if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
+        for (const sentence of sentences) {
+          const paragraph = sentence.closest('p') ?? sentence.parentElement;
+          if (!paragraph) continue;
+          const style = window.getComputedStyle(paragraph);
+          const fontSize = Number.parseFloat(style.fontSize) || 16;
+          const width = (paragraph as HTMLElement).clientWidth;
+          const text = (sentence.textContent ?? '').replace(/\s+/g, '');
+          const chars = Array.from(text).length;
+          if (chars === 0) continue;
+          const columnChars = width / fontSize;
+          if (chars <= columnChars + 1e-6 && lineCount(sentence) !== 1) {
+            failures.push(
+              `文が 1 行に収まらない（${chars} 字 / 列 ${columnChars.toFixed(1)} 字）: ${text.slice(0, 40)}`,
+            );
+          }
+        }
+
+        // 読み物の本文の箱が 40 字を超えない（R2）。表・脚注・著者の箱・要点の箱・出典の一覧は本文ではない。
+        const bodyBoxes = Array.from(document.querySelectorAll('main .prose > p, main p.lb-text'));
+        for (const paragraph of bodyBoxes) {
+          if (paragraph.closest('table, aside, nav, li, [data-article-sources]')) continue;
+          const style = window.getComputedStyle(paragraph);
+          const fontSize = Number.parseFloat(style.fontSize) || 16;
+          const width = (paragraph as HTMLElement).clientWidth;
+          if (width > fontSize * 40 + 1) {
+            failures.push(
+              `本文の箱が 40 字を超える（${width.toFixed(1)}px > ${(fontSize * 40).toFixed(1)}px）: ${(paragraph.textContent ?? '').slice(0, 40)}`,
+            );
+          }
+        }
+
+        return failures;
+      });
+      failures.push(...issues.map((issue) => `${viewport.name} ${route}: ${issue}`));
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`line breaks are not at meaning boundaries:\n${failures.join('\n')}`);
+  }
+});
+
+// 表・code block の中に、文と塊の印が 1 つも無いこと。
+test('tables and code blocks have no line-break marks (line breaks)', async ({ page }) => {
+  test.setTimeout(180_000);
+  const failures: string[] = [];
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  for (const route of READING_LINE_BREAK_ROUTES) {
+    await settlePage(page, route);
+    const count = await page.evaluate(
+      () =>
+        document.querySelectorAll(
+          'main table .lb-sentence, main table .lb-clause, main pre .lb-sentence, main pre .lb-clause',
+        ).length,
+    );
+    if (count > 0) failures.push(`${route}: 表・code block の中に印が ${count} 個`);
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`line-break marks must not be inside tables or code blocks:\n${failures.join('\n')}`);
+  }
+});
+
+// 幅 390 で、読み物の page にも横の scroll が出ず、塊が箱からはみ出さないことを見る。
+test('reading pages have no horizontal overflow on mobile (line breaks)', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const failures: string[] = [];
+
+  for (const route of READING_LINE_BREAK_ROUTES) {
+    await settlePage(page, route);
+    const issues = await page.evaluate(() => {
+      const failures: string[] = [];
+      const root = document.documentElement;
+      const scrollWidth = Math.max(root.scrollWidth, document.body?.scrollWidth ?? 0);
+      if (scrollWidth > root.clientWidth + 2) {
+        failures.push(`横 scroll が出る（scrollWidth=${scrollWidth} > clientWidth=${root.clientWidth}）`);
+      }
+
+      const clauses = Array.from(document.querySelectorAll('.lb-clause'));
+      if (clauses.length === 0) failures.push('.lb-clause が 1 つも無い');
+      for (const clause of clauses) {
+        const box = clause.parentElement?.getBoundingClientRect();
+        const rect = clause.getBoundingClientRect();
+        if (!box) continue;
+        if (rect.left < box.left - 1 || rect.right > box.right + 1) {
+          failures.push(`塊が箱からはみ出す: ${(clause.textContent ?? '').slice(0, 30)}`);
+        }
+      }
+      return failures;
+    });
+    failures.push(...issues.map((issue) => `mobile-390 ${route}: ${issue}`));
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`reading column overflows on mobile:\n${failures.join('\n')}`);
+  }
+});
+
 test('production pages do not have hard responsive text failures', async ({ page }) => {
   const routes = discoverRoutes();
   const observations: AuditObservation[] = [];

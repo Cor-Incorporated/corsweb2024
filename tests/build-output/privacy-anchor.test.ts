@@ -41,7 +41,9 @@ describe('privacy policy AI reception anchor (dist)', () => {
       expect(title, page.locale).toBeTruthy();
       const start = html.indexOf(opens[0]);
       const nextHeading = html.slice(start).match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
-      expect(nextHeading?.[1], page.locale).toBe(escapeHtml(title as string));
+      // 題には文と塊の印（span）が付く（docs/design/layout-rules.md の R1）。印を外した文字で比べる。
+      const headingText = (nextHeading?.[1] ?? '').replace(/<[^>]*>/g, '');
+      expect(headingText, page.locale).toBe(escapeHtml(title as string));
     });
   }
 });
