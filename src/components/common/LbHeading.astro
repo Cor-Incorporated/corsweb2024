@@ -1,0 +1,37 @@
+---
+// 題（h1〜h3・CTA の見出し）の塊の印（docs/design/layout-rules.md の R1）。
+// 読点・句点の後でだけ塊（span.lb-clause）に分ける。字数を等分する折り方（text-wrap: balance）は
+// CSS の .lb-heading で止める。手で入れた <br> を持つ題は、呼び出し側でこの部品を使わずそのまま出す。
+import type { InlinePart } from '../../utils/line-breaks';
+import { groupClauses } from '../../utils/line-breaks';
+import { getCurrentLocale } from '../../utils/i18n';
+
+interface Props {
+  text?: string;
+  parts?: readonly InlinePart[];
+  as?: 'h1' | 'h2' | 'h3';
+  id?: string;
+  class?: string;
+}
+
+const { text, parts, as: Tag = 'h2', id, class: className } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const input: InlinePart[] = parts && parts.length > 0 ? [...parts] : text ? [{ text }] : [];
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const html = groupClauses(input, locale)
+  .map(
+    (clause) =>
+      `<span class="lb-clause">${clause
+        .map((part) =>
+          part.href
+            ? `<a href="${escapeHtml(part.href)}"${part.external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(part.text)}</a>`
+            : escapeHtml(part.text),
+        )
+        .join('')}</span>`,
+  )
+  .join('');
+const classes = `${className ?? ''} lb-heading`.trim();
+---
+
+<Tag id={id} class={classes}><Fragment set:html={html} /></Tag>

@@ -35,3 +35,9 @@ main .type-copy.text-balance {
 .lb-heading {
   text-wrap: wrap;
 }
+
+/* 段落の中の <br> は残す。直前で文が終わっている時（.lb-sentence の直後）は、
+   <br> の改行と文の block の改行で行が 2 つ空かないよう、<br> を消す。 */
+.lb-sentence + br {
+  display: none;
+}
