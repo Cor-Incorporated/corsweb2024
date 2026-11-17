@@ -71,23 +71,43 @@ test('LP headings and sentences break at meaning boundaries (LP line breaks)', a
           return tops.length;
         };
 
-        // 折り返さない時の幅。箱より長い塊を「確かめる対象」から除くために使う。
+        // 折り返さない時の幅。同じ要素を nowrap にした複製を作って測り、すぐ消す
+        // （元の要素の見た目は変えない）。「1 行のはず」を字数でなく実際の幅で決める:
+        // OS ごとに font の幅が違い、同じ字数でも幅が変わるため。width は max-content で
+        // 測る（auto だと複製が箱の幅に切り詰められ、本当の幅より小さく出る事がある）。
         const unwrappedWidth = (element: Element): number => {
           const clone = element.cloneNode(true) as HTMLElement;
           clone.style.position = 'absolute';
           clone.style.visibility = 'hidden';
           clone.style.whiteSpace = 'nowrap';
           clone.style.maxWidth = 'none';
-          clone.style.width = 'auto';
           clone.style.display = 'inline-block';
+          clone.style.width = 'max-content';
           element.parentElement?.appendChild(clone);
           const width = clone.getBoundingClientRect().width;
           clone.remove();
           return width;
         };
 
-        const parentWidth = (element: Element): number =>
-          element.parentElement ? (element.parentElement as HTMLElement).clientWidth : document.documentElement.clientWidth;
+        // 箱（要素の中身の幅。padding は引く）。inline の要素（span の中の span など）は
+        // 幅が 0 なので、幅を持つ block の祖先まで上がってから測る。見えていない要素
+        // （閉じた開閉の中など）は 0 のまま返る。
+        const contentBoxWidth = (element: Element): number => {
+          let current: Element | null = element;
+          while (current && current !== document.documentElement) {
+            const style = window.getComputedStyle(current);
+            if (!style.display.startsWith('inline')) {
+              const width = (current as HTMLElement).clientWidth;
+              if (width > 0) {
+                return width - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
+              }
+            }
+            current = current.parentElement;
+          }
+          return 0;
+        };
+
+        const clauseBoxWidth = (element: Element): number => contentBoxWidth(element.parentElement ?? element);
 
         // 塊の span だけを持つ（手書きの <br> や set:html の HTML を含まない）題。
         const plainMarkedHeadings = Array.from(
@@ -114,36 +134,39 @@ test('LP headings and sentences break at meaning boundaries (LP line breaks)', a
           );
         }
 
-        // 塊の 1 つ 1 つは 1 行（箱より長い塊は除く）。
+        // 塊の 1 つ 1 つは 1 行（折り返さない時の幅が箱より長い塊は除く。許す幅 2px。
+        // 見えていない塊（幅 0）は対象外）。
         const headingClauses = Array.from(
           document.querySelectorAll('main h1 .lb-clause, main h2 .lb-clause, main h3 .lb-clause'),
         );
         if (headingClauses.length === 0) failures.push('題の塊（.lb-clause）が 1 つも無い');
         for (const clause of headingClauses) {
-          const box = parentWidth(clause);
-          if (unwrappedWidth(clause) > box + 1) continue;
+          const unwrapped = unwrappedWidth(clause);
+          if (unwrapped <= 0) continue;
+          const box = clauseBoxWidth(clause);
+          if (unwrapped > box + 2) continue;
           const lines = lineCount(clause);
           if (lines !== 1) {
             failures.push(`題の塊が ${lines} 行に割れている: ${(clause.textContent ?? '').slice(0, 40)}`);
           }
         }
 
-        // main の中に文の印が 1 つ以上在る。列に収まる長さの文は 1 行。
+        // main の中に文の印が 1 つ以上在る。折り返さない時の幅が箱（文を入れる要素の
+        // 中身の幅）に収まる文は 1 行（許す幅 2px）。見えていない文（閉じた開閉の中など・
+        // 行が測れない）は対象外。字数は落ちた時の文に出すだけ。
         const sentences = Array.from(document.querySelectorAll('main .lb-sentence'));
         if (sentences.length === 0) failures.push('.lb-sentence が 1 つも無い');
         for (const sentence of sentences) {
-          const paragraph = sentence.closest('p') ?? sentence.parentElement;
-          if (!paragraph) continue;
-          const style = window.getComputedStyle(paragraph);
-          const fontSize = Number.parseFloat(style.fontSize) || 16;
-          const width = (paragraph as HTMLElement).clientWidth || (paragraph.parentElement as HTMLElement)?.clientWidth || 0;
           const text = (sentence.textContent ?? '').replace(/\s+/g, '');
-          const chars = Array.from(text).length;
-          if (chars === 0) continue;
-          const columnChars = width / fontSize;
-          if (chars <= columnChars + 1e-6 && lineCount(sentence) !== 1) {
+          if (text.length === 0) continue;
+          const lines = lineCount(sentence);
+          if (lines === 0) continue;
+          const box = contentBoxWidth(sentence);
+          const unwrapped = unwrappedWidth(sentence);
+          if (unwrapped <= box + 2 && lines !== 1) {
+            const fontSize = Number.parseFloat(window.getComputedStyle(sentence).fontSize) || 16;
             failures.push(
-              `文が 1 行に収まらない（${chars} 字 / 列 ${columnChars.toFixed(1)} 字）: ${text.slice(0, 40)}`,
+              `文が 1 行に収まらない（折り返さない時 ${unwrapped.toFixed(1)}px / 箱 ${box.toFixed(1)}px・${Array.from(text).length} 字 / 列 ${(box / fontSize).toFixed(1)} 字）: ${text.slice(0, 40)}`,
             );
           }
         }
