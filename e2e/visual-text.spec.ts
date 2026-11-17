@@ -228,6 +228,8 @@ function buildSummary(observations: AuditObservation[], routeCount: number): str
 
 // 広い画面で、main の中の節（container）の左端・右端が header の container と揃っているかを見る。
 // 幅を決める値が 1 つにまとまっていれば、どの page でも同じ左端・右端になる。
+// あわせて、main の中の全部の table が横 scroll の wrapper（親）の幅を埋めているかも見る
+//（罫線が page の半分で切れて見えないように）。
 const LAYOUT_RAIL_VIEWPORTS = [
   { name: 'desktop-1440', width: 1440, height: 900 },
   { name: 'desktop-1920', width: 1920, height: 1080 },
@@ -346,6 +348,21 @@ test('main content rails align with the header container on wide screens', async
           .join('\n');
         failures.push(
           `${viewport.name} ${route}: ${mismatched.length} rail(s) differ from header by more than ${RAIL_TOLERANCE_PX}px\n${rows}`,
+        );
+      }
+
+      // main の中の table は、親（横 scroll の wrapper）の clientWidth − 2px 以上の幅を持つこと。
+      const tables = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('main table')).map((table) => ({
+          width: table.getBoundingClientRect().width,
+          parentClientWidth: table.parentElement ? table.parentElement.clientWidth : 0,
+        }));
+      });
+      const narrowTables = tables.filter((table) => table.width < table.parentClientWidth - 2);
+      if (narrowTables.length > 0) {
+        const example = narrowTables[0];
+        failures.push(
+          `${viewport.name} ${route}: ${narrowTables.length} table(s) narrower than the scroll wrapper by more than 2px (e.g. width=${example.width.toFixed(1)} < parent clientWidth - 2=${(example.parentClientWidth - 2).toFixed(1)})`,
         );
       }
     }
