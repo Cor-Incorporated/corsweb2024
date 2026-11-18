@@ -24,7 +24,10 @@ const t = getTranslations(currentLocale);
   description={t.meta.contact.description}
   title={t.meta.contact.title}
 >
-  <Heading />
+  {/* この h1 だけ文節で折る印（:lang(ja) .lb-heading-balance h1）。説明文と、この外の題には当たらない。 */}
+  <div class="lb-heading-balance">
+    <Heading />
+  </div>
   <DocumentRequestEntry />
   {
     CONTACT_CHAT_ENABLED ? (
