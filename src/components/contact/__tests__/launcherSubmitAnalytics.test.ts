@@ -5,18 +5,23 @@ import { describe, expect, it } from 'vitest';
 import { CONTACT_INTENTS } from '../../../config/site';
 import {
   CONTACT_CHAT_SUBMIT_SUCCESS_EVENT,
+  LAUNCHER_ENTRY_SURFACES,
   LAUNCHER_ENTRY_SURFACE,
   LAUNCHER_SUBMIT_MESSAGE_TYPE,
   createLauncherSubmitBridge,
+  toLauncherEntrySurface,
   type LauncherSubmitMessageEvent,
   type LauncherSubmitWindow,
   type LauncherSubmitFrame,
 } from '../launcherSubmitAnalytics';
 
 // ランチャー（iframe, ?embed=1）からの受付成功を、親ページの GA4 に 1 回だけ送る。
+// 2026-11-18 の統括判断: GA4 に渡すのは entry_surface だけ。intent は受け取る条件にだけ使い、
+// 送らない。entry_surface は候補（LAUNCHER_ENTRY_SURFACES）の中だけに寄せる。
 // 落ちるべき変更:
 //   - origin / source を見ずに message を受ける（別の枠・別のページからの偽装）
-//   - 7 種以外の intent、別の type を送る
+//   - intent を GA4 に渡す、または 7 種以外の intent を受ける
+//   - 候補に無い値・URL・自由記述を entry_surface として送る
 //   - 氏名・メール・電話・会社名・会話・受付番号などの項目を GA4 に渡す
 //   - 同じ iframe の連続した message で 2 回送る
 //   - gtag が無い（本番以外）のに送る、または送ったことにする
@@ -101,20 +106,73 @@ const validMessage = (intent: string = CONTACT_INTENTS[0]) => ({
 });
 
 describe('createLauncherSubmitBridge（ランチャーの受付成功を GA4 へ）', () => {
-  it('7 種の intent はすべて、決めた 1 つのイベント名と許可リストの項目だけで送る', () => {
+  it('(a) 正しい message で、entry_surface だけを第 3 引数に 1 回だけ送る', () => {
+    expect(LAUNCHER_ENTRY_SURFACES).toEqual(['launcher']);
     for (const intent of CONTACT_INTENTS) {
       const { send, calls } = setup();
       send(validMessage(intent));
-      expect(calls).toEqual([
-        [
-          'event',
-          CONTACT_CHAT_SUBMIT_SUCCESS_EVENT,
-          { intent, entry_surface: LAUNCHER_ENTRY_SURFACE },
-        ],
-      ]);
+      expect(calls).toHaveLength(1);
+      expect(calls[0][0]).toBe('event');
+      expect(calls[0][1]).toBe(CONTACT_CHAT_SUBMIT_SUCCESS_EVENT);
+      expect(calls[0][2]).toEqual({ entry_surface: LAUNCHER_ENTRY_SURFACE });
+      // 第 3 引数のキーは entry_surface の 1 つだけ（intent のキーが混ざらない）。
+      expect(Object.keys(calls[0][2] as object)).toEqual(['entry_surface']);
     }
     expect(CONTACT_CHAT_SUBMIT_SUCCESS_EVENT).toBe('contact_chat_submit_success');
     expect(LAUNCHER_ENTRY_SURFACE).toBe('launcher');
+  });
+
+  it('(b) intent は GA4 に送らない（7 キーの値も intent という語も入らない）', () => {
+    for (const intent of CONTACT_INTENTS) {
+      const { send, calls } = setup();
+      send(validMessage(intent));
+      expect(calls).toHaveLength(1);
+      for (const call of calls) {
+        const serialized = JSON.stringify(call);
+        expect(serialized).not.toContain('intent');
+        for (const contactIntent of CONTACT_INTENTS) {
+          expect(serialized).not.toContain(contactIntent);
+        }
+      }
+    }
+    expect(CONTACT_INTENTS).toHaveLength(7);
+  });
+
+  it('(c) 候補に無い値・URL・自由記述は entry_surface にせず、候補だけを送る', () => {
+    const invalid = [
+      'evil',
+      'https://example.com/x',
+      '山田 太郎 taro@example.com',
+      'launcher ',
+      'Launcher',
+      '',
+      7,
+      null,
+      undefined,
+      { entry_surface: 'evil' },
+      ['launcher'],
+    ];
+    for (const raw of invalid) {
+      expect(toLauncherEntrySurface(raw)).toBe(LAUNCHER_ENTRY_SURFACE);
+      expect(LAUNCHER_ENTRY_SURFACES).toContain(toLauncherEntrySurface(raw));
+    }
+    expect(toLauncherEntrySurface('launcher')).toBe('launcher');
+
+    // 候補に無い値が message に混ざっても、gtag の引数のどこにも出ない。
+    const { send, calls } = setup();
+    send({
+      ...validMessage('contract-dev'),
+      entry_surface: 'evil',
+      entrySurface: 'https://example.com/x',
+      surface: '山田 太郎 taro@example.com',
+    });
+    const serialized = JSON.stringify(calls);
+    expect(serialized).not.toContain('evil');
+    expect(serialized).not.toContain('https://example.com/x');
+    expect(serialized).not.toContain('山田 太郎 taro@example.com');
+    expect(calls).toEqual([
+      ['event', CONTACT_CHAT_SUBMIT_SUCCESS_EVENT, { entry_surface: 'launcher' }],
+    ]);
   });
 
   it('iframe の src の origin と違う origin からの message は受けない', () => {
@@ -158,7 +216,7 @@ describe('createLauncherSubmitBridge（ランチャーの受付成功を GA4 へ
     expect(calls).toEqual([]);
   });
 
-  it('message に個人情報らしい項目が付いていても、GA4 には許可リストの 2 項目だけを渡す', () => {
+  it('message に個人情報らしい項目が付いていても、GA4 には entry_surface だけを渡す', () => {
     const { send, calls } = setup();
     send({
       ...validMessage('contract-dev'),
@@ -172,17 +230,17 @@ describe('createLauncherSubmitBridge（ランチャーの受付成功を GA4 へ
       note: '自由記述の値',
     });
     expect(calls).toEqual([
-      [
-        'event',
-        CONTACT_CHAT_SUBMIT_SUCCESS_EVENT,
-        { intent: 'contract-dev', entry_surface: 'launcher' },
-      ],
+      ['event', CONTACT_CHAT_SUBMIT_SUCCESS_EVENT, { entry_surface: 'launcher' }],
     ]);
     expect(JSON.stringify(calls)).not.toContain('氏名の値');
     expect(JSON.stringify(calls)).not.toContain('mail@example.invalid');
     expect(JSON.stringify(calls)).not.toContain('000-0000-0000');
     expect(JSON.stringify(calls)).not.toContain('受付番号の値');
     expect(JSON.stringify(calls)).not.toContain('会話の本文');
+    expect(JSON.stringify(calls)).not.toContain('intent');
+    for (const intent of CONTACT_INTENTS) {
+      expect(JSON.stringify(calls)).not.toContain(intent);
+    }
   });
 
   it('同じ iframe の同じ受付の 2 回目以降は送らない', () => {
@@ -194,7 +252,7 @@ describe('createLauncherSubmitBridge（ランチャーの受付成功を GA4 へ
     expect(calls[0]).toEqual([
       'event',
       CONTACT_CHAT_SUBMIT_SUCCESS_EVENT,
-      { intent: 'local-llm-poc', entry_surface: 'launcher' },
+      { entry_surface: 'launcher' },
     ]);
   });
 

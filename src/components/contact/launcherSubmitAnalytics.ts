@@ -5,7 +5,8 @@ import { isContactIntent, type ContactIntent } from '../../config/site';
  *
  * 枠の中では gtag を読み込まない（同じ訪問者を二重に計測しないため）。受付が成功したら
  * 枠が親へ 1 つの message を送り、親がここで受けて `contact_chat_submit_success` を送る。
- * GA4 に渡すのは `intent`（ADR-0014 の 7 キー）と `entry_surface=launcher` だけ。
+ * GA4 に渡すのは `entry_surface` だけ。`intent`（ADR-0014 の 7 キー）は message を
+ * 受ける条件としてだけ確かめ、GA4 には渡さない（2026-11-18 統括判断）。
  * 氏名・メール・電話・会社名・会話の本文・受付番号・受付 ID・自由記述は読まない。
  *
  * 受ける条件:
@@ -20,7 +21,27 @@ import { isContactIntent, type ContactIntent } from '../../config/site';
 
 export const LAUNCHER_SUBMIT_MESSAGE_TYPE = 'cloudia:contact-chat-submit-success';
 export const CONTACT_CHAT_SUBMIT_SUCCESS_EVENT = 'contact_chat_submit_success';
-export const LAUNCHER_ENTRY_SURFACE = 'launcher';
+
+/**
+ * GA4 の `entry_surface` に送ってよい候補。ここに無い値・URL・自由記述は送らない。
+ * 候補を増やすときは、この配列と `toLauncherEntrySurface` の既定値を一緒に見直す。
+ */
+export const LAUNCHER_ENTRY_SURFACES = ['launcher'] as const;
+
+export type LauncherEntrySurface = (typeof LAUNCHER_ENTRY_SURFACES)[number];
+
+/** 候補に無い値を寄せる既定値。 */
+export const LAUNCHER_ENTRY_SURFACE: LauncherEntrySurface = 'launcher';
+
+/**
+ * `entry_surface` の元になる値（設定・属性・message など）を、候補の中だけに寄せる。
+ * 候補に無い値・URL・自由記述・文字列以外は、すべて既定の `launcher` にする。
+ */
+export function toLauncherEntrySurface(raw: unknown): LauncherEntrySurface {
+  return typeof raw === 'string' && (LAUNCHER_ENTRY_SURFACES as readonly string[]).includes(raw)
+    ? (raw as LauncherEntrySurface)
+    : LAUNCHER_ENTRY_SURFACE;
+}
 
 /** message から読む項目だけを持つ形（それ以外の項目は読まない）。 */
 export interface LauncherSubmitMessageEvent {
@@ -53,7 +74,7 @@ export interface LauncherSubmitBridge {
 }
 
 /**
- * message の data から、送ってよい intent だけを取り出す。
+ * message の data から、受付成功として受けてよい intent だけを取り出す（GA4 へは渡さない）。
  * type が決めた 1 つと違う、intent が 7 キーに無い、object でない、のどれかなら null。
  */
 export function readLauncherSubmitIntent(data: unknown): ContactIntent | null {
@@ -88,6 +109,7 @@ export function createLauncherSubmitBridge(options: {
     // frame.contentWindow が無い時に event.source も null だと一致してしまうので、先に確かめる。
     if (!frame.contentWindow || event.source !== frame.contentWindow) return;
     if (event.origin !== expectedOrigin) return;
+    // intent は「許可リストのどれか」を確かめるためだけに読み、GA4 へは渡さない。
     const intent = readLauncherSubmitIntent(event.data);
     if (!intent) return;
     // gtag は message のたびに読む（Analytics.astro が後から定義しても、無ければ何もしない）。
@@ -95,8 +117,7 @@ export function createLauncherSubmitBridge(options: {
     if (typeof gtag !== 'function') return;
     sent = true;
     gtag('event', CONTACT_CHAT_SUBMIT_SUCCESS_EVENT, {
-      intent,
-      entry_surface: LAUNCHER_ENTRY_SURFACE,
+      entry_surface: toLauncherEntrySurface(LAUNCHER_ENTRY_SURFACE),
     });
   };
 

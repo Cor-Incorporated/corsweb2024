@@ -447,7 +447,8 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
 
   // ランチャー（iframe, ?embed=1）からの受付成功を、親ページの GA4 に 1 回だけ送る。
   // 枠の中では gtag を読み込まないので、親が `contact_chat_submit_success` を代わりに送る。
-  // 送る項目は launcherSubmitAnalytics.ts の許可リストだけ（個人情報は読まない）。
+  // 送る項目は launcherSubmitAnalytics.ts が決めた entry_surface だけ
+  // （intent は受ける条件にだけ使い、GA4 へは渡さない。個人情報は読まない）。
   let launcherSubmitBridge: LauncherSubmitBridge | undefined;
   let launcherSubmitFrame: HTMLIFrameElement | undefined;
 
