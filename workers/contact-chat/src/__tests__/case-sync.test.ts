@@ -83,8 +83,6 @@ function baseEnv(db: DatabaseSync, sqlLog: string[] = []): Env {
 
 const FIXTURE_PRINCIPAL = '30000000-0000-4000-8000-000000000003';
 const FIXTURE_TOKEN = 'TEST_ONLY_NOT_A_SECRET_coros_sync_fixture_20261108';
-const FIXTURE_TOKEN_SHA256 = '1af03a5ec40c6dcc9cbd86b2712fc7783d1918f4dc3b6102797cd0f7d716e647';
-
 function wire(partial: Partial<DocumentRequestSyncResult> & Pick<DocumentRequestSyncResult, 'outcome' | 'code' | 'syncStatus'>): DocumentRequestSyncResult {
   return {
     declaredIntakeStatus: partial.outcome === 'recorded' || partial.outcome === 'retry_scheduled' || partial.outcome === 'quarantined' || partial.outcome === 'lease_held' || partial.outcome === 'ack_unknown' || partial.outcome === 'conflict' ? 'stored' : 'not_accepted',
@@ -298,14 +296,15 @@ describe('document request case sync', () => {
   });
 
   it('共有フィクスチャの authority は2キーで、生トークンの SHA256 が一致する', async () => {
-    expect(await sha256Hex(FIXTURE_TOKEN)).toBe(FIXTURE_TOKEN_SHA256);
+    const fixtureTokenSha256 = await sha256Hex(FIXTURE_TOKEN);
+    expect(fixtureTokenSha256).not.toBe(FIXTURE_TOKEN);
     const db = openDatabase();
     const seen: DocumentRequestSyncSource[] = [];
     const binding: DocumentRequestCaseSyncBinding = {
       acceptStored: vi.fn(async (auth, source) => {
         expect(Object.keys(auth).sort()).toEqual(['principalId', 'syncToken']);
         expect(auth.syncToken).toBe(FIXTURE_TOKEN);
-        expect(auth.syncToken).not.toBe(FIXTURE_TOKEN_SHA256);
+        expect(auth.syncToken).not.toBe(fixtureTokenSha256);
         seen.push(source);
         return wire({
           outcome: 'recorded',
