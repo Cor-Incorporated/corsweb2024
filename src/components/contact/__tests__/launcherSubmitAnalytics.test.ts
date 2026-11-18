@@ -1,6 +1,8 @@
+// @vitest-environment jsdom
+// @vitest-environment-options {"url": "https://cor-jp.com/contact/"}
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONTACT_INTENTS } from '../../../config/site';
 import {
@@ -183,6 +185,29 @@ describe('createLauncherSubmitBridge（ランチャーの受付成功を GA4 へ
     expect(calls).toEqual([]);
   });
 
+  it('origin は完全一致だけを通す（サブドメイン・別ポートは受けない）', () => {
+    // iframe の src は https://cor-jp.com/contact/chat/... なので、受け付ける origin は
+    // https://cor-jp.com の 1 つだけ。前方一致・後方一致・ポート違いで通してはいけない。
+    const { send, calls } = setup();
+    for (const origin of [
+      'https://evil.cor-jp.com',
+      'https://www.cor-jp.com',
+      'https://cor-jp.com:8443',
+      'https://cor-jp.com.',
+      'https://cor-jp.com.evil.example',
+      'http://cor-jp.com',
+    ]) {
+      send(validMessage(), { origin });
+    }
+    expect(calls).toEqual([]);
+
+    // 対照: 完全一致なら 1 回だけ送る（上の message で「送った印」が付いていない事）。
+    send(validMessage(), { origin: FRAME_ORIGIN });
+    expect(calls).toEqual([
+      ['event', CONTACT_CHAT_SUBMIT_SUCCESS_EVENT, { entry_surface: 'launcher' }],
+    ]);
+  });
+
   it('iframe の contentWindow ではない source からの message は受けない', () => {
     const { send, calls } = setup();
     send(validMessage(), { source: { name: 'another-frame' } });
@@ -304,14 +329,118 @@ describe('createLauncherSubmitBridge（ランチャーの受付成功を GA4 へ
     expect(frame.count()).toBe(0);
   });
 
-  it('CloudiaLauncher.astro は iframe を取ってこの橋を astro:page-load で付け直す', () => {
+  it('CloudiaLauncher.astro は配線を抱えず、動きを確かめた入口を呼ぶ', () => {
     const source = readFileSync(
       resolve(process.cwd(), 'src/components/contact/CloudiaLauncher.astro'),
       'utf8'
     );
     expect(source).toContain("from './launcherSubmitAnalytics'");
-    expect(source).toContain('createLauncherSubmitBridge');
-    expect(source).toContain("getElementById('cloudia-launcher-frame')");
-    expect(source).toContain("addEventListener('astro:page-load'");
+    expect(source).toContain('installLauncherSubmitAnalytics(document, window)');
+  });
+});
+
+// ここから下は jsdom の上で、CloudiaLauncher.astro の script が呼ぶ入口
+// （installLauncherSubmitAnalytics）を実際に動かす。文字列の包含ではなく、
+//   ・astro:page-load で listener が付く
+//   ・ランチャーの iframe からの正しい message で 1 回だけ送る
+//   ・入口が呼ばれなければ listener が付かず、送らない
+// を確かめる。
+describe('CloudiaLauncher の配線（jsdom の上で入口を動かす）', () => {
+  type GtagWindow = Window & { gtag?: Gtag };
+  const gtagWindow = window as unknown as GtagWindow;
+
+  function mountLauncherFrame(options: { contentWindow?: unknown } = {}) {
+    document.body.innerHTML = '';
+    const frame = document.createElement('iframe');
+    frame.id = 'cloudia-launcher-frame';
+    frame.src = FRAME_SRC;
+    document.body.append(frame);
+    const contentWindow =
+      'contentWindow' in options ? options.contentWindow : { name: 'jsdom-launcher-frame' };
+    Object.defineProperty(frame, 'contentWindow', { value: contentWindow, configurable: true });
+    return { frame, contentWindow };
+  }
+
+  function dispatchLauncherMessage(
+    data: unknown,
+    options: { origin?: string; source?: unknown } = {}
+  ) {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data,
+        origin: options.origin ?? FRAME_ORIGIN,
+        source: (options.source ?? null) as MessageEventSource | null,
+      })
+    );
+  }
+
+  async function loadInstaller() {
+    // 入口は module の中で「どの frame に付けたか」を持つ。試験ごとに作り直す。
+    vi.resetModules();
+    const { installLauncherSubmitAnalytics } = await import('../launcherSubmitAnalytics');
+    return installLauncherSubmitAnalytics;
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    delete gtagWindow.gtag;
+  });
+
+  afterEach(() => {
+    delete gtagWindow.gtag;
+    document.body.innerHTML = '';
+  });
+
+  it('入口が呼ばれていない時は listener が付かず、message を送っても gtag を呼ばない', () => {
+    const { contentWindow } = mountLauncherFrame();
+    const calls: unknown[][] = [];
+    gtagWindow.gtag = (...args: unknown[]) => calls.push(args);
+
+    // astro:page-load を投げても、入口（script）が動いていないので受け手は無い。
+    document.dispatchEvent(new Event('astro:page-load'));
+    dispatchLauncherMessage(validMessage(), { source: contentWindow });
+    expect(calls).toEqual([]);
+  });
+
+  it('astro:page-load で listener が付き、正しい message で 1 回だけ送る', async () => {
+    const { contentWindow } = mountLauncherFrame();
+    const calls: unknown[][] = [];
+    gtagWindow.gtag = (...args: unknown[]) => calls.push(args);
+    const install = await loadInstaller();
+
+    // 入口の前は受け取らない。
+    dispatchLauncherMessage(validMessage(), { source: contentWindow });
+    expect(calls).toEqual([]);
+
+    // CloudiaLauncher.astro の script と同じ呼び方。
+    install(document, window);
+
+    // astro:page-load（初回ロード）で listener が付く。
+    document.dispatchEvent(new Event('astro:page-load'));
+    dispatchLauncherMessage(validMessage(), { source: contentWindow });
+
+    expect(calls).toEqual([
+      ['event', CONTACT_CHAT_SUBMIT_SUCCESS_EVENT, { entry_surface: 'launcher' }],
+    ]);
+
+    // 同じ frame の同じ受付の 2 回目は送らない（配線が二重に付いていない）。
+    dispatchLauncherMessage(validMessage(), { source: contentWindow });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('contentWindow も event.source も null なら、null 同士でも通さない', async () => {
+    const { frame, contentWindow } = mountLauncherFrame({ contentWindow: null });
+    expect(contentWindow).toBeNull();
+    expect(frame.contentWindow).toBeNull();
+
+    const calls: unknown[][] = [];
+    gtagWindow.gtag = (...args: unknown[]) => calls.push(args);
+    const install = await loadInstaller();
+    install(document, window);
+    document.dispatchEvent(new Event('astro:page-load'));
+
+    expect(frame.contentWindow).toBeNull();
+    dispatchLauncherMessage(validMessage(), { source: null });
+    expect(calls).toEqual([]);
   });
 });

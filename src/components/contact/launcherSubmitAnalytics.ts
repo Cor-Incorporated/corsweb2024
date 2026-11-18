@@ -137,3 +137,40 @@ export function createLauncherSubmitBridge(options: {
     },
   };
 }
+
+/** ランチャーの iframe の id（`CloudiaLauncher.astro` と同じ値）。 */
+export const LAUNCHER_SUBMIT_FRAME_ID = 'cloudia-launcher-frame';
+
+let wiredFrame: HTMLIFrameElement | undefined;
+let wiredBridge: LauncherSubmitBridge | undefined;
+
+/**
+ * `CloudiaLauncher.astro` の script が呼ぶ入口。`astro:page-load`（初回と遷移後）の
+ * たびに、今のランチャーの iframe に受付成功の listener を付け直す。
+ *
+ * 判定と送信は `createLauncherSubmitBridge` が持つ。ここが持つのは「どの frame に
+ * 付けたか」だけ（同じ frame に 2 回付けない・frame が替わったら前のを外す）。
+ */
+export function installLauncherSubmitAnalytics(doc: Document, win: Window): void {
+  const init = (): void => {
+    const frame = doc.getElementById(LAUNCHER_SUBMIT_FRAME_ID);
+    if (!(frame instanceof HTMLIFrameElement)) {
+      // ランチャーの無いページへ移ったら、前の frame の listener を残さない。
+      wiredBridge?.dispose();
+      wiredBridge = undefined;
+      wiredFrame = undefined;
+      return;
+    }
+    // ViewTransitions では body ごと frame が替わる。同じ frame に 2 回付けない
+    // （同じ受付を 2 回送らないための印は frame の同一性で持つ）。
+    if (wiredFrame === frame && wiredBridge) return;
+    wiredBridge?.dispose();
+    wiredFrame = frame;
+    wiredBridge = createLauncherSubmitBridge({
+      win: win as unknown as LauncherSubmitWindow,
+      frame: frame as unknown as LauncherSubmitFrame,
+    });
+  };
+
+  doc.addEventListener('astro:page-load', init);
+}

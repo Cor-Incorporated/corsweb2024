@@ -438,39 +438,11 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
 </script>
 
 <script>
-  import {
-    createLauncherSubmitBridge,
-    type LauncherSubmitBridge,
-    type LauncherSubmitFrame,
-    type LauncherSubmitWindow,
-  } from './launcherSubmitAnalytics';
+  import { installLauncherSubmitAnalytics } from './launcherSubmitAnalytics';
 
   // ランチャー（iframe, ?embed=1）からの受付成功を、親ページの GA4 に 1 回だけ送る。
   // 枠の中では gtag を読み込まないので、親が `contact_chat_submit_success` を代わりに送る。
-  // 送る項目は launcherSubmitAnalytics.ts が決めた entry_surface だけ
+  // 受ける条件と送る項目は launcherSubmitAnalytics.ts が決める
   // （intent は受ける条件にだけ使い、GA4 へは渡さない。個人情報は読まない）。
-  let launcherSubmitBridge: LauncherSubmitBridge | undefined;
-  let launcherSubmitFrame: HTMLIFrameElement | undefined;
-
-  const initLauncherSubmitAnalytics = () => {
-    const frame = document.getElementById('cloudia-launcher-frame');
-    if (!(frame instanceof HTMLIFrameElement)) {
-      // ランチャーの無いページへ移ったら、前の frame の listener を残さない。
-      launcherSubmitBridge?.dispose();
-      launcherSubmitBridge = undefined;
-      launcherSubmitFrame = undefined;
-      return;
-    }
-    // ViewTransitions では body ごと frame が替わる。同じ frame に 2 回付けない
-    // （同じ受付を 2 回送らないための印は frame の同一性で持つ）。
-    if (launcherSubmitFrame === frame && launcherSubmitBridge) return;
-    launcherSubmitBridge?.dispose();
-    launcherSubmitFrame = frame;
-    launcherSubmitBridge = createLauncherSubmitBridge({
-      win: window as unknown as LauncherSubmitWindow,
-      frame: frame as unknown as LauncherSubmitFrame,
-    });
-  };
-
-  document.addEventListener('astro:page-load', initLauncherSubmitAnalytics);
+  installLauncherSubmitAnalytics(document, window);
 </script>
