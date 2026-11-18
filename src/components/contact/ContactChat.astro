@@ -17,6 +17,8 @@
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import ChatPanel from './chat/ChatPanel.astro';
 import HandoffForm from './chat/HandoffForm.astro';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -42,15 +44,15 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? '';
 <section class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 lg:max-w-content">
     <div class="flex flex-col gap-3">
-      <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">{c.heading}</h2>
-      <p class="text-lg text-primary-950/70 dark:text-primary-200/70">{c.intro}</p>
+      <LbHeading as="h2" class="text-3xl font-medium tracking-tight sm:text-4xl" text={c.heading} />
+      <LbText class="max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={c.intro} />
 
-      <!-- PII 注意喚起（常時表示） -->
+      <!-- PII 注意喚起（常時表示）。role="note" を残すため p の中に印を置く -->
       <p
         class="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-300/60 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-700/40"
         role="note"
       >
-        {c.piiNotice}
+        <LbText as="span" text={c.piiNotice} />
       </p>
     </div>
 

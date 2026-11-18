@@ -4,6 +4,7 @@ import ContactChat from '../../components/contact/ContactChat.astro';
 import ContactForm from '../../components/contact/ContactForm.astro';
 import ContactInfo from '../../components/contact/ContactInfo.astro';
 import CloudiaContactEntry from '../../components/contact/CloudiaContactEntry.astro';
+import DocumentRequestEntry from '../../components/contact/DocumentRequestEntry.astro';
 import Heading from '../../components/contact/Heading.astro';
 import Layout from '../../layouts/Layout.astro';
 import { CLOUDIA_CONTACT_PRIMARY_ENABLED, CLOUDIA_LAUNCHER_ENABLED, CONTACT_CHAT_ENABLED } from '../../config/contact';
@@ -23,7 +24,11 @@ const t = getTranslations(currentLocale);
   description={t.meta.contact.description}
   title={t.meta.contact.title}
 >
-  <Heading />
+  {/* この h1 だけ文節で折る印（:lang(ja) .lb-heading-balance h1）。説明文と、この外の題には当たらない。 */}
+  <div class="lb-heading-balance">
+    <Heading />
+  </div>
+  <DocumentRequestEntry />
   {
     CONTACT_CHAT_ENABLED ? (
       <ContactChat />

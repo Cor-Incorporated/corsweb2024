@@ -1,4 +1,7 @@
 ---
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
+
 interface Props {
   eyebrow: string;
   title: string;
@@ -38,12 +41,8 @@ const {
   <p class="mb-3 text-sm font-semibold text-blue-700 dark:text-blue-300">
     {eyebrow}
   </p>
-  <h1 class="text-balance text-3xl font-semibold leading-tight text-stone-950 dark:text-stone-50 sm:text-5xl">
-    {title}
-  </h1>
-  <p class="mx-auto mt-5 max-w-2xl text-pretty text-base leading-8 text-stone-600 dark:text-stone-300 sm:text-lg lg:max-w-content">
-    {description}
-  </p>
+  <LbHeading as="h1" class="text-balance text-3xl font-semibold leading-tight text-stone-950 dark:text-stone-50 sm:text-5xl" text={title} />
+  <LbText class="mx-auto mt-5 max-w-[40em] text-pretty text-base leading-8 text-stone-600 dark:text-stone-300 sm:text-lg" text={description} />
 
   {(countLabel || rssHref) && (
     <div class="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm text-stone-500 dark:text-stone-400">

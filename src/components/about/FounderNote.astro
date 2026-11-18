@@ -3,6 +3,8 @@ import { KOUSUKE_TERADA, authorLinks } from '../../config/author';
 import { getFounderStoryLink } from '../../utils/founder-story';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import RandomPlayer from '../youtube/RandomPlayer.astro';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const locale = getCurrentLocale(Astro.url);
 const t = getTranslations(locale);
@@ -16,9 +18,11 @@ const story = await getFounderStoryLink(locale);
 
 <section id="founder-story" class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
-    <h2 class="type-heading max-w-3xl text-3xl font-medium tracking-tight sm:text-4xl lg:max-w-content">
-      {t.aboutPage.founderTitle}
-    </h2>
+    <LbHeading
+      as="h2"
+      class="type-heading max-w-3xl text-3xl font-medium tracking-tight sm:text-4xl lg:max-w-content"
+      text={t.aboutPage.founderTitle}
+    />
 
     <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-16">
       <div class="flex flex-col gap-5 self-start rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10" data-testid="founder-profile">
@@ -34,9 +38,7 @@ const story = await getFounderStoryLink(locale);
         <p class="text-base font-medium text-primary-950 dark:text-primary-200" data-testid="founder-byline">
           {founderByline}
         </p>
-        <p class="type-copy text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80">
-          {t.aboutPage.founderLead}
-        </p>
+        <LbText class="type-copy text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80" text={t.aboutPage.founderLead} />
         <div class="flex flex-col gap-2">
           <p class="text-sm font-medium text-primary-950/60 dark:text-primary-200/60">{t.aboutPage.founderLinksTitle}</p>
           <ul class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -59,13 +61,13 @@ const story = await getFounderStoryLink(locale);
       </div>
 
       <div class="flex flex-col gap-6">
-        <h3 class="type-heading text-2xl font-medium tracking-tight">{t.aboutPage.founderTimelineTitle}</h3>
+        <LbHeading as="h3" class="type-heading text-2xl font-medium tracking-tight" text={t.aboutPage.founderTimelineTitle} />
         <ol class="flex flex-col divide-y divide-primary-900/10 dark:divide-primary-300/10" data-testid="founder-timeline">
           {
             t.aboutPage.founderTimeline.map((item) => (
               <li class="flex flex-col gap-1 py-3 sm:flex-row sm:gap-6">
                 <span class="shrink-0 text-sm font-medium text-primary-600 dark:text-primary-400 sm:w-40">{item.when}</span>
-                <span class="type-copy text-base text-primary-950/80 dark:text-primary-200/80">{item.what}</span>
+                <LbText as="span" class="type-copy text-base text-primary-950/80 dark:text-primary-200/80" text={item.what} />
               </li>
             ))
           }
@@ -75,10 +77,10 @@ const story = await getFounderStoryLink(locale);
 
     <article class="mt-16 flex max-w-3xl flex-col gap-5 lg:max-w-content" data-testid="founder-story-excerpt">
       <p class="text-sm font-medium tracking-wide text-primary-600 dark:text-primary-400">{story.title}</p>
-      <h3 class="type-heading text-2xl font-medium tracking-tight sm:text-3xl">{t.aboutPage.founderStoryHeading}</h3>
+      <LbHeading as="h3" class="type-heading text-2xl font-medium tracking-tight sm:text-3xl" text={t.aboutPage.founderStoryHeading} />
       {
         t.aboutPage.founderStoryExcerpt.map((paragraph) => (
-          <p class="type-copy text-lg leading-relaxed text-primary-950/80 dark:text-primary-200/80">{paragraph}</p>
+          <LbText class="type-copy max-w-[40em] text-lg leading-relaxed text-primary-950/80 dark:text-primary-200/80" text={paragraph} />
         ))
       }
       <p class="flex items-center gap-1 text-base">
@@ -95,12 +97,12 @@ const story = await getFounderStoryLink(locale);
     </article>
 
     <div class="mt-16 flex max-w-4xl flex-col gap-6 lg:max-w-content">
-      <h3 class="type-heading text-2xl font-medium tracking-tight sm:text-3xl">
-        {t.aboutPage.founderYoutubeTitle}
-      </h3>
-      <p class="type-copy text-base text-primary-950/70 dark:text-primary-200/70">
-        {t.aboutPage.founderYoutubeDescription}
-      </p>
+      <LbHeading
+        as="h3"
+        class="type-heading text-2xl font-medium tracking-tight sm:text-3xl"
+        text={t.aboutPage.founderYoutubeTitle}
+      />
+      <LbText class="type-copy max-w-[40em] text-base text-primary-950/70 dark:text-primary-200/70" text={t.aboutPage.founderYoutubeDescription} />
       <RandomPlayer messages={t.aboutPage.founderYoutubeMessages} />
     </div>
   </div>

@@ -9,3 +9,8 @@
 # 8b2367d の workers/contact-chat/src/__tests__/storage.test.ts 133 行目: 試験の冪等の key（idempotencyKey の "idempotency-1"）。秘密ではない。
 # この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
 8b2367d6739642105fc6696f570408ef53f80945:workers/contact-chat/src/__tests__/storage.test.ts:generic-api-key:133
+#
+# 90d4359f の workers/contact-chat/src/__tests__/case-sync.test.ts 86 行目:
+# 試験専用トークン（接頭辞 TEST_ONLY_NOT_A_SECRET_）の SHA256 定数。秘密ではない。
+# この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
+90d4359f4ab194449c902ebf3f4f3871e7615134:workers/contact-chat/src/__tests__/case-sync.test.ts:generic-api-key:86

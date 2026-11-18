@@ -2,6 +2,8 @@
 import { getFounderStoryLink } from '../../utils/founder-story';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import { getContactUrl, getGriftUrl, isContactIntent } from '../../config/site';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -25,16 +27,14 @@ const founderStory = await getFounderStoryLink(currentLocale);
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div class="flex flex-col gap-8 rounded-3xl bg-primary-500/10 px-5 py-10 dark:bg-primary-400/10 sm:gap-10 sm:px-12 sm:py-16">
       <div class="flex max-w-2xl flex-col gap-3 sm:gap-4 lg:max-w-content">
-        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">{t.finalCta.title}</h2>
-        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
-          {t.finalCta.description}
-        </p>
+        <LbHeading as="h2" class="text-balance text-2xl font-medium tracking-tight sm:text-4xl" text={t.finalCta.title} />
+        <LbText class="max-w-[40em] text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg" text={t.finalCta.description} />
       </div>
       <ul class="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         {
           items.map((item) => (
             <li class="group relative flex h-full flex-col gap-1 rounded-2xl bg-white/70 px-5 py-4 transition hover:bg-white dark:bg-primary-950/40 dark:hover:bg-primary-950/60">
-              <p class="text-sm text-primary-950/70 dark:text-primary-200/70">{item.audience}</p>
+              <LbText class="text-sm text-primary-950/70 dark:text-primary-200/70" text={item.audience} />
               <div class="flex items-start justify-between gap-3">
                 <a
                   href={item.href}
@@ -52,9 +52,7 @@ const founderStory = await getFounderStoryLink(currentLocale);
         }
       </ul>
       <div class="flex flex-col gap-3 border-t border-primary-900/10 pt-6 dark:border-primary-300/10 sm:flex-row sm:items-center sm:justify-between">
-        <p class="max-w-2xl text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base lg:max-w-content">
-          {t.finalCta.founderLead}
-        </p>
+        <LbText class="max-w-[40em] text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base" text={t.finalCta.founderLead} />
         <a
           href={founderStory.href}
           hreflang={founderStory.locale}

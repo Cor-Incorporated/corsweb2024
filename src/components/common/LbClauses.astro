@@ -1,0 +1,34 @@
+---
+// 題の塊の印だけを返す部品（docs/design/layout-rules.md の R1）。
+// LbHeading は題の要素ごと作り替えるため、data-reveal などの演出の属性や、
+// card の題のように <a> を中に持つ題にはそのまま使えない。そういう題は、
+// 呼び出し側の要素（h1〜h3）に lb-heading の class を足した上で、この部品を
+// 中に置く（LbHeading と同じ塊の span だけを出す。文字は 1 字も変えない）。
+import { groupClauses, type InlinePart } from '../../utils/line-breaks';
+import { getCurrentLocale } from '../../utils/i18n';
+
+interface Props {
+  text?: string;
+  parts?: readonly InlinePart[];
+}
+
+const { text, parts } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const input: InlinePart[] = parts && parts.length > 0 ? [...parts] : text ? [{ text }] : [];
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const html = groupClauses(input, locale)
+  .map(
+    (clause) =>
+      `<span class="lb-clause">${clause
+        .map((part) =>
+          part.href
+            ? `<a href="${escapeHtml(part.href)}"${part.external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(part.text)}</a>`
+            : escapeHtml(part.text),
+        )
+        .join('')}</span>`,
+  )
+  .join('');
+---
+
+<Fragment set:html={html} />
