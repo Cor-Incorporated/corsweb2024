@@ -4,12 +4,15 @@
 # 実行: bash docs/billing/tests/test-gitleaksignore.sh
 # 確かめること:
 #   1. 除く検出は docs/billing/plans.json の税率の識別子と、
-#      workers/contact-chat/src/__tests__/storage.test.ts の試験の冪等の key の
-#      generic-api-key だけ（ほかのファイルや規則を除かない）
+#      workers/contact-chat/src/__tests__/storage.test.ts の試験の冪等の key と、
+#      workers/contact-chat/src/__tests__/case-sync.test.ts の試験専用トークンの
+#      SHA256 定数の generic-api-key だけ（ほかのファイルや規則を除かない）
 #   2. 除く commit がこのリポジトリの履歴にある
-#   3. 除く行の中身が、どちらも秘密でないと分かる形である
-#      （plans.json は今の tax_rate.id と同じ値、contact-chat は試験の作り物の値）。
-#      行の中身が違えば、期待と観測の両方を出して落ちる
+#   3. 除く行の中身が、どれも秘密でないと分かる形である
+#      （plans.json は今の tax_rate.id と同じ値、storage は試験の作り物の値、
+#      case-sync は同じ commit の FIXTURE_TOKEN の SHA256）。
+#      plans.json と storage は、行の中身が違えば期待と観測の両方を出して落ちる。
+#      case-sync の失敗報告ではトークンとハッシュの値は出さない。
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +20,8 @@ ROOT="$(git -C "$HERE" rev-parse --show-toplevel)"
 IGNORE="${GITLEAKSIGNORE:-$ROOT/.gitleaksignore}"
 PLANS="$ROOT/docs/billing/plans.json"
 IDEMPOTENCY_PATH="workers/contact-chat/src/__tests__/storage.test.ts"
+CASE_SYNC_PATH="workers/contact-chat/src/__tests__/case-sync.test.ts"
+FIXTURE_PREFIX="TEST_ONLY_NOT_A_SECRET_"
 # 期待する行は key 名と値に分けて持ち、検査の file 自身が秘密と見なされない形にする
 IDEMPOTENCY_FIELD="idempotencyKey"
 IDEMPOTENCY_VALUE="idempotency-1"
@@ -64,13 +69,37 @@ while IFS= read -r line || [ -n "$line" ]; do
       ng "$commit の $lineno 行目が試験の冪等の key でない（期待: $IDEMPOTENCY_LINE 観測: ${got}）"
     fi
     ;;
+  "$CASE_SYNC_PATH")
+    if ! printf '%s\n' "$got" | grep -Eq "^const FIXTURE_TOKEN_SHA256 = '[0-9a-f]{64}';$"; then
+      ng "$commit の $lineno 行目が試験専用トークンの SHA256 定数の形でない（const FIXTURE_TOKEN_SHA256 = '<64桁hex>';）"
+    else
+      n_token="$(git -C "$ROOT" show "$commit:$path" | grep -c '^const FIXTURE_TOKEN = ' || true)"
+      token="$(git -C "$ROOT" show "$commit:$path" | sed -n "s/^const FIXTURE_TOKEN = '\\(.*\\)';$/\\1/p")"
+      if [ "$n_token" -ne 1 ] || [ -z "$token" ]; then
+        ng "$commit に FIXTURE_TOKEN 定数が 1 件で取れない（観測: ${n_token} 件）"
+      elif [ "${#token}" -ne 50 ] || [ "${token#"$FIXTURE_PREFIX"}" = "$token" ]; then
+        ng "$commit の FIXTURE_TOKEN が試験専用の形でない（接頭辞 TEST_ONLY_NOT_A_SECRET_、長さ 50）"
+      else
+        got_hash=""
+        if [[ "$got" =~ ^const\ FIXTURE_TOKEN_SHA256\ =\ \'([0-9a-f]{64})\'\;$ ]]; then
+          got_hash="${BASH_REMATCH[1]}"
+        fi
+        want_hash="$(printf '%s' "$token" | shasum -a 256 | cut -d ' ' -f1)"
+        if [ -n "$got_hash" ] && [ "$got_hash" = "$want_hash" ]; then
+          ok "$commit の $lineno 行目は試験専用トークンの SHA256 定数（同じ commit の FIXTURE_TOKEN と一致）"
+        else
+          ng "$commit の $lineno 行目の SHA256 が同じ commit の FIXTURE_TOKEN と一致しない"
+        fi
+      fi
+    fi
+    ;;
   *)
     ng "$commit の対象が想定の file でない（観測: ${path}）"
     ;;
   esac
 done <"$IGNORE"
 
-[ "$entries" -eq 2 ] && ok ".gitleaksignore の検出は $entries 件" || ng ".gitleaksignore の検出が 2 件でない（観測: ${entries} 件）"
+[ "$entries" -eq 3 ] && ok ".gitleaksignore の検出は $entries 件" || ng ".gitleaksignore の検出が 3 件でない（観測: ${entries} 件）"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
