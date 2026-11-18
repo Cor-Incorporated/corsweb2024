@@ -422,3 +422,146 @@ describe('migration を当てる前の D1 では、submit も 503 にそろえ�
     expect(response.status).toBe(503);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// /submit で、会話が取りこぼした structuredLead の欄を受け取る側で拾う。
+// 2026-11-18 統括判断: session の値が常に勝ち、session に値が無い欄だけ、
+// 正規化を通したブラウザの structuredLead で埋める。schema は変えない。
+// ─────────────────────────────────────────────────────────────────────────────
+
+function intakeLead(db: DatabaseSync, receiptId: string): Record<string, unknown> {
+  const row = db.prepare('SELECT structured_lead_json FROM submission_intake WHERE receipt_id = ?')
+    .get(receiptId) as { structured_lead_json: string };
+  return JSON.parse(row.structured_lead_json) as Record<string, unknown>;
+}
+
+describe('送信時に、会話が取りこぼした受付の欄を拾う（structuredLead の埋め合わせ）', () => {
+  it('session の lead に discoverySource が無いとき、ブラウザが送った discoverySource が受付の記録に入る', async () => {
+    const db = openDatabase();
+    const { receiptId } = await runInquiry(testEnv(db), db, {
+      source: 'industry-medical',
+      modelText: modelJson('genuine'), // model の lead は purpose だけ。discoverySource は会話で取りこぼしたままとする
+      submitExtra: { structuredLead: { discoverySource: '知人の紹介' } },
+    });
+    const lead = intakeLead(db, receiptId);
+    expect(lead.purpose).toBe('業務の整理');
+    expect(lead.discoverySource).toBe('知人の紹介');
+  });
+
+  it('session の lead に値が在る欄はブラウザの値で置き換えず、値が無い欄だけ埋める', async () => {
+    const db = openDatabase();
+    const { receiptId } = await runInquiry(testEnv(db), db, {
+      source: 'industry-medical',
+      modelText: JSON.stringify({
+        reply: '作業の種類を確認しました。時期の目安だけ教えてください。',
+        summary: '業務の整理の相談',
+        classification: 'genuine',
+        readyForContact: false,
+        structuredLead: { purpose: '業務の整理', discoverySource: '検索' },
+      }),
+      submitExtra: { structuredLead: { discoverySource: 'SNSの広告', contactReason: '導入相談' } },
+    });
+    const lead = intakeLead(db, receiptId);
+    expect(lead.discoverySource).toBe('検索'); // session の値が常に勝つ（既存の「偽値で置き換えさせない」性質）
+    expect(lead.contactReason).toBe('導入相談'); // 値が無い欄だけ埋める
+    expect(lead.purpose).toBe('業務の整理');
+  });
+
+  it('埋める値は許可リスト・長さ上限・個人情報の伏せ字を通る（許可リスト外の欄は捨てる）', async () => {
+    const db = openDatabase();
+    const { receiptId } = await runInquiry(testEnv(db), db, {
+      source: 'industry-medical',
+      modelText: modelJson('genuine'),
+      submitExtra: {
+        structuredLead: {
+          discoverySource: 'hoge@example.com',
+          timingBudget: '090-1234-5678',
+          stage: 'あ'.repeat(600),
+          freeNote: '許可リスト外の欄',
+        },
+      },
+    });
+    const lead = intakeLead(db, receiptId);
+    expect(Object.keys(lead)).not.toContain('freeNote');
+    expect(lead.discoverySource).toBe('[redacted]');
+    expect(lead.timingBudget).toBe('[redacted]');
+    // 長すぎる値は正規化（validate 500 字 → 保存時 redact 240 字）で丸まり、生の値は残らない
+    expect(String(lead.stage).length).toBeLessThanOrEqual(240);
+    expect(String(lead.stage)).not.toBe('あ'.repeat(600));
+  });
+
+  it('会話が読めない submit でも、ブラウザの structuredLead の扱いは前と同じ', async () => {
+    const db = openDatabase();
+    const response = await worker.fetch(post('/api/contact/submit', {
+      sessionId: 'missing-session', name: '山田太郎', email: 'taro@example.com', message: '相談です',
+      intent: 'contract-dev', source: 'industry-medical',
+      structuredLead: { discoverySource: '検索エンジン' },
+    }), testEnv(db));
+    expect(response.status).toBe(200);
+    const { receiptId } = await response.json() as { receiptId: string };
+    const lead = intakeLead(db, receiptId);
+    expect(lead.discoverySource).toBe('検索エンジン');
+    const row = db.prepare('SELECT machine_classification, classification_reason FROM submission_intake WHERE receipt_id = ?')
+      .get(receiptId) as Record<string, string>;
+    expect(row.machine_classification).toBe('unknown');
+    expect(row.classification_reason).toBe('no_session');
+  });
+
+  it('埋まった discoverySource は、社内メールの「流入経路:」まで届く', async () => {
+    const db = openDatabase();
+    const sent: NotificationMessage[] = [];
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (String(url).includes('generateContent')) {
+        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: modelJson('genuine') }] } }] }), { status: 200 });
+      }
+      if (String(url).includes('api.resend.com')) {
+        return new Response(JSON.stringify({ id: 're_mock_lead_fill' }), { status: 200 });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const env = {
+      LLM_PROVIDER: 'vertex-gemini',
+      VERTEX_GATEWAY_URL: 'https://gateway.example/generateContent',
+      VERTEX_GATEWAY_SECRET: 'gateway-secret',
+      ANTHROPIC_API_KEY: '',
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_SECRET: '',
+      CONTACT_TO_EMAIL: 'info@cor-jp.com',
+      CONTACT_FROM_EMAIL: 'noreply@cor-jp.com',
+      PII_ENCRYPTION_KEY: 'storage-secret',
+      PII_HMAC_KEY: 'hmac-secret',
+      DB: asD1(db),
+      CONTACT_NOTIFICATIONS: { send: async (message: NotificationMessage) => { sent.push(message); } },
+    } as unknown as Env;
+
+    const started = await worker.fetch(post('/api/contact/chat/start', {
+      start: true, event: 'intent_selected', intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+    }), env);
+    const { sessionId } = await started.json() as { sessionId: string };
+    await worker.fetch(post('/api/contact/chat', {
+      sessionId, intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+      messages: [{ role: 'user', content: '業務の整理を相談したい' }],
+    }), env);
+    const submitted = await worker.fetch(post('/api/contact/submit', {
+      sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です',
+      intent: 'contract-dev', source: 'industry-medical',
+      structuredLead: { discoverySource: '知人の紹介' },
+    }), env);
+    expect(submitted.status).toBe(200);
+    expect(sent[0]?.messageType).toBe('internal');
+
+    await worker.queue({
+      messages: [
+        { body: sent[0], ack() {}, retry() { throw new Error('internal should ack'); } },
+        { body: sent[1], ack() {}, retry() { throw new Error('receipt should ack'); } },
+      ],
+    } as unknown as MessageBatch<NotificationMessage>, env);
+    const resendCall = fetchMock.mock.calls.find((call) => String(call[0]).includes('api.resend.com')
+      && String((call[1] as RequestInit | undefined)?.body).includes('info@cor-jp.com'));
+    expect(resendCall).toBeTruthy();
+    const mail = JSON.parse(String((resendCall as unknown as [string, RequestInit])[1].body)) as { to: string; text: string };
+    expect(mail.to).toBe('info@cor-jp.com');
+    expect(mail.text).toContain('流入経路: 知人の紹介');
+  });
+});
