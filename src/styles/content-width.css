@@ -59,6 +59,18 @@ h3.lb-heading,
   text-wrap: wrap;
 }
 
+/* 問い合わせの h1 の塊だけ、箱より長いときに文節で折る。
+   全部の日本語の題に当てると、語の途中や行頭の区切り記号が新しく出る。
+   当たるのは次が全部そろう塊だけ:
+   日本語（:lang(ja)）、contact page の印（.lb-heading-balance）、h1.lb-heading の中の .lb-clause。
+   h2・h3、他の page、英語・中国語・韓国語、本文（.lb-text）には当たらない。
+   Chromium では word-break: auto-phrase が文節で折れるのは text-wrap: balance と組んだときだけ。
+   題の要素そのものは、上の text-wrap: wrap のまま。 */
+:lang(ja) .lb-heading-balance h1.lb-heading .lb-clause {
+  word-break: auto-phrase;
+  text-wrap: balance;
+}
+
 /* 段落の中の <br> は残す。直前で文が終わっている時（.lb-sentence の直後）は、
    <br> の改行と文の block の改行で行が 2 つ空かないよう、<br> を消す。 */
 .lb-sentence + br {

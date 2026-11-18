@@ -1,5 +1,8 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbClauses from '../common/LbClauses.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -20,9 +23,7 @@ const t = getTranslations(currentLocale);
         >
           {t.homeChallenges.eyebrow}
         </p>
-        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
-          {t.homeChallenges.title}
-        </h2>
+        <LbHeading as="h2" class="text-balance text-2xl font-medium tracking-tight sm:text-4xl" text={t.homeChallenges.title} />
       </div>
       <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         {
@@ -33,19 +34,17 @@ const t = getTranslations(currentLocale);
               style={`--reveal-delay:${(0.1 + i * 0.08).toFixed(2)}s`}
             >
               <div class="flex items-start justify-between gap-2">
-                <h3 class="text-balance text-lg font-medium tracking-tight">
+                <h3 class="lb-heading text-balance text-lg font-medium tracking-tight">
                   <a
                     href={getLocalizedUrl(item.link, currentLocale)}
                     class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                   >
-                    {item.title}
+                    <LbClauses text={item.title} />
                   </a>
                 </h3>
                 <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">→</span>
               </div>
-              <p class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base">
-                {item.description}
-              </p>
+              <LbText class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base" text={item.description} />
             </li>
           ))
         }

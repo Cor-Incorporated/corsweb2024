@@ -1,5 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const t = getTranslations(getCurrentLocale(Astro.url));
 ---
@@ -7,12 +9,8 @@ const t = getTranslations(getCurrentLocale(Astro.url));
 <section class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div class="max-w-3xl lg:max-w-content">
-      <h2 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl">
-        {t.aboutPage.teamTitle}
-      </h2>
-      <p class="type-copy mt-4 text-lg text-primary-950/70 dark:text-primary-200/70">
-        {t.aboutPage.teamBody}
-      </p>
+      <LbHeading as="h2" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl" text={t.aboutPage.teamTitle} />
+      <LbText class="type-copy mt-4 max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.aboutPage.teamBody} />
     </div>
   </div>
 </section>

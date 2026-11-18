@@ -1,5 +1,7 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -13,17 +15,13 @@ const incomingSource = Astro.url.searchParams.get('source') || 'corsweb-contact-
   <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div class="grid gap-12 lg:grid-cols-2 lg:gap-8">
       <div class="flex flex-col gap-4 sm:gap-6">
-        <h2 class="text-3xl font-medium tracking-tight sm:text-4xl">{t.contact.form.title}</h2>
-        <p class="max-w-lg text-lg text-primary-950/70 dark:text-primary-200/70 sm:text-xl">
-          {t.contact.form.description1}
-        </p>
-        <p class="max-w-lg text-lg text-primary-950/70 dark:text-primary-200/70 sm:text-xl">
-          {t.contact.form.description2}
-        </p>
+        <LbHeading as="h2" class="text-3xl font-medium tracking-tight sm:text-4xl" text={t.contact.form.title} />
+        <LbText class="max-w-lg text-lg text-primary-950/70 dark:text-primary-200/70 sm:text-xl" text={t.contact.form.description1} />
+        <LbText class="max-w-lg text-lg text-primary-950/70 dark:text-primary-200/70 sm:text-xl" text={t.contact.form.description2} />
         {/* 営業・勧誘お断りの注意書き（法的トーンで抑止） */}
         <div class="max-w-lg rounded-2xl border border-primary-950/10 bg-primary-500/5 px-4 py-3 text-sm text-primary-950/70 dark:border-primary-200/10 dark:bg-primary-400/5 dark:text-primary-200/70">
           <p class="font-semibold text-primary-950/80 dark:text-primary-200/80">{t.contact.form.noticeTitle}</p>
-          <p class="mt-1.5 leading-relaxed">{t.contact.form.noticeBody}</p>
+          <LbText class="mt-1.5 leading-relaxed" text={t.contact.form.noticeBody} />
         </div>
       </div>
       {/* data-clarity-mask: 入力欄は Clarity が既定で常にマスクするが、フォーム全体を
