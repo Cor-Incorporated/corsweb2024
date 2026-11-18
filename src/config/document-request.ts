@@ -20,3 +20,20 @@ export type DocumentRequestIndustry = (typeof DOCUMENT_REQUEST_INDUSTRIES)[numbe
 export function isDocumentRequestIndustry(value: string): value is DocumentRequestIndustry {
   return (DOCUMENT_REQUEST_INDUSTRIES as readonly string[]).includes(value);
 }
+
+/**
+ * どこで知ったか（任意）。GA4 には送らず、受付の記録にだけ残す。
+ * 自由記述は「その他」の時だけ受け付け、この文字数までにする。
+ */
+export const DOCUMENT_REQUEST_DISCOVERY_SOURCES = [
+  'x',
+  'linkedin',
+  'note',
+  'qiita',
+  'search',
+  'referral',
+  'event',
+  'other',
+] as const;
+
+export const DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX = 100;

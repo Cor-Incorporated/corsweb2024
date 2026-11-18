@@ -450,11 +450,107 @@ describe('document request intake', () => {
     expect(count.n).toBe(0);
   });
 
+  it('どこで知ったかは空でも送れて、空で記録する', async () => {
+    const db = openDatabase();
+    const { env } = envFor(db);
+    const res = await worker.fetch(post(valid, { 'cf-connecting-ip': '198.51.100.60' }), env);
+    expect(res.status).toBe(200);
+    const row = db.prepare(
+      'SELECT discovery_source, discovery_other_ciphertext FROM submission_intake',
+    ).get() as { discovery_source: string; discovery_other_ciphertext: string };
+    expect(row.discovery_source).toBe('');
+    expect(row.discovery_other_ciphertext).toBe('');
+  });
+
+  it('8 つの選択肢をそのまま記録する', async () => {
+    const sources = ['x', 'linkedin', 'note', 'qiita', 'search', 'referral', 'event', 'other'];
+    for (const [index, source] of sources.entries()) {
+      const db = openDatabase();
+      const { env } = envFor(db);
+      const res = await worker.fetch(
+        post({ ...valid, discoverySource: source }, { 'cf-connecting-ip': `198.51.100.${70 + index}` }),
+        env,
+      );
+      expect(res.status).toBe(200);
+      const row = db.prepare('SELECT discovery_source FROM submission_intake').get() as {
+        discovery_source: string;
+      };
+      expect(row.discovery_source).toBe(source);
+    }
+  });
+
+  it('選択肢の外は 400 discovery で弾き、記録しない', async () => {
+    const db = openDatabase();
+    const { env, sent } = envFor(db);
+    const res = await worker.fetch(
+      post({ ...valid, discoverySource: 'friend' }, { 'cf-connecting-ip': '198.51.100.61' }),
+      env,
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'discovery' });
+    const count = db.prepare('SELECT COUNT(*) AS n FROM submission_intake').get() as { n: number };
+    expect(count.n).toBe(0);
+    expect(sent).toHaveLength(0);
+  });
+
+  it('その他の自由記述は 100 文字まで記録し、101 文字は弾く', async () => {
+    const db = openDatabase();
+    const { env } = envFor(db);
+    const text = 'あ'.repeat(100);
+    const ok = await worker.fetch(
+      post(
+        { ...valid, discoverySource: 'other', discoveryOther: text },
+        { 'cf-connecting-ip': '198.51.100.62' },
+      ),
+      env,
+    );
+    expect(ok.status).toBe(200);
+    const row = db.prepare(
+      'SELECT discovery_source, discovery_other_ciphertext FROM submission_intake',
+    ).get() as { discovery_source: string; discovery_other_ciphertext: string };
+    expect(row.discovery_source).toBe('other');
+    expect(row.discovery_other_ciphertext).not.toContain(text);
+    await expect(decryptText(SECRET, row.discovery_other_ciphertext)).resolves.toBe(text);
+
+    const tooLong = await worker.fetch(
+      post(
+        { ...valid, email: 'long@example.com', discoverySource: 'other', discoveryOther: 'あ'.repeat(101) },
+        { 'cf-connecting-ip': '198.51.100.63' },
+      ),
+      env,
+    );
+    expect(tooLong.status).toBe(400);
+    expect(await tooLong.json()).toEqual({ error: 'discovery' });
+    const count = db.prepare('SELECT COUNT(*) AS n FROM submission_intake').get() as { n: number };
+    expect(count.n).toBe(1);
+  });
+
+  it('その他以外で送られた自由記述は捨てる', async () => {
+    const db = openDatabase();
+    const { env } = envFor(db);
+    const res = await worker.fetch(
+      post(
+        { ...valid, discoverySource: 'event', discoveryOther: '会場で聞いた' },
+        { 'cf-connecting-ip': '198.51.100.64' },
+      ),
+      env,
+    );
+    expect(res.status).toBe(200);
+    const row = db.prepare(
+      'SELECT discovery_source, discovery_other_ciphertext FROM submission_intake',
+    ).get() as { discovery_source: string; discovery_other_ciphertext: string };
+    expect(row.discovery_source).toBe('event');
+    expect(row.discovery_other_ciphertext).toBe('');
+  });
+
   it('画面の文・業種・資料 URL がサイト側と一致する', () => {
     const root = resolve(__dirname, '../../../..');
     const config = readFileSync(resolve(root, 'src/config/document-request.ts'), 'utf8');
     const industries = [...config.match(/export const DOCUMENT_REQUEST_INDUSTRIES = \[([\s\S]*?)\] as const/)![1].matchAll(/'([^']+)'/g)].map((item) => item[1]);
     expect(industries).toEqual([...DOCUMENT_REQUEST_INDUSTRIES]);
+    const discovery = [...config.match(/export const DOCUMENT_REQUEST_DISCOVERY_SOURCES = \[([\s\S]*?)\] as const/)![1].matchAll(/'([^']+)'/g)].map((item) => item[1]);
+    expect(discovery).toEqual(['x', 'linkedin', 'note', 'qiita', 'search', 'referral', 'event', 'other']);
+    expect(config).toContain('DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX = 100');
     expect(config).toContain(`'${DOCUMENT_REQUEST_CONSENT_VERSION}'`);
     expect(config).toContain(`'${DOCUMENT_REQUEST_ID}'`);
     const site = readFileSync(resolve(root, 'src/config/site.ts'), 'utf8');

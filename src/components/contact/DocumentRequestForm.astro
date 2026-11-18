@@ -1,6 +1,8 @@
 ---
 import { COMPANY_DECK_URL } from '../../config/site';
 import {
+  DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX,
+  DOCUMENT_REQUEST_DISCOVERY_SOURCES,
   DOCUMENT_REQUEST_ID,
   DOCUMENT_REQUEST_INDUSTRIES,
   isDocumentRequestIndustry,
@@ -21,6 +23,21 @@ const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
   if (!label || !isDocumentRequestIndustry(slug)) return [];
   return [{ slug, label }];
 });
+// どこで知ったか（任意）。GA4 には送らない。
+const discoveryLabels: Record<string, string> = {
+  x: 'X',
+  linkedin: 'LinkedIn',
+  note: 'note',
+  qiita: 'Qiita',
+  search: copy.discoverySearch,
+  referral: copy.discoveryReferral,
+  event: copy.discoveryEvent,
+  other: copy.discoveryOtherOption,
+};
+const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
+  slug,
+  label: discoveryLabels[slug],
+}));
 ---
 
 <section class="py-16 sm:py-20">
@@ -50,6 +67,7 @@ const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
       data-msg-error-email={copy.errorEmail}
       data-msg-error-consent={copy.errorConsent}
       data-msg-error-industry={copy.errorIndustry}
+      data-msg-error-discovery={copy.errorDiscovery}
       data-msg-error-invalid={copy.errorInvalid}
       data-msg-error-storage={copy.errorStorage}
       data-msg-error-rate={copy.errorRate}
@@ -79,6 +97,17 @@ const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
           {industries.map((item) => <option value={item.slug}>{item.label}</option>)}
         </select>
       </label>
+      <label class="flex flex-col gap-1 text-sm font-medium text-primary-950 dark:text-primary-200" for="document-request-discovery">
+        {copy.discovery}
+        <select id="document-request-discovery" name="discoverySource" data-discovery-source class="min-h-[48px] rounded border border-primary-950/20 bg-white px-3 text-base text-primary-950 dark:border-primary-200/20 dark:bg-primary-950 dark:text-primary-200">
+          <option value="">{copy.discoveryEmpty}</option>
+          {discoveries.map((item) => <option value={item.slug}>{item.label}</option>)}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-sm font-medium text-primary-950 dark:text-primary-200" for="document-request-discovery-other" data-discovery-other-field hidden>
+        {copy.discoveryOther}
+        <input id="document-request-discovery-other" name="discoveryOther" data-discovery-other type="text" maxlength={DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX} class="min-h-[48px] rounded border border-primary-950/20 bg-white px-3 text-base text-primary-950 dark:border-primary-200/20 dark:bg-primary-950 dark:text-primary-200" />
+      </label>
       <label class="flex min-h-[48px] items-start gap-3 text-sm leading-relaxed text-primary-950 dark:text-primary-200" for="document-request-consent">
         <input id="document-request-consent" name="consent" type="checkbox" value="yes" required class="mt-1 h-5 w-5" />
         <span>
@@ -97,6 +126,17 @@ const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
     var form = document.querySelector('[data-document-request]');
     if (!form || typeof fetch !== 'function') return;
     var result = document.getElementById('document-request-result');
+    var discovery = form.querySelector('[data-discovery-source]');
+    var discoveryOther = form.querySelector('[data-discovery-other]');
+    var discoveryOtherField = form.querySelector('[data-discovery-other-field]');
+    function syncDiscoveryOther() {
+      // 自由記述は「その他」の時だけ。閉じたら中身も消す。
+      var other = !!(discovery && discovery.value === 'other');
+      if (discoveryOtherField) discoveryOtherField.hidden = !other;
+      if (discoveryOther && !other) discoveryOther.value = '';
+    }
+    if (discovery) discovery.addEventListener('change', syncDiscoveryOther);
+    syncDiscoveryOther();
     var sentReceipts = Object.create(null);
     function track(data, industry) {
       // 重複の再申込みでは送らない。受付 ID ごとに 1 回だけ。
@@ -124,6 +164,8 @@ const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
         email: String(payload.get('email') || ''),
         company: String(payload.get('company') || ''),
         industry: String(payload.get('industry') || ''),
+        discoverySource: String(payload.get('discoverySource') || ''),
+        discoveryOther: String(payload.get('discoverySource') === 'other' ? (payload.get('discoveryOther') || '') : ''),
         consent: payload.get('consent') === 'yes',
         website: String(payload.get('website') || ''),
         locale: String(payload.get('locale') || '')
@@ -155,7 +197,8 @@ const industries = DOCUMENT_REQUEST_INDUSTRIES.flatMap((slug) => {
               name: form.dataset.msgErrorName,
               email: form.dataset.msgErrorEmail,
               consent: form.dataset.msgErrorConsent,
-              industry: form.dataset.msgErrorIndustry
+              industry: form.dataset.msgErrorIndustry,
+              discovery: form.dataset.msgErrorDiscovery
             };
             show(errors[code] || form.dataset.msgErrorInvalid || '', true);
             return;

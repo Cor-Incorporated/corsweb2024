@@ -114,6 +114,8 @@ const record = {
   email: 'taro@example.com',
   company: '例株式会社',
   industry: 'medical',
+  discoverySource: '',
+  discoveryOther: '',
   documentId: 'company-deck',
   consentVersion: 'document-request-1',
 };
@@ -454,7 +456,7 @@ describe('document request case sync', () => {
     const db = new DatabaseSync(':memory:');
     db.exec('PRAGMA foreign_keys = ON');
     const dir = resolve(__dirname, '../../migrations');
-    for (const file of readdirSync(dir).filter((name) => name.endsWith('.sql') && name < '0006').sort()) {
+    for (const file of readdirSync(dir).filter((name) => name.endsWith('.sql') && !name.startsWith('0006')).sort()) {
       db.exec(readFileSync(resolve(dir, file), 'utf8'));
     }
     const sqlLog: string[] = [];

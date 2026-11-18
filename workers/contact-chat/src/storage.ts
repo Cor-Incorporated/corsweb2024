@@ -305,6 +305,8 @@ export interface DocumentRequestRecord {
   email: string;
   company: string;
   industry: string;
+  discoverySource: string;
+  discoveryOther: string;
   documentId: string;
   consentVersion: string;
 }
@@ -345,6 +347,10 @@ export async function createDocumentRequest(
     encryptText(env.PII_ENCRYPTION_KEY, ''),
     emailHmac(env.PII_HMAC_KEY, record.email),
   ]);
+  // 自由記述は「その他」の時だけ入る。空なら暗号文の列も空のまま。
+  const discoveryOtherCipher = record.discoveryOther
+    ? await encryptText(env.PII_ENCRYPTION_KEY, record.discoveryOther)
+    : '';
   const statements = [
     env.DB.prepare(`
       INSERT INTO submission_intake
@@ -354,8 +360,9 @@ export async function createDocumentRequest(
          email_hmac, intent, source,
          structured_lead_json, utm_json, classification, status,
          created_at, updated_at, expires_at,
-         request_kind, document_id, industry, consent_version)
-      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'document-request', '{}', '{}', '', 'stored', ?, ?, ?, 'document', ?, ?, ?)
+         request_kind, document_id, industry, consent_version,
+         discovery_source, discovery_other_ciphertext)
+      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'document-request', '{}', '{}', '', 'stored', ?, ?, ?, 'document', ?, ?, ?, ?, ?)
     `).bind(
       submissionId,
       idempotencyKey,
@@ -373,6 +380,8 @@ export async function createDocumentRequest(
       record.documentId,
       record.industry,
       record.consentVersion,
+      record.discoverySource,
+      discoveryOtherCipher,
     ),
     env.DB.prepare(`
       INSERT INTO notification_outbox

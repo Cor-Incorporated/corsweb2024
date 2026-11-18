@@ -13,6 +13,7 @@ export interface DocumentRequestCopy {
   errorEmail: string;
   errorConsent: string;
   errorIndustry: string;
+  errorDiscovery: string;
   errorInvalid: string;
   errorStorage: string;
   errorRate: string;
@@ -32,6 +33,7 @@ export const DOCUMENT_REQUEST_COPY: Record<DocumentLocale, DocumentRequestCopy> 
     errorEmail: 'メールの形式を確認してください。',
     errorConsent: '同意がないと記録できません。',
     errorIndustry: '業種は、表示されている5つのうちから選びます。',
+    errorDiscovery: 'どこで知ったかは、表示されている選択肢から選んでください。',
     errorInvalid: '入力を確認して、もう一度送ってください。',
     errorStorage: '記録できませんでした。時間をおいて、もう一度送ってください。',
     errorRate: '短時間に送りすぎています。時間をおいて、もう一度送ってください。',
@@ -48,6 +50,7 @@ export const DOCUMENT_REQUEST_COPY: Record<DocumentLocale, DocumentRequestCopy> 
     errorEmail: 'Check the email address.',
     errorConsent: 'The request cannot be recorded without consent.',
     errorIndustry: 'Choose one of the five industries shown.',
+    errorDiscovery: 'Choose one of the options shown for how you heard about us.',
     errorInvalid: 'Check the form and send it again.',
     errorStorage: 'The request was not recorded. Wait and send it again.',
     errorRate: 'Too many requests in a short time. Wait and send it again.',
@@ -64,6 +67,7 @@ export const DOCUMENT_REQUEST_COPY: Record<DocumentLocale, DocumentRequestCopy> 
     errorEmail: '请核对邮箱格式。',
     errorConsent: '没有同意，就不能记录。',
     errorIndustry: '请从列出的五个行业中选择。',
+    errorDiscovery: '请从列出的渠道选项中选择。',
     errorInvalid: '请核对输入后再发送。',
     errorStorage: '没有记录下来。请稍后再发送。',
     errorRate: '短时间内发送次数过多。请稍后再发送。',
@@ -80,6 +84,7 @@ export const DOCUMENT_REQUEST_COPY: Record<DocumentLocale, DocumentRequestCopy> 
     errorEmail: '메일 형식을 확인하세요.',
     errorConsent: '동의가 없으면 기록할 수 없습니다.',
     errorIndustry: '표시된 5개 업종 중에서 고르세요.',
+    errorDiscovery: '알게 된 경로는 표시된 선택지 중에서 고르세요.',
     errorInvalid: '입력을 확인하고 다시 보내세요.',
     errorStorage: '기록하지 못했습니다. 잠시 뒤 다시 보내세요.',
     errorRate: '짧은 시간에 너무 많이 보냈습니다. 잠시 뒤 다시 보내세요.',
@@ -96,6 +101,7 @@ export const DOCUMENT_REQUEST_COPY: Record<DocumentLocale, DocumentRequestCopy> 
     errorEmail: 'Revise el correo.',
     errorConsent: 'Sin consentimiento no se puede registrar.',
     errorIndustry: 'Elija uno de los cinco sectores que se muestran.',
+    errorDiscovery: 'Elija una de las opciones que se muestran para saber cómo nos conoció.',
     errorInvalid: 'Revise los datos y envíe de nuevo.',
     errorStorage: 'No se registró. Espere y envíe de nuevo.',
     errorRate: 'Ha enviado demasiadas veces en poco tiempo. Espere y envíe de nuevo.',

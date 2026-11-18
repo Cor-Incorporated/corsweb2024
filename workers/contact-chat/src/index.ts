@@ -552,6 +552,8 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
       email: norm.value.email,
       company: norm.value.company,
       industry: norm.value.industry,
+      discoverySource: norm.value.discoverySource,
+      discoveryOther: norm.value.discoveryOther,
       documentId: DOCUMENT_REQUEST_ID,
       consentVersion: DOCUMENT_REQUEST_CONSENT_VERSION,
     });

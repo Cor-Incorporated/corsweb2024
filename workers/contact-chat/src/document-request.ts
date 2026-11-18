@@ -18,6 +18,23 @@ export const DOCUMENT_REQUEST_INDUSTRIES = [
 ] as const;
 export type DocumentRequestIndustry = (typeof DOCUMENT_REQUEST_INDUSTRIES)[number];
 
+/**
+ * どこで知ったか（任意）。GA4 には送らず、受付の記録にだけ残す。
+ * src/config/document-request.ts の同名定数とパリティテストで揃える。
+ */
+export const DOCUMENT_REQUEST_DISCOVERY_SOURCES = [
+  'x',
+  'linkedin',
+  'note',
+  'qiita',
+  'search',
+  'referral',
+  'event',
+  'other',
+] as const;
+export const DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX = 100;
+export type DocumentRequestDiscoverySource = (typeof DOCUMENT_REQUEST_DISCOVERY_SOURCES)[number];
+
 /** 公開スライド。src/config/site.ts の COMPANY_DECK_URL とパリティテストで揃える。 */
 export const DOCUMENT_DECK_URL =
   'https://docs.google.com/presentation/d/1bl7eyuHc_pohcdyzWzOWibWisz-IQFe3/preview';
@@ -38,13 +55,15 @@ export function materialsPath(locale: DocumentLocale): string {
   return locale === 'ja' ? '/contact/materials/' : `/${locale}/contact/materials/`;
 }
 
-export type DocumentRequestErrorCode = 'name' | 'email' | 'consent' | 'industry' | 'invalid';
+export type DocumentRequestErrorCode = 'name' | 'email' | 'consent' | 'industry' | 'discovery' | 'invalid';
 
 export interface ValidDocumentRequest {
   name: string;
   email: string;
   company: string;
   industry: DocumentRequestIndustry | '';
+  discoverySource: DocumentRequestDiscoverySource | '';
+  discoveryOther: string;
   locale: DocumentLocale;
 }
 
@@ -85,6 +104,25 @@ export function validateDocumentRequest(input: Record<string, unknown> | undefin
     industry = industryRaw as DocumentRequestIndustry;
   }
 
+  const discoveryRaw = sanitizeLine(input.discoverySource, 40);
+  let discoverySource: DocumentRequestDiscoverySource | '' = '';
+  if (discoveryRaw) {
+    if (!(DOCUMENT_REQUEST_DISCOVERY_SOURCES as readonly string[]).includes(discoveryRaw)) {
+      return { ok: false, code: 'discovery' };
+    }
+    discoverySource = discoveryRaw as DocumentRequestDiscoverySource;
+  }
+
+  // 自由記述は「その他」の時だけ。それ以外で送られても捨てる。
+  let discoveryOther = '';
+  if (discoverySource === 'other') {
+    const normalized = sanitizeLine(input.discoveryOther, 10000);
+    if (normalized.length > DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX) {
+      return { ok: false, code: 'discovery' };
+    }
+    discoveryOther = normalized;
+  }
+
   return {
     ok: true,
     value: {
@@ -92,6 +130,8 @@ export function validateDocumentRequest(input: Record<string, unknown> | undefin
       email,
       company: sanitizeLine(input.company, MAX_COMPANY_LEN),
       industry,
+      discoverySource,
+      discoveryOther,
       locale: asLocale(input.locale),
     },
   };
@@ -177,6 +217,8 @@ export function documentErrorCopy(locale: DocumentLocale, code: DocumentRequestE
       return copy.errorConsent;
     case 'industry':
       return copy.errorIndustry;
+    case 'discovery':
+      return copy.errorDiscovery;
     case 'invalid':
       return copy.errorInvalid;
     default: {

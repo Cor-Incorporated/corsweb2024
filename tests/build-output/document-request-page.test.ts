@@ -27,6 +27,14 @@ describe('資料請求のページ', () => {
     expect(html).toContain('data-document-id=company-deck');
     expect(html).toContain('data-entry-surface=materials');
     expect(html).toContain('data-industries=medical,shigyo,construction,manufacturing,education');
+    expect(html).toContain('name=discoverySource');
+    for (const slug of ['x', 'linkedin', 'note', 'qiita', 'search', 'referral', 'event', 'other']) {
+      expect(html).toContain(`value=${slug}`);
+    }
+    expect(html).toContain('name=discoveryOther');
+    expect(html).toContain('maxlength=100');
+    expect(html).toContain('data-discovery-other-field');
+    expect(html).toContain('data-msg-error-discovery');
     expect(html).toContain('資料は送っていません');
     expect(html).not.toContain('送付しました');
     const script = formScript(html);
