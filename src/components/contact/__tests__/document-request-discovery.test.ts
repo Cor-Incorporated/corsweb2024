@@ -158,7 +158,7 @@ describe('資料請求のどこで知りましたか', () => {
     expect(input.getAttribute('maxlength')).toBe('100');
   });
 
-  it('GA4 の送る項目は 3 つのままで、どこで知ったかを混ぜない', async () => {
+  it('GA4 にはイベント名だけを送り、どこで知ったかを混ぜない', async () => {
     const { gtag, fetchMock, submit } = mount('other', '知人の紹介');
     respond(fetchMock, SUCCESS);
     submit();
@@ -166,11 +166,8 @@ describe('資料請求のどこで知りましたか', () => {
 
     expect(gtag).toHaveBeenCalledTimes(1);
     const args = gtag.mock.calls[0];
-    expect(Object.keys(args[2] as Record<string, unknown>).sort()).toEqual([
-      'document_id',
-      'entry_surface',
-      'industry',
-    ]);
+    expect(args).toHaveLength(2);
+    expect(args).toEqual(['event', 'document_request_submit_success']);
     const serialized = JSON.stringify(args);
     expect(serialized).not.toContain('other');
     expect(serialized).not.toContain('知人の紹介');
