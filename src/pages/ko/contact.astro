@@ -4,6 +4,7 @@ import ContactChat from '../../components/contact/ContactChat.astro';
 import ContactForm from '../../components/contact/ContactForm.astro';
 import ContactInfo from '../../components/contact/ContactInfo.astro';
 import CloudiaContactEntry from '../../components/contact/CloudiaContactEntry.astro';
+import DocumentRequestEntry from '../../components/contact/DocumentRequestEntry.astro';
 import Heading from '../../components/contact/Heading.astro';
 import Layout from '../../layouts/Layout.astro';
 import { CLOUDIA_CONTACT_PRIMARY_ENABLED, CLOUDIA_LAUNCHER_ENABLED, CONTACT_CHAT_ENABLED } from '../../config/contact';
@@ -24,6 +25,7 @@ const t = getTranslations(currentLocale);
   title={t.meta.contact.title}
 >
   <Heading />
+  <DocumentRequestEntry />
   {
     CONTACT_CHAT_ENABLED ? (
       <ContactChat />

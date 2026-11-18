@@ -15,6 +15,7 @@ export const CONTACT_LOG_EVENTS = [
   'notification_failed',
   'body_too_large',
   'body_timeout',
+  'document_case_sync_failed',
   'daily_cap_reached',
   'daily_cap_unavailable',
   'daily_cap_without_db',
