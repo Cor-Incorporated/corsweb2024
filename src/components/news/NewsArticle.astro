@@ -1,6 +1,8 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { getNewsCategoryLabel } from '../../config/news-categories';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import { DATE_LOCALES } from '../../utils/content-i18n';
 import { safeJsonLd } from '../../utils/json-ld';
@@ -86,7 +88,7 @@ const breadcrumbJsonLd = {
 };
 ---
 
-<article class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+<article class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
   <nav class="mb-8" aria-label="Breadcrumb">
     <ol class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-primary-950/60 dark:text-primary-200/60">
       <li><a href={getLocalizedUrl('/', currentLocale)} class="hover:text-primary-950 dark:hover:text-primary-100">{t.nav.home}</a></li>
@@ -112,8 +114,8 @@ const breadcrumbJsonLd = {
       )}
     </div>
 
-    <h1 class="type-heading mb-4 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{data.title}</h1>
-    <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">{data.description}</p>
+    <LbHeading as="h1" class="type-heading mb-4 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={data.title} />
+    <LbText class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70" text={data.description} />
   </header>
 
   <div class="prose prose-lg prose-stone mx-auto max-w-none dark:prose-invert prose-headings:font-bold prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400">

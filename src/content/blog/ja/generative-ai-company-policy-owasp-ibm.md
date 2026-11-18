@@ -3,7 +3,7 @@ title: "生成AIの社内利用ルールの作り方｜OWASP・IBM調査から�
 description: "生成AIの利用ルールを作る経営者・管理部門向けに、入力禁止情報、承認済みAI、ログ、教育、インシデント対応を整理します。AI活用と情報管理を両立したい企業向けの記事です。"
 summary: "生成AIの社内利用ルールは、「使わせないため」ではなく「安全に使い切るため」に作ります。利用可能なAIツール、入力禁止情報、利用可能な業務、人間レビュー、ログと報告の5項目から始め、現場の反応で更新し続けることが重要です。"
 pubDate: 2026-06-17
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI","社内ルール","セキュリティ","ガバナンス"]
@@ -66,4 +66,4 @@ AI活用で重要なのは、完璧な規程ではなく、改善され続ける
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI関連インシデントで適切なアクセス制御がなかった組織が97%、AIガバナンスポリシーを欠く組織が63%。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure、Excessive Agency、OverrelianceなどLLMアプリの代表的リスクを整理。
 - [NIST AI 600-1: Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) - NIST AI RMF 1.0の生成AI向けプロファイル。信頼性・リスク管理を設計・開発・利用・評価に組み込むための参照。
-- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年10月に第2段階審査を終え、2026年12月ごろの認証登録を見込む）を確認。
+- [Cor. HP: セキュリティ](https://cor-jp.com/security/) - ローカルファースト、最小限のログ、機密度ティア、AI利用方針、ISMS（2026年11月に認証を取得。対象範囲は「ソフトウエアの受託開発および運用」）を確認。

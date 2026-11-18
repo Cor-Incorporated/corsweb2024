@@ -16,11 +16,8 @@ const { entries } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-// チャット窓口 (/contact/chat/) は ja にしか存在しないため、非ja は各言語の /contact に intent 付きで送る。
-const pressContactHref =
-  currentLocale === 'ja'
-    ? '/contact/chat/?intent=press-speaking-other&source=press-page'
-    : getContactUrl(currentLocale, { intent: 'press-speaking-other', source: 'press-page' });
+// 問い合わせは Cloudia のチャットへ直接向ける（問い合わせページは通さない）。5 言語とも同じ形で、locale はそのページの言語。
+const pressContactHref = getContactUrl(currentLocale, { intent: 'press-speaking-other', source: 'press-page' });
 
 const pageUrl = new URL(getLocalizedUrl('/news/press/', currentLocale), Astro.site).toString();
 const jsonLd = {
@@ -47,8 +44,8 @@ const jsonLd = {
 };
 ---
 
-<main class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-7xl lg:px-8">
-  <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12">
+<main class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-content lg:px-8">
+  <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12 lg:max-w-content">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">{t.press.eyebrow}</p>
     <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{t.press.title}</h1>
     <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
@@ -69,7 +66,7 @@ const jsonLd = {
       ))}
     </ul>
   ) : (
-    <div class="flex max-w-3xl flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10">
+    <div class="flex max-w-3xl flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 lg:max-w-content">
       <p class="type-copy text-primary-950/70 dark:text-primary-200/70">{t.press.empty}</p>
       <a href={pressContactHref} class="type-action inline-flex w-fit items-center gap-1 text-sm text-primary-950/60 underline-offset-4 hover:text-primary-950 hover:underline dark:text-primary-200/60 dark:hover:text-primary-100">
         {t.press.contactLabel}

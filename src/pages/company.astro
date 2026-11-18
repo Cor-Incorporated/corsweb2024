@@ -2,7 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import CompanyProfile from '../components/company/CompanyProfile.astro';
 import NextStep from '../components/common/NextStep.astro';
-import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../utils/i18n';
+import { getCurrentLocale, getTranslations } from '../utils/i18n';
+import { getContactUrl } from '../config/site';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -12,6 +13,7 @@ const t = getTranslations(currentLocale);
   <CompanyProfile />
   <NextStep
     heading={t.nextStep.about.heading}
-    ctas={[{ label: t.companyPage.cta, href: getLocalizedUrl('/contact', currentLocale), primary: true }]}
+    ctas={[{ label: t.companyPage.cta, href: getContactUrl(currentLocale, { source: 'company' }), primary: true }]}
+    width="reading"
   />
 </Layout>

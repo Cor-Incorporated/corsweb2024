@@ -1,6 +1,8 @@
 ---
 // 記事の要点（frontmatter の summary）。本文の前に出し、Article.abstract と同じ文を使う。
 // 読み始める前に結論が分かるようにする（AI による要約・引用の対象にもなる）。summary が無い記事では出さない。
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 import { getCurrentLocale, type Locale } from '../../utils/i18n';
 
 interface Props {
@@ -26,8 +28,8 @@ const summary = Astro.props.summary?.trim();
       aria-labelledby="article-summary-heading"
       data-testid="article-summary"
     >
-      <h2 id="article-summary-heading" class="text-sm font-semibold text-stone-900 dark:text-stone-100">{LABELS[locale]}</h2>
-      <p class="mt-2 text-base leading-8 text-stone-700 dark:text-stone-300">{summary}</p>
+      <LbHeading as="h2" id="article-summary-heading" class="text-sm font-semibold text-stone-900 dark:text-stone-100" text={LABELS[locale]} />
+      <LbText class="mt-2 text-base leading-8 text-stone-700 dark:text-stone-300" text={summary} />
     </aside>
   )
 }

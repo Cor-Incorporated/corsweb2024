@@ -24,7 +24,7 @@ export const CLOUDIA_CONTACT_PRIMARY_ENABLED =
 // AI 自動音声で応対するコールセンター。表示用の番号は i18n（contactInfo.phone.value）側で
 // ロケール別に持つ（ja は国内表記、他は +81 表記）。href は国際表記で統一し、海外からの
 // 発信でも繋がるようにする。
-export const CALL_CENTER_TEL_HREF = 'tel:+817085611659';
+export const CALL_CENTER_TEL_HREF = 'tel:+815017929351';
 
 // /contact に電話導線を出すかどうか。false の間は番号・tel リンク・注記をまとめて描画しない。
 // 番号だけ隠すと「担当者から折り返します」の注記だけが残り、何の導線か分からないカードになるため、

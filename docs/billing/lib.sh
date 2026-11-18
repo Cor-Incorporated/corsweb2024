@@ -14,17 +14,23 @@
 #   鍵の接頭辞では見分けない（形式を決め打ちしない）。
 # 冪等: POST は Idempotency-Key 付き。Stripe が前回の結果を返したとき（Idempotent-Replayed: true）は、
 #   check_replay で今の状態を読み直し、期待と違えば止まる（「作った」と誤って出さない）。
+#
+# Clerk の鍵（COR_CLERK_SECRET_KEY）も同じ扱い（表示しない・ファイルに書かない・curl の引数に載せない）。
+#   送る本文も curl の設定（標準入力）に載せるので、プロセス一覧に顧客の契約の値が出ない。
 
 readonly API_BASE="https://api.stripe.com"
+readonly CLERK_API_BASE="https://api.clerk.com/v1"
 # shellcheck disable=SC2034 # apply-plans.sh と subscribe.sh が使う
 readonly MANAGED_BY="corsweb/docs/billing/plans.json"
 MODE=""
 API_KEY=""
 API_VERSION=""
+CLERK_KEY=""
 RESP_BODY=""
 RESP_CODE=""
 RESP_REPLAYED=""
 export -n COR_BILLING_API_KEY
+export -n COR_CLERK_SECRET_KEY
 
 die() {
   local code="$1"
@@ -52,15 +58,15 @@ require_curl() {
   major="${v%%.*}"
   minor="${v#*.}"
   minor="${minor%%.*}"
-  [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || die 64 "curl の版を読めない（観測: $v）"
+  [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || die 64 "curl の版を読めない（観測: ${v}）"
   if [ "$major" -lt 7 ] || { [ "$major" -eq 7 ] && [ "$minor" -lt 84 ]; }; then
-    die 64 "curl 7.84 以上が要る（観測: $v）"
+    die 64 "curl 7.84 以上が要る（観測: ${v}）"
   fi
 }
 
 load_api_version() {
   API_VERSION="$(jq -r '.stripe_api_version' "$PLANS")"
-  [[ "$API_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\.[a-z]+$ ]] || die 2 "plans.json の stripe_api_version の形が違う（観測: $API_VERSION）"
+  [[ "$API_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\.[a-z]+$ ]] || die 2 "plans.json の stripe_api_version の形が違う（観測: ${API_VERSION}）"
 }
 
 sha256_hex() {
@@ -93,7 +99,7 @@ api() {
   escaped="${API_KEY//\\/\\\\}"
   escaped="${escaped//\"/\\\"}"
   out="$(printf 'header = "Authorization: Bearer %s"\n' "$escaped" | curl "${args[@]}" "$@" "$API_BASE$path")" \
-    || die 4 "curl が失敗した（$method $path）。POST なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、status か Stripe の画面で今の状態を確かめる"
+    || die 4 "curl が失敗した（$method ${path}）。POST なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、status か Stripe の画面で今の状態を確かめる"
   RESP_CODE="${out##*$'\n'}"
   rest="${out%$'\n'*}"
   RESP_REPLAYED="${rest##*$'\n'}"
@@ -105,12 +111,14 @@ api() {
 # check_replay <説明> <GET のパス> <今の状態として正しい条件（jq）> <観測として出す値（jq）> [GET の引数 ...]
 # 正しければ RESP_BODY は読み直した結果になる。違えば止まる。
 check_replay() {
-  local what="$1" path="$2" cond="$3" shown="$4"
+  local what="$1" path="$2" cond="$3" shown="$4" rid
   shift 4
   [ "$RESP_REPLAYED" = "true" ] || return 0
+  # 読み直した答えが、読んだ path の物（同じ id）かも確かめる。別の物の答えなら、その id に明細を足すなどの誤りになる
+  rid="${path##*/}"
   printf 'NOTE %s: 24 時間以内に同じ内容で送った要求の、前回の結果が返った（Idempotent-Replayed）。今の状態を読み直す\n' "$what"
   api_ok "$what の読み直し" GET "$path" "$@"
-  jq -e "$cond" <<<"$RESP_BODY" >/dev/null \
+  jq -e --arg id "$rid" "($cond) and .id == \$id" <<<"$RESP_BODY" >/dev/null \
     || die 3 "$what: 前回の結果が返ったが、今の状態が期待と違う（観測: $(jq -c "$shown" <<<"$RESP_BODY")）。何も変わっていない。24 時間以上あけて実行し直すか、status で確かめる"
 }
 
@@ -122,7 +130,7 @@ api_error_text() {
 require_ok() {
   case "$RESP_CODE" in
     2??) ;;
-    *) die 4 "API エラー（HTTP $RESP_CODE、$1）: $(api_error_text)" ;;
+    *) die 4 "API エラー（HTTP ${RESP_CODE}、$1）: $(api_error_text)" ;;
   esac
 }
 
@@ -132,6 +140,51 @@ api_ok() {
   shift
   api "$@"
   require_ok "$what"
+}
+
+# 一覧（list）と検索（search_result）の答えの形を確かめる。形が違えば、数えも読み進めもせずに止まる（exit 4）。
+# 形が違うのに「0 件」「続きなし」と読むと、作る・書く・hold を外す側に倒れるため。確かめること: JSON がちょうど 1 つ、
+# object が $2、data が配列、has_more が真偽値、data のどの要素も object で、id が空でない文字列（$3 を渡せば、その形）。
+check_list_shape() {
+  local what="$1" want="$2" id_re="${3:-.}"
+  jq -e -s --arg o "$want" --arg re "$id_re" '
+    length == 1 and (.[0] | type) == "object" and .[0].object == $o
+    and (.[0].data | type) == "array" and (.[0].has_more | type) == "boolean"
+    and all(.[0].data[]; type == "object" and (.id | type) == "string" and (.id | test($re)))
+  ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、data が配列、has_more が真偽値、どの要素にも空でない id、のどれかが無い）。全部を読めないので、何も書かない"
+}
+
+# 1 つの物を id で読んだ答えが、読んだつもりの物かを確かめる。JSON がちょうど 1 つ、object が $2、id が $3。
+# 別の物の答えをそのまま使うと、その物の metadata で請求書を作る・別の組織の状態で本文を作るため（違えば exit 4）。
+check_object_shape() {
+  local what="$1" want="$2" id="$3"
+  jq -e -s --arg o "$want" --arg id "$id" '
+    length == 1 and (.[0] | type) == "object" and .[0].object == $o and .[0].id == $id
+  ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、id が $id、のどれかが無い）。別の物の答えかもしれないので、何も書かない"
+}
+
+# 1 ページだけを読んで決める所で、check_list_shape の後に呼ぶ。has_more が true なら、読んでいない続きに
+# 同じものが在りうる（data が空でも「無い」とは読めない）ので、作る・書く前に止まる（exit 3）。
+# 通すのは、JSON がちょうど 1 つで、has_more が真偽値の false のときだけ（欠け・null・文字列の "false" も止める）。
+check_one_page() {
+  jq -e -s 'length == 1 and .[0].has_more == false' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 3 "$1 の答えに続きが在る（has_more が true）。全部を読んでいないので、何も書かない"
+}
+
+# 1 つの請求書を読んだ答えの形を、明細を数える前に確かめる。形が違えば止まる（exit 4）。
+# lines が無い・明細の数が食い違うのに明細を 0 行と読むと、明細の在る下書きに、同じ明細をもう一度足すため。
+# 確かめること: JSON がちょうど 1 つ、object が invoice、id が $2、lines.data が配列、lines.has_more が false
+# （明細が全部 data に在る）、lines.total_count が在れば lines.data の数と同じ（数えるのはこの 2 つのどちらか）。
+check_invoice_shape() {
+  local what="$1" id="$2"
+  jq -e -s --arg id "$id" '
+    length == 1 and (.[0] | type) == "object" and .[0].object == "invoice" and .[0].id == $id
+    and (.[0].lines.data | type) == "array" and .[0].lines.has_more == false
+    and (.[0].lines.total_count == null or .[0].lines.total_count == (.[0].lines.data | length))
+  ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
+    die 4 "$what の答えの形が違う（JSON が 1 つ、object が invoice、id が $id、lines.data が配列、lines.has_more が false、lines.total_count が明細の数と同じ、のどれかが無い）。明細を数えられないので、何も書かない"
 }
 
 read_key() {
@@ -147,12 +200,46 @@ read_key() {
   [ -n "$API_KEY" ] || die 64 "鍵が空"
 }
 
+# Clerk の鍵を読む（表示しない・ファイルに書かない・子プロセスへ継承させない）
+read_clerk_key() {
+  if [ -n "${COR_CLERK_SECRET_KEY:-}" ]; then
+    CLERK_KEY="$COR_CLERK_SECRET_KEY"
+  else
+    [ -t 0 ] || die 64 "Clerk の鍵が無い: COR_CLERK_SECRET_KEY を設定するか、端末から実行する（表示しない入力で受ける）"
+    printf '%s モードの Clerk の鍵を貼り付けて Enter（画面には出ない）: ' "$MODE" >/dev/tty
+    IFS= read -rs CLERK_KEY
+    printf '\n' >/dev/tty
+  fi
+  unset COR_CLERK_SECRET_KEY
+  [ -n "$CLERK_KEY" ] || die 64 "Clerk の鍵が空"
+}
+
+# Clerk の Backend API を呼ぶ。鍵と本文は curl の設定（標準入力）で渡すので、引数にもプロセス一覧にも出ない。
+# clerk_api METHOD PATH [JSON の本文] → RESP_CODE・RESP_BODY に入れる。
+clerk_api() {
+  local method="$1" path="$2" body="${3:-}" escaped cfg payload out
+  escaped="${CLERK_KEY//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  cfg="$(printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"' "$escaped")"
+  if [ -n "$body" ]; then
+    payload="$(printf '%s' "$body" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+    # 行を分ける（$( ) は末尾の改行を落とすので、$'\n' で足す）
+    cfg="$cfg"$'\n'"$(printf 'data = "%s"' "$payload")"
+  fi
+  out="$(printf '%s' "$cfg" | curl -q -sS -X "$method" --max-time 30 -K - --write-out '\n%{http_code}' "$CLERK_API_BASE$path")" \
+    || die 4 "Clerk の API に届かなかった（$method $path）。PATCH なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、clerk-sync の dry-run か Clerk の画面で今の metadata を確かめる"
+  RESP_CODE="${out##*$'\n'}"
+  RESP_BODY="${out%$'\n'*}"
+  RESP_BODY="${RESP_BODY%$'\r'}"
+  RESP_REPLAYED=""
+}
+
 check_mode() {
   local live want="false"
   api_ok "モードの確認 GET /v1/balance" GET /v1/balance
   live="$(jq -r '.livemode' <<<"$RESP_BODY")"
   if [ "$MODE" = "live" ]; then want="true"; fi
-  [ "$live" = "$want" ] || die 3 "鍵のモードが --mode と違う（--mode $MODE、観測 livemode=$live）。何も書いていない"
+  [ "$live" = "$want" ] || die 3 "鍵のモードが --mode と違う（--mode ${MODE}、観測 livemode=${live}）。何も書いていない"
   printf 'CHECK ok: 鍵のモード = %s（観測 livemode=%s）\n' "$MODE" "$live"
 }
 
@@ -169,6 +256,8 @@ confirm_live() {
 price_id_by_lookup() {
   local lk="$1" id
   api_ok "価格 $lk の読取 GET /v1/prices" GET /v1/prices --data-urlencode "lookup_keys[]=$lk" --data-urlencode "limit=10"
+  check_list_shape "価格 $lk の検索" list '^price_'
+  check_one_page "価格 $lk の検索"
   id="$(jq -r '.data[0].id // empty' <<<"$RESP_BODY")"
   [ -n "$id" ] || die 3 "価格 $lk が無い。先に apply-plans.sh --apply --mode $MODE を実行する"
   printf '%s' "$id"
@@ -179,6 +268,8 @@ tax_rate_id() {
   local key n
   key="$(jq -r '.tax_rate.id' "$PLANS")"
   api_ok "税率の一覧 GET /v1/tax_rates" GET /v1/tax_rates --data-urlencode "active=true" --data-urlencode "limit=100"
+  check_list_shape "税率の一覧" list '^txr_'
+  check_one_page "税率の一覧"
   n="$(jq --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)] | length' <<<"$RESP_BODY")"
   [ "$n" -eq 1 ] || die 3 "metadata.plan_key=$key の税率が $n 件（1 件のはず）。先に apply-plans.sh --apply --mode $MODE を実行する"
   jq -r --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)][0].id' <<<"$RESP_BODY"
@@ -206,7 +297,7 @@ require_implemented_billing() {
   local closing
   closing="$(jq -r '.billing.closing // "-"' "$PLANS")"
   [ "$closing" = "$IMPLEMENTED_BILLING_CLOSING" ] \
-    || die 3 "plans.json の請求の形（billing.closing=$closing）は、このスクリプトの実装（$IMPLEMENTED_BILLING_CLOSING。README 1C 章の B）と違う。何もしていない"
+    || die 3 "plans.json の請求の形（billing.closing=${closing}）は、このスクリプトの実装（${IMPLEMENTED_BILLING_CLOSING}。README 1C 章の B）と違う。何もしていない"
 }
 
 plans_services() {
@@ -224,10 +315,10 @@ fmt_jst() {
 # YYYY-MM-DD の日本時間 09:00 を epoch 秒にする（macOS と GNU の date の両方）。
 jst_date_epoch() {
   local d="$1"
-  [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "日付は YYYY-MM-DD（観測: $d）"
+  [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die 64 "日付は YYYY-MM-DD（観測: ${d}）"
   TZ=Asia/Tokyo date -j -f '%Y-%m-%d %H:%M:%S' "$d 09:00:00" '+%s' 2>/dev/null \
     || TZ=Asia/Tokyo date -d "$d 09:00:00" '+%s' 2>/dev/null \
-    || die 64 "日付として読めない（観測: $d）"
+    || die 64 "日付として読めない（観測: ${d}）"
 }
 
 # 年と月から、その月の日数（うるう年を含む）。
@@ -237,7 +328,7 @@ days_in_month() {
     1 | 3 | 5 | 7 | 8 | 10 | 12) printf '31' ;;
     4 | 6 | 9 | 11) printf '30' ;;
     2) if (((y % 4 == 0 && y % 100 != 0) || y % 400 == 0)); then printf '29'; else printf '28'; fi ;;
-    *) die 64 "月は 1〜12（観測: $m）" ;;
+    *) die 64 "月は 1〜12（観測: ${m}）" ;;
   esac
 }
 
@@ -251,8 +342,8 @@ valid_date() {
 # YYYY-MM-DD の n か月後の同じ日。同じ日が無い月は、その月の末日（1/31 の 1 か月後は 2/28 か 2/29）。
 add_months_clamped() {
   local date="$1" n="$2"
-  valid_date "$date" || die 64 "実在する日付ではない（観測: $date）"
-  [[ "$n" =~ ^[0-9]+$ ]] || die 64 "月数は整数（観測: $n）"
+  valid_date "$date" || die 64 "実在する日付ではない（観測: ${date}）"
+  [[ "$n" =~ ^[0-9]+$ ]] || die 64 "月数は整数（観測: ${n}）"
   [[ "$date" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})$ ]]
   local y=$((10#${BASH_REMATCH[1]})) m=$((10#${BASH_REMATCH[2]})) d=$((10#${BASH_REMATCH[3]})) ny nm last
   nm=$(((m - 1 + n) % 12 + 1))
@@ -343,7 +434,7 @@ load_amounts() {
   IFS=$'\t' read -r AMT_BASIC AMT_DEVFEE DEVFEE_MAX TERM_MONTHS NAME_BASIC NAME_DEVFEE <<<"$row"
   local v
   for v in "$AMT_BASIC" "$AMT_DEVFEE" "$DEVFEE_MAX" "$TERM_MONTHS"; do
-    [[ "$v" =~ ^[0-9]+$ ]] || die 2 "plans.json の service=$1 の金額・回数・最低利用期間を読めない（観測: $row）"
+    [[ "$v" =~ ^[0-9]+$ ]] || die 2 "plans.json の service=$1 の金額・回数・最低利用期間を読めない（観測: ${row}）"
   done
 }
 
@@ -378,12 +469,12 @@ billing_lines() {
   last="$(month_last_date "$ym")"
   if [ "$k" -eq 1 ]; then
     usage="$AMT_BASIC" # 初月は開始日にかかわらず 1 か月分
-    emit_line usage_first "$usage" "$start" "$last" "$NAME_BASIC $ym（初月。1 か月分）"
+    emit_line usage_first "$usage" "$start" "$last" "$NAME_BASIC ${ym}（初月。1 か月分）"
   elif [ "$k" = "$k_end" ]; then
     d=$((10#${end:8:2}))
     dim="$(days_in_month "$((10#${ym:0:4}))" "$((10#${ym:5:2}))")"
     usage=$((AMT_BASIC * d / dim))
-    emit_line usage_prorated "$usage" "$first" "$end" "$NAME_BASIC $ym（終了日 $end まで。$d/$dim 日の日割り）"
+    emit_line usage_prorated "$usage" "$first" "$end" "$NAME_BASIC ${ym}（終了日 $end まで。$d/$dim 日の日割り）"
   else
     usage="$AMT_BASIC"
     emit_line usage "$usage" "$first" "$last" "$NAME_BASIC $ym"

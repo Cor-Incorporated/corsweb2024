@@ -22,7 +22,7 @@ const {
 } = Astro.props;
 ---
 
-<header class="mx-auto max-w-3xl py-12 text-center sm:py-16">
+<header class="mx-auto max-w-3xl py-12 text-center sm:py-16 lg:max-w-content">
   {backHref && backLabel && (
     <div class="mb-5">
       <a
@@ -41,7 +41,7 @@ const {
   <h1 class="text-balance text-3xl font-semibold leading-tight text-stone-950 dark:text-stone-50 sm:text-5xl">
     {title}
   </h1>
-  <p class="mx-auto mt-5 max-w-2xl text-pretty text-base leading-8 text-stone-600 dark:text-stone-300 sm:text-lg">
+  <p class="mx-auto mt-5 max-w-2xl text-pretty text-base leading-8 text-stone-600 dark:text-stone-300 sm:text-lg lg:max-w-content">
     {description}
   </p>
 

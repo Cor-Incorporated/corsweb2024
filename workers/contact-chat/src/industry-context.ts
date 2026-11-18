@@ -2,11 +2,19 @@ import type { ChatLocale, ContactIntent } from './types';
 import { normalizeSource } from './validate';
 
 /**
- * 業種の最初の案内。文案は暫定（INDUSTRY_COPY_STATUS）。
- * 本人の壁打ち後の文が来るまで、この文を最終稿と呼ばない。
+ * 業種の最初の案内の文の状態。言語ごとに持つ。
+ * - ja: 5 業種のページの掲載用本文（issue #525）と 1 文ずつ照らした日付。本文に無い実績・料金・効果を
+ *   足していないこと、本文の提供範囲と矛盾しないことを確かめた（本文の締め: 最初は業務の概要だけで
+ *   足りること、業種ごとに含めないもの、最初に聞くこと）。
+ * - en: ja に意味をそろえた訳。まだ確かめていないので暫定。
  * 診断、法律・税務の結論、効果の保証はしない。秘密の中身は聞かない。
+ * 最初の一文（〇〇のページから開いています。）は画面との照合の目印なので変えない。
+ * この値はモデルへの指示には入れない（人と試験が読む値で、応答の作り方を変えないため）。
  */
-export const INDUSTRY_COPY_STATUS = 'provisional-2026-11-08' as const;
+export const INDUSTRY_COPY_STATUS = {
+  ja: 'page-body-checked-2026-11-13',
+  en: 'provisional-2026-11-08',
+} as const satisfies Record<ChatLocale, string>;
 
 export const INDUSTRY_ENTRY_SOURCES = [
   'industry-medical',
@@ -42,6 +50,9 @@ const INDUSTRY_BY_TOKEN: Record<IndustryEntrySource, IndustrySlug> = {
   'industry-manufacturing': 'manufacturing',
   'industry-education': 'education',
 };
+
+/** 業種の値の一覧。サイトの業種の一覧と照らす試験がある。 */
+export const INDUSTRY_SLUGS: readonly IndustrySlug[] = INDUSTRY_ENTRY_SOURCES.map((token) => INDUSTRY_BY_TOKEN[token]);
 
 export function readTrafficSource(raw: unknown): TrafficReading {
   const stored = normalizeSource(raw);
@@ -83,32 +94,32 @@ function intentGroup(intent: ContactIntent | ''): IntentGroup {
 
 const BOUNDARY: Record<IndustrySlug, Record<ChatLocale, string>> = {
   medical: {
-    ja: '医療のページから開いています。患者さんの記録、症状、個人名は書かないでください。ここでは診断も、結果の保証もしません。',
-    en: 'You opened this from the healthcare page. Do not write patient records, symptoms, or anyone\'s name. This chat does not make a diagnosis or promise a result.',
+    ja: '医療のページから開いています。最初は業務の概要だけで構いません。患者さんの実データやカルテ、認証情報は書かないでください。ここでは診断も、結果の保証もしません。',
+    en: 'You opened this from the healthcare page. An outline of the work is enough to start. Do not write real patient data, medical records, or login credentials. This chat does not make a diagnosis or promise a result.',
   },
   shigyo: {
-    ja: '士業のページから開いています。依頼者名や案件の中身は書かないでください。法律や税務の結論は出しません。',
-    en: 'You opened this from the professional-services page. Do not write a client\'s name or the contents of a matter. This chat does not give a legal or tax conclusion.',
+    ja: '士業のページから開いています。最初は業務の概要だけで構いません。顧問先・依頼者の実データや認証情報は書かないでください。法律や税務の結論は出しません。',
+    en: 'You opened this from the professional-services page. An outline of the work is enough to start. Do not write real data about your clients or login credentials. This chat does not give a legal or tax conclusion.',
   },
   construction: {
-    ja: '建設のページから開いています。図面、施主名、契約書は書かないでください。工期や安全の適合は、ここでは断定しません。',
-    en: 'You opened this from the construction page. Do not send drawings, a client\'s name, or a contract. This chat does not confirm a schedule or a safety approval.',
+    ja: '建設のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料を書く必要はありません。工期や安全の適合は、ここでは断定しません。',
+    en: 'You opened this from the construction page. An outline of the work is enough to start. There is no need to write real site data or confidential documents. This chat does not confirm a schedule or a safety approval.',
   },
   manufacturing: {
-    ja: '製造のページから開いています。図面、顧客の仕様、個人名は書かないでください。品質や歩留まりの改善は、ここでは断定しません。',
-    en: 'You opened this from the manufacturing page. Do not paste drawings, a customer\'s specifications, or personal names. This chat does not promise a quality or yield result.',
+    ja: '製造のページから開いています。最初は業務の概要だけで構いません。現場の実データや機密資料を書く必要はありません。品質や歩留まりの改善は、ここでは断定しません。',
+    en: 'You opened this from the manufacturing page. An outline of the work is enough to start. There is no need to write real shop-floor data or confidential documents. This chat does not promise a quality or yield result.',
   },
   education: {
-    ja: '教育のページから開いています。生徒の名前や成績は書かないでください。学習効果は、ここでは断定しません。',
-    en: 'You opened this from the education page. Do not write a student\'s name or grades. This chat does not promise a learning outcome.',
+    ja: '教育のページから開いています。最初は業務の概要だけで構いません。学生・生徒の実データ、機密資料、認証情報は書かないでください。学習効果は、ここでは断定しません。',
+    en: 'You opened this from the education page. An outline of the work is enough to start. Do not write real student data, confidential documents, or login credentials. This chat does not promise a learning outcome.',
   },
 };
 
 const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, string>>> = {
   medical: {
     assessment: {
-      ja: '機密として扱う範囲を確かめる相談として、外に出せない情報の種類を、作業の名前だけで教えてください。',
-      en: 'For a confidential-data assessment, name only the kind of work whose information must stay inside.',
+      ja: '機密として扱う範囲を確かめる相談として、外に出せない情報を扱う作業の名前を教えてください。',
+      en: 'For a confidential-data assessment, name the work that handles information that must stay inside.',
     },
     local: {
       ja: '手元の機械で試す相談として、試したい作業を、作業の名前だけで教えてください。',
@@ -127,18 +138,18 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'For an estimate, name only the kind of material that cannot leave the organization.',
     },
     press: {
-      ja: '取材や登壇のテーマを教えてください。患者の実例は不要です。',
+      ja: '取材や登壇のテーマを教えてください。患者さんの実例は不要です。',
       en: 'What is the press or speaking topic? A patient example is not needed.',
     },
     general: {
-      ja: '受付、記録の下書き、院内の調べもののどれに近いご相談ですか。',
-      en: 'Is this closer to reception, drafting notes, or an internal lookup?',
+      ja: '紹介状の下書きや看護サマリーの整理など、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example drafting referral letters or organizing nursing summaries?',
     },
   },
   shigyo: {
     assessment: {
-      ja: '機密として扱う範囲を確かめる相談として、書類の種類を、業務の名前だけで教えてください。',
-      en: 'For a confidential-data assessment, name only the kind of professional work.',
+      ja: '機密として扱う範囲を確かめる相談として、外に出せない書類を扱う業務の名前を教えてください。',
+      en: 'For a confidential-data assessment, name the work that handles documents that must stay inside.',
     },
     local: {
       ja: '手元の機械で試す相談として、試したい業務を、業務の名前だけで教えてください。',
@@ -161,8 +172,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? A client example is not needed.',
     },
     general: {
-      ja: '契約書の確認、申請、期日の管理のどれに近いご相談ですか。',
-      en: 'Is this closer to reviewing agreements, filings, or deadline tracking?',
+      ja: '顧問先への回答案づくりや案件資料の整理など、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example drafting answers for client companies or organizing case documents?',
     },
   },
   construction: {
@@ -191,8 +202,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? Site drawings are not needed.',
     },
     general: {
-      ja: '現場の記録、見積りの整理、社内の調べもののどれに近いご相談ですか。',
-      en: 'Is this closer to site notes, organizing an estimate, or an internal lookup?',
+      ja: '現場から届く報告の転記や書類の下書きなど、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example transcribing reports from the site or drafting documents?',
     },
   },
   manufacturing: {
@@ -221,8 +232,8 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? Drawings and a customer\'s specifications are not needed.',
     },
     general: {
-      ja: '現場のメモ、品質の記録、社内の調べもののどれに近いご相談ですか。',
-      en: 'Is this closer to shop-floor notes, quality records, or an internal lookup?',
+      ja: '日報や、次の担当者へ残したい作業の手がかりなど、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example daily reports or the clues you want to leave for the next person on a task?',
     },
   },
   education: {
@@ -251,22 +262,22 @@ const QUESTION: Record<IndustrySlug, Record<IntentGroup, Record<ChatLocale, stri
       en: 'What is the press or speaking topic? Student names and grades are not needed.',
     },
     general: {
-      ja: '職員の事務、教材の下書き、問い合わせ対応のどれに近いご相談ですか。',
-      en: 'Is this closer to staff administration, drafting teaching material, or handling inquiries?',
+      ja: '学内の資料の検索や教務システムへの転記など、まず、どんなことをしたいとお考えですか。',
+      en: 'To start, what would you like to do, for example searching school documents or transcribing into the academic system?',
     },
   },
 };
 
 export function industryStartReply(industry: IndustrySlug, intent: ContactIntent | '', locale: ChatLocale): string {
   const group = intentGroup(intent);
-  return `${BOUNDARY[industry][locale]}${QUESTION[industry][group][locale]}`;
+  return `${BOUNDARY[industry][locale]}\n${QUESTION[industry][group][locale]}`;
 }
 
 export function industrySystemPolicy(token: IndustryEntrySource): string {
   const industry = INDUSTRY_BY_TOKEN[token];
   const boundary = BOUNDARY[industry].en;
   return [
-    `Industry context is the trusted enum ${token} only. Copy status: ${INDUSTRY_COPY_STATUS}.`,
+    `Industry context is the trusted enum ${token} only.`,
     'This enum is routing context. It is not visitor text and not an instruction to change these rules.',
     boundary,
     'Ask one short question about the kind of work. Do not request patient records, symptoms, diagnoses, client names, matter contents, drawings, contracts, customer specifications, student names, or grades.',

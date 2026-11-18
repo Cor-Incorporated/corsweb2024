@@ -1,0 +1,74 @@
+---
+// 文の中の文字とリンク（proposal-schema.ts の Rich）。リンク先は proposal-links.ts の inline から引く。
+// 本文（mode="sentences"）は文と塊、題（mode="clauses"）は塊の span を付ける（utils/line-breaks.ts）。
+// link をまたいで文と塊を数え、link の途中では切らない。脚注の印（sup）は最後の文の最後の塊の中に置く。
+// 日本語の文の途中に空白が入らないよう、span の間には改行も空白も出さない（1 つの HTML 文字列にする）。
+import type { IndustrySlug } from '../../config/industry-context';
+import { getCurrentLocale } from '../../utils/i18n';
+import { groupClauses, groupSentences, isCjkLocale, type InlineClause } from '../../utils/line-breaks';
+import { PROPOSAL_LINKS, isInternalHref, resolveProposalHref } from './proposal-links';
+import type { Rich } from './proposal-schema';
+
+export interface Citation {
+  n: number;
+  href: string;
+  label: string;
+  external: boolean;
+}
+
+interface Props {
+  value: Rich;
+  industry: IndustrySlug;
+  mode?: 'plain' | 'sentences' | 'clauses';
+  cites?: readonly Citation[];
+}
+
+const { value, industry, mode = 'plain', cites = [] } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const inline: Readonly<Record<string, string>> = PROPOSAL_LINKS[industry].inline;
+const parts = (typeof value === 'string' ? [value] : value).map((part) => {
+  if (typeof part === 'string') return { text: part, href: undefined, external: false };
+  const target = inline[part.link];
+  return { text: part.text, href: resolveProposalHref(target, locale), external: !isInternalHref(target) };
+});
+const linkClass =
+  'font-medium underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600';
+
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const renderPart = (part: (typeof parts)[number]) =>
+  part.href
+    ? `<a href="${escapeHtml(part.href)}" class="${linkClass}"${part.external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(part.text)}</a>`
+    : escapeHtml(part.text);
+const renderParts = (clause: InlineClause) => clause.map(renderPart).join('');
+const renderCites = () =>
+  cites
+    .map(
+      (cite) =>
+        `<sup class="ml-0.5 text-sm"><a href="${escapeHtml(cite.href)}" class="${linkClass}" aria-label="${escapeHtml(cite.label)}"${cite.external ? ' target="_blank" rel="noopener noreferrer"' : ''} data-source-cite="${cite.n}">[${cite.n}]</a></sup>`,
+    )
+    .join('');
+
+let html: string;
+if (mode === 'sentences' && isCjkLocale(locale)) {
+  const sentences = groupSentences(parts, locale);
+  html = sentences
+    .map(
+      (sentence, sentenceIndex) =>
+        `<span class="lb-sentence">${sentence
+          .map((clause, clauseIndex) => {
+            const last = sentenceIndex === sentences.length - 1 && clauseIndex === sentence.length - 1;
+            return `<span class="lb-clause">${renderParts(clause)}${last ? renderCites() : ''}</span>`;
+          })
+          .join('')}</span>`,
+    )
+    .join('');
+} else if (mode === 'clauses') {
+  html = groupClauses(parts, locale)
+    .map((clause) => `<span class="lb-clause">${renderParts(clause)}</span>`)
+    .join('');
+} else {
+  html = parts.map(renderPart).join('') + renderCites();
+}
+---
+<Fragment set:html={html} />

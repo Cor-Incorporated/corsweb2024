@@ -5,6 +5,8 @@ import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
 import { remarkHasMath } from './src/utils/remark-has-math';
 import { remarkArticleSources } from './src/utils/remark-article-sources';
+import { rehypeContactLinks } from './src/utils/rehype-contact-links';
+import { rehypeLineBreaks } from './src/utils/rehype-line-breaks';
 import { fileURLToPath } from 'node:url';
 import { includeInSitemap } from './src/config/indexing';
 import { collectBlogLastmod } from './src/config/sitemap';
@@ -44,6 +46,10 @@ export default defineConfig({
       'rehype-slug',
       ['rehype-autolink-headings', { behavior: 'append', properties: { class: 'heading-link' } }],
       'rehype-katex',
+      // 記事の本文の問い合わせページへの link を、その記事の言語の Cloudia のチャットへ向ける（本文と訳は変えない）
+      rehypeContactLinks,
+      // 本文と題に、文と塊の印を付ける（docs/design/layout-rules.md の R1）。文字は変えない
+      rehypeLineBreaks,
     ],
     shikiConfig: {
       theme: 'dracula',

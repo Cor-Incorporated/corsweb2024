@@ -15,15 +15,20 @@
 # 分割（開発費の 12 回）: 価格は月額の定期価格として作るだけ。毎月末の請求書（作り方 B）は価格を使わず、
 #       plans.json の金額を明細に入れる。回数は subscribe.sh invoice が Customer の metadata から数える（README.md 3 章）。
 #
+# 照らすだけ: --check --mode test|live は、--apply と同じ読取と照らし合わせをして、作る所では MISSING を出すだけで
+#       作らない（書く API を呼ばない）。食い違いは --apply と同じ STOP で止まる。書かないので live の確認は聞かない。
+#
 # 終了コード: 0 = 成功 / 2 = plans.json の検査で不合格 / 3 = Stripe 側の既存と食い違い・モード違い /
 #            4 = API・通信のエラー / 64 = 使い方の誤り
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
+# shellcheck disable=SC1091 # lib.sh は同じディレクトリにあり、-x 無しで走らせても中身は要らない（source= の指示だけでは SC1091 は消えない）
 . "$SCRIPT_DIR/lib.sh"
 PLANS="$SCRIPT_DIR/plans.json"
 DO_APPLY=0
+DO_CHECK=0
 
 usage() {
   cat <<'EOF'
@@ -31,6 +36,7 @@ usage() {
   bash docs/billing/apply-plans.sh [--plans <path>]                     dry-run（既定。通信しない・鍵を読まない）
   bash docs/billing/apply-plans.sh --apply --mode test [--plans <path>] テストモードに作る（寺田が実行）
   bash docs/billing/apply-plans.sh --apply --mode live [--plans <path>] 本番に作る（寺田が実行。端末で live と打つ確認あり）
+  bash docs/billing/apply-plans.sh --check --mode test|live [--plans <path>] 読んで plans.json と照らすだけ（書かない）
 鍵: 環境変数 COR_BILLING_API_KEY。無ければ表示しない入力で受ける。
 EOF
 }
@@ -40,6 +46,7 @@ parse_args() {
     case "$1" in
       --apply) DO_APPLY=1 ;;
       --dry-run) DO_APPLY=0 ;;
+      --check) DO_CHECK=1 ;;
       --mode)
         [ $# -ge 2 ] || { usage >&2; die 64 "--mode に値が無い"; }
         MODE="$2"
@@ -61,7 +68,13 @@ parse_args() {
     esac
     shift
   done
-  if [ "$DO_APPLY" -eq 1 ]; then
+  if [ "$DO_CHECK" -eq 1 ]; then
+    [ "$DO_APPLY" -eq 0 ] || die 64 "--check と --apply は一緒に使わない（--check は書かない）"
+    case "$MODE" in
+      test | live) ;;
+      *) die 64 "--check には --mode test か --mode live が要る（観測: '${MODE}'）" ;;
+    esac
+  elif [ "$DO_APPLY" -eq 1 ]; then
     case "$MODE" in
       test | live) ;;
       *) die 64 "--apply には --mode test か --mode live が要る（観測: '${MODE}'）" ;;
@@ -78,6 +91,7 @@ def isint: type == "number" and . == floor;
 '
 
 # plans.json の検査。誤りを 1 行ずつ出す（観測値つき）。
+# shellcheck disable=SC2016 # jq のプログラム。$ は jq の変数で、シェルが展開しないのが正しい
 readonly JQ_VALIDATE='
 . as $r
 | ($r.limits // {}) as $l
@@ -159,6 +173,7 @@ readonly JQ_SUMMARY='
 "CHECK ok: plans.json の検査（products \(.products | length)、prices \(.prices | length)（有効 \([.prices[] | select(.enabled)] | length)、枠 \([.prices[] | select(.enabled | not)] | length)）、tax_rate 1）"
 '
 
+# shellcheck disable=SC2016 # jq のプログラム。$ は jq の変数で、シェルが展開しないのが正しい
 readonly JQ_PLAN='
 . as $r | $r.tax_rate as $t
 | "PLAN tax_rate \($t.id): 「\($t.display_name)」\($t.percentage)% 税別（inclusive=false）country=\($t.country) jurisdiction=\($t.jurisdiction) tax_type=\($t.tax_type) → GET /v1/tax_rates で metadata.plan_key を探し、無ければ POST /v1/tax_rates",
@@ -191,6 +206,7 @@ ensure_tax_rate() {
   key="$(jq -r '.id' <<<"$want")"
   api GET /v1/tax_rates --data-urlencode "active=true" --data-urlencode "limit=100"
   require_ok "税率の一覧 GET /v1/tax_rates"
+  check_list_shape "税率の一覧" list '^txr_'
   [ "$(jq -r '.has_more' <<<"$RESP_BODY")" != "true" ] || die 3 "有効な税率が 100 件を超える。手で確かめてから実行する"
   matches="$(jq -c --arg k "$key" '[.data[] | select(.metadata.plan_key == $k)]' <<<"$RESP_BODY")"
   n="$(jq 'length' <<<"$matches")"
@@ -202,8 +218,12 @@ ensure_tax_rate() {
       (if $o.country != $w.country then "country 期待 \($w.country) 観測 \($o.country)" else empty end),
       (if $o.tax_type != $w.tax_type then "tax_type 期待 \($w.tax_type) 観測 \($o.tax_type)" else empty end)
       ] | join("; ")' <<<"$matches")"
-    [ -z "$diff" ] || die 3 "既存の税率 $(jq -r '.[0].id' <<<"$matches") が plans.json と違う: $diff（率と国は作成後に変えられない。作り直すかは寺田判断）"
+    [ -z "$diff" ] || die 3 "既存の税率 $(jq -r '.[0].id' <<<"$matches") が plans.json と違う: ${diff}（率と国は作成後に変えられない。作り直すかは寺田判断）"
     printf 'OK tax_rate %s: 既存 %s と一致\n' "$key" "$(jq -r '.[0].id' <<<"$matches")"
+    return 0
+  fi
+  if [ "$DO_CHECK" -eq 1 ]; then
+    printf 'MISSING tax_rate %s: 無い（--apply で作る。--check は作らない）\n' "$key"
     return 0
   fi
   api POST /v1/tax_rates \
@@ -225,6 +245,10 @@ ensure_product() {
   want="$(jq -c --arg id "$id" '.products[] | select(.id == $id)' "$PLANS")"
   api GET "/v1/products/$id"
   if [ "$RESP_CODE" = "404" ]; then
+    if [ "$DO_CHECK" -eq 1 ]; then
+      printf 'MISSING product %s: 無い（--apply で作る。--check は作らない）\n' "$id"
+      return 0
+    fi
     api POST /v1/products \
       --data-urlencode "id=$id" \
       --data-urlencode "name=$(jq -r '.name' <<<"$want")" \
@@ -243,7 +267,7 @@ ensure_product() {
     (if .metadata.service != $w.service then "metadata.service 期待 \($w.service) 観測 \(.metadata.service)" else empty end),
     (if .metadata.kind != $w.kind then "metadata.kind 期待 \($w.kind) 観測 \(.metadata.kind)" else empty end)
     ] | join("; ")' <<<"$RESP_BODY")"
-  [ -z "$diff" ] || die 3 "既存の商品 $id が plans.json と違う: $diff（上書きしない。直すかは寺田判断）"
+  [ -z "$diff" ] || die 3 "既存の商品 $id が plans.json と違う: ${diff}（上書きしない。直すかは寺田判断）"
   printf 'OK product %s: 既存と一致\n' "$id"
 }
 
@@ -253,6 +277,8 @@ ensure_price() {
   currency="$(jq -r '.currency' "$PLANS")"
   api GET /v1/prices --data-urlencode "lookup_keys[]=$lk" --data-urlencode "limit=10"
   require_ok "価格 $lk の読取 GET /v1/prices"
+  check_list_shape "価格 $lk の検索" list '^price_'
+  check_one_page "価格 $lk の検索"
   if [ "$(jq '.data | length' <<<"$RESP_BODY")" -ge 1 ]; then
     diff="$(jq -r --argjson w "$want" --arg cur "$currency" '.data[0] as $o | [
       (if $o.unit_amount != $w.unit_amount_jpy_excl_tax then "unit_amount 期待 \($w.unit_amount_jpy_excl_tax) 観測 \($o.unit_amount)" else empty end),
@@ -262,8 +288,12 @@ ensure_price() {
       (if $o.tax_behavior != $w.tax_behavior then "tax_behavior 期待 \($w.tax_behavior) 観測 \($o.tax_behavior)" else empty end),
       (if (($o.product | if type == "object" then .id else . end)) != $w.product then "product 期待 \($w.product) 観測 \($o.product)" else empty end)
       ] | join("; ")' <<<"$RESP_BODY")"
-    [ -z "$diff" ] || die 3 "既存の価格 $lk（$(jq -r '.data[0].id' <<<"$RESP_BODY")）が plans.json と違う: $diff（金額は作成後に変えられないので上書きしない。新しい lookup_key で作るかは寺田判断）"
+    [ -z "$diff" ] || die 3 "既存の価格 ${lk}（$(jq -r '.data[0].id' <<<"$RESP_BODY")）が plans.json と違う: ${diff}（金額は作成後に変えられないので上書きしない。新しい lookup_key で作るかは寺田判断）"
     printf 'OK price %s: 既存 %s と一致\n' "$lk" "$(jq -r '.data[0].id' <<<"$RESP_BODY")"
+    return 0
+  fi
+  if [ "$DO_CHECK" -eq 1 ]; then
+    printf 'MISSING price %s: 無い（--apply で作る。--check は作らない）\n' "$lk"
     return 0
   fi
   product="$(jq -r '.product' <<<"$want")"
@@ -300,10 +330,23 @@ apply_all() {
   printf 'DONE apply --mode %s: 上の CREATED / OK が全件\n' "$MODE"
 }
 
+# 読んで plans.json と照らすだけ。--apply と同じ読取と照らし合わせを使い、作る所では MISSING を出すだけ（書く API を呼ばない）。
+check_all() {
+  require_curl
+  read_key
+  check_mode
+  ensure_tax_rate
+  while IFS= read -r id; do ensure_product "$id"; done < <(jq -r '.products[].id' "$PLANS")
+  while IFS= read -r lk; do ensure_price "$lk"; done < <(jq -r '.prices[] | select(.enabled) | .lookup_key' "$PLANS")
+  printf 'DONE check --mode %s: 何も作っていない。上の OK / MISSING が全件\n' "$MODE"
+}
+
 main() {
   parse_args "$@"
   command -v jq >/dev/null 2>&1 || die 64 "jq が要る"
-  if [ "$DO_APPLY" -eq 1 ]; then
+  if [ "$DO_CHECK" -eq 1 ]; then
+    printf 'mode: check --mode %s（読んで照らすだけ。書かない）\n' "$MODE"
+  elif [ "$DO_APPLY" -eq 1 ]; then
     printf 'mode: apply --mode %s\n' "$MODE"
   else
     printf 'mode: dry-run（通信しない・鍵を読まない）\n'
@@ -312,6 +355,10 @@ main() {
   load_api_version
   printf 'api_version: %s\nplans: %s\n' "$API_VERSION" "$PLANS"
   jq -r "$JQ_LIB$JQ_PLAN" "$PLANS"
+  if [ "$DO_CHECK" -eq 1 ]; then
+    check_all
+    return 0
+  fi
   if [ "$DO_APPLY" -eq 0 ]; then
     printf 'DONE dry-run: 何も作っていない。作るのは寺田が --apply --mode test で（docs/billing/runbook.md）\n'
     return 0

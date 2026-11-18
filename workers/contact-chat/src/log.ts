@@ -4,6 +4,7 @@
 export const CONTACT_LOG_EVENTS = [
   'session_storage_failed',
   'llm_failed',
+  'llm_not_configured',
   'email_unconfigured',
   'submission_storage_failed',
   'notification_queue_unconfigured',
@@ -15,6 +16,9 @@ export const CONTACT_LOG_EVENTS = [
   'body_too_large',
   'body_timeout',
   'document_case_sync_failed',
+  'daily_cap_reached',
+  'daily_cap_unavailable',
+  'daily_cap_without_db',
 ] as const;
 
 export type ContactLogEvent = (typeof CONTACT_LOG_EVENTS)[number];

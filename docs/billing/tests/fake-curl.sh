@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # jq のプログラムは単一引用符で書く（$ は jq の変数で、シェルが展開しないのが正しい）
 # テスト用の偽 curl。通信しない。引数と「標準入力に Authorization があったか」を FAKE_LOG に残し、
 # FAKE_SCENARIO に応じて Stripe の応答の形（本文 + 改行 + HTTP 状態）を返す。
 # 応答の中身は FAKE_PLANS（plans.json）から作る。
@@ -19,11 +20,107 @@ stdin_text="$(cat)"
     *"Authorization: Bearer "*) printf 'STDIN_AUTH yes\n' ;;
     *) printf 'STDIN_AUTH no\n' ;;
   esac
+  key_kind="unknown"
+  if [ -n "${FAKE_CLERK_KEY:-}" ] && printf '%s' "$stdin_text" | grep -qF "Bearer $FAKE_CLERK_KEY"; then
+    key_kind="clerk"
+  elif [ -n "${FAKE_STRIPE_KEY:-}" ] && printf '%s' "$stdin_text" | grep -qF "Bearer $FAKE_STRIPE_KEY"; then
+    key_kind="stripe"
+  fi
+  printf 'STDIN_KEY %s\n' "$key_kind"
 } >>"$FAKE_LOG"
+
+# Clerk（api.clerk.com）の呼出しは、ここで応答して終わる。Stripe の応答の形とは別（本文 + 改行 + HTTP 状態）。
+case " $* " in
+  *" https://api.clerk.com/v1/"*)
+    clerk_path=""
+    clerk_method="GET"
+    prev=""
+    for a in "$@"; do
+      if [ "$prev" = "-X" ]; then clerk_method="$a"; fi
+      case "$a" in https://api.clerk.com/v1/*) clerk_path="${a#https://api.clerk.com/v1}" ;; esac
+      prev="$a"
+    done
+    printf 'CALL %s %s\n' "$clerk_method" "$clerk_path" >>"$FAKE_LOG"
+    # FAKE_NO_WRITE=1: 読むだけの形の試験。書く呼び出しを 1 回でも受けたら、記録して断る（試験が落ちる）
+    if [ "${FAKE_NO_WRITE:-}" = "1" ] && [ "$clerk_method" != "GET" ]; then
+      printf 'WRITE_REFUSED %s %s\n' "$clerk_method" "$clerk_path" >>"$FAKE_LOG"
+      printf '{"error":{"message":"fake-curl: write refused"}}\n\n500'
+      exit 0
+    fi
+    clerk_org="${clerk_path#/organizations/}"
+    clerk_org="${clerk_org%%/*}"
+    # 本文（curl の設定の data = "..."）を戻す
+    raw="$(printf '%s\n' "$stdin_text" | sed -n 's/^data = "\(.*\)"$/\1/p' | tail -1)"
+    raw="$(printf '%s' "$raw" | sed -e 's/\\\\/\\/g' -e 's/\\"/"/g')"
+    [ -z "$raw" ] || printf 'CLERK_BODY %s\n' "$raw" >>"$FAKE_LOG"
+    state_file="$FAKE_LOG.clerk"
+    if [ -f "$state_file" ]; then
+      state="$(jq -c --arg o "$clerk_org" '.[$o] // {}' "$state_file" 2>/dev/null || printf '{}')"
+    elif [ -n "${FAKE_CLERK_META:-}" ]; then
+      state="$FAKE_CLERK_META"
+    else
+      state='{}'
+    fi
+    if [ "${FAKE_CLERK_STATUS:-200}" != "200" ]; then
+      printf '{"error":{"message":"fake-curl: clerk failure"}}\n\n%s' "$FAKE_CLERK_STATUS"
+      exit 0
+    fi
+    # GET（送る前の読取）は今の状態をそのまま返す
+    if [ "$clerk_method" = "GET" ]; then
+      # FAKE_CLERK_GET_UNTIL=N なら、N 回目の読取までだけ壊す（後の読取は今の状態を返す）
+      cg=0
+      if [ -f "$FAKE_LOG.clerkget" ]; then cg="$(cat "$FAKE_LOG.clerkget")"; fi
+      cg=$((cg + 1))
+      printf '%s' "$cg" >"$FAKE_LOG.clerkget"
+      gshape="${FAKE_CLERK_GET_SHAPE:-}"
+      if [ -n "${FAKE_CLERK_GET_UNTIL:-}" ] && [ "$cg" -gt "$FAKE_CLERK_GET_UNTIL" ]; then gshape=""; fi
+      case "$gshape" in
+        emptyobj) printf '{}\n\n200' ;;
+        other) printf '{"id":"org_other","object":"organization","public_metadata":{}}\n\n200' ;;
+        # 別の組織の答えで、その組織は hold 中（読んだつもりの組織が hold 中だと読ませる形）
+        other_hold) printf '{"id":"org_other","object":"organization","public_metadata":{"services":{"xesm":{"from":"2026-10-01","until":null,"hold":true}}}}\n\n200' ;;
+        wrongobj) printf '{"id":"%s","object":"user","public_metadata":%s}\n\n200' "$clerk_org" "$state" ;;
+        nometa) printf '{"id":"%s","object":"organization"}\n\n200' "$clerk_org" ;;
+        *) printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$state" ;;
+      esac
+      exit 0
+    fi
+    if [ "${FAKE_CLERK_ECHO:-}" = "wrong" ]; then
+      # 送った値を反映しない（Clerk が別の値を返したときの形）。どの状態から始めても一致しないようにする。
+      printf '{"id":"%s","object":"organization","public_metadata":{"services":{"business-dossier":{"from":"2020-01-01","until":null,"hold":false}}}}\n\n200' "$clerk_org"
+      exit 0
+    fi
+    if [ -z "$raw" ]; then
+      incoming='{}'
+    else
+      incoming="$(jq -c '.public_metadata // {}' <<<"$raw")"
+    fi
+    merged="$(jq -c --argjson inc "$incoming" '
+      def deepmerge($a; $b):
+        if ($b | type) == "object" then
+          (if ($a | type) == "object" then $a else {} end) as $base
+          | reduce ($b | keys_unsorted[]) as $k ($base;
+              if $b[$k] == null then del(.[$k]) else .[$k] = deepmerge(.[$k]; $b[$k]) end)
+        else $b end;
+      deepmerge(.; $inc)' <<<"$state")"
+    if [ -f "$state_file" ]; then
+      jq -c --arg o "$clerk_org" --argjson m "$merged" '. + {($o): $m}' "$state_file" >"$state_file.new" 2>/dev/null || printf '{"%s":%s}' "$clerk_org" "$merged" >"$state_file.new"
+    else
+      printf '{"%s":%s}' "$clerk_org" "$merged" >"$state_file.new"
+    fi
+    mv "$state_file.new" "$state_file"
+    printf '{"id":"%s","object":"organization","public_metadata":%s}\n\n200' "$clerk_org" "$merged"
+    exit 0
+    ;;
+esac
 
 method="GET"
 url=""
 lookup=""
+start_arg=""
+customer_arg=""
+status_arg=""
+limit_arg=""
 amount_arg=""
 invoice_arg=""
 query_arg=""
@@ -37,6 +134,10 @@ for a in "$@"; do
     "amount="*) amount_arg="${a#amount=}" ;;
     "invoice="*) invoice_arg="${a#invoice=}" ;;
     "query="*) query_arg="${a#query=}" ;;
+    "starting_after="*) start_arg="${a#starting_after=}" ;;
+    "status="*) status_arg="${a#status=}" ;;
+    "limit="*) limit_arg="${a#limit=}" ;;
+    "customer="*) customer_arg="${a#customer=}" ;;
     "metadata["*"]="*)
       k="${a#"metadata["}"
       k="${k%%"]="*}"
@@ -47,15 +148,65 @@ for a in "$@"; do
 done
 path="${url#https://api.stripe.com}"
 printf 'CALL %s %s\n' "$method" "$path" >>"$FAKE_LOG"
+# FAKE_NO_WRITE=1: 読むだけの形の試験。書く呼び出しを 1 回でも受けたら、記録して断る（試験が落ちる）
+if [ "${FAKE_NO_WRITE:-}" = "1" ] && [ "$method" != "GET" ]; then
+  printf 'WRITE_REFUSED %s %s\n' "$method" "$path" >>"$FAKE_LOG"
+  printf '%s\n%s\n%s' '{"error":{"type":"api_error","message":"fake-curl: write refused"}}' "" "500"
+  exit 0
+fi
 
 # 本文 + 改行 + Idempotent-Replayed の値 + 改行 + HTTP 状態（curl の --write-out と同じ形）。
 # FAKE_REPLAY=1 なら POST の応答を「前回の結果」として返す。
+# 顧客を 1 つ読む答えを壊す（FAKE_CUSTGET_SHAPE。FAKE_CUSTGET_AFTER=N なら N 回目の読取の後から、
+# FAKE_CUSTGET_UNTIL=N なら N 回目の読取まで）
+custget_broken() {
+  local body="$1" cnt=0
+  [ -n "${FAKE_CUSTGET_SHAPE:-}" ] || { printf '%s' "$body"; return 0; }
+  if [ -f "$FAKE_LOG.custget" ]; then cnt="$(cat "$FAKE_LOG.custget")"; fi
+  cnt=$((cnt + 1))
+  printf '%s' "$cnt" >"$FAKE_LOG.custget"
+  if [ "$cnt" -le "${FAKE_CUSTGET_AFTER:-0}" ]; then printf '%s' "$body"; return 0; fi
+  # FAKE_CUSTGET_UNTIL=N なら、N 回目の読取までだけ壊す
+  if [ -n "${FAKE_CUSTGET_UNTIL:-}" ] && [ "$cnt" -gt "$FAKE_CUSTGET_UNTIL" ]; then printf '%s' "$body"; return 0; fi
+  case "$FAKE_CUSTGET_SHAPE" in
+    # 別の顧客の答え（開発費の回数と customer_code が違う）
+    other) jq -c '.id = "cus_other" | .metadata.contract_xesm_devfee_count = "0" | .metadata.customer_code = "other-co"' <<<"$body" ;;
+    emptyobj) printf '{}' ;;
+    wrongobj) jq -c '.object = "list"' <<<"$body" ;;
+    twojson) printf '%s%s' "$body" "$body" ;;
+    *) printf '%s' "$body" ;;
+  esac
+}
+
 respond() {
   local replayed=""
+  if [ "$method:${path%/*}" = "GET:/v1/customers" ] && [ "$path" != "/v1/customers/search" ]; then set -- "$1" "$(custget_broken "$2")"; fi
   if [ "$method" = "POST" ] && [ "${FAKE_REPLAY:-}" = "1" ]; then replayed="true"; fi
   # 実物の curl が値の末尾に CR を残す・大文字で返す場合の形（FAKE_REPLAY_RAW=1）
   if [ "$method" = "POST" ] && [ "${FAKE_REPLAY_RAW:-}" = "1" ]; then replayed=$'True\r'; fi
   printf '%s\n%s\n%s' "$2" "$replayed" "$1"
+}
+
+# 一覧・検索の答えの形を壊した本文（FAKE_*_SHAPE の値）。$2 は list か search_result
+malformed_body() {
+  case "$1" in
+    nodata) printf '{"object":"%s","has_more":false}' "$2" ;;
+    datanull) printf '{"object":"%s","has_more":false,"data":null}' "$2" ;;
+    dataobj) printf '{"object":"%s","has_more":false,"data":{}}' "$2" ;;
+    noid) printf '{"object":"%s","has_more":false,"data":[{"metadata":{}}]}' "$2" ;;
+    emptyid) printf '{"object":"%s","has_more":false,"data":[{"id":"","metadata":{}}]}' "$2" ;;
+    empty) printf '' ;;
+    wrongobj) printf '{"object":"other","has_more":false,"data":[]}' ;;
+    hasmore_missing) printf '{"object":"%s","data":[]}' "$2" ;;
+    hasmore_num) printf '{"object":"%s","has_more":1,"data":[]}' "$2" ;;
+    twojson) printf '{"object":"%s","has_more":false,"data":null}{"object":"%s","has_more":false,"data":[]}' "$2" "$2" ;;
+    twovalid) printf '{"object":"%s","has_more":false,"data":[]}{"object":"%s","has_more":false,"data":[]}' "$2" "$2" ;;
+    # 続きが在るのに空（食い違った答え）。1 ページだけを読む所は「無い」と読まずに止まる
+    hasmore_true_empty) printf '{"object":"%s","has_more":true,"data":[]}' "$2" ;;
+    # id の頭が違う（顧客は cus_、請求書は in_、税率は txr_、価格は price_ のはず）。期限は過ぎた日にしておく
+    idform) printf '{"object":"%s","has_more":false,"data":[{"id":"xx_1","due_date":1,"metadata":{}}]}' "$2" ;;
+    *) printf '{"object":"%s","has_more":false,"data":[]}' "$2" ;;
+  esac
 }
 
 balance() {
@@ -65,6 +216,7 @@ balance() {
 }
 
 tax_rates() {
+  if [ -n "${FAKE_TAX_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_TAX_SHAPE" list)"; return 0; fi
   case "$FAKE_SCENARIO" in
     empty | livemismatch) respond 200 '{"object":"list","data":[],"has_more":false}' ;;
     *) respond 200 "$(jq -c '{object: "list", has_more: false, data: [.tax_rate | {id: "txr_fake", percentage, inclusive, country, tax_type, metadata: {plan_key: .id}}]}' "$FAKE_PLANS")" ;;
@@ -80,6 +232,7 @@ product() {
 }
 
 prices() {
+  if [ -n "${FAKE_PRICE_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_PRICE_SHAPE" list)"; return 0; fi
   case "$FAKE_SCENARIO" in
     empty | livemismatch) respond 200 '{"object":"list","data":[],"has_more":false}' ;;
     *)
@@ -90,18 +243,155 @@ prices() {
   esac
 }
 
+# --- resync 用: 顧客の状態（id → 顧客）と、open の請求書の一覧。状態は $FAKE_LOG.customers に持つ ---
+RESYNC_CUSTOMERS="$FAKE_LOG.customers"
+resync_store() {
+  if [ -f "$RESYNC_CUSTOMERS" ]; then
+    cat "$RESYNC_CUSTOMERS"
+  else
+    jq -c -n --argjson a "${FAKE_CUST_PAGE1:-[]}" --argjson b "${FAKE_CUST_PAGE2:-[]}" '($a + $b) | map({key: .id, value: .}) | from_entries'
+  fi
+}
+# 顧客の一覧。100 件ずつ、starting_after でページを送る（FAKE_CUST_PAGE1 と FAKE_CUST_PAGE2）
+resync_customers_list() {
+  local data more
+  if [ -n "${FAKE_CUST_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_CUST_SHAPE" list)"; return 0; fi
+  if [ -n "${start_arg:-}" ]; then
+    data="${FAKE_CUST_PAGE2:-[]}"
+    more=false
+  else
+    data="${FAKE_CUST_PAGE1:-[]}"
+    if [ -n "${FAKE_CUST_PAGE2:-}" ]; then more=true; else more=false; fi
+  fi
+  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: $d}')"
+}
+resync_customer_get() {
+  local id="${path#/v1/customers/}" rec
+  rec="$(jq -c --arg i "$id" '.[$i] // empty' <<<"$(resync_store)")"
+  if [ -z "$rec" ]; then
+    respond 404 '{"error":{"type":"invalid_request_error","code":"resource_missing","message":"No such customer"}}'
+    return 0
+  fi
+  respond 200 "$rec"
+}
+resync_customer_update() {
+  local id="${path#/v1/customers/}" cur merged
+  cur="$(resync_store)"
+  merged="$(jq -c --arg i "$id" --argjson p "$posted_meta" '.[$i].metadata = ((.[$i].metadata // {}) + $p)' <<<"$cur")"
+  printf '%s' "$merged" >"$RESYNC_CUSTOMERS"
+  respond 200 "$(jq -c --arg i "$id" '.[$i]' <<<"$merged")"
+}
+# open の請求書の一覧。FAKE_OPEN_INVOICES（1 ページ目）と FAKE_OPEN_INVOICES_P2（2 ページ目）
+resync_invoices() {
+  if [ -n "${FAKE_INV_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INV_SHAPE" list)"; return 0; fi
+  local cus="${customer_arg:-}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" data more cnt=0
+  # 呼ばれた回数を数える。FAKE_OPEN_INVOICES_AFTER があれば 2 回目からそちらを返す
+  # （下見の後に請求書の状態が変わったことを、1 回の実行の中で作るため）
+  if [ -f "$FAKE_LOG.invcount" ]; then cnt="$(cat "$FAKE_LOG.invcount")"; fi
+  cnt=$((cnt + 1))
+  printf '%s' "$cnt" >"$FAKE_LOG.invcount"
+  if [ -n "${FAKE_OPEN_INVOICES_AFTER:-}" ] && [ "$cnt" -ge 2 ]; then
+    p1="$FAKE_OPEN_INVOICES_AFTER"
+    p2='{}'
+  fi
+  [ -n "$p1" ] || p1='{}'
+  [ -n "$p2" ] || p2='{}'
+  # status が付いていなければ全部を返す（本物の一覧と同じ。付いていればその状態だけ）
+  local st="${status_arg:-}" filter='.[$c] // []'
+  if [ -n "$st" ]; then filter='.[$c] // [] | map(select((.status // "open") == $st))'; fi
+  if [ -n "${start_arg:-}" ]; then
+    # 続きの位置は、同じ状態の 1 ページ目の最後の id でなければならない。偽の curl は、別の一覧の id を
+    # starting_after に渡す誤りを試験で見つけるために、違えば 400 を返す（本物の応答は未確認）
+    local last
+    last="$(jq -r --arg c "$cus" --arg st "$st" "$filter | .[-1].id // \"\"" <<<"$p1")"
+    if [ "$start_arg" != "$last" ]; then
+      respond 400 "$(jq -cn --arg s "$start_arg" --arg st "$st" --arg l "$last" '{error: {message: ("fake-curl: starting_after=" + $s + " is not the last " + $st + " invoice of the previous page (" + $l + ")")}}')"
+      return 0
+    fi
+    data="$(jq -c --arg c "$cus" --arg st "$st" "$filter" <<<"$p2")"
+    more=false
+  else
+    data="$(jq -c --arg c "$cus" --arg st "$st" "$filter" <<<"$p1")"
+    if [ "$(jq -c --arg c "$cus" --arg st "$st" "$filter | length" <<<"$p2")" -gt 0 ]; then more=true; else more=false; fi
+  fi
+  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: ($d | map(. + {object: "invoice", status: (.status // "open")}))}')"
+}
+resync_find_invoice() {
+  local id="$1" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}"
+  [ -n "$p1" ] || p1='{}'
+  [ -n "$p2" ] || p2='{}'
+  jq -c -n --argjson a "$p1" --argjson b "$p2" --arg i "$id" '[([$a, $b][] | .[][] | select(.id == $i))][0] // {}'
+}
+# 請求書の明細の一覧（hold を決めるのに使う）。100 件ずつ、starting_after=il_<番号> でページを送る
+resync_invoice_lines() {
+  if [ -n "${FAKE_LINES_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_LINES_SHAPE" list)"; return 0; fi
+  local id="${path#/v1/invoices/}" rec svc_json total start=0 limit=100 data more
+  id="${id%/lines}"
+  rec="$(resync_find_invoice "$id")"
+  if [ "$(jq -r '.lines_status // 0' <<<"$rec")" = "500" ]; then
+    respond 500 '{"error":{"message":"fake-curl: lines failure"}}'
+    return 0
+  fi
+  svc_json="$(jq -c '(if .no_service then "" else "xesm" end) as $fill
+    | if (.lines_count // 0) > 0 then [range(0; .lines_count) | $fill]
+      elif (.services | type) == "array" then .services
+      elif .service then [.service]
+      else []
+      end' <<<"$rec")"
+  total="$(jq 'length' <<<"$svc_json")"
+  if [ -n "${start_arg:-}" ]; then start="${start_arg#il_}"; fi
+  case "$start" in '' | *[!0-9]*) start=0 ;; esac
+  if [ -n "${limit_arg:-}" ]; then limit="$limit_arg"; fi
+  data="$(jq -c -n --argjson s "$svc_json" --argjson st "$start" --argjson l "$limit" '[range(0; ($s | length)) as $i | select($i >= $st and $i < ($st + $l)) | {id: ("il_" + ($i | tostring)), object: "invoiceitem", metadata: (if $s[$i] == "" then {} else {service: $s[$i]} end)}]')"
+  if [ $((start + limit)) -lt "$total" ]; then more=true; else more=false; fi
+  respond 200 "$(jq -c -n --argjson d "$data" --argjson m "$more" '{object: "list", has_more: $m, data: $d}')"
+}
+# 請求書の明細。metadata.service を 1 つだけ返す（hold を決めるのに使う）
+resync_invoice_get() {
+  local id="${path#/v1/invoices/}" p1="${FAKE_OPEN_INVOICES:-}" p2="${FAKE_OPEN_INVOICES_P2:-}" rec
+  [ -n "$p1" ] || p1='{}'
+  [ -n "$p2" ] || p2='{}'
+  rec="$(jq -c -n --argjson a "$p1" --argjson b "$p2" --arg i "$id" '[([$a, $b][] | .[][] | select(.id == $i))][0] // {}')"
+  respond 200 "$(jq -c '{id, object: "invoice", status: "open", customer, due_date, lines: {object: "list", data: (if .service then [{id: ("il_" + .id), object: "invoiceitem", metadata: {service: .service}}] else [] end)}}' <<<"$rec")"
+}
+
 # --- subscribe.sh 用（FAKE_SEARCH・FAKE_CUST_* ・FAKE_INV_* ・FAKE_CS_* などで応答を変える） ---
 readonly MANAGED="corsweb/docs/billing/plans.json"
 # 明細の POST の金額を残すファイル（請求書の小計を、実物と同じく明細の和で返すため）
 ITEMS="$FAKE_LOG.items"
 
 customer_search() {
+  # 組織の id での検索（customer --clerk-org の重なりの検査）は FAKE_SEARCH_ORG で返す（既定は 0 件）
+  case "$query_arg" in
+    *clerk_org_id*)
+      case "${FAKE_SEARCH_ORG:-none}" in
+        dup) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_other","name":"別の顧客","metadata":{"customer_code":"other-co","payment":"card","clerk_org_id":"org_abc123"}}]}' ;;
+        # hold・unhold・clerk-sync の重なりの検査: 自分（cus_x）とほかの顧客（cus_y）が同じ組織を持つ
+        shared) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}},{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        # 作った直後で、自分がまだ検索に出ない形（ほかの顧客だけが出る）
+        other_only) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_y","metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        self) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
+        # 答えの形がおかしい場面（HTTP 200 のまま）。守りは「ほかの顧客は居ない」と読まずに止まる
+        nodata) respond 200 '{"object":"search_result"}' ;;
+        datanull) respond 200 '{"object":"search_result","has_more":false,"data":null}' ;;
+        noid) respond 200 '{"object":"search_result","has_more":false,"data":[{"metadata":{"customer_code":"y-co","clerk_org_id":"org_x"}}]}' ;;
+        empty) respond 200 '' ;;
+        wrongobj) respond 200 '{"object":"list","data":[]}' ;;
+        # 続きが在る（limit を超える）。全部を見ていないので止まる
+        more) respond 200 '{"object":"search_result","has_more":true,"data":[{"id":"cus_x","metadata":{"customer_code":"sample-co","clerk_org_id":"org_x"}}]}' ;;
+        dataobj | emptyid | hasmore_missing | hasmore_num | twojson | twovalid | hasmore_true_empty | idform) respond 200 "$(malformed_body "$FAKE_SEARCH_ORG" search_result)" ;;
+        *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
+      esac
+      return 0
+      ;;
+  esac
+  if [ -n "${FAKE_SEARCH_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_SEARCH_SHAPE" search_result)"; return 0; fi
   case "${FAKE_SEARCH:-none}" in
-    one) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card"}}]}' ;;
-    one_clerk) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card","clerk_org_id":"org_other"}}]}' ;;
-    one_transfer) respond 200 '{"object":"search_result","data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"transfer"}}]}' ;;
-    two) respond 200 '{"object":"search_result","data":[{"id":"cus_a","metadata":{}},{"id":"cus_b","metadata":{}}]}' ;;
-    *) respond 200 '{"object":"search_result","data":[]}' ;;
+    one) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card"}}]}' ;;
+    one_clerk) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"card","clerk_org_id":"org_other"}}]}' ;;
+    one_transfer) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_existing","name":"既存","metadata":{"customer_code":"sample-co","payment":"transfer"}}]}' ;;
+    two) respond 200 '{"object":"search_result","has_more":false,"data":[{"id":"cus_a","metadata":{}},{"id":"cus_b","metadata":{}}]}' ;;
+    *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
   esac
 }
 
@@ -110,7 +400,7 @@ customer_json() {
   local m="${FAKE_CUST_META:-}"
   [ -n "$m" ] || m='{"customer_code":"sample-co"}'
   jq -nc --argjson m "$m" --argjson p "$1" --arg pm "${FAKE_CUST_PM:-}" \
-    '{id: "cus_x", object: "customer", name: "テスト", metadata: ($m + $p), invoice_settings: {default_payment_method: (if $pm == "" then null else $pm end)}}'
+    --arg id "${cust_id:-cus_x}" '{id: $id, object: "customer", name: "テスト", metadata: ($m + $p), invoice_settings: {default_payment_method: (if $pm == "" then null else $pm end)}}'
 }
 
 # 顧客の更新: 送られた metadata を足して返す（FAKE_META_ECHO=wrong なら足さずに返す）
@@ -134,7 +424,7 @@ inv_json() {
     '{id: $id, object: "invoice", customer: "cus_x", status: $st, subtotal: $sub, total: ($sub + ($sub / 10 | floor)),
       amount_paid: (if $st == "paid" then ($sub + ($sub / 10 | floor)) else 0 end),
       total_taxes: [{amount: ($sub / 10 | floor)}], due_date: $due, hosted_invoice_url: "https://invoice.example.test/i/\($id)",
-      lines: {object: "list", total_count: $n, data: []}, metadata: {billing_month: $m, managed_by: $mb}}'
+      lines: {object: "list", has_more: false, total_count: $n, data: [range(0; $n) | {id: "il_\(.)", object: "line_item"}]}, metadata: {billing_month: $m, managed_by: $mb}}'
 }
 
 # 同じ月の請求書: FAKE_INV_STATE（none|draft|open|paid|void|two）を、FAKE_INV_WHERE（both|search|list）に返す。
@@ -150,16 +440,20 @@ found_invoices() {
 }
 
 invoice_search() {
+  if [ -n "${FAKE_INVSEARCH_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INVSEARCH_SHAPE" search_result)"; return 0; fi
   local m
   m="$(printf '%s' "$query_arg" | sed -n 's/.*billing_month"\]:"\([0-9-]*\)".*/\1/p')"
   case "${FAKE_INV_WHERE:-both}" in
-    both | search) respond 200 "{\"object\":\"search_result\",\"data\":$(found_invoices "$m")}" ;;
-    *) respond 200 '{"object":"search_result","data":[]}' ;;
+    both | search) respond 200 "{\"object\":\"search_result\",\"has_more\":false,\"data\":$(found_invoices "$m")}" ;;
+    *) respond 200 '{"object":"search_result","has_more":false,"data":[]}' ;;
   esac
 }
 
-# FAKE_OLDER_OPEN=YYYY-MM なら、一覧にその月の open の請求書（in_older）も足す
+# FAKE_OLDER_OPEN=YYYY-MM なら、一覧にその月の open の請求書（in_older）も足す。
+# 答えの形は、status の付いた一覧（mark-paid の古い月の検査）を FAKE_INVOPEN_SHAPE、付かない一覧を FAKE_INVLIST_SHAPE で壊す
 invoice_list() {
+  if [ -n "${status_arg:-}" ] && [ -n "${FAKE_INVOPEN_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INVOPEN_SHAPE" list)"; return 0; fi
+  if [ -z "${status_arg:-}" ] && [ -n "${FAKE_INVLIST_SHAPE:-}" ]; then respond 200 "$(malformed_body "$FAKE_INVLIST_SHAPE" list)"; return 0; fi
   local data
   data="$(found_invoices "${FAKE_INV_MONTH:-none}")"
   if [ -n "${FAKE_OLDER_OPEN:-}" ]; then
@@ -176,7 +470,26 @@ invoice_get() {
   local id="${path#/v1/invoices/}" sub n
   sub=$((${FAKE_DRAFT_SUBTOTAL:-0} + $(item_sum) + ${FAKE_SUBTOTAL_BUMP:-0}))
   n=$((${FAKE_DRAFT_LINES:-0} + $(item_count)))
-  respond 200 "$(inv_json "$id" "${FAKE_INV_GET_STATUS:-draft}" "-" "$sub" "$n")"
+  local body
+  body="$(inv_json "$id" "${FAKE_INV_GET_STATUS:-draft}" "-" "$sub" "$n")"
+  # 答えの形を壊す（FAKE_INVGET_SHAPE）。lines の無い形は、明細を 0 行と読ませる形
+  case "${FAKE_INVGET_SHAPE:-}" in
+    emptyobj) body='{}' ;;
+    nolines) body="$(jq -c 'del(.lines)' <<<"$body")" ;;
+    linesnull) body="$(jq -c '.lines = null' <<<"$body")" ;;
+    linesdataobj) body="$(jq -c '.lines.data = {} | .lines.total_count = 0' <<<"$body")" ;;
+    # 明細の数が食い違う形（total_count が 0・文字列、続きが在る、has_more が無い）。どれも明細を 0 行と読ませうる
+    tc0) body="$(jq -c '.lines.total_count = 0' <<<"$body")" ;;
+    tcstr) body="$(jq -c '.lines.total_count = "0"' <<<"$body")" ;;
+    hasmore_empty) body="$(jq -c '.lines.data = [] | .lines.has_more = true | del(.lines.total_count)' <<<"$body")" ;;
+    hasmore_full) body="$(jq -c '.lines.has_more = true | del(.lines.total_count)' <<<"$body")" ;;
+    nohasmore) body="$(jq -c 'del(.lines.has_more)' <<<"$body")" ;;
+    wrongid) body="$(jq -c '.id = "in_other"' <<<"$body")" ;;
+    wrongobj) body="$(jq -c '.object = "list"' <<<"$body")" ;;
+    twojson) body="$body$body" ;;
+    empty) body='' ;;
+  esac
+  respond 200 "$body"
 }
 
 invoice_action() {
@@ -201,13 +514,15 @@ case "$method:$path" in
   GET:/v1/products/*) product ;;
   GET:/v1/prices) prices ;;
   GET:/v1/customers/search) customer_search ;;
-  GET:/v1/customers/*) respond 200 "$(customer_json '{}')" ;;
+  GET:/v1/customers) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customers_list; else respond 200 '{"object":"list","has_more":false,"data":[]}'; fi ;;
+  GET:/v1/customers/*) cust_id="${path#/v1/customers/}"; if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_get; else respond 200 "$(customer_json '{}')"; fi ;;
   POST:/v1/customers) respond 200 '{"id":"cus_new"}' ;;
-  POST:/v1/customers/*) customer_update ;;
+  POST:/v1/customers/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_customer_update; else customer_update; fi ;;
   GET:/v1/prices/* | GET:/v1/tax_rates/*) respond 200 "{\"id\":\"${path##*/}\",\"active\":${FAKE_ACTIVE:-true},\"percentage\":10,\"unit_amount\":10000}" ;;
   GET:/v1/invoices/search) invoice_search ;;
-  GET:/v1/invoices) invoice_list ;;
-  GET:/v1/invoices/*) invoice_get ;;
+  GET:/v1/invoices) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_invoices; else invoice_list; fi ;;
+  GET:/v1/invoices/*/lines) resync_invoice_lines ;;
+  GET:/v1/invoices/*) if [ "${FAKE_RESYNC:-}" = "1" ]; then resync_invoice_get; else invoice_get; fi ;;
   POST:/v1/invoices) respond 200 "$(inv_json in_new draft "-" 0 0)" ;;
   POST:/v1/invoices/*/finalize) invoice_action "${FAKE_FINALIZE_STATUS:-open}" ;;
   POST:/v1/invoices/*/send) invoice_action open ;;

@@ -1,12 +1,15 @@
 ---
 import { type CollectionEntry, getCollection } from 'astro:content'
 import NextStep from '../common/NextStep.astro'
+import LbHeading from '../common/LbHeading.astro'
+import LbText from '../common/LbText.astro'
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n'
 import { DATE_LOCALES, localizeEntries, toCleanSlug } from '../../utils/content-i18n'
 import { safeJsonLd } from '../../utils/json-ld'
 import { organizationRef } from '../../utils/structured-data'
 import { ORGANIZATION_LOGO } from '../../config/organization'
 import { findServiceByCaseCategory, formatServiceLinkLabel, getServiceUrl } from '../../config/services'
+import { getContactUrl } from '../../config/site'
 
 // /works/<slug>（ja）と /[lang]/works/<slug>（非ja）で共有する実績記事本体。
 // 本文の見出し（## 課題 / アプローチ / 実装 / 成果）は markdown 側にある。
@@ -23,7 +26,7 @@ const t = getTranslations(currentLocale)
 // OG画像: ogImage 優先、なければ heroImage。og:image と JSON-LD image で共用。
 const ogImageUrl = data.ogImage ?? data.heroImage?.url
 
-// CTA 出し分け（ctaType > category）。link は /contact（tech-culture のみ /about + /contact）。
+// CTA 出し分け（ctaType > category）。問い合わせは Cloudia のチャットへ直接（tech-culture のみ /about + チャット）。
 type CtaKey =
   | 'grift'
   | 'confidential-ai'
@@ -38,7 +41,8 @@ interface Cta {
   primary?: boolean
 }
 
-const contactHref = getLocalizedUrl('/contact', currentLocale)
+// source は記事ごと（ブログの記事の blog/<slug> と同じ形）。intent は今までどおり付けない。
+const contactHref = getContactUrl(currentLocale, { source: `works/${toCleanSlug(entry.slug)}` })
 const aboutHref = getLocalizedUrl('/about', currentLocale)
 
 const CTA_MAP: Record<CtaKey, Cta[]> = {
@@ -141,7 +145,7 @@ const articleJsonLd = {
 }
 ---
 
-<article class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+<article class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
   <!-- Breadcrumb -->
   <nav class="mb-8" aria-label="Breadcrumb">
     <ol class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-primary-950/60 dark:text-primary-200/60">
@@ -171,8 +175,8 @@ const articleJsonLd = {
       )}
     </div>
 
-    <h1 class="type-heading mb-4 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{data.title}</h1>
-    <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">{data.summary}</p>
+    <LbHeading as="h1" class="type-heading mb-4 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={data.title} />
+    <LbText class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70" text={data.summary} />
   </header>
 
   <!-- Hero image -->
@@ -185,8 +189,8 @@ const articleJsonLd = {
   <!-- NDA / 機密案件の注記 -->
   {data.securityNote && (
     <aside class="mb-10 rounded-2xl bg-primary-950/5 p-5 text-sm text-primary-950/70 dark:bg-primary-200/5 dark:text-primary-200/70">
-      <p class="type-copy font-medium">{t.caseStudy.ndaHeading}</p>
-      <p class="type-copy mt-2">{data.securityNote}</p>
+      <LbText class="type-copy font-medium" text={t.caseStudy.ndaHeading} />
+      <LbText class="type-copy mt-2" text={data.securityNote} />
     </aside>
   )}
 
@@ -201,6 +205,7 @@ const articleJsonLd = {
       heading={t.caseStudy.nextHeading}
       lead={t.caseStudy.nextLead}
       ctas={ctas}
+      width="reading"
     />
     {serviceLink && (
       <p class="mt-6 text-center">

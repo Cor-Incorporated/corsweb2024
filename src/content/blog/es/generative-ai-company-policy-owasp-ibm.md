@@ -3,14 +3,14 @@ title: "Cómo crear directrices internas para el uso de IA generativa | Gestión
 description: "Una guía para directivos y departamentos de administración que buscan elaborar directrices de uso de IA generativa, estructurando información restringida, IA autorizadas, registros, formación y respuesta ante incidentes. Dirigido a empresas que desean compaginar el aprovechamiento de la IA con la seguridad de la información."
 summary: "Las directrices internas para el uso de la IA generativa no se crean para impedir su uso, sino para aprovecharla de forma segura. Es fundamental comenzar con 5 puntos clave (herramientas de IA permitidas, información restringida, tareas en las que se autoriza su uso, revisión humana, y registros y notificación) y continuar actualizándolas según la respuesta operativa."
 pubDate: 2026-06-17
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "社内ルール", "セキュリティ", "ガバナンス"]
 lang: "es"
 featured: true
 isDraft: false
-translationSourceHash: "7fd67394fcdeb12c96567e8bdf8c1004667438099fd688ec12be2c0ee942ded0"
+translationSourceHash: "b9ecddf43c42a8accb5836a94a26a3fe21c4c402bd31b81e751c035dc1589b39"
 translatedAt: "2026-10-23T05:23:47.782Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -69,4 +69,4 @@ Las normas por sí solas no son suficientes. Estas cobran sentido y funcionan de
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach): el 97 % de las organizaciones que sufrieron incidentes relacionados con IA carecían de controles de acceso adecuados, y el 63 % carecía de una política de gobernanza de IA.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/): clasificación de los principales riesgos en aplicaciones con LLM, como Sensitive Information Disclosure, Excessive Agency y Overreliance.
 - [NIST AI 600-1: Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence): perfil para IA generativa del NIST AI RMF 1.0. Referencia para integrar confiabilidad y gestión de riesgos en el diseño, desarrollo, uso y evaluación.
-- [Cor. HP: Seguridad](https://cor-jp.com/security/): información sobre el enfoque *local-first*, registro mínimo, niveles de confidencialidad, política de uso de IA e ISMS (se completó la fase 2 de auditoría en octubre de 2026 y se prevé el registro de certificación en torno a diciembre de 2026).
+- [Cor. HP: Seguridad](https://cor-jp.com/security/): información sobre el enfoque *local-first*, registro mínimo, niveles de confidencialidad, política de uso de IA e ISMS (con certificación obtenida en noviembre de 2026; alcance: «Desarrollo y operación de software por encargo»).

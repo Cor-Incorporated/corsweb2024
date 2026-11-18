@@ -18,7 +18,7 @@ ADR-0025 の判断材料。取りまとめの Issue は #421（作業 D）。調
 - Cloudia が落ちると、サイトに問い合わせの手段が残らない（ADR-0005 で受容したリスク。監視は #322 で未設定。行き止まりの件は #352）
 - **連絡先はすでに公開している**
   - メールアドレス `company@cor-jp.com` はプライバシーポリシー（開示等の請求の窓口）と特定商取引法の表記に載っている
-  - 電話番号 `070-8561-1659` は特定商取引法の表記に載っている（表示の義務があるため。ADR-0005 の改訂）
+  - 電話番号 `050-1792-9351` は特定商取引法の表記に載っている（表示の義務があるため。ADR-0005 の改訂）
   - つまり、調べる気のある営業はいまでも連絡先にたどり着ける。`/contact` に出さないことで減っているのは、ついでに連絡してくる営業だと考えられる（所見）
 
 社内で出ていた意見と運用は次のとおり（数字と、社外の方の名前は書かない）。
@@ -66,7 +66,7 @@ FROM submission_intake GROUP BY day, intent, classification ORDER BY day;
 
 ### SSGFORM のフォームが外から送れる状態で残っている
 
-- `src/components/contact/ContactForm.astro` には、SSGFORM の送信先（`action` の URL）が書いてある。このリポジトリは公開なので、ページにフォームを出していなくても、送信先へ直接送ることはできる。いまのサイトでは、このフォームは `PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false` のとき（Cloudia を止めたときの非常口）にだけ出る
+- `src/components/contact/ContactForm.astro` には、SSGFORM の送信先（`action` の URL）が書いてある。このリポジトリは公開なので、ページにフォームを出していなくても、送信先へ直接送ることはできる。いまのサイトでは、このフォームは `PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED=false` のとき（Cloudia を止めたときの非常口）にだけ出る（2026-11 の追記: このフラグは、サイトの問い合わせの入口の link にも効く。false の build では、入口がチャットではなく問い合わせページのフォームへ向く。浮きボタンは別のフラグ `PUBLIC_CLOUDIA_LAUNCHER_ENABLED` で止める）
 - 全ページの `<head>` に、使っていない `ssgform.com` への `dns-prefetch` が残っている（`src/layouts/Layout.astro`）
 - SSGFORM の管理画面でこのフォームを止めれば、外からの直接の送信は届かなくなる。ただし、非常口のフォームも同時に使えなくなる。どちらを取るかは代表の判断（ADR-0025 の「決めてほしいこと」）
 

@@ -8,6 +8,8 @@ export interface Env {
   GOOGLE_CLOUD_PROJECT?: string;
   GOOGLE_CLOUD_LOCATION?: string;
   VERTEX_MODEL?: string;
+  /** 1 日（JST）に model を呼ぶ回数の上限。0 以上の整数。無い・読めないときは daily-cap.ts の既定の値。 */
+  CHAT_DAILY_MODEL_CALL_LIMIT?: string;
   VERTEX_GATEWAY_URL?: string;
   VERTEX_GATEWAY_SECRET?: string;
   CONTACT_TO_EMAIL: string; // 問い合わせメールの宛先（社内インボックス）。

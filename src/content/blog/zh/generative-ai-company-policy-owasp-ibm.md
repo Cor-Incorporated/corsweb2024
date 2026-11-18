@@ -3,14 +3,14 @@ title: "企业内部生成式AI使用规则制定指南｜基于OWASP与IBM调�
 description: "面向制定生成式AI使用规则的管理层与管理部门，系统梳理禁止输入信息、获批AI、日志、培训以及事件应对。本文专为希望兼顾AI应用与信息管理的企业而写。"
 summary: "制定企业内部生成式AI使用规则，目的不是“禁止使用”，而是“安全且充分地运用”。建议从可用AI工具、禁止输入信息、适用业务范围、人工审核、日志与报告这5个项目入手，并根据一线反馈持续保持更新，这一点至关重要。"
 pubDate: 2026-06-17
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "社内ルール", "セキュリティ", "ガバナンス"]
 lang: "zh"
 featured: true
 isDraft: false
-translationSourceHash: "7fd67394fcdeb12c96567e8bdf8c1004667438099fd688ec12be2c0ee942ded0"
+translationSourceHash: "b9ecddf43c42a8accb5836a94a26a3fe21c4c402bd31b81e751c035dc1589b39"
 translatedAt: "2026-10-23T05:21:47.483Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -69,4 +69,4 @@ Cor.株式会社认为，尚未制定生成式AI规则的企业，并不是不�
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - 在AI相关事件中，97%的组织缺乏适当的访问控制，63%的组织缺乏AI治理策略。
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - 梳理了Sensitive Information Disclosure、Excessive Agency、Overreliance等LLM应用的代表性风险。
 - [NIST AI 600-1: Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) - NIST AI RMF 1.0面向生成式AI的概况文件。将可信度与风险管理融入设计、开发、利用和评估的参考指南。
-- [Cor. HP: 安全](https://cor-jp.com/security/) - 了解本地优先、最小化日志、机密性层级、AI使用方针及ISMS（预计于2026年10月完成第二阶段审核，2026年12月左右完成认证注册）。
+- [Cor. HP: 安全](https://cor-jp.com/security/) - 了解本地优先、最小化日志、机密性层级、AI使用方针及ISMS（于2026年11月取得认证。认证范围为“软件的受托开发及运营”）。

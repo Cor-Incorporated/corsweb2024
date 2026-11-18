@@ -1,0 +1,66 @@
+/* 本文・部品の幅を決める 1 つの値。header / footer の container（max-w-7xl = 80rem）に合わせる。
+   値を変えるときはこの 1 行だけを変える（Tailwind の max-w-content が参照する）。 */
+:root {
+  --content-width: 80rem;
+  --reading-width: 48rem;
+}
+
+/* ヒーローの背景（ぼかした光）が節の終わりで切り落とされて線に見えないよう、下へ自然に消す。 */
+.motion-bg {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 75%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 75%);
+}
+
+/* Tailwind 3.3 には text-balance の utility が無いため、class を書いてある所（意図）を有効にする。
+   本文の最終行に 1〜2 文字だけ残るのを防ぐ。 */
+main .type-copy.text-balance {
+  text-wrap: balance;
+}
+
+/* 行を替える印（src/utils/line-breaks.ts が付ける）。
+   文は 1 行ずつ置き、塊の間だけで折る。塊が箱より長い時は、塊の中で折り返す
+   （word-break: auto-phrase は h1〜h3・p の今の定義が効く）。 */
+.lb-sentence {
+  display: block;
+}
+
+.lb-clause {
+  display: inline-block;
+  max-width: 100%;
+  /* 塊が箱より長い時、最後の行に 1 字だけ残らないようにする（主に中国語）。 */
+  text-wrap: pretty;
+}
+
+/* 狭い画面（幅 640px 未満。本文の文字を 16px にする Tailwind の sm と同じ境）では、
+   本文は文の終わり（句点）でだけ行を替える（docs/design/layout-rules.md の R1）。
+   文の中の塊を通常の折り方に戻し、文に text-wrap: pretty を当てて
+   最後の行に 1〜2 字だけ残るのを減らす。塊は .lb-sentence の子孫すべてに当てる
+   （link などを挟んで直下に無い塊も、文の中の塊だから同様に流す）。
+   題の塊（.lb-heading の中の .lb-clause）は .lb-sentence の中に無いので
+   inline-block のまま（題は狭い画面でも読点で切る）。 */
+@media not all and (min-width: 640px) {
+  .lb-sentence .lb-clause {
+    display: inline;
+    max-width: none;
+  }
+
+  .lb-sentence {
+    text-wrap: pretty;
+  }
+}
+
+/* 塊を持つ題は、字数を等分する折り方（text-wrap: balance）を止める。
+   layout の `h1, h2, h3, .type-heading { text-wrap: balance }` より強い形で書く
+   （出る順番に頼らない）。 */
+h1.lb-heading,
+h2.lb-heading,
+h3.lb-heading,
+.type-heading.lb-heading {
+  text-wrap: wrap;
+}
+
+/* 段落の中の <br> は残す。直前で文が終わっている時（.lb-sentence の直後）は、
+   <br> の改行と文の block の改行で行が 2 つ空かないよう、<br> を消す。 */
+.lb-sentence + br {
+  display: none;
+}

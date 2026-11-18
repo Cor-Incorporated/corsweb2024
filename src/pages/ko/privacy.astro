@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import LbHeading from '../../components/common/LbHeading.astro';
+import LbText from '../../components/common/LbText.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 
 const currentLocale = Astro.props.locale || getCurrentLocale(Astro.url);
@@ -12,23 +14,13 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
   description={t.meta.privacy.description}
   title={t.meta.privacy.title}
 >
-  <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+  <div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
     <div class="flex flex-col gap-4 pb-16 text-start sm:pb-20">
-      <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">
-        {currentLocale === 'ja' ? (
-          <>
-            個人情報保護方針
-            <span class="type-keep inline-block">（プライバシー</span>
-            <span class="type-keep inline-block">ポリシー）</span>
-          </>
-        ) : (
-          p.title
-        )}
-      </h1>
+      <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={p.title} />
       <p class="type-copy text-base text-primary-950/70 dark:text-primary-200/70">{p.lastUpdate}</p>
     </div>
 
-    <div class="type-copy text-base leading-[1.8]">
+    <div class="type-copy text-base leading-[1.8] sm:text-lg">
       {
         p.note && (
           <p class="mb-6 rounded-md border border-primary-900/15 bg-primary-900/[0.03] px-4 py-3 text-sm dark:border-primary-300/15 dark:bg-primary-300/[0.04]">
@@ -37,9 +29,9 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
         )
       }
 
-      <p class="mb-4">{p.intro}</p>
+      <LbText class="mb-4" text={p.intro} />
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{p.businessTitle}</h2>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={p.businessTitle} />
       <div class="overflow-x-auto">
         <table class="w-full max-w-full border-collapse text-left text-sm sm:text-base">
           <tbody>
@@ -55,13 +47,13 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
         </table>
       </div>
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{p.purposeTitle}</h2>
-      <p class="mb-6">{p.purposeLead}</p>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={p.purposeTitle} />
+      <LbText class="mb-6" text={p.purposeLead} />
       <div class="flex flex-col gap-8">
         {
           Array.isArray(p.purposeGroups) && p.purposeGroups.map((group) => (
             <div>
-              <h3 class="type-heading mb-3 text-lg font-medium">{group.title}</h3>
+              <LbHeading as="h3" class="type-heading mb-3 text-lg font-medium" text={group.title} />
               <dl class="flex flex-col gap-2">
                 {group.lines.map((line) => (
                   <div>
@@ -78,17 +70,17 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
 
       {
         Array.isArray(p.sections) && p.sections.map((section) => (
-          <section>
-            <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{section.title}</h2>
-            {Array.isArray(section.body) && section.body.map((para) => <p class="mb-4">{para}</p>)}
+          <section id={'id' in section ? section.id : undefined} class="scroll-mt-24">
+            <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={section.title} />
+            {Array.isArray(section.body) && section.body.map((para) => <LbText class="mb-4" text={para} />)}
             {Array.isArray(section.list) && (
               <ul class="mb-4 list-inside list-disc space-y-3">
                 {section.list.map((item) => (
-                  <li>{item}</li>
+                  <LbText as="li" text={item} />
                 ))}
               </ul>
             )}
-            {Array.isArray(section.bodyAfter) && section.bodyAfter.map((para) => <p class="mb-4">{para}</p>)}
+            {Array.isArray(section.bodyAfter) && section.bodyAfter.map((para) => <LbText class="mb-4" text={para} />)}
             {/* 参照リンク（任意）。本文は素のテキストとして描画されるため、オプトアウト等の
                 「実際に到達できる必要がある」導線はここで anchor として出す。
                 label / href とも文字列として扱い、HTML は挿入しない。 */}
@@ -112,8 +104,8 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
         ))
       }
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{p.inquiryTitle}</h2>
-      <p class="mb-6">{p.inquiryLead}</p>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={p.inquiryTitle} />
+      <LbText class="mb-6" text={p.inquiryLead} />
       <div class="overflow-x-auto">
         <table class="w-full max-w-full border-collapse text-left text-sm sm:text-base">
           <tbody>
@@ -134,12 +126,17 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
         </table>
       </div>
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{p.revisionTitle}</h2>
-      {Array.isArray(p.revisionBody) && p.revisionBody.map((para) => <p class="mb-4">{para}</p>)}
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={p.revisionTitle} />
+      {Array.isArray(p.revisionBody) && p.revisionBody.map((para) => <LbText class="mb-4" text={para} />)}
 
-      <p class="mb-4 mt-8">
-        {p.securityLinkPrefix}<a class="font-medium underline" href={securityUrl}>{p.securityLinkText}</a>{p.securityLinkSuffix}
-      </p>
+      <LbText
+        class="mb-4 mt-8"
+        parts={[
+          { text: p.securityLinkPrefix },
+          { text: p.securityLinkText, href: securityUrl },
+          { text: p.securityLinkSuffix },
+        ]}
+      />
 
       <hr class="my-10 border-primary-900/15 dark:border-primary-300/15" />
       <p class="text-sm text-primary-950/70 dark:text-primary-200/70">{p.footer}</p>

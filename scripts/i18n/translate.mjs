@@ -155,15 +155,23 @@ async function translateFields({ collection, lang, data, client, attempts, grift
   throw new TranslationError('frontmatter', errors);
 }
 
+// These diagnostics contain only fixed labels and counts. Other validation messages can include
+// restored URLs or code, so never send the complete errors array back to the model.
+const REPAIRABLE_STRUCTURE_ERROR_RE =
+  /^(?:段落などのブロック数|リスト項目の数|見出し H[1-6] の数|表の行数|表の \d+ 行目のセルの数)が一致しません（ja \d+ \/ 翻訳 \d+）$/;
+
 async function translateBody({ body, lang, client, attempts, griftTerms }) {
   const sourceCore = bodyCore(body);
   if (sourceCore === '') return '';
   const { text: protectedText, store } = protect(sourceCore, { griftTerms });
   const errors = [];
+  let repair = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await client.generate({
-      system: bodySystemInstruction(lang, griftTermTokens(store, lang)),
-      prompt: protectedText,
+      system: bodySystemInstruction(lang, griftTermTokens(store, lang), {
+        repair: repair !== null,
+      }),
+      prompt: repair ? JSON.stringify({ sourceMarkdown: protectedText, ...repair }) : protectedText,
     });
     const result = checkBodyOutput({
       output: response.text,
@@ -175,6 +183,11 @@ async function translateBody({ body, lang, client, attempts, griftTerms }) {
     });
     if (result.ok) return result.text;
     errors.push(...result.errors.map((e) => `#${attempt} ${e}`));
+    const validationErrors = result.errors.filter((error) =>
+      REPAIRABLE_STRUCTURE_ERROR_RE.test(error)
+    );
+    repair =
+      validationErrors.length > 0 ? { previousTranslation: response.text, validationErrors } : null;
   }
   throw new TranslationError('本文', errors);
 }

@@ -5,9 +5,9 @@ const t = getTranslations(getCurrentLocale(Astro.url));
 ---
 
 <section id="kyousou" class="py-16 sm:py-20">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div class="flex flex-col gap-10 sm:gap-12">
-      <div class="max-w-3xl">
+      <div class="max-w-3xl lg:max-w-content">
         <h2 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl" set:html={emphasizeKyousou(t.aboutPage.kyousouTitle)} />
         <p class="type-copy mt-4 text-lg text-primary-950/70 dark:text-primary-200/70">{t.aboutPage.kyousouLead}</p>
       </div>
@@ -21,7 +21,7 @@ const t = getTranslations(getCurrentLocale(Astro.url));
           ))
         }
       </ul>
-      <p class="type-heading max-w-3xl rounded-3xl bg-primary-600/10 p-6 text-xl font-medium tracking-tight text-primary-700 dark:bg-primary-400/10 dark:text-primary-300 sm:text-2xl" set:html={emphasizeKyousou(t.aboutPage.kyousouAxis)} />
+      <p class="type-heading max-w-3xl rounded-3xl bg-primary-600/10 p-6 text-xl font-medium tracking-tight text-primary-700 dark:bg-primary-400/10 dark:text-primary-300 sm:text-2xl lg:max-w-content" set:html={emphasizeKyousou(t.aboutPage.kyousouAxis)} />
     </div>
   </div>
 </section>

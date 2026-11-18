@@ -10,6 +10,8 @@ import ArticleSummary from '../../components/blog/ArticleSummary.astro';
 import BlogCta from '../../components/blog/BlogCta.astro';
 import TipButton from '../../components/blog/TipButton.astro';
 import BlogLayout from '../../layouts/BlogLayout.astro';
+import LbHeading from '../../components/common/LbHeading.astro';
+import LbText from '../../components/common/LbText.astro';
 import { getCurrentLocale } from '../../utils/i18n';
 
 export async function getStaticPaths() {
@@ -72,7 +74,7 @@ const ctaSlug = post.slug.replace(/^[a-z]{2}\//, '');
 ---
 
 <BlogLayout post={post} relatedPosts={relatedPosts} nextPost={nextPost} prevPost={prevPost} hasMath={hasMath} citations={remarkPluginFrontmatter.citations ?? []}>
-  <article class="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+  <article class="mx-auto max-w-reading px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
     <!-- Breadcrumb -->
     <nav class="mb-8" aria-label="Breadcrumb">
       <ol class="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-stone-600 dark:text-stone-400">
@@ -106,13 +108,9 @@ const ctaSlug = post.slug.replace(/^[a-z]{2}\//, '');
         </span>
       </div>
       
-      <h1 class="mb-4 max-w-3xl text-balance text-3xl font-bold leading-tight text-stone-900 dark:text-stone-100 sm:text-4xl">
-        {post.data.title}
-      </h1>
+      <LbHeading as="h1" class="mb-4 max-w-reading text-balance text-3xl font-bold leading-tight text-stone-900 dark:text-stone-100 sm:text-4xl" text={post.data.title} />
       
-      <p class="mb-6 max-w-3xl text-pretty text-lg leading-8 text-stone-600 dark:text-stone-300">
-        {post.data.description}
-      </p>
+      <LbText class="mb-6 max-w-reading text-pretty text-lg leading-8 text-stone-600 dark:text-stone-300" text={post.data.description} />
       
       <div class="flex flex-col gap-4 border-b border-stone-200 pb-6 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 items-center gap-3">
@@ -159,17 +157,17 @@ const ctaSlug = post.slug.replace(/^[a-z]{2}\//, '');
     </div>
 
     <!-- 相談の案内（ADR-0020: 本文の下に 1 つ。intent と source=blog/<slug> を付ける） -->
-    <div class="mx-auto mt-12 max-w-3xl">
+    <div class="mx-auto mt-12 max-w-reading">
       <BlogCta category={post.data.category} ctaIntent={post.data.ctaIntent} slug={ctaSlug} />
     </div>
 
     <!-- 著者（写真・名前・肩書・紹介・プロフィール。JSON-LD の Person と同じ正本） -->
-    <div class="mx-auto mt-12 max-w-3xl">
+    <div class="mx-auto mt-12 max-w-reading">
       <AuthorBox author={post.data.author} />
     </div>
 
     <!-- Support/Tip Section -->
-    <div class="mx-auto mt-12 max-w-3xl">
+    <div class="mx-auto mt-12 max-w-reading">
       <TipButton />
     </div>
 

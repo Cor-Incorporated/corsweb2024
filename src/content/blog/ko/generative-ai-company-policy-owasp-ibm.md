@@ -3,14 +3,14 @@ title: "생성형 AI 사내 이용 규칙 작성법｜OWASP·IBM 조사를 통�
 description: "생성형 AI 이용 규칙을 수립하는 경영진 및 관리 부서를 위해 입력 금지 정보, 승인된 AI, 로그, 교육, 인시던트 대응을 정리합니다. AI 활용과 정보 관리를 양립하고자 하는 기업을 위한 글입니다."
 summary: "생성형 AI의 사내 이용 규칙은 '사용하지 못하게 하기 위함'이 아니라 '안전하게 최대한 활용하기 위해' 만듭니다. 사용 가능한 AI 도구, 입력 금지 정보, 적용 가능한 업무, 인간의 검토, 로그 및 보고의 5가지 항목부터 시작하여 현장의 반응에 따라 지속해서 업데이트해 나가는 것이 중요합니다."
 pubDate: 2026-06-17
-updatedDate: 2026-10-23
+updatedDate: 2026-11-15
 author: "Terisuke"
 category: "ai"
 tags: ["生成AI", "社内ルール", "セキュリティ", "ガバナンス"]
 lang: "ko"
 featured: true
 isDraft: false
-translationSourceHash: "7fd67394fcdeb12c96567e8bdf8c1004667438099fd688ec12be2c0ee942ded0"
+translationSourceHash: "b9ecddf43c42a8accb5836a94a26a3fe21c4c402bd31b81e751c035dc1589b39"
 translatedAt: "2026-10-23T05:22:46.425Z"
 translationModel: "gemini-3.8-flash"
 ---
@@ -69,4 +69,4 @@ AI 활용에서 중요한 것은 완벽한 규정이 아니라, 지속적으로 
 - [IBM: Cost of a Data Breach Report 2025](https://www.ibm.com/reports/data-breach) - AI 관련 인시던트에서 적절한 액세스 제어가 없었던 조직이 97%, AI 거버넌스 정책이 결여된 조직이 63%.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - Sensitive Information Disclosure, Excessive Agency, Overreliance 등 LLM 애플리케이션의 대표적 리스크 정리.
 - [NIST AI 600-1: Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence) - NIST AI RMF 1.0의 생성형 AI 대상 프로파일. 신뢰성·리스크 관리를 설계·개발·이용·평가에 내재화하기 위한 참조 자료.
-- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 10월에 2단계 심사를 마치고 2026년 12월경 인증 등록 전망) 확인 가능.
+- [Cor. HP: 보안](https://cor-jp.com/security/) - 로컬 퍼스트, 최소한의 로그, 기밀도 티어, AI 이용 방침, ISMS(2026년 11월에 인증을 취득함. 인증 범위는 “소프트웨어의 수탁 개발 및 운영”) 확인 가능.

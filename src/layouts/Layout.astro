@@ -15,6 +15,7 @@ import { ORGANIZATION_NAMES } from '../config/organization';
 import { OG_LOCALES } from '../config/og-locales';
 import { isNoindexPath } from '../config/indexing';
 import { SERVICE_PAGES, getServiceBasePath, getServiceOgSlug } from '../config/services';
+import '../styles/content-width.css';
 
 interface Props {
   description: string;
@@ -348,38 +349,87 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
 
     <!-- スクロール没入演出: IntersectionObserver で [data-reveal] に .is-visible を付与（軽量・ライブラリ0） -->
     <script>
-      let revealObserver: IntersectionObserver | null = null;
+      // 見え始めと見え終わりを分ける（演出の対象は [data-reveal]）。
+      //  - 下へスクロールして入る要素は、窓の下 12% を除いた範囲に入ったときに出す（ふわっと出る演出）。
+      //  - 下へのスクロールの途中でなければ、窓の中に在る要素はすぐ出す（読み込んだ時・上へ動いた時・一気に上へ
+      //    移った時・字体で配置が変わった時）。窓が低いとき、ヒーローの主ボタンは下 12% に在り、これが無いと
+      //    透明のまま残る。下へのスクロールで下 12% に残った要素も、上へ動いたら出す。
+      //  - 窓から出きったら隠す（次に入ったとき、また演出がかかる）。
+      // 隠れている間のずれと縮み。上の CSS（html.js [data-reveal].reveal-ready の transform）と同じ値にする。
+      // 両方を src/utils/__tests__/layout-reveal.test.ts が読んで照らす。
+      const REVEAL_SHIFT_REM = 2.5;
+      const REVEAL_SCALE = 0.98;
+      let stopReveal: (() => void) | null = null;
+
+      // 「窓の中」の判定を下へ広げる量（px）。隠れている要素は REVEAL_SHIFT_REM だけ下へずれ、真ん中を軸に縮む
+      // （上の端が、高さの (1 − REVEAL_SCALE) / 2 だけさらに下がる）。observer はずれた後の位置で判定する。
+      function hiddenOffsetPx(targets: NodeListOf<HTMLElement>) {
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const tallest = Math.max(0, ...Array.from(targets, (el) => el.offsetHeight));
+        return Math.ceil(rem * REVEAL_SHIFT_REM + (tallest * (1 - REVEAL_SCALE)) / 2);
+      }
+
+      // 監視を始め、止める関数を返す。登録に失敗したら、登録できた分を外して投げ直す
+      function observeReveal(targets: NodeListOf<HTMLElement>) {
+        const show = (el: Element) => el.classList.add('is-visible');
+        const inView = new Set<Element>();
+        let lastY = window.scrollY;
+        let scrollingDown = false;
+        const onScroll = () => {
+          const y = window.scrollY;
+          if (y !== lastY) scrollingDown = y > lastY;
+          lastY = y;
+          if (!scrollingDown) inView.forEach(show);
+        };
+        const observers: IntersectionObserver[] = [];
+        const stop = () => {
+          observers.forEach((observer) => observer.disconnect());
+          window.removeEventListener('scroll', onScroll);
+        };
+        const onEnter = (entries: IntersectionObserverEntry[]) =>
+          entries.forEach((entry) => entry.isIntersecting && show(entry.target));
+        const onView = (entries: IntersectionObserverEntry[]) =>
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) {
+              inView.delete(entry.target);
+              entry.target.classList.remove('is-visible');
+              return;
+            }
+            inView.add(entry.target);
+            if (!scrollingDown) show(entry.target);
+          });
+        try {
+          // 見え始め: threshold 0 + 下 12% マージンで、上端が入った時点で発火（早すぎ防止）
+          observers.push(new IntersectionObserver(onEnter, { threshold: 0, rootMargin: '0px 0px -12% 0px' }));
+          // 窓の中か（隠れている間のずれの分だけ下へ広げる）
+          observers.push(new IntersectionObserver(onView, { threshold: 0, rootMargin: `0px 0px ${hiddenOffsetPx(targets)}px 0px` }));
+          targets.forEach((el) => observers.forEach((observer) => observer.observe(el)));
+          window.addEventListener('scroll', onScroll, { passive: true });
+          return stop;
+        } catch (error) {
+          stop();
+          throw error;
+        }
+      }
+
       function initScrollReveal() {
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const targets = document.querySelectorAll('[data-reveal]');
+        const targets = document.querySelectorAll<HTMLElement>('[data-reveal]');
         targets.forEach((el) => el.classList.remove('reveal-ready'));
-        // 再初期化(ページ遷移)時は前の observer を破棄して重複監視を防ぐ
-        if (revealObserver) { revealObserver.disconnect(); revealObserver = null; }
+        // 再初期化(ページ遷移)時は前の監視を外して重複を防ぐ
+        stopReveal?.();
+        stopReveal = null;
         if (prefersReduced || !('IntersectionObserver' in window)) {
           // 演出オフ: 即表示（北極星=離脱防止）
           targets.forEach((el) => el.classList.add('is-visible'));
           return;
         }
-        let nextObserver: IntersectionObserver | null = null;
         try {
-          nextObserver = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                // 双方向: viewport に入れば表示、出れば元に戻す（上下どちらのスクロールでも毎回アニメ）
-                entry.target.classList.toggle('is-visible', entry.isIntersecting);
-              });
-            },
-            // threshold 0 + 下 12% マージンで、上端が入った時点で発火（早すぎ防止）
-            { threshold: 0, rootMargin: '0px 0px -12% 0px' }
-          );
-          targets.forEach((el) => nextObserver!.observe(el));
-          revealObserver = nextObserver;
+          stopReveal = observeReveal(targets);
           targets.forEach((el) => el.classList.add('reveal-ready'));
         } catch {
           // 一部だけ登録できた場合も、非表示に切り替えず本文を見えるままにする。
           targets.forEach((el) => el.classList.remove('reveal-ready'));
-          nextObserver?.disconnect();
-          revealObserver = null;
         }
       }
       // 初回 + View Transitions のページ遷移後にも再バインド

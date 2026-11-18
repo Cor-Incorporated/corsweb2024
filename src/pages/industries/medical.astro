@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import MedicalBody from '../../components/industry/MedicalBody.astro';
+import ProposalPage from '../../components/industry/ProposalPage.astro';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 
 const currentLocale = getCurrentLocale(Astro.url);
@@ -12,5 +12,5 @@ const t = getTranslations(currentLocale);
   title={t.meta.industryMedical.title}
   availableLocales={['ja', 'en', 'zh', 'ko', 'es']}
 >
-  <MedicalBody />
+  <ProposalPage industry="medical" />
 </Layout>

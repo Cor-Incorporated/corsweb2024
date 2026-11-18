@@ -1,7 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import NextStep from '../../components/common/NextStep.astro';
+import LbHeading from '../../components/common/LbHeading.astro';
+import LbText from '../../components/common/LbText.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
+import { getContactUrl } from '../../config/site';
 
 const locale = Astro.props.locale || getCurrentLocale(Astro.url);
 const t = getTranslations(locale);
@@ -11,18 +14,16 @@ const t = getTranslations(locale);
   description={t.meta.security.description}
   title={t.meta.security.title}
 >
-  <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+  <div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
     <div class="flex flex-col gap-4 pb-16 text-start sm:pb-20">
-      <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{t.security.title}</h1>
-      <p class="type-copy text-base italic text-primary-950/70 dark:text-primary-200/70">{t.security.tagline}</p>
+      <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={t.security.title} />
+      <LbText class="type-copy text-base italic sm:text-lg text-primary-950/70 dark:text-primary-200/70" text={t.security.tagline} />
     </div>
-    <div class="type-copy text-base leading-[1.8]">
-      <p class="mb-4">
-        {t.security.lead}
-      </p>
+    <div class="type-copy text-base leading-[1.8] sm:text-lg">
+      <LbText class="mb-4" text={t.security.lead} />
 
       <section>
-        <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{t.security.basicPolicy.title}</h2>
+        <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.basicPolicy.title} />
         {
           t.security.basicPolicy.note && (
             <p class="mb-6 rounded-md border border-primary-900/15 bg-primary-900/[0.03] px-4 py-3 text-sm dark:border-primary-300/15 dark:bg-primary-300/[0.04]">
@@ -32,13 +33,13 @@ const t = getTranslations(locale);
         }
         {
           Array.isArray(t.security.basicPolicy.preamble) &&
-            t.security.basicPolicy.preamble.map((para) => <p class="mb-4">{para}</p>)
+            t.security.basicPolicy.preamble.map((para) => <LbText class="mb-4" text={para} />)
         }
-        <h3 class="type-heading mb-4 mt-8 text-lg font-medium">{t.security.basicPolicy.guidelinesTitle}</h3>
+        <LbHeading as="h3" class="type-heading mb-4 mt-8 text-lg font-medium" text={t.security.basicPolicy.guidelinesTitle} />
         <ol class="list-outside list-decimal space-y-3 pl-6">
           {
             Array.isArray(t.security.basicPolicy.guidelines) &&
-              t.security.basicPolicy.guidelines.map((item) => <li>{item}</li>)
+              t.security.basicPolicy.guidelines.map((item) => <LbText as="li" text={item} />)
           }
         </ol>
         <div class="mt-8 text-end">
@@ -49,28 +50,28 @@ const t = getTranslations(locale);
         <p class="mt-6 text-sm text-primary-950/50 dark:text-primary-200/50">{t.security.basicPolicy.meta}</p>
       </section>
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{t.security.pillarsTitle}</h2>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.pillarsTitle} />
       <div class="flex flex-col gap-8">
         {
           Array.isArray(t.security?.pillars) && t.security.pillars.map((pillar) => (
             <div>
-              <h3 class="type-heading mb-2 text-lg font-medium">{pillar.title}</h3>
-              <p>{pillar.description}</p>
+              <LbHeading as="h3" class="type-heading mb-2 text-lg font-medium" text={pillar.title} />
+              <LbText text={pillar.description} />
             </div>
           ))
         }
       </div>
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{t.security.statusTitle}</h2>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.statusTitle} />
       <ul class="list-inside list-disc space-y-4">
-        <li>{t.security.status.legal}</li>
-        <li>{t.security.status.isms}</li>
+        <LbText as="li" text={t.security.status.legal} />
+        <LbText as="li" text={t.security.status.isms} />
       </ul>
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{t.security.aiTitle}</h2>
-      <p class="mb-4">{t.security.aiDescription}</p>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.aiTitle} />
+      <LbText class="mb-4" text={t.security.aiDescription} />
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{t.security.tableTitle}</h2>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.tableTitle} />
       <div class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm sm:text-base">
           <thead>
@@ -94,15 +95,21 @@ const t = getTranslations(locale);
         </table>
       </div>
 
-      <h2 class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl">{t.security.privacyTitle}</h2>
-      <p class="mb-4">
-        {t.security.privacyDescription}<span class="font-medium"><a href={getLocalizedUrl('/privacy', locale)}>{t.security.privacyLinkText}</a></span>{t.security.privacySuffix}
-      </p>
+      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.privacyTitle} />
+      <LbText
+        class="mb-4"
+        parts={[
+          { text: t.security.privacyDescription },
+          { text: t.security.privacyLinkText, href: getLocalizedUrl('/privacy', locale) },
+          { text: t.security.privacySuffix },
+        ]}
+      />
     </div>
   </div>
 
   <NextStep
     heading={t.nextStep.security.heading}
-    ctas={[{ label: t.nextStep.security.ctaLabel, href: getLocalizedUrl('/contact', locale), primary: true }]}
+    ctas={[{ label: t.nextStep.security.ctaLabel, href: getContactUrl(locale, { source: 'security' }), primary: true }]}
+    width="reading"
   />
 </Layout>

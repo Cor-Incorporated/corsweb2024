@@ -81,7 +81,23 @@ describe('ログは固定コードだけ', () => {
     }, '198.51.100.41'), ENV);
     expect(res.status).toBe(503);
     expectFixedLog(logs.lines());
-    expect(logs.lines()).toBe('contact-chat:llm_failed');
+    // この ENV には D1 の binding が無いので、1 日の上限を掛けずに呼んだことの記録が先に 1 行出る。
+    expect(logs.lines()).toBe('contact-chat:daily_cap_without_db\ncontact-chat:llm_failed');
+  });
+
+  it('LLM の設定が無いときのログに、本文も設定の名前も含めない', async () => {
+    const logs = captureLogs();
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const env = { ...ENV, VERTEX_GATEWAY_URL: '' } as Env;
+    const res = await worker.fetch(posted('/api/contact/chat', {
+      messages: [{ role: 'user', content: LEAK }],
+    }, '198.51.100.42'), env);
+    expect(res.status).toBe(503);
+    expectFixedLog(logs.lines());
+    expect(logs.lines()).toBe('contact-chat:llm_not_configured');
+    expect(logs.lines()).not.toContain('VERTEX_GATEWAY');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('メール送信失敗のログに本文を含めない', async () => {
