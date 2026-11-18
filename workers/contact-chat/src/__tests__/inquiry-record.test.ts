@@ -9,7 +9,7 @@ import { INQUIRY_CLASSIFICATION_VERSION } from '../inquiry-classification';
 import { industryPagePath } from '../inquiry-context';
 import worker from '../index';
 import { resetRateLimits } from '../security';
-import { getInquiryCaseCopySource } from '../storage';
+import { decryptText, getInquiryCaseCopySource } from '../storage';
 import type { Env, NotificationMessage } from '../types';
 
 afterEach(() => {
@@ -66,6 +66,20 @@ function post(path: string, body: unknown): Request {
       'cf-connecting-ip': `198.51.100.${ipCounter % 250}`,
     },
     body: JSON.stringify(body),
+  });
+}
+
+/** JSON.stringify が落とすキー（__proto__）を、リクエスト本文に残して送る。 */
+function postRaw(path: string, rawBody: string): Request {
+  ipCounter += 1;
+  return new Request(`https://cor-jp.com${path}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: 'https://cor-jp.com',
+      'cf-connecting-ip': `198.51.100.${ipCounter % 250}`,
+    },
+    body: rawBody,
   });
 }
 
@@ -485,9 +499,11 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     expect(Object.keys(lead)).not.toContain('freeNote');
     expect(lead.discoverySource).toBe('[redacted]');
     expect(lead.timingBudget).toBe('[redacted]');
-    // 長すぎる値は正規化（validate 500 字 → 保存時 redact 240 字）で丸まり、生の値は残らない
-    expect(String(lead.stage).length).toBeLessThanOrEqual(240);
-    expect(String(lead.stage)).not.toBe('あ'.repeat(600));
+    // 長すぎる値は正規化（validate 500 字 → 保存時 redact 240 字）で丸まる。
+    // 欄が無いと String(undefined) は "undefined" になり、上限の比較だけでは通る。
+    expect(lead.stage).not.toBeUndefined();
+    expect(lead.stage).toHaveLength(240);
+    expect(lead.stage).not.toBe('あ'.repeat(600));
   });
 
   it('会話が読めない submit でも、ブラウザの structuredLead の扱いは前と同じ', async () => {
@@ -563,5 +579,230 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     const mail = JSON.parse(String((resendCall as unknown as [string, RequestInit])[1].body)) as { to: string; text: string };
     expect(mail.to).toBe('info@cor-jp.com');
     expect(mail.text).toContain('流入経路: 知人の紹介');
+  });
+
+  it('session の空文字・null・空白だけの欄はブラウザの値で埋まり、数値・真偽値・オブジェクトは文字列のまま残る', async () => {
+    const db = openDatabase();
+    const { receiptId } = await runInquiry(testEnv(db), db, {
+      source: 'industry-medical',
+      modelText: JSON.stringify({
+        reply: '作業の種類を確認しました。時期の目安だけ教えてください。',
+        summary: '業務の整理の相談',
+        classification: 'genuine',
+        readyForContact: false,
+        // 空文字・null・空白は session に残らず、0・真偽値・オブジェクトは文字列になる。
+        structuredLead: {
+          purpose: '',
+          industryRole: null,
+          dataSensitivity: '   ',
+          stage: 0,
+          timingBudget: false,
+          discoverySource: { via: 'obj' },
+          contactReason: true,
+        },
+      }),
+      submitExtra: {
+        structuredLead: {
+          purpose: 'ブラウザの目的',
+          industryRole: 'ブラウザの役割',
+          dataSensitivity: 'ブラウザの感度',
+          stage: 'ブラウザの段階',
+          timingBudget: 'ブラウザの時期',
+          discoverySource: 'ブラウザの経路',
+          contactReason: 'ブラウザの理由',
+        },
+      },
+    });
+    const lead = intakeLead(db, receiptId);
+    expect(lead).toEqual({
+      purpose: 'ブラウザの目的',
+      industryRole: 'ブラウザの役割',
+      dataSensitivity: 'ブラウザの感度',
+      stage: '0',
+      timingBudget: 'false',
+      discoverySource: '[object Object]',
+      contactReason: 'true',
+    });
+  });
+
+  it('許可リスト外のキー・入れ子・配列・__proto__・constructor・prototype は保存されず prototype も汚れない', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'industry-medical');
+    await chatOnce(env, sessionId, 'industry-medical', modelJson('genuine'));
+    const leadJson = [
+      '{',
+      '"freeNote":"許可リスト外の欄",',
+      '"nested":{"inner":"入れ子の値"},',
+      '"items":["配列の値"],',
+      '"industryRole":{"title":"入れ子の役割"},',
+      '"discoverySource":"検索エンジン",',
+      '"__proto__":{"leadProtoPolluted":"yes"},',
+      '"constructor":{"prototype":{"leadProtoPolluted":"yes"}},',
+      '"prototype":{"leadProtoPolluted":"yes"}',
+      '}',
+    ].join('');
+    const outer = JSON.stringify({
+      sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です',
+      intent: 'contract-dev', source: 'industry-medical',
+    });
+    const rawBody = `${outer.slice(0, -1)},"structuredLead":${leadJson}}`;
+    expect(rawBody).toContain('"__proto__"');
+    expect(rawBody).toContain('"constructor"');
+    expect(rawBody).toContain('"prototype"');
+    expect(Object.prototype.hasOwnProperty('leadProtoPolluted')).toBe(false);
+
+    const submitted = await worker.fetch(postRaw('/api/contact/submit', rawBody), env);
+    expect(submitted.status).toBe(200);
+    const { receiptId } = await submitted.json() as { receiptId: string };
+    const raw = (db.prepare('SELECT structured_lead_json FROM submission_intake WHERE receipt_id = ?')
+      .get(receiptId) as { structured_lead_json: string }).structured_lead_json;
+    expect(raw).not.toContain('__proto__');
+    expect(raw).not.toContain('constructor');
+    expect(raw).not.toContain('prototype');
+    expect(raw).not.toContain('freeNote');
+    expect(raw).not.toContain('許可リスト外の欄');
+    expect(raw).not.toContain('入れ子の値');
+    expect(raw).not.toContain('配列の値');
+    expect(raw).not.toContain('入れ子の役割');
+    expect(raw).not.toContain('leadProtoPolluted');
+    const lead = JSON.parse(raw) as Record<string, unknown>;
+    const allowed = ['purpose', 'industryRole', 'dataSensitivity', 'stage', 'timingBudget', 'discoverySource', 'contactReason'];
+    for (const key of Object.keys(lead)) expect(allowed).toContain(key);
+    for (const value of Object.values(lead)) {
+      expect(typeof value).toBe('string');
+      expect(Array.isArray(value)).toBe(false);
+    }
+    // session の purpose が勝つ。空だった欄の入れ子は文字列になり、中身は残らない。
+    expect(lead).toEqual({
+      purpose: '業務の整理',
+      industryRole: '[object Object]',
+      discoverySource: '検索エンジン',
+    });
+    expect(Object.prototype.hasOwnProperty('leadProtoPolluted')).toBe(false);
+    expect('leadProtoPolluted' in {}).toBe(false);
+
+    const { receiptId: arrayId } = await runInquiry(env, db, {
+      source: 'industry-medical',
+      modelText: modelJson('genuine'),
+      submitExtra: { structuredLead: ['配列だけの送信', { inner: '入れ子だけの送信' }] },
+    });
+    const arrayRaw = (db.prepare('SELECT structured_lead_json FROM submission_intake WHERE receipt_id = ?')
+      .get(arrayId) as { structured_lead_json: string }).structured_lead_json;
+    expect(arrayRaw).not.toContain('配列だけの送信');
+    expect(arrayRaw).not.toContain('入れ子だけの送信');
+    expect(intakeLead(db, arrayId)).toEqual({ purpose: '業務の整理' });
+    expect('leadProtoPolluted' in {}).toBe(false);
+  });
+
+  it('600 字の値は欄が在ってちょうど 240 字になり、240 字の値はそのまま残る', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const exact = 'あ'.repeat(240);
+    const { receiptId: longId } = await runInquiry(env, db, {
+      source: 'industry-medical',
+      modelText: modelJson('genuine'),
+      submitExtra: { structuredLead: { stage: 'あ'.repeat(600) } },
+    });
+    const longLead = intakeLead(db, longId);
+    expect(longLead.stage).not.toBeUndefined();
+    expect(longLead.stage).toHaveLength(240);
+    expect(longLead.stage).toBe(exact);
+
+    const { receiptId: exactId } = await runInquiry(env, db, {
+      source: 'industry-medical',
+      modelText: modelJson('genuine'),
+      submitExtra: { structuredLead: { stage: exact } },
+    });
+    const exactLead = intakeLead(db, exactId);
+    expect(exactLead.stage).not.toBeUndefined();
+    expect(exactLead.stage).toHaveLength(240);
+    expect(exactLead.stage).toBe(exact);
+  });
+
+  it('伏せる前のメールアドレス・電話番号・600 字は社内メールと要約に出ない', async () => {
+    const rawEmail = 'hoge@example.com';
+    const rawPhone = '090-1234-5678';
+    const rawLong = 'あ'.repeat(600);
+    const db = openDatabase();
+    const sent: NotificationMessage[] = [];
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (String(url).includes('generateContent')) {
+        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: modelJson('genuine') }] } }] }), { status: 200 });
+      }
+      if (String(url).includes('api.resend.com')) {
+        return new Response(JSON.stringify({ id: 're_mock_lead_redact' }), { status: 200 });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const env = {
+      LLM_PROVIDER: 'vertex-gemini',
+      VERTEX_GATEWAY_URL: 'https://gateway.example/generateContent',
+      VERTEX_GATEWAY_SECRET: 'gateway-secret',
+      ANTHROPIC_API_KEY: '',
+      RESEND_API_KEY: 're_test',
+      TURNSTILE_SECRET: '',
+      CONTACT_TO_EMAIL: 'info@cor-jp.com',
+      CONTACT_FROM_EMAIL: 'noreply@cor-jp.com',
+      PII_ENCRYPTION_KEY: 'storage-secret',
+      PII_HMAC_KEY: 'hmac-secret',
+      DB: asD1(db),
+      CONTACT_NOTIFICATIONS: { send: async (message: NotificationMessage) => { sent.push(message); } },
+    } as unknown as Env;
+
+    const started = await worker.fetch(post('/api/contact/chat/start', {
+      start: true, event: 'intent_selected', intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+    }), env);
+    const { sessionId } = await started.json() as { sessionId: string };
+    await worker.fetch(post('/api/contact/chat', {
+      sessionId, intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+      messages: [{ role: 'user', content: '業務の整理を相談したい' }],
+    }), env);
+    const submitted = await worker.fetch(post('/api/contact/submit', {
+      sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です',
+      intent: 'contract-dev', source: 'industry-medical',
+      structuredLead: {
+        discoverySource: rawEmail,
+        timingBudget: rawPhone,
+        stage: rawLong,
+        freeNote: '許可リスト外の欄',
+      },
+    }), env);
+    expect(submitted.status).toBe(200);
+    const { receiptId } = await submitted.json() as { receiptId: string };
+    const stored = db.prepare('SELECT summary_ciphertext FROM submission_intake WHERE receipt_id = ?')
+      .get(receiptId) as { summary_ciphertext: string };
+    // 暗号文は base64（v1.）なので、メールの @ や電話の - がそのまま残っていれば平文の保存。
+    expect(stored.summary_ciphertext.startsWith('v1.')).toBe(true);
+    expect(stored.summary_ciphertext).not.toContain(rawEmail);
+    expect(stored.summary_ciphertext).not.toContain(rawPhone);
+    expect(stored.summary_ciphertext).not.toContain(rawLong);
+    const summary = await decryptText('storage-secret', stored.summary_ciphertext);
+    expect(summary).toBe('業務の整理の相談');
+    expect(summary).not.toContain(rawEmail);
+    expect(summary).not.toContain(rawPhone);
+    expect(summary).not.toContain(rawLong);
+
+    expect(sent[0]?.messageType).toBe('internal');
+    await worker.queue({
+      messages: [
+        { body: sent[0], ack() {}, retry() { throw new Error('internal should ack'); } },
+        { body: sent[1], ack() {}, retry() { throw new Error('receipt should ack'); } },
+      ],
+    } as unknown as MessageBatch<NotificationMessage>, env);
+    const resendCall = fetchMock.mock.calls.find((call) => String(call[0]).includes('api.resend.com')
+      && String((call[1] as RequestInit | undefined)?.body).includes('info@cor-jp.com'));
+    expect(resendCall).toBeTruthy();
+    const mail = JSON.parse(String((resendCall as unknown as [string, RequestInit])[1].body)) as { to: string; text: string };
+    expect(mail.to).toBe('info@cor-jp.com');
+    expect(mail.text).toContain('流入経路: [redacted]');
+    expect(mail.text).toContain('時期・予算: [redacted]');
+    expect(mail.text).toContain(`進捗段階: ${'あ'.repeat(240)}`);
+    expect(mail.text).toContain('業務の整理の相談');
+    expect(mail.text).not.toContain(rawEmail);
+    expect(mail.text).not.toContain(rawPhone);
+    expect(mail.text).not.toContain(rawLong);
+    expect(mail.text).not.toContain('許可リスト外の欄');
   });
 });
