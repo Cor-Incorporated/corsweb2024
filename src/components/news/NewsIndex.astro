@@ -5,6 +5,8 @@ import NewsCard from './NewsCard.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import { toCleanSlug } from '../../utils/content-i18n';
 import { safeJsonLd } from '../../utils/json-ld';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 // /news（ja）と /[lang]/news（非ja）で共有するニュース一覧本体。
 interface Props {
@@ -58,10 +60,8 @@ const countLabel = t.news.countTemplate
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
       {t.news.eyebrow}
     </p>
-    <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{t.news.title}</h1>
-    <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
-      {t.news.intro}
-    </p>
+    <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={t.news.title} />
+    <LbText class="type-copy max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.news.intro} />
     <a
       href={rssHref}
       class="type-action inline-flex w-fit items-center gap-2 text-sm text-primary-950/60 underline-offset-4 transition hover:text-primary-950 hover:underline dark:text-primary-200/60 dark:hover:text-primary-100"
@@ -92,7 +92,7 @@ const countLabel = t.news.countTemplate
     </ul>
   ) : (
     <div class="flex max-w-3xl flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 lg:max-w-content">
-      <p class="type-copy text-primary-950/70 dark:text-primary-200/70">{t.news.empty}</p>
+      <LbText class="type-copy max-w-[40em] text-primary-950/70 dark:text-primary-200/70" text={t.news.empty} />
       <a
         href={getLocalizedUrl('/blog', currentLocale)}
         class="type-action inline-flex w-fit items-center gap-1 text-sm text-primary-950/60 underline-offset-4 transition hover:text-primary-950 hover:underline dark:text-primary-200/60 dark:hover:text-primary-100"

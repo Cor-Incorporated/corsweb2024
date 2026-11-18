@@ -3,6 +3,8 @@ import type { CollectionEntry } from 'astro:content';
 import { getNewsCategoryLabel } from '../../config/news-categories';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import { DATE_LOCALES, toCleanSlug } from '../../utils/content-i18n';
+import LbClauses from '../common/LbClauses.astro';
+import LbText from '../common/LbText.astro';
 
 interface Props {
   entry: CollectionEntry<'news'>;
@@ -35,19 +37,17 @@ const formattedDate = new Date(data.publishedAt).toLocaleDateString(DATE_LOCALES
   </div>
 
   <div class="flex flex-1 flex-col gap-3">
-    <h2 class="type-heading text-lg font-medium tracking-tight">
+    <h2 class="lb-heading type-heading text-lg font-medium tracking-tight">
       <a
         href={href}
         target={isExternal ? '_blank' : undefined}
         rel={isExternal ? 'noopener noreferrer' : undefined}
         class="rounded-md outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-primary-500"
       >
-        {data.title}
+        <LbClauses text={data.title} />
       </a>
     </h2>
-    <p class="type-copy text-sm leading-6 text-primary-950/70 dark:text-primary-200/70">
-      {data.description}
-    </p>
+    <LbText class="type-copy text-sm leading-6 text-primary-950/70 dark:text-primary-200/70" text={data.description} />
   </div>
 
   <div class="mt-auto flex flex-wrap items-center gap-2 text-xs text-primary-950/50 dark:text-primary-200/50">

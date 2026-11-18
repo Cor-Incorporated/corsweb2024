@@ -247,6 +247,59 @@ export function buildReceiptBody(inquiry: NormalizedInquiry, receiptId: string):
   ].join('\n');
 }
 
+export interface DocumentNotice {
+  name: string;
+  email: string;
+  company: string;
+  industry: string;
+  documentId: string;
+  consentVersion: string;
+  receiptId: string;
+}
+
+/** 件名に氏名もメールも置かない。本文は社内通知だけ。資料を送ったとは書かない。 */
+export function buildDocumentRequestSubject(notice: DocumentNotice): string {
+  return `[資料請求] 受付 ${notice.receiptId}`;
+}
+
+export function buildDocumentRequestBody(notice: DocumentNotice): string {
+  return [
+    'cor-jp.com の資料請求を記録しました。',
+    'これは社内への連絡です。請求者へ資料は送っていません。送り方は未確定です。',
+    '',
+    `受付番号: ${notice.receiptId}`,
+    `資料ID: ${notice.documentId}`,
+    `業種: ${notice.industry || '(未選択)'}`,
+    `同意の版: ${notice.consentVersion}`,
+    `氏名: ${notice.name}`,
+    `メール: ${notice.email}`,
+    `会社名: ${notice.company || '(未記入)'}`,
+  ].join('\n');
+}
+
+export function createMockEmailProvider(): EmailProvider {
+  return {
+    async send() {
+      return { messageId: 'mock', deliveryStatus: 'accepted' };
+    },
+  };
+}
+
+export async function sendDocumentRequestEmail(
+  env: Env,
+  provider: EmailProvider,
+  notice: DocumentNotice,
+): Promise<EmailSendResult> {
+  return provider.send(
+    env.CONTACT_TO_EMAIL || 'cloudia@cor-jp.com',
+    env.CONTACT_FROM_EMAIL,
+    buildDocumentRequestSubject(notice),
+    buildDocumentRequestBody(notice),
+    notice.email,
+    getInternalCcRecipients(env),
+  );
+}
+
 /** 問い合わせ者本人へ送る受付確認。社内CC・返信先・社内分類は付与しない。 */
 export async function sendReceiptEmail(
   env: Env,

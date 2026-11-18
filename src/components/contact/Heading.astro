@@ -1,5 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -8,12 +10,15 @@ const t = getTranslations(currentLocale);
 <section class="py-16 sm:py-20">
   <div class="mx-auto max-w-2xl px-4 text-left sm:px-6 lg:max-w-content lg:px-8">
     <div class="flex flex-col gap-4 sm:gap-6">
-      <h1 class="max-w-3xl text-balance text-4xl font-medium tracking-tight sm:text-5xl lg:text-6xl lg:max-w-content">
-        {t.contact?.heading?.title ?? 'お問い合わせ'}
-      </h1>
-      <p class="max-w-2xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl lg:max-w-content">
-        {t.contact?.heading?.description ?? 'ご質問・ご相談・お見積もり依頼など、お気軽にご連絡ください。'}
-      </p>
+      <LbHeading
+        as="h1"
+        class="max-w-3xl text-balance text-4xl font-medium tracking-tight sm:text-5xl lg:text-6xl lg:max-w-content"
+        text={t.contact?.heading?.title ?? 'お問い合わせ'}
+      />
+      <LbText
+        class="max-w-[40em] text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl"
+        text={t.contact?.heading?.description ?? 'ご質問・ご相談・お見積もり依頼など、お気軽にご連絡ください。'}
+      />
     </div>
   </div>
 </section>

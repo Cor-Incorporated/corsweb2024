@@ -2,6 +2,9 @@
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import { ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+import LbHeading from '../common/LbHeading.astro';
+import LbClauses from '../common/LbClauses.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -32,12 +35,8 @@ const items = t.proof.items.map((item) => {
         >
           {t.proof.eyebrow}
         </p>
-        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
-          {t.proof.title}
-        </h2>
-        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
-          {t.proof.description}
-        </p>
+        <LbHeading as="h2" class="text-balance text-2xl font-medium tracking-tight sm:text-4xl" text={t.proof.title} />
+        <LbText class="max-w-[40em] text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg" text={t.proof.description} />
       </div>
       <ul class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         {
@@ -74,18 +73,18 @@ const items = t.proof.items.map((item) => {
                 />
               )}
               <div class="flex min-w-0 flex-col gap-1.5 sm:gap-2">
-                <h3 class="flex items-start justify-between gap-2 text-base font-medium tracking-tight sm:text-lg">
+                <h3 class="lb-heading flex items-start justify-between gap-2 text-base font-medium tracking-tight sm:text-lg">
                   <a
                     href={item.href}
                     target={item.external ? '_blank' : undefined}
                     rel={item.external ? 'noopener noreferrer' : undefined}
                     class="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                   >
-                    {item.title}
+                    <LbClauses text={item.title} />
                   </a>
                   <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">{item.external ? '↗' : '→'}</span>
                 </h3>
-                <p class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base">{item.body}</p>
+                <LbText class="text-pretty text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-base" text={item.body} />
               </div>
             </li>
           ))

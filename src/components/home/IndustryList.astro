@@ -1,5 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -15,12 +17,8 @@ const t = getTranslations(currentLocale);
         >
           {t.homeIndustries.eyebrow}
         </p>
-        <h2 class="text-balance text-2xl font-medium tracking-tight sm:text-4xl">
-          {t.homeIndustries.title}
-        </h2>
-        <p class="text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg">
-          {t.homeIndustries.description}
-        </p>
+        <LbHeading as="h2" class="text-balance text-2xl font-medium tracking-tight sm:text-4xl" text={t.homeIndustries.title} />
+        <LbText class="max-w-[40em] text-pretty text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg" text={t.homeIndustries.description} />
       </div>
       <ul class="border-t border-primary-900/20 dark:border-primary-300/20" data-reveal style="--reveal-delay:0.15s">
         {
@@ -33,9 +31,7 @@ const t = getTranslations(currentLocale);
                 {row.industry}
               </a>
               <span aria-hidden="true" class="text-[#2d4a6b] transition group-hover:translate-x-0.5 dark:text-[#7ba3cc] sm:order-last">→</span>
-              <p class="col-span-2 text-sm text-primary-950/70 dark:text-primary-200/70 sm:col-span-1 sm:text-base">
-                {row.theme}
-              </p>
+              <LbText class="col-span-2 text-sm text-primary-950/70 dark:text-primary-200/70 sm:col-span-1 sm:text-base" text={row.theme} />
             </li>
           ))
         }

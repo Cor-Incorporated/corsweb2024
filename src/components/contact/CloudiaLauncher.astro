@@ -436,3 +436,13 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
   // astro:page-load は初回ロードと ViewTransitions の各遷移後に必ず発火する。
   document.addEventListener('astro:page-load', initCloudiaLauncher);
 </script>
+
+<script>
+  import { installLauncherSubmitAnalytics } from './launcherSubmitAnalytics';
+
+  // ランチャー（iframe, ?embed=1）からの受付成功を、親ページの GA4 に 1 回だけ送る。
+  // 枠の中では gtag を読み込まないので、親が `contact_chat_submit_success` を代わりに送る。
+  // 受ける条件と送る項目は launcherSubmitAnalytics.ts が決める
+  // （intent は受ける条件にだけ使い、GA4 へは渡さない。個人情報は読まない）。
+  installLauncherSubmitAnalytics(document, window);
+</script>
