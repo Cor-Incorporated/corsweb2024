@@ -18,6 +18,8 @@ const SUCCESS = {
   receiptId: 'R-20261118-0001',
 };
 
+const EVENT = ['event', 'document_request_submit_success'];
+
 function html(industry = 'medical'): string {
   const options = ['', 'medical', 'shigyo', 'construction', 'manufacturing', 'education', 'other']
     .map((value) => `<option value="${value}"${value === industry ? ' selected' : ''}>${value}</option>`)
@@ -27,9 +29,6 @@ function html(industry = 'medical'): string {
       data-document-request
       action="/api/contact/document-request"
       method="post"
-      data-document-id="company-deck"
-      data-entry-surface="materials"
-      data-industries="medical,shigyo,construction,manufacturing,education"
       data-msg-success="受け付けました"
       data-msg-duplicate="受け付け済みです"
       data-msg-notify-pending="通知は後で送ります"
@@ -90,7 +89,7 @@ afterEach(() => {
 });
 
 describe('資料請求の計測 document_request_submit_success', () => {
-  it('保存成功（status stored と受付 ID）の応答のあと、1 回だけ送る', async () => {
+  it('保存成功（status stored と受付 ID）の応答のあと、イベント名だけで 1 回送る', async () => {
     const { gtag, fetchMock, submit } = mount();
     respond(fetchMock, SUCCESS);
     submit();
@@ -98,11 +97,8 @@ describe('資料請求の計測 document_request_submit_success', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(gtag).toHaveBeenCalledTimes(1);
-    expect(gtag).toHaveBeenCalledWith(
-      'event',
-      'document_request_submit_success',
-      expect.objectContaining({ document_id: 'company-deck' }),
-    );
+    // 2 引数だけ。document_id・industry・entry_surface などの第 3 引数は付けない。
+    expect(gtag.mock.calls[0]).toEqual(EVENT);
   });
 
   it('同じ受付 ID の 2 回目は送らない', async () => {
@@ -151,7 +147,7 @@ describe('資料請求の計測 document_request_submit_success', () => {
     expect(gtag).not.toHaveBeenCalled();
   });
 
-  it('送る項目は許可リスト（document_id・industry・entry_surface）だけ', async () => {
+  it('どの呼び出しにもフォームの値が出ない（引数はイベント名だけ）', async () => {
     const { gtag, fetchMock, submit } = mount('medical');
     respond(fetchMock, SUCCESS);
     submit();
@@ -159,30 +155,38 @@ describe('資料請求の計測 document_request_submit_success', () => {
 
     expect(gtag).toHaveBeenCalledTimes(1);
     const args = gtag.mock.calls[0];
-    expect(args[0]).toBe('event');
-    expect(args[1]).toBe('document_request_submit_success');
-    const params = args[2] as Record<string, unknown>;
-    expect(Object.keys(params).sort()).toEqual(['document_id', 'entry_surface', 'industry']);
-    expect(params).toEqual({
-      document_id: 'company-deck',
-      industry: 'medical',
-      entry_surface: 'materials',
-    });
+    expect(args).toEqual(EVENT);
+    expect(args).toHaveLength(2);
 
     const serialized = JSON.stringify(args);
-    for (const value of ['山田太郎', 'taro@example.com', '株式会社テスト', 'R-20261118-0001']) {
+    for (const value of [
+      '山田太郎',
+      'taro@example.com',
+      '株式会社テスト',
+      'R-20261118-0001',
+      'company-deck',
+      'materials',
+      'medical',
+      'discoverySource',
+      'discoveryOther',
+      'industry',
+      'company',
+      'email',
+      'name',
+      'consent',
+    ]) {
       expect(serialized).not.toContain(value);
     }
   });
 
-  it('5 業種に無い業種は空で送る', async () => {
+  it('業種を選んでも送る引数は変わらない', async () => {
     const { gtag, fetchMock, submit } = mount('other');
     respond(fetchMock, SUCCESS);
     submit();
     await flush();
 
     expect(gtag).toHaveBeenCalledTimes(1);
-    expect((gtag.mock.calls[0][2] as Record<string, unknown>).industry).toBe('');
+    expect(gtag.mock.calls[0]).toEqual(EVENT);
   });
 
   it('gtag が無い環境（本番以外）では何も送らず、画面の処理も壊さない', async () => {

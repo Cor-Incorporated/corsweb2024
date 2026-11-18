@@ -3,7 +3,6 @@ import { COMPANY_DECK_URL } from '../../config/site';
 import {
   DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX,
   DOCUMENT_REQUEST_DISCOVERY_SOURCES,
-  DOCUMENT_REQUEST_ID,
   DOCUMENT_REQUEST_INDUSTRIES,
   isDocumentRequestIndustry,
 } from '../../config/document-request';
@@ -55,9 +54,6 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
       action="/api/contact/document-request"
       accept-charset="UTF-8"
       data-document-request
-      data-document-id={DOCUMENT_REQUEST_ID}
-      data-entry-surface="materials"
-      data-industries={DOCUMENT_REQUEST_INDUSTRIES.join(',')}
       data-clarity-mask="true"
       data-msg-success={copy.success}
       data-msg-duplicate={copy.duplicate}
@@ -138,20 +134,16 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
     if (discovery) discovery.addEventListener('change', syncDiscoveryOther);
     syncDiscoveryOther();
     var sentReceipts = Object.create(null);
-    function track(data, industry) {
+    function track(data) {
       // 重複の再申込みでは送らない。受付 ID ごとに 1 回だけ。
       if (data.duplicate === true) return;
       if (!data.receiptId || sentReceipts[data.receiptId]) return;
       // 本番で gtag が読み込まれている時だけ。タグは Analytics.astro の既存のものを使う。
       if (typeof window.gtag !== 'function') return;
-      var industries = (form.getAttribute('data-industries') || '').split(',');
       sentReceipts[data.receiptId] = true;
       try {
-        window.gtag('event', 'document_request_submit_success', {
-          document_id: form.getAttribute('data-document-id') || '',
-          industry: industries.indexOf(industry) === -1 ? '' : industry,
-          entry_surface: form.getAttribute('data-entry-surface') || ''
-        });
+        // イベント名だけを送る。フォームの値・個人情報・固定の文字列は付けない。
+        window.gtag('event', 'document_request_submit_success');
       } catch (e) {}
     }
     form.addEventListener('submit', function (event) {
@@ -184,7 +176,7 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
         return response.json().catch(function () { return null; }).then(function (data) {
           var code = data && typeof data.error === 'string' ? data.error : '';
           var stored = (response.status === 200 || response.status === 202) && data && data.ok === true && data.status === 'stored' && typeof data.receiptId === 'string';
-          if (stored) track(data, body.industry);
+          if (stored) track(data);
           if (stored && data.delivered === false) {
             var lead = data.duplicate === true ? form.dataset.msgDuplicate : form.dataset.msgSuccess;
             var pending = data.notification === 'pending' ? ' ' + (form.dataset.msgNotifyPending || '') : '';
