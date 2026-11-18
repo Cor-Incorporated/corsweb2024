@@ -53,8 +53,8 @@ const countLabel = t.news.countTemplate
   .replace('{last}', String(page.lastPage));
 ---
 
-<main class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-7xl lg:px-8">
-  <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12">
+<main class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-content lg:px-8">
+  <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12 lg:max-w-content">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
       {t.news.eyebrow}
     </p>
@@ -77,7 +77,7 @@ const countLabel = t.news.countTemplate
   </div>
 
   {page.total > page.size && (
-    <p class="mb-8 max-w-3xl text-sm text-primary-950/50 dark:text-primary-200/50">
+    <p class="mb-8 max-w-3xl text-sm text-primary-950/50 dark:text-primary-200/50 lg:max-w-content">
       {countLabel}
     </p>
   )}
@@ -91,7 +91,7 @@ const countLabel = t.news.countTemplate
       ))}
     </ul>
   ) : (
-    <div class="flex max-w-3xl flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10">
+    <div class="flex max-w-3xl flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10 lg:max-w-content">
       <p class="type-copy text-primary-950/70 dark:text-primary-200/70">{t.news.empty}</p>
       <a
         href={getLocalizedUrl('/blog', currentLocale)}

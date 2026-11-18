@@ -75,7 +75,7 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
 <section class={`relative isolate flex items-center overflow-hidden pb-28 sm:pb-32 ${heroSpacing.section}`}>
   {/* 抽象モーション背景（装飾・読み上げ対象外）。prefers-reduced-motion で静止。 */}
   <div class="motion-bg" aria-hidden="true"></div>
-  <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 2xl:max-w-[90rem]">
+  <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8 2xl:max-w-content">
     <div class={`flex flex-col items-center text-center ${heroSpacing.column}`} data-hero-content>
       <p
         class={`font-medium uppercase text-primary-600 dark:text-primary-400 ${heroSpacing.kicker}`}
@@ -84,7 +84,7 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
       >
         {t.homeHero.kicker}
       </p>
-      <div class={`flex max-w-5xl flex-col items-center 2xl:max-w-7xl ${heroSpacing.titleBlock}`}>
+      <div class={`flex max-w-5xl flex-col items-center 2xl:max-w-content ${heroSpacing.titleBlock}`}>
         {/* 即描画(LCP死守)のため演出は付けない。サイズは heroTitleSizeClass が全て持つ（ベタ書きの
             text-[...] を足すと、後勝ちがクラス属性の順ではなく CSS の出力順で決まるため、無言で競合する）。 */}
         <h1

@@ -6,12 +6,12 @@ const t = getTranslations(getCurrentLocale(Astro.url));
 ---
 
 <section class="py-16 sm:py-20">
-  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+  <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     {/* 会社を語るページなので、福岡100選のエンブレムはここに縦型で置く（#304）。提供素材の縦型は
         横型より情報量が多く、余白のあるこのレイアウトに合う。lg 未満は縦積み（見出しが先）、
         lg 以上で右に添える。掲載条件（クリック遷移・2027年7月末の掲載期限）はコンポーネント側で担保。 */}
     <div class="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
-      <div class="flex max-w-3xl flex-col gap-6">
+      <div class="flex max-w-3xl flex-col gap-6 lg:max-w-content">
         <p class="text-sm font-medium uppercase tracking-wide text-primary-600 dark:text-primary-400">{t.aboutPage.kicker}</p>
         <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl lg:text-5xl" set:html={emphasizeKyousou(t.aboutPage.title)} />
         <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">

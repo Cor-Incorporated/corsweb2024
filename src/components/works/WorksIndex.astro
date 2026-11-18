@@ -38,15 +38,15 @@ const moreHref = t.works.moreHref.startsWith('/')
   : t.works.moreHref;
 ---
 
-<div class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-7xl lg:px-8">
-  <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12">
+<div class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-content lg:px-8">
+  <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12 lg:max-w-content">
     <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">{t.works.title}</h1>
     <p class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70">
       {t.works.intro}
     </p>
   </div>
 
-  <p class="type-copy mb-12 max-w-3xl text-sm text-primary-950/50 dark:text-primary-200/50">
+  <p class="type-copy mb-12 max-w-3xl text-sm text-primary-950/50 dark:text-primary-200/50 lg:max-w-content">
     {t.works.note}
   </p>
 

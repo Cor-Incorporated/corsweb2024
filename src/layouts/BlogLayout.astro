@@ -17,6 +17,7 @@ import CloudiaLauncher from '../components/contact/CloudiaLauncher.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
 import type { ArticleCitation } from '../utils/remark-article-sources';
 import { getCollection, type CollectionEntry } from 'astro:content';
+import '../styles/content-width.css';
 
 type BlogPostData = {
   title: string;
@@ -221,8 +222,8 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       [x-cloak] { display: none !important; }
       
       /* Blog specific styles */
-      .prose {
-        max-width: none;
+      main .prose {
+        max-width: var(--reading-width);
       }
 
       .prose :where(h1, h2, h3) {

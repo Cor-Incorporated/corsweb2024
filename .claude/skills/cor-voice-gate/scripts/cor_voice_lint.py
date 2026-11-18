@@ -67,7 +67,15 @@ RULES: tuple[Rule, ...] = (
     _rule("price", "warn", r"(?<![\d,，.])\d[\d,，.]*[ \t]*(万円|円)", "価格は資料にあるときだけ。Grift の料金は個別案内", "cor-voice §6"),
     _rule("ai_slop", "warn", r"シームレス|革新的|画期的|ご紹介します|解説します|見ていきましょう|いかがでしたか|寄り添|最大限に活用|と言えるでしょう", "AI の下書きで増えた言い回し。本人の書き方（短く言い切る、確かめた事実を書く）に寄せる", "cor-voice §3 / §4"),
     _rule("company_first_person", "warn", r"(?<![公滅下])(僕|私)(は|が|も|の|に|を|たち|達)", "会社として書く文章で「僕」「私」を使わない", "cor-voice §2", ("company",)),
+    # 代表個人の X だけ。X では本人・bot とも 0 本だったが、個人 LinkedIn の bot 投稿に出たため型として置く（2026-11-18 寺田決定）。
+    # founder（note など）には足さない
+    _rule("press_phrase", "warn", r"このたび|この度|いたしました|ご報告", "代表個人の X はプレスリリースの口調にしない（このたび／いたしました／ご報告）", "cor-voice §5B (2026-11-18 寺田決定)", ("founder-x",)),
 )
+
+# 代表個人の X の実測（2026-11-18、本人 2025-11〜2026-06 の 358 本・返信除く）:
+# 「。」3 個以上は本人 4 本・bot 8/8 本、URL 除く本文 140 字超は本人 5 本・bot 2/8 本
+SNS_MAX_KUTEN = 3
+SNS_MAX_CHARS = 140
 
 FIRST_PERSON = re.compile(r"(?<![公滅下])(僕|私)(?=は|が|も|の|に|を|たち|達|自身)")
 
@@ -552,13 +560,32 @@ MAX_PARAGRAPH_SENTENCES = 3.0
 
 def _length_hits(text: str, scene: str) -> list[Hit]:
     if scene == "founder-x":
-        return []
+        return _sns_hits(text)
     s = stats_text(text)
     hits = []
     if s["sentences"] >= 5 and s["sentence_len_mean"] > MAX_SENTENCE_MEAN:
         hits.append(Hit("long_sentences", "warn", 1, f"1 文の平均 {s['sentence_len_mean']} 字", f"1 文の平均が {MAX_SENTENCE_MEAN:g} 字を超えています（本人の記事は 17.8〜27.2 字）。長い文から見直す", "cor-voice §2"))
     if s["paragraphs"] >= 3 and s["paragraph_sentences_mean"] > MAX_PARAGRAPH_SENTENCES:
         hits.append(Hit("long_paragraphs", "warn", 1, f"1 段落の平均 {s['paragraph_sentences_mean']} 文", f"1 段落の平均が {MAX_PARAGRAPH_SENTENCES:g} 文を超えています（1 段落は 1〜3 文）", "cor-voice §2"))
+    return hits
+
+
+def sns_body(text: str) -> str:
+    """X の本文から、URL、返信の先頭の @宛先、改行を除いた文字列（2026-11-18 の実測と同じ数え方。空白は数える）。"""
+    _, body = strip_frontmatter(text)
+    body = re.sub(r"https?://\S+", "", body)
+    body = re.sub(r"\A\s*(?:@\w+\s+)+", "", body)
+    return body.replace("\r", "").replace("\n", "").strip()
+
+
+def _sns_hits(text: str) -> list[Hit]:
+    body = sns_body(text)
+    hits = []
+    kuten = body.count("。")
+    if kuten >= SNS_MAX_KUTEN:
+        hits.append(Hit("sns_kuten", "warn", 1, f"「。」{kuten} 個", f"「。」が {SNS_MAX_KUTEN} 個以上あります（本人の X はほぼ使わない）。言い切りの行を体言止めか改行に変える", "cor-voice §5B (2026-11-18 寺田決定)"))
+    if len(body) > SNS_MAX_CHARS:
+        hits.append(Hit("sns_length", "warn", 1, f"本文 {len(body)} 字（URL 除く）", f"URL を除いた本文が {SNS_MAX_CHARS} 字を超えています。記事かリプライに分ける（上限はおよそ 110 字）", "cor-voice §5B (2026-11-18 寺田決定)"))
     return hits
 
 

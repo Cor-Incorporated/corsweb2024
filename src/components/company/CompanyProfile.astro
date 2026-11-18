@@ -5,6 +5,8 @@
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import { ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL } from '../../config/site';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
+import LbHeading from '../common/LbHeading.astro';
+import LbText from '../common/LbText.astro';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -19,24 +21,18 @@ const relatedLinks = [
 ];
 ---
 
-<div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+<div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
   <div class="flex flex-col gap-4 pb-12 text-start sm:pb-16">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
       {c.kicker}
     </p>
-    <h1 class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl">
-      {c.title}
-    </h1>
-    <p class="type-copy text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-      {c.lead}
-    </p>
+    <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={c.title} />
+    <LbText class="type-copy text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70" text={c.lead} />
   </div>
 
   <section aria-labelledby="company-profile">
     <div class="flex flex-wrap items-baseline justify-between gap-2">
-      <h2 id="company-profile" class="type-heading text-xl font-medium sm:text-2xl">
-        {c.profileTitle}
-      </h2>
+      <LbHeading as="h2" id="company-profile" class="type-heading text-xl font-medium sm:text-2xl" text={c.profileTitle} />
       <p class="text-sm text-primary-950/60 dark:text-primary-200/60">{c.asOf}</p>
     </div>
     <dl class="mt-6 divide-y divide-primary-900/15 border-y border-primary-900/15 dark:divide-primary-300/15 dark:border-primary-300/15">
@@ -52,21 +48,17 @@ const relatedLinks = [
   </section>
 
   <section id="business" aria-labelledby="company-business" class="mt-16 scroll-mt-24">
-    <h2 id="company-business" class="type-heading text-xl font-medium sm:text-2xl">
-      {c.businessTitle}
-    </h2>
-    <p class="mt-4 text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70">
-      {c.businessLead}
-    </p>
+    <LbHeading as="h2" id="company-business" class="type-heading text-xl font-medium sm:text-2xl" text={c.businessTitle} />
+    <LbText class="mt-4 text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg" text={c.businessLead} />
     <ol class="mt-6 flex flex-col gap-4">
       {
         c.business.map((item) => (
           <li class="rounded-3xl bg-primary-500/10 p-6 dark:bg-primary-400/10">
-            <h3 class="text-lg font-medium tracking-tight">{item.name}</h3>
+            <LbHeading as="h3" class="text-lg font-medium tracking-tight" text={item.name} />
             {item.tagline && (
-              <p class="mt-1 text-base font-medium text-primary-700 dark:text-primary-300">{item.tagline}</p>
+              <LbText class="mt-1 text-base font-medium text-primary-700 sm:text-lg dark:text-primary-300" text={item.tagline} />
             )}
-            <p class="mt-3 text-base leading-relaxed">{item.description}</p>
+            <LbText class="mt-3 text-base leading-relaxed sm:text-lg" text={item.description} />
             <p class="mt-3 text-sm leading-relaxed text-primary-950/70 dark:text-primary-200/70">{item.status}</p>
           </li>
         ))
@@ -75,10 +67,8 @@ const relatedLinks = [
   </section>
 
   <section aria-labelledby="company-security" class="mt-16">
-    <h2 id="company-security" class="type-heading text-xl font-medium sm:text-2xl">
-      {c.securityTitle}
-    </h2>
-    <p class="mt-4 text-base leading-relaxed">{c.securityBody}</p>
+    <LbHeading as="h2" id="company-security" class="type-heading text-xl font-medium sm:text-2xl" text={c.securityTitle} />
+    <LbText class="mt-4 text-base leading-relaxed sm:text-lg" text={c.securityBody} />
     <p class="mt-3 text-sm">
       <a
         href={getLocalizedUrl('/security', currentLocale)}
@@ -90,9 +80,7 @@ const relatedLinks = [
   </section>
 
   <section aria-labelledby="company-recognition" class="mt-16">
-    <h2 id="company-recognition" class="type-heading text-xl font-medium sm:text-2xl">
-      {c.recognitionTitle}
-    </h2>
+    <LbHeading as="h2" id="company-recognition" class="type-heading text-xl font-medium sm:text-2xl" text={c.recognitionTitle} />
     <ul class="mt-6 flex flex-col gap-4">
       {/* カード全体をクリックできるように、短いリンク（見出し）の ::after をカードいっぱいに広げる。
           エンブレム自体のリンク（掲載条件。行き先は同じ特設ページ）は前面に置く。 */}
@@ -116,7 +104,7 @@ const relatedLinks = [
             </a>
             <span aria-hidden="true" class="mt-0.5 shrink-0 text-primary-600 transition group-hover:translate-x-0.5 dark:text-primary-400">↗</span>
           </h3>
-          <p class="text-base leading-relaxed">{c.fukuoka100Body}</p>
+          <LbText class="text-base leading-relaxed sm:text-lg" text={c.fukuoka100Body} />
         </div>
       </li>
       <li class="group relative flex flex-col gap-4 rounded-3xl bg-primary-500/10 p-6 transition duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-primary-400/10 sm:flex-row sm:items-start">
@@ -132,7 +120,7 @@ const relatedLinks = [
           />
         </span>
         <div class="flex flex-col gap-2">
-          <p class="text-base leading-relaxed">{c.engineerCafeBody}</p>
+          <LbText class="text-base leading-relaxed sm:text-lg" text={c.engineerCafeBody} />
           <p class="flex items-center gap-1 text-sm">
             <a
               href={getLocalizedUrl(ENGINEER_CAFE_CASE_PATH, currentLocale)}
@@ -148,7 +136,7 @@ const relatedLinks = [
   </section>
 
   <nav aria-labelledby="company-links" class="mt-16 border-t border-primary-900/15 pt-8 dark:border-primary-300/15">
-    <h2 id="company-links" class="text-base font-medium">{c.linksTitle}</h2>
+    <LbHeading as="h2" id="company-links" class="text-base font-medium" text={c.linksTitle} />
     <ul class="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
       {
         relatedLinks.map((link) => (

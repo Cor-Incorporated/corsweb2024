@@ -1,0 +1,22 @@
+---
+// 業種の提案ページの題（h1〜h3・CTA の見出し）。読点・句点の後でだけ塊に分ける（R1）。
+// 字数を等分する折り方（text-wrap: balance）は CSS の .lb-heading で止める。
+import { getCurrentLocale } from '../../utils/i18n';
+import { groupClauses } from '../../utils/line-breaks';
+
+interface Props {
+  text: string;
+  as?: 'h1' | 'h2' | 'h3';
+  class?: string;
+}
+
+const { text, as: Tag = 'h2', class: className } = Astro.props;
+const locale = getCurrentLocale(Astro.url);
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const html = groupClauses([{ text }], locale)
+  .map((clause) => `<span class="lb-clause">${clause.map((part) => escapeHtml(part.text)).join('')}</span>`)
+  .join('');
+const classes = `${className ?? ''} lb-heading`.trim();
+---
+<Tag class={classes}><Fragment set:html={html} /></Tag>

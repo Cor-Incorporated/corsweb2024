@@ -21,7 +21,7 @@ const secondaryHref = getContactUrl(currentLocale, {
   <!-- 1. Hero -->
   <section class="relative isolate flex min-h-[70vh] items-center overflow-hidden py-20 sm:py-28">
     <div class="motion-bg" aria-hidden="true"></div>
-    <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
       <div class="flex flex-col items-start gap-8 text-left sm:gap-10">
         <p
           class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
@@ -30,7 +30,7 @@ const secondaryHref = getContactUrl(currentLocale, {
         >
           {page.hero.eyebrow}
         </p>
-        <div class="flex max-w-4xl flex-col items-start gap-6 sm:gap-8">
+        <div class="flex max-w-4xl flex-col items-start gap-6 sm:gap-8 lg:max-w-content">
           <h1
             class="text-balance text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl"
             data-reveal
@@ -39,7 +39,7 @@ const secondaryHref = getContactUrl(currentLocale, {
             {page.hero.title}
           </h1>
           <p
-            class="max-w-3xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl"
+            class="max-w-3xl text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl lg:max-w-content"
             data-reveal
             style="--reveal-delay:0.2s"
           >
@@ -52,9 +52,9 @@ const secondaryHref = getContactUrl(currentLocale, {
 
   <!-- 2. Challenges -->
   <section class="py-24 sm:py-32">
-    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
       <div class="flex flex-col gap-10 sm:gap-12">
-        <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+        <div class="flex max-w-3xl flex-col gap-4 lg:max-w-content" data-reveal>
           <p
             class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400"
           >
@@ -86,9 +86,9 @@ const secondaryHref = getContactUrl(currentLocale, {
 
   <!-- 3. Support -->
   <section class="bg-[#1b2c40] py-24 sm:py-32">
-    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
       <div class="flex flex-col gap-10 sm:gap-12">
-        <div class="flex max-w-3xl flex-col gap-4" data-reveal>
+        <div class="flex max-w-3xl flex-col gap-4 lg:max-w-content" data-reveal>
           <p
             class="text-sm font-medium uppercase tracking-widest text-[#7ba3cc]"
           >
@@ -133,12 +133,12 @@ const secondaryHref = getContactUrl(currentLocale, {
 
   <!-- 4. CTA（診断 / ローカルLLM PoC） -->
   <section class="py-24 sm:py-32">
-    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
       <div
         class="flex flex-col items-center gap-8 rounded-3xl bg-[#2d4a6b] px-6 py-16 text-center text-white sm:px-12 sm:py-20"
         data-reveal
       >
-        <div class="flex max-w-2xl flex-col gap-4">
+        <div class="flex max-w-2xl flex-col gap-4 lg:max-w-content">
           <h2 class="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
             {page.cta.title}
           </h2>

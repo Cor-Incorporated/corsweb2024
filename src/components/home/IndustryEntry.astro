@@ -23,7 +23,7 @@ const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIn
   <p class="text-xs font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400 sm:text-sm">
     {t.homeIndustries.eyebrow}
   </p>
-  <ul class="flex max-w-3xl flex-wrap justify-center gap-1.5 sm:gap-2">
+  <ul class="flex max-w-3xl flex-wrap justify-center gap-1.5 sm:gap-2 lg:max-w-content">
     {
       rows.map((row) => (
         <li>
