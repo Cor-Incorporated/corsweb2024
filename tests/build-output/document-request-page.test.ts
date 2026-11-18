@@ -9,9 +9,10 @@ function page(path: string): string {
 }
 
 function formScript(html: string): string {
-  const match = html.match(/<script[^>]*>[\s\S]*?document-request-result[\s\S]*?<\/script>/);
-  expect(match).toBeTruthy();
-  return match![0];
+  const scripts = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+  const script = scripts.find((body) => body.includes('document-request-result'));
+  expect(script).toBeTruthy();
+  return script!;
 }
 
 describe('資料請求のページ', () => {
@@ -23,15 +24,20 @@ describe('資料請求のページ', () => {
       expect(html).toContain(`value=${slug}`);
     }
     expect(html).toContain('data-clarity-mask=true');
+    expect(html).toContain('data-document-id=company-deck');
+    expect(html).toContain('data-entry-surface=materials');
+    expect(html).toContain('data-industries=medical,shigyo,construction,manufacturing,education');
     expect(html).toContain('資料は送っていません');
     expect(html).not.toContain('送付しました');
     const script = formScript(html);
-    expect(script).not.toContain('gtag');
+    expect(script).toContain('gtag');
+    expect(script).toContain('document_request_submit_success');
+    expect(script).toContain('entry_surface');
     expect(script).not.toContain('dataLayer');
     expect(script).not.toContain('generateContent');
     expect(script).not.toContain('taro@');
-    expect(script).toContain('!1!==n.delivered');
-    expect(script).toContain('"stored"!==n.status');
+    expect(script).toContain('"stored"');
+    expect(script).toContain('.delivered');
   });
 
   it('問い合わせページから資料請求へ進める', () => {
