@@ -65,7 +65,9 @@ main() {
   [ -n "$SERVICE" ] || die "--service が要る"
   [ -n "$DATE" ] || die "--date が要る"
   [ -f "$SERVICES_JSON" ] || die "読めないファイル（観測: ${SERVICES_JSON}）"
-  jq -e . "$SERVICES_JSON" >/dev/null 2>&1 || die "JSON として読めない（観測: ${SERVICES_JSON}）"
+  # jq -e は最後の値が null や false だと exit 1 になる。services が null でも JSON としては読める。
+  # null は下で「オブジェクトでない」として closed にする（fail closed）。exit 64 は壊れた JSON だけ。
+  jq . "$SERVICES_JSON" >/dev/null 2>&1 || die "JSON として読めない（観測: ${SERVICES_JSON}）"
 
   # 判定は jq だけで行う。形の違う行は "MALFORMED: ..." を返し、下で closed + exit 0 にする。
   # 使い方の誤り（--date）は "STOP: ..." のまま残し、下で exit 64 にする。

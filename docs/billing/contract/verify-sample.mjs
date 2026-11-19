@@ -16,15 +16,18 @@
 //
 //   --case <名前>      陽性: positive / 陰性: bad-signature expired not-yet wrong-iss wrong-azp
 //                      no-org wrong-org sts-pending bad-version
+//                      日付: jst-date / 権利: held missing-service services-null
 //   --issuer <url>     設定に置く iss（既定: https://clerk.example.test）
 //   --azp <url,url>    azp の許可リスト（カンマ区切り。既定: https://bd.example.test）
 //   --org-id <id>      そのサービスのテナントに結んだ Clerk の組織の id（既定: org_test_configured）
 //   --date YYYY-MM-DD  judge.sh に渡す日本時間の日付（既定: 日本時間の今日）
+//   --instant <時刻>   --case jst-date のときだけ。UTC の ISO 8601（末尾 Z）
 //   --judge <path>     判定の見本（既定: このファイルと同じディレクトリの judge.sh）
 //
 // 出力（標準出力）:
 //   TOKEN accepted iss=… azp=… sub=… org_id=… services=<サービス名を , で>
 //   JUDGE <サービス> <結果>      … cor_svc のサービスごとに 1 行
+//   JST YYYY-MM-DD               … --case jst-date（トークンは作らない）
 //   拒否したときは REJECT <理由の符号> を 1 行（理由は標準エラーにも出す）
 //
 // 終了コード: 0 = 受け入れた / 3 = 拒否した（R1・R2 のどれかが成り立たない）/ 64 = 使い方の誤り
@@ -48,10 +51,14 @@ const CASES = new Map([
   ['wrong-org', 'o.id が設定の組織と違う'],
   ['sts-pending', 'sts が pending'],
   ['bad-version', 'v が 2 でない'],
+  ['jst-date', '日本時間の日付の境目（UTC の時刻を日本時間の日付にする。トークンは作らない）'],
+  ['held', 'hold が true の行と、終わりの無い行'],
+  ['missing-service', 'cor_svc に無いサービスは閉じる'],
+  ['services-null', 'cor_svc が null（オブジェクトでないので閉じる）'],
 ]);
 
-const USAGE = `使い方: node verify-sample.mjs --case <名前> [--date YYYY-MM-DD] [--issuer <url>] [--azp <url,url>] [--org-id <id>] [--judge <path>]
---case は ${[...CASES.keys()].join(' / ')} のどれか。`;
+const USAGE = `使い方: node verify-sample.mjs --case <名前> [--date YYYY-MM-DD] [--instant <UTC>] [--issuer <url>] [--azp <url,url>] [--org-id <id>] [--judge <path>]
+--case は ${[...CASES.keys()].join(' / ')} のどれか。--instant は --case jst-date のときだけ（UTC の ISO 8601、末尾 Z）。`;
 
 function die(message) {
   process.stderr.write(`STOP: ${message}\n`);
@@ -70,6 +77,7 @@ function parseArgs(argv) {
     azp: 'https://bd.example.test',
     orgId: 'org_test_configured',
     date: '',
+    instant: '',
     judge: path.join(HERE, 'judge.sh'),
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -85,6 +93,7 @@ function parseArgs(argv) {
       case '--azp': opts.azp = needValue(); break;
       case '--org-id': opts.orgId = needValue(); break;
       case '--date': opts.date = needValue(); break;
+      case '--instant': opts.instant = needValue(); break;
       case '--judge': opts.judge = needValue(); break;
       case '-h':
       case '--help':
@@ -101,10 +110,23 @@ function parseArgs(argv) {
   return opts;
 }
 
+// 日本時間は UTC+9 固定（夏時間が無い）。9 時間足した UTC の日付が、日本時間の日付になる。
+function jstCalendarDate(epochMs) {
+  return new Date(epochMs + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 function todayJst() {
-  const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return jst.toISOString().slice(0, 10);
+  return jstCalendarDate(Date.now());
+}
+
+function printJstDate(instant) {
+  if (!instant) usageDie('--case jst-date には --instant が要る（UTC の ISO 8601、末尾は Z）');
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(instant)) {
+    usageDie(`--instant は UTC の ISO 8601（末尾 Z。観測: ${instant}）`);
+  }
+  const ms = Date.parse(instant);
+  if (Number.isNaN(ms)) usageDie(`--instant を時刻として読めない（観測: ${instant}）`);
+  process.stdout.write(`JST ${jstCalendarDate(ms)}\n`);
 }
 
 function b64u(value) {
@@ -184,9 +206,52 @@ function buildClaims(opts) {
     case 'wrong-org': claims.o = { ...claims.o, id: 'org_other' }; break;
     case 'sts-pending': claims.sts = 'pending'; break;
     case 'bad-version': claims.v = 1; break;
-    default: break; // positive と bad-signature は claim を変えない（bad-signature は鍵だけ変える）
+    case 'held':
+      claims.cor_svc = {
+        'business-dossier': { from: '2026-12-01', until: '2026-12-31', hold: true },
+        xesm: { from: '2026-12-01', until: null, hold: false },
+      };
+      break;
+    case 'missing-service':
+      claims.cor_svc = {
+        'business-dossier': { from: '2026-12-01', until: null, hold: false },
+      };
+      break;
+    case 'services-null':
+      claims.cor_svc = null;
+      break;
+    default: break; // positive と bad-signature と jst-date は claim を変えない（jst-date はトークンを作らない）
   }
   return claims;
+}
+
+function judgePlan(caseName, rawServices) {
+  const services = rawServices && typeof rawServices === 'object' ? rawServices : {};
+  const displayNames = Object.keys(services).sort();
+  if (caseName === 'services-null') {
+    return { services: null, displayNames, judgeNames: ['xesm'] };
+  }
+  if (caseName === 'missing-service') {
+    return { services, displayNames, judgeNames: ['business-dossier', 'xesm'] };
+  }
+  return { services, displayNames, judgeNames: displayNames };
+}
+
+function writeJudgements(opts, claims, date) {
+  const plan = judgePlan(opts.caseName, claims.cor_svc);
+  if (plan.displayNames.length === 0) {
+    process.stdout.write('NOTE cor_svc が無い（services の行が 1 つも無い。判定は全部 closed になる）\n');
+  }
+  const shown = plan.displayNames.length ? plan.displayNames.join(',') : '（なし）';
+  process.stdout.write(`TOKEN accepted iss=${claims.iss} azp=${claims.azp} sub=${claims.sub} org_id=${claims.o.id} services=${shown}\n`);
+  for (const name of plan.judgeNames) {
+    const judged = runJudge(opts.judge, plan.services, name, date);
+    if (!judged.ok) die(`${name} の判定で止まった: ${judged.message}`);
+    if (!['open', 'view_only', 'read_export_only', 'closed'].includes(judged.value)) {
+      die(`判定の値が 4 つのどれでもない（観測: ${judged.value}）`);
+    }
+    process.stdout.write(`JUDGE ${name} ${judged.value}\n`);
+  }
 }
 
 function runJudge(judgePath, services, service, date) {
@@ -208,6 +273,11 @@ function runJudge(judgePath, services, service, date) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
+  if (opts.caseName === 'jst-date') {
+    printJstDate(opts.instant);
+    return;
+  }
+  if (opts.instant) usageDie('--instant は --case jst-date だけで使う');
   const date = opts.date || todayJst();
   if (!fs.existsSync(opts.judge)) usageDie(`判定の見本が無い（観測: ${opts.judge}）`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) usageDie(`日付が YYYY-MM-DD でない（観測: ${date}）`);
@@ -234,19 +304,7 @@ function main() {
     process.exit(3);
   }
 
-  const services = result.claims.cor_svc && typeof result.claims.cor_svc === 'object' ? result.claims.cor_svc : {};
-  const names = Object.keys(services).sort();
-  if (names.length === 0) process.stdout.write('NOTE cor_svc が無い（services の行が 1 つも無い。判定は全部 closed になる）\n');
-  process.stdout.write(`TOKEN accepted iss=${result.claims.iss} azp=${result.claims.azp} sub=${result.claims.sub} org_id=${result.claims.o.id} services=${names.length ? names.join(',') : '（なし）'}\n`);
-
-  for (const name of names) {
-    const judged = runJudge(opts.judge, services, name, date);
-    if (!judged.ok) die(`${name} の判定で止まった: ${judged.message}`);
-    if (!['open', 'view_only', 'read_export_only', 'closed'].includes(judged.value)) {
-      die(`判定の値が 4 つのどれでもない（観測: ${judged.value}）`);
-    }
-    process.stdout.write(`JUDGE ${name} ${judged.value}\n`);
-  }
+  writeJudgements(opts, result.claims, date);
 }
 
 main();
