@@ -660,6 +660,26 @@
       "service": "xesm",
       "d": "2026-12-01",
       "expect": "closed"
+    },
+    {
+      "id": "v62-services-null",
+      "tags": ["services_not_object"],
+      "note": "services が null。オブジェクトでないので、空のオブジェクト（行が無い）とは違い、判定表の前に閉じる",
+      "malformed": true,
+      "services": null,
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
+    },
+    {
+      "id": "v68-services-false",
+      "tags": ["services_not_object"],
+      "note": "services が false。null と同じく、オブジェクトでないので判定表の前に閉じる",
+      "malformed": true,
+      "services": false,
+      "service": "xesm",
+      "d": "2026-12-01",
+      "expect": "closed"
     }
   ]
 }
