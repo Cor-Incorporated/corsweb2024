@@ -2021,6 +2021,8 @@
       "legal": "Legal Notice",
       "company": "Company Profile"
     },
+    "commonLinksLabel": "Common links",
+    "sitesLabel": "Sites",
     "description": "Cor.Inc. is a Fukuoka-based AI implementation company built around local LLMs, our own product Grift, and AI contract development — and we also help create opportunities for learning and community in the region."
   },
   "header": {

@@ -1,0 +1,68 @@
+{
+  "version": 2,
+  "organization": {
+    "ja": "Cor.株式会社",
+    "en": "Cor.Inc.",
+    "zh": "Cor.株式会社",
+    "ko": "Cor.주식회사",
+    "es": "Cor.Inc."
+  },
+  "commonLinks": [
+    {
+      "id": "privacy",
+      "label": {
+        "ja": "プライバシー",
+        "en": "Privacy",
+        "zh": "隐私",
+        "ko": "개인정보처리방침",
+        "es": "Privacidad"
+      },
+      "href": {
+        "ja": "https://cor-jp.com/privacy/",
+        "en": "https://cor-jp.com/en/privacy/",
+        "zh": "https://cor-jp.com/zh/privacy/",
+        "ko": "https://cor-jp.com/ko/privacy/",
+        "es": "https://cor-jp.com/es/privacy/"
+      }
+    },
+    {
+      "id": "tokushoho",
+      "label": {
+        "ja": "特定商取引法表記",
+        "en": "Legal Notice",
+        "zh": "法律声明",
+        "ko": "법적 고지",
+        "es": "Aviso Legal"
+      },
+      "href": {
+        "ja": "https://cor-jp.com/legal/tokushoho/",
+        "en": "https://cor-jp.com/en/legal/tokushoho/",
+        "zh": "https://cor-jp.com/zh/legal/tokushoho/",
+        "ko": "https://cor-jp.com/ko/legal/tokushoho/",
+        "es": "https://cor-jp.com/es/legal/tokushoho/"
+      }
+    },
+    {
+      "id": "security",
+      "label": {
+        "ja": "セキュリティ",
+        "en": "Security",
+        "zh": "安全",
+        "ko": "보안",
+        "es": "Seguridad"
+      },
+      "href": {
+        "ja": "https://cor-jp.com/security/",
+        "en": "https://cor-jp.com/en/security/",
+        "zh": "https://cor-jp.com/zh/security/",
+        "ko": "https://cor-jp.com/ko/security/",
+        "es": "https://cor-jp.com/es/security/"
+      }
+    }
+  ],
+  "sites": [
+    { "id": "cor", "label": "Cor.", "href": "https://cor-jp.com/" },
+    { "id": "grift", "label": "Grift", "href": "https://griftai.org/" },
+    { "id": "cloudia", "label": "Cloudia", "href": "https://cor-jp.com/contact/chat/" }
+  ]
+}

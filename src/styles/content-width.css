@@ -76,3 +76,15 @@ h3.lb-heading,
 .lb-sentence + br {
   display: none;
 }
+
+/* header が sticky になったため、ページ内の先（#anchor）へ飛ぶときに見出しを隠さないための空き。
+   header の高さ（1024px 未満 56px・以上 64px）+ 8px。Header.astro の bar の高さと合わせる。 */
+html {
+  scroll-padding-top: 4rem;
+}
+
+@media (min-width: 1024px) {
+  html {
+    scroll-padding-top: 4.5rem;
+  }
+}
