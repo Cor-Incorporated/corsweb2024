@@ -450,7 +450,7 @@ const NO_SESSION_CONTEXT: InquiryRecordContext = {
  * submit の時に、サーバー側の会話の状態で問い合わせを組み直す。
  * 要約・構造化の欄・分類・業種・path はブラウザが送った値で置き換えさせない。
  * ただし session の lead に値が無い欄（会話の抽出が取りこぼした項目）だけは、
- * 正規化を通したブラウザの structuredLead で埋める（2026-11-18 統括判断）。
+ * 正規化を通したブラウザの structuredLead で埋める。
  * 会話が見つからないときは構造化の欄だけで要約を作り、分類は unknown（no_session）にする。
  */
 async function readTrustedInquiry(

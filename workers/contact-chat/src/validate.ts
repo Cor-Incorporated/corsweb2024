@@ -193,8 +193,8 @@ export function normalizeStructuredLead(raw: unknown): StructuredLead {
 
 /**
  * submit の組み直し用。session の lead の値が常に勝ち、session に値が無い欄だけ、
- * ブラウザが送った structuredLead で埋める（2026-11-18 統括判断: 取りこぼしを
- * 受け取る側で拾う）。埋める値は normalizeStructuredLead の許可リスト・長さ上限を
+ * ブラウザが送った structuredLead で埋める。取りこぼしを受け取る側で拾う。
+ * 埋める値は normalizeStructuredLead の許可リスト・長さ上限を
  * もう一度必ず通すので、許可リスト外の欄は捨てる。メール・電話らしき値は
  * 保存時の redactStructuredLead とメール境界の maskSensitiveContent で伏せる。
  */
