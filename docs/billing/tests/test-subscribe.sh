@@ -533,6 +533,23 @@ printf '%s' "$LOG" | grep -q '^STDIN_AUTH no' && ng "標準入力に鍵の無い
 eq "Clerk の state に xesm が入った" "$(clerk_state | jq -r '.services.xesm.from')" "$LAST-15"
 printf '%s' "$OUT" | grep -qF 'until の null は Clerk の deep merge でキーを消す' && ok "until の null がキーを消すことを NOTE で出す" || ng "until の NOTE が無い: $OUT"
 eq "until の無い契約では until のキーが残らない（from と hold）" "$(clerk_state | jq -r '.services.xesm | has("until")')" "false"
+# 終了日の書いてある契約（cancel の後）は、until に終了日を写す（ADR-0028 の 2 節: until は終了日）
+END_META="$(jq -c '. + {contract_xesm_end: "2027-04-05"}' <<<"$CLERK_META")"
+FAKE_CUST_META="$END_META" run clerk-sync --customer cus_x --mode test
+printf '%s' "$OUT" | grep -qF 'PLAN services.xesm from='"$LAST"'-15 until=2027-04-05 hold=false' \
+  && ok "終了日の書いてある契約は until に終了日を出す" || ng "dry-run の until が違う: $OUT"
+printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":"2027-04-05","hold":false}' \
+  && ok "dry-run の JSON の until は終了日" || ng "dry-run の JSON の until が違う: $OUT"
+rm -f "$WORK/log.clerk"
+FAKE_CUST_META="$END_META" run clerk-sync --customer cus_x --mode test --apply
+expect "終了日の書いてある契約も apply できる" 0 0 'SENT clerk org_x: services を送った'
+printf '%s\n' "$LOG" | grep '^CLERK_BODY' | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":"2027-04-05","hold":false}' \
+  && ok "送る本文の until は終了日" || ng "本文の until が違う: $LOG"
+eq "Clerk の state の until が終了日" "$(clerk_state | jq -r '.services.xesm.until')" "2027-04-05"
+# services の各サービスの値は from・until・hold の 3 つの項目だけ（ADR-0028 の 2 節。道 A の claim に載せる形）
+eq "services の値は from・until・hold の 3 つだけ" \
+  "$(printf '%s\n' "$LOG" | grep '^CLERK_BODY' | sed 's/^CLERK_BODY //' | jq -r '[.public_metadata.services | to_entries[] | select(.value != null) | .value | (keys | sort) == ["from", "hold", "until"]] | all')" \
+  "true"
 FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply --clerk-org org_y
 expect "--clerk-org は clerk-sync でだけ使わない（customer 用）" 64 0 "customer でだけ使う"
 FAKE_CUST_META="$(jq -c 'del(.clerk_org_id)' <<<"$CLERK_META")" run clerk-sync --customer cus_x --mode test --apply
@@ -695,6 +712,13 @@ eq "2 回目は hold を書き直さない（冪等）" "$(count "$LOG" '^CALL P
 OPEN_INVOICES="" resync resync --apply --mode test
 printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=' && ok "請求書が払われたら hold を外す" || ng "hold を外していない: $LOG"
 printf '%s\n' "$LOG" | grep '^CLERK_BODY' | grep -qF '"hold":false' && ok "Clerk の services の hold を false にする" || ng "Clerk の hold=false が無い: $LOG"
+# 期限の 14 日後の翌日（期限が 15 日前）が、hold になる最初の日（決定 1: 「14 日後を過ぎても」の過ぎた）。
+# 14 日前ちょうどは hold にしない側の境界を、上の cus_b が既に押さえている
+rm -f "$WORK/log.customers" "$WORK/log.clerk"
+D15="$(jq -c -n --argjson d15 "$(due_of 15)" '{cus_a: [{id: "in_a15", due_date: $d15, service: "xesm"}], cus_b: [], cus_c: []}')"
+FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$D15" run resync --apply --mode test
+expect "期限の 15 日前の請求書は hold にする（14 日後を過ぎた最初の日）" 0 - "PLAN hold cus_a xesm"
+printf '%s\n' "$LOG" | grep -qF 'metadata[contract_xesm_hold]=true' && ok "期限の 15 日前でも hold の印を書く" || ng "期限の 15 日前で hold を書いていない: $LOG"
 # 請求書の一覧も 2 ページ目を見る
 rm -f "$WORK/log.customers"
 OPEN_INVOICES="$(jq -c -n --argjson d0 "$(due_of 0)" '{cus_a: [{id: "in_a0", due_date: $d0, service: "xesm"}], cus_b: []}')"
