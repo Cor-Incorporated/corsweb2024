@@ -22,6 +22,7 @@ import {
   containsTranscriptRoleLine,
   maskMessagesForLlm,
   maskSensitiveContent,
+  mergeStructuredLead,
   normalizeStructuredLead,
 } from './validate';
 import {
@@ -465,6 +466,8 @@ const NO_SESSION_CONTEXT: InquiryRecordContext = {
 /**
  * submit の時に、サーバー側の会話の状態で問い合わせを組み直す。
  * 要約・構造化の欄・分類・業種・path はブラウザが送った値で置き換えさせない。
+ * ただし session の lead に値が無い欄（会話の抽出が取りこぼした項目）だけは、
+ * 正規化を通したブラウザの structuredLead で埋める。
  * 会話が見つからないときは構造化の欄だけで要約を作り、分類は unknown（no_session）にする。
  */
 async function readTrustedInquiry(
@@ -473,11 +476,14 @@ async function readTrustedInquiry(
   sessionId: string | null,
 ): Promise<{ inquiry: NormalizedInquiry; context: InquiryRecordContext }> {
   const session = await readTrustedSession(env, sessionId);
-  const structuredLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
+  const sessionLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
+  const structuredLead = sessionLead
+    ? mergeStructuredLead(sessionLead, inquiry.structuredLead)
+    : undefined;
   const summary = session?.summary || buildDeterministicSummary({
     classification: inquiry.classification,
     intent: inquiry.intent,
-    structuredLead: inquiry.structuredLead,
+    structuredLead: structuredLead ?? inquiry.structuredLead,
   });
   return {
     inquiry: {
@@ -531,8 +537,10 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   // The server-side session summary is the email source of truth. Do not let a
   // stale or forged browser payload replace it; when the session is unavailable,
   // fall back to structured fields only. Structured lead fields are restored
-  // from the same server-side session so the browser cannot replace them at
-  // submit time (including discoverySource/contactReason).
+  // from the same server-side session so the browser cannot replace the values
+  // the session already has (including discoverySource/contactReason); fields
+  // the conversation missed are filled from the normalized submission lead
+  // (mergeStructuredLead) instead of being dropped.
   // 会話の状態を読めない（D1 の障害、migration を当てる前の版の D1 など）ときは、保存できないときと同じ 503 にそろえる。
   let trusted: { inquiry: NormalizedInquiry; context: InquiryRecordContext } | null = null;
   if (env.DB) {

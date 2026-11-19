@@ -191,6 +191,24 @@ export function normalizeStructuredLead(raw: unknown): StructuredLead {
   return out;
 }
 
+/**
+ * submit の組み直し用。session の lead の値が常に勝ち、session に値が無い欄だけ、
+ * ブラウザが送った structuredLead で埋める。取りこぼしを受け取る側で拾う。
+ * 埋める値は normalizeStructuredLead の許可リスト・長さ上限を
+ * もう一度必ず通すので、許可リスト外の欄は捨てる。メール・電話らしき値は
+ * 保存時の redactStructuredLead とメール境界の maskSensitiveContent で伏せる。
+ */
+export function mergeStructuredLead(sessionLead: StructuredLead, submissionLead: unknown): StructuredLead {
+  const out: StructuredLead = { ...sessionLead };
+  const fill = normalizeStructuredLead(submissionLead);
+  for (const key of LEAD_KEYS) {
+    if (out[key]) continue;
+    const value = fill[key];
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
 export function normalizeUtm(raw: unknown): Record<string, string> {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const src = raw as Record<string, unknown>;
