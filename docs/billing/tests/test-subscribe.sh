@@ -10,6 +10,7 @@
 #      残りの期間分 68,334、開発費の残り 48,000。初月は 1 か月分。12 か月目の末日より後の終了日では残り 0。開発費 0 回）
 #   4. 請求書: draft → 明細 → 小計の照合 → finalize → send の順。同じ月の 2 枚目は作らない。小計が違えば確定しない。
 #      請求書を 1 つ読む答えの形が違えば、明細を数えずに止まる（明細の在る下書きに、同じ明細を足さない）
+#      2 つのサービスを契約した顧客は、1 枚の請求書に両サービスの明細が載る（7b）
 #   5. charge: 振込の顧客・期限前・カードなしは払わない
 #   6. 前の形（same_day_advance）の plans.json の写しでは、新しいサブコマンドはテストモードでも本番でも止まる
 set -euo pipefail
@@ -351,6 +352,42 @@ SCN=live FAKE_CUST_META="$INV_META" run invoice --customer cus_x --month "$LAST"
 expect "本番の invoice は live と打たなければ作らない" 64 0 "本番は端末から実行する"
 SCN=livemismatch FAKE_CUST_META="$INV_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
 expect "invoice のモード違いは exit 3" 3 0 "観測 livemode=true"
+
+# 7b. 2 つのサービスを契約した顧客の請求書は 1 枚に全明細が載る（README 1C 章の作り方 B: 顧客ごとに毎月 1 枚）。
+#     サービスの名前と金額は plans.json から読む（lib.sh の load_amounts と同じ読み方を、試験側に独立に書く）
+SVC1="$(jq -r '.services[0].service' "$PLANS")"
+SVC2="$(jq -r '.services[1].service' "$PLANS")"
+[ "$(jq '.services | length' "$PLANS")" -ge 2 ] && ok "plans.json は 2 つ以上のサービスを持つ（7b の前提）" || ng "plans.json のサービスが 2 つ未満で、7b が書けない"
+svc_basic() { jq -r --arg s "$1" '. as $r | [.services[] | select(.service == $s)][0] as $v | [$r.prices[] | select(.product == $v.product and .plan == "basic" and .enabled == true)][0].unit_amount_jpy_excl_tax' "$PLANS"; }
+svc_devfee() { jq -r --arg s "$1" '. as $r | [.services[] | select(.service == $s)][0] as $v | [$r.prices[] | select(.product == $v.dev_fee_product and .plan == "dev_fee" and .enabled == true)][0].unit_amount_jpy_excl_tax' "$PLANS"; }
+svc_name() { jq -r --arg s "$1" --arg k "$2" '. as $r | [.services[] | select(.service == $s)][0] as $v | [$r.products[] | select(.id == (if $k == "dev" then $v.dev_fee_product else $v.product end))][0].name' "$PLANS"; }
+argv_count() { printf '%s\n' "$LOG" | grep '^ARGV' | grep -cF -- "[$1]" || true; }
+TWO_TOTAL="$(( $(svc_basic "$SVC1") + $(svc_devfee "$SVC1") + $(svc_basic "$SVC2") + $(svc_devfee "$SVC2") ))"
+SVC1_TOTAL="$(( $(svc_basic "$SVC1") + $(svc_devfee "$SVC1") ))"
+# 顧客 1 社に 2 つのサービスの契約（開発費の回数はサービスごとに 6 回と 12 回で変える）
+TWO_META="$(jq -nc --arg a "$SVC1" --arg b "$SVC2" --arg s "$LAST-15" \
+  '{customer_code: "sample-co", payment: "card"}
+    + {("contract_\($a)_start"): $s, ("contract_\($a)_devfee_count"): "6"}
+    + {("contract_\($b)_start"): $s, ("contract_\($b)_devfee_count"): "12"}')"
+FAKE_CUST_META="$TWO_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "2 つのサービスの契約は 1 枚の請求書に全明細を載せる" 0 8 "CHECK ok: 小計 $TWO_TOTAL 円（税別）・明細 4 行は計算と一致"
+eq "請求書を作る POST は 1 回だけ" "$(count "$LOG" '^CALL POST /v1/invoices$')" "1"
+eq "POST の順は draft → 両サービスの明細 4 行 → finalize → send → 送った記録" "$(post_seq)" \
+  "/v1/invoices /v1/invoiceitems /v1/invoiceitems /v1/invoiceitems /v1/invoiceitems /v1/invoices/in_new/finalize /v1/invoices/in_new/send /v1/customers/cus_x"
+eq "明細 4 行は全部、作った下書き in_new に足す" "$(argv_count 'invoice=in_new')" "4"
+eq "$SVC1 の明細は利用料と開発費の 2 行" "$(argv_count "metadata[service]=$SVC1")" "2"
+eq "$SVC2 の明細も利用料と開発費の 2 行" "$(argv_count "metadata[service]=$SVC2")" "2"
+check_arg "$SVC1 の利用料の明細（初月 1 か月分）" "description=$(svc_name "$SVC1" basic) $LAST（初月。1 か月分）"
+check_arg "$SVC2 の利用料の明細（初月 1 か月分）" "description=$(svc_name "$SVC2" basic) $LAST（初月。1 か月分）"
+check_arg "$SVC1 の開発費の明細は 6 回の契約の 1 回目" "description=$(svc_name "$SVC1" dev) 1/6 回目"
+check_arg "$SVC2 の開発費の明細は 12 回の契約の 1 回目" "description=$(svc_name "$SVC2" dev) 1/12 回目"
+# 比べる対: 1 つのサービスだけの顧客の明細は、そのサービスの分だけ
+ONE_META="$(jq -nc --arg a "$SVC1" --arg s "$LAST-15" \
+  '{customer_code: "sample-co", payment: "card"} + {("contract_\($a)_start"): $s, ("contract_\($a)_devfee_count"): "6"}')"
+FAKE_CUST_META="$ONE_META" run invoice --customer cus_x --month "$LAST" --apply --mode test
+expect "1 つのサービスだけの顧客の明細は 2 行だけ" 0 6 "CHECK ok: 小計 $SVC1_TOTAL 円（税別）・明細 2 行は計算と一致"
+eq "$SVC1 のみの顧客に $SVC2 の明細は足さない" "$(argv_count "metadata[service]=$SVC2")" "0"
+eq "$SVC1 のみの顧客の明細は $SVC1 の 2 行だけ" "$(argv_count "metadata[service]=$SVC1")" "2"
 
 # 8. charge（2 か月前の分。期限は先月の末日で、もう過ぎている）
 CH_META="$(meta card "$TWO_AGO-15" 12)"
