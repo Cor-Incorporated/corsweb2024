@@ -62,6 +62,7 @@ function openDatabase(): DatabaseSync {
     '0007_document_request.sql',
     '0008_document_case_sync.sql',
     '0009_document_request_discovery.sql',
+    '0010_document_locale.sql',
   ]);
   for (const file of files) {
     db.exec(readFileSync(resolve(migrationsDir, file), 'utf8'));
