@@ -110,42 +110,42 @@ test.describe('Cloudia contact routing', () => {
     await expect(openButton).toHaveAttribute('aria-expanded', 'false');
     await expect(panel).toHaveAttribute('aria-hidden', 'true');
     await expect(openButton).toBeFocused();
-    await expect(openButton).toHaveText('Cloudiaに相談する');
+    await expect(openButton).toHaveText('お問い合わせ（AI受付）');
 
     await openButton.click();
     await page.keyboard.press('Escape');
     await expect(panel).toHaveAttribute('aria-hidden', 'true');
     await expect(openButton).toBeFocused();
-    await expect(openButton).toHaveText('Cloudiaに相談する');
+    await expect(openButton).toHaveText('お問い合わせ（AI受付）');
   });
 
-  // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押すと何が起きるか分からない。
-  // 開いている間は「Cloudiaを閉じる」と表示し（× ボタンの「閉じる」とは名前を分ける）、押せば閉じてラベルが戻ることを固定する。
+  // 開いている間もボタンの文字が開く前のままだと、もう一度押すと何が起きるか分からない。
+  // 開いている間は問い合わせを閉じる旨の文字を表示し（× ボタンの「閉じる」とは名前を分ける）、押せば閉じてラベルが戻ることを固定する。
   test('turns the launcher button into a close button while the panel is open', async ({ page }) => {
     await page.goto('/contact/');
 
     const openButton = page.locator('#cloudia-launcher-open');
     const panel = page.locator('#cloudia-launcher-panel');
-    await expect(openButton).toHaveText('Cloudiaに相談する');
+    await expect(openButton).toHaveText('お問い合わせ（AI受付）');
 
     await openButton.click();
     await expect(panel).toHaveAttribute('aria-hidden', 'false');
-    await expect(openButton).toHaveText('Cloudiaを閉じる');
+    await expect(openButton).toHaveText('お問い合わせを閉じる');
     await expect(openButton).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByRole('button', { name: '閉じる', exact: true })).toHaveCount(1);
 
     await openButton.click();
     await expect(panel).toHaveAttribute('aria-hidden', 'true');
-    await expect(openButton).toHaveText('Cloudiaに相談する');
+    await expect(openButton).toHaveText('お問い合わせ（AI受付）');
     await expect(openButton).toHaveAttribute('aria-expanded', 'false');
     await expect(openButton).toBeFocused();
   });
 
   // zh・ko・es のページには、以前は英語の案内とボタンが出ていた。各言語で出ることを固定する。
   for (const { lang, title, cta, launcher, close, closeLauncher } of [
-    { lang: 'zh', title: '请先与 Cloudia 沟通', cta: '打开 Cloudia', launcher: '咨询 Cloudia', close: '关闭', closeLauncher: '关闭 Cloudia' },
-    { lang: 'ko', title: '먼저 Cloudia에게 상담해 주세요', cta: 'Cloudia 열기', launcher: 'Cloudia에게 상담하기', close: '닫기', closeLauncher: 'Cloudia 닫기' },
-    { lang: 'es', title: 'Empiece con una conversación con Cloudia', cta: 'Abrir Cloudia', launcher: 'Consultar con Cloudia', close: 'Cerrar', closeLauncher: 'Cerrar Cloudia' },
+    { lang: 'zh', title: '请先联系我们', cta: '开始联系', launcher: '联系我们（AI 接待）', close: '关闭', closeLauncher: '关闭联系窗口' },
+    { lang: 'ko', title: '먼저 문의해 주세요', cta: '문의 시작하기', launcher: '문의하기 (AI 접수)', close: '닫기', closeLauncher: '문의 닫기' },
+    { lang: 'es', title: 'Empiece contactándonos', cta: 'Iniciar contacto', launcher: 'Contacto (recepción con IA)', close: 'Cerrar', closeLauncher: 'Cerrar contacto' },
   ]) {
     test(`shows the Cloudia entry and launcher in the page language (${lang})`, async ({ page }) => {
       await page.goto(`/${lang}/contact/`);
@@ -153,7 +153,7 @@ test.describe('Cloudia contact routing', () => {
       const entry = page.locator('section[aria-labelledby="cloudia-contact-entry-title"]');
       await expect(entry.locator('#cloudia-contact-entry-title')).toHaveText(title);
       await expect(entry.locator('[data-cloudia-query-link]')).toHaveText(cta);
-      await expect(entry).not.toContainText('Start with a conversation');
+      await expect(entry).not.toContainText('Start by contacting us');
 
       const openButton = page.locator('#cloudia-launcher-open');
       await expect(openButton).toHaveText(launcher);
