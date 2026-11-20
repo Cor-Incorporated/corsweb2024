@@ -1,4 +1,7 @@
-// Public, versioned facts mirrored from src/i18n/locales/{ja,en}.json.
+// Public facts maintained by hand; there is no automatic sync from src/i18n/locales/{ja,en}.json.
+// The ISMS line is the one fact with an external source of truth
+// (.claude/skills/cor-voice/references/facts.json) and is tied to it by
+// __tests__/company-knowledge-isms.test.ts; keep the other lines correct by hand.
 // Do not add private customer, contract, calendar, or credential data here.
 export const COMPANY_KNOWLEDGE = [
   'Cor.株式会社 is a Fukuoka-based AI implementation company that supports clients from problem discovery through design, implementation, and operations.',
@@ -7,7 +10,7 @@ export const COMPANY_KNOWLEDGE = [
   'Confidential-data AI assessment guideline price: JPY 100,000-300,000.',
   'Local LLM / AI platform PoC guideline: from JPY 3,000,000 for about three months. Production and operations are quoted individually.',
   'Grift extracts verifiable facts from engineers\' git history (catchphrase: 経歴は盛れる。証拠は盛れない。). Grift CLI is free, open-source (MIT) on PyPI as grift-cli; it uses no LLM for measurement, gives no scores or rankings, and runs locally. Only when the person has named their own identity and a consent record exists does a report open with short Japanese sentences on how that person\'s recorded work was done and with questions worth asking in an interview. The sentences themselves are not checked by grift verify; the numbers behind them are. A trial (PoC) for recruiting agencies, SES companies and hiring teams at companies that build their own software is offered on an individual basis (in Japanese, call it テスト導入, not 試行); the official version is planned for 2027 and its price is not decided. The former estimation web app and the Team Beta / Paid Trial / Estimate Audit plans were withdrawn.',
-  'Information security: Cor.株式会社 completed the stage 2 audit for ISO/IEC 27001 (ISMS) in October 2026 and expects certification registration around December 2026. It is not certified yet.',
+  'Information security: Cor.株式会社 obtained ISO/IEC 27001:2022 (ISMS) certification in November 2026 (first registration 2026-11-07; registration number JP26/00000364 issued by SGSジャパン株式会社). The registration stays valid until 2029-11-07 only while continued registration is approved in surveillance audits during the validity period, and it covers the registered scope 「ソフトウエアの受託開発および運用」 (contracted software development and operations) only. It does not extend beyond the registered scope (登録範囲の外) to individual products (including our own products), AI answer accuracy, the entire business, or any guarantee of zero leaks or complete safety; when asked about something outside the registered scope, say it is outside the registration scope and guide the visitor to the formal inquiry flow.',
   'Cor.株式会社 (コー株式会社) generally follows up within three business days after a formal inquiry.',
   'Mission: open the future through co-creation rather than competition and contribute to a happier society.',
 ].join('\n');
