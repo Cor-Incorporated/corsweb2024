@@ -31,6 +31,10 @@ CHAT_DAILY_MODEL_CALL_LIMIT = "300"
 CONTACT_TO_EMAIL = "cloudia@cor-jp.com"
 CONTACT_CC_EMAILS = "company@cor-jp.com,nagisa.terada@cor-jp.com"
 CONTACT_FROM_EMAIL = "noreply@cor-jp.com"
+# 資料請求の社内通知。live は、解放時刻（10 桁の unix 秒）以降に作られた行だけを送る。解放時刻より前に作られた行は保留のまま
+# 送らない。配備が終わる予定より後の時刻にする。時刻が動く時は、この 1 行だけを直す。
+DOCUMENT_REQUEST_NOTIFY_MODE = "live"
+DOCUMENT_REQUEST_NOTIFY_RELEASED_AT = "1795230600"   # 2026-11-21 12:10 JST
 
 # D1 stores redacted session metadata and encrypted, short-lived submit data.
 [[d1_databases]]
