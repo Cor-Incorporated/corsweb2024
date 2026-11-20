@@ -173,6 +173,8 @@
       "legal": "特商法表記",
       "company": "会社概要"
     },
+    "commonLinksLabel": "共通リンク",
+    "sitesLabel": "サイト切替",
     "description": "Cor.株式会社は、ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む福岡のAI実装会社です。"
   },
   "header": {

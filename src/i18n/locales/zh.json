@@ -2021,6 +2021,8 @@
       "legal": "法律声明",
       "company": "公司概况"
     },
+    "commonLinksLabel": "通用链接",
+    "sitesLabel": "站点切换",
     "description": "Cor.株式会社是一家扎根福冈、专注 AI 落地的公司，以本地 LLM、自研产品「Grift」和 AI 受托开发为核心，同时也在教育与地区层面营造学习与交流的场所。"
   },
   "header": {

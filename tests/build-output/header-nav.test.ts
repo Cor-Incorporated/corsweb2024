@@ -1,6 +1,7 @@
 // ビルド済み dist のヘッダーの検査（設定: vitest.dist.config.ts。`npm run build` の後に `npm run test:dist`）。
 // 2026-10-24: パソコンのヘッダーにブログと About がなく、スマホのメニューからしか行けなかった（代表の指摘）。
-// 並びは ADR-0011 の「Header IA の改訂」: サービス ▾ / 業種別 ▾ / 実績 / ブログ / Cor.について ▾ / お問い合わせ。
+// 並びは ADR-0011 の「Header IA の改訂」: サービス ▾ / 業種別 ▾ / 実績 / ブログ / Cor.について ▾。
+// 2026-11-19: 末尾の「お問い合わせ」は nav の外、右の組の CTA（pill）へ移した（3 サイト共通の形）。
 // 5 業種は src/config/industry-context.ts の INDUSTRY_SLUGS から導く（一覧を 1 か所にする）。
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -49,6 +50,19 @@ describe('パソコンのヘッダー', () => {
       const industries = menu(readHome(locale), 'industries');
       expect(industries, `パソコンの業種別のメニュー（data-menu="industries"）が無い（${locale}）`).not.toBe('');
       expect(hrefs(industries)).toEqual(prefixed(locale, INDUSTRY_PAGES));
+    });
+
+    it(`${locale}: お問い合わせは nav の外の CTA（右の組）で、nav の中には無い`, () => {
+      const html = readHome(locale);
+      const header = html.match(/<header\b[\s\S]*?<\/header>/)?.[0] ?? '';
+      expect(header, `<header> が無い（${locale}）`).not.toBe('');
+      const nav = desktopNav(html);
+      expect(nav, 'aria-label="主要ページ" の nav が無い').not.toBe('');
+      // 2026-11-19: nav の末尾にあった「お問い合わせ」を右の組の CTA（pill）へ移した。
+      expect(nav, 'nav の中に CTA が残っている').not.toContain('source=header-quick');
+      const cta = header.match(/<a\b(?=[^>]*source=header-quick)[^>]*>/)?.[0] ?? '';
+      expect(cta, '右の組に CTA（source=header-quick）が無い').not.toBe('');
+      expect(cta, 'CTA は pill（rounded-full）').toMatch(/rounded-full/);
     });
   }
 });

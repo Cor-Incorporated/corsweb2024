@@ -3,6 +3,7 @@ import { getCurrentLocale, getTranslations, getLocalizedUrl, type Locale } from 
 import { getContactUrl, getGriftUrl } from '../../config/site';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
 import { industryRowsInOrder } from '../../config/industry-context';
+import { ORGANIZATION_NAMES } from '../../config/organization';
 
 // このページが存在するロケール。言語切替が「同一ページの翻訳版」へ飛ぶか、翻訳が無い言語で
 // ホームへフォールバックするかの判定に使う。未指定なら全言語ありとみなす（従来の暗黙の挙動）。
@@ -90,8 +91,9 @@ const isCurrentSection = (href: string) => {
 
 const servicesLabel = nav.services || 'サービス';
 
-// パソコンのヘッダーの並び: サービス ▾ / 業種別 ▾ / 実績 / ブログ / Cor.について ▾ / お問い合わせ。
+// パソコンのヘッダーの並び: サービス ▾ / 業種別 ▾ / 実績 / ブログ / Cor.について ▾。
 // 業種別は 2026-11-08 の本人指示で足した。中身は既存の5業種ページ。
+// 「お問い合わせ」は nav の外、右の組の CTA（pill）に出す（3 サイト共通の形。下の contactCta）。
 type DesktopEntry =
   // highlight: 中のページを開いているとき、プルダウンのボタンを現在地として光らせるか。
   // サービスは以前は相談の種類つきのお問い合わせへ直行していたので光らせなかった（お問い合わせのページで二重に光るため）。
@@ -105,8 +107,12 @@ const desktopEntries: DesktopEntry[] = [
   { kind: 'link', name: t.nav.works, href: getLocalizedUrl('/works', currentLocale), isActive: false },
   { kind: 'link', name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isActive: false },
   { kind: 'menu', menu: 'about', label: t.nav.aboutMenu, items: aboutLinks, highlight: true, isActive: false },
-  { kind: 'link', name: nav.consult || t.nav.contact, href: getContactUrl(currentLocale, { source: 'header-quick' }), isActive: false },
 ];
+// 右の組の CTA。従来 nav の末尾にあった物と同じ href（source=header-quick）。
+const contactCta = {
+  name: nav.consult || t.nav.contact,
+  href: getContactUrl(currentLocale, { source: 'header-quick' }),
+};
 const desktopNav = desktopEntries.map((entry): DesktopEntry =>
   entry.kind === 'menu'
     ? { ...entry, isActive: entry.highlight && entry.items.some((item) => !item.isExternal && isCurrentSection(item.href)) }
@@ -129,6 +135,14 @@ const langFlags: Record<string, string> = {
   ko: '🇰🇷',
   es: '🇪🇸',
 };
+// 言語の pill に見せる短い名前（🇯🇵 JA ▾ の「JA」）。読み上げは sr-only の文にも這わせる。
+const langShort: Record<string, string> = {
+  ja: 'JA',
+  en: 'EN',
+  zh: 'ZH',
+  ko: 'KO',
+  es: 'ES',
+};
 // 現在パスから locale プレフィックスを除いた基準パス（例: /en/about → /about）。
 const langBasePath = Astro.url.pathname.replace(/^\/(en|zh|ko|es)(?=\/|$)/, '') || '/';
 const langOptions = localeOrder.map((loc) => ({
@@ -145,22 +159,26 @@ const langOptions = localeOrder.map((loc) => ({
 
 <header
   x-data="{ open: false }"
-  class="relative z-40 bg-primary-50 transition dark:bg-primary-950"
+  class="sticky top-0 z-40 border-b border-primary-900/10 bg-primary-50 transition dark:border-primary-300/10 dark:bg-primary-950"
   :class="{ 'bg-primary-500/10 dark:bg-primary-400/10': open, 'bg-primary-50 dark:bg-primary-950': !(open) }"
 >
+  <!-- 1 段の bar。高さは 1024px 未満 56px・以上 64px（下の border 1px を含む）。横の padding は 12px / 24px。 -->
   <div
-    class="mx-auto flex max-w-2xl items-center justify-between px-4 py-4 sm:px-6 sm:py-6 lg:max-w-7xl lg:px-8"
+    class="mx-auto flex h-[calc(3.5rem-1px)] max-w-2xl items-center justify-between gap-2 px-3 sm:gap-3 lg:h-[calc(4rem-1px)] lg:max-w-7xl lg:gap-6 lg:px-8"
   >
-    <!-- Brand logo -->
-    <div class="flex">
-      <a
-        href={getLocalizedUrl('/', currentLocale)}
-        class="rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-950 dark:group-focus-visible:outline-primary-200"
+    <!-- Brand: 印（logo.png）+ 社名の文字。社名は 1024px 以上だけ見せる（読み上げは sr-only が担う） -->
+    <a
+      href={getLocalizedUrl('/', currentLocale)}
+      class="flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-950 dark:group-focus-visible:outline-primary-200"
+    >
+      <span class="sr-only lg:hidden">{ORGANIZATION_NAMES[currentLocale]}</span>
+      <img class="h-10 w-10 rounded-lg object-cover" width="40" height="40" src="/logo.png" alt="" />
+      <span
+        class="hidden whitespace-nowrap text-base font-semibold text-primary-950 lg:inline dark:text-primary-200"
       >
-        <span class="sr-only">Cor.株式会社</span>
-        <img class="h-20 w-auto" width="65" height="40" src="/assets/logo.avif" alt="Cor.株式会社" />
-      </a>
-    </div>
+        {ORGANIZATION_NAMES[currentLocale]}
+      </span>
+    </a>
 
     <nav class="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="主要ページ">
       {
@@ -238,9 +256,9 @@ const langOptions = localeOrder.map((loc) => ({
       }
     </nav>
 
-    <!-- Actions -->
-    <div class="-mr-2 flex items-center space-x-2 sm:space-x-3">
-      <!-- Theme toggle: 一般的なスイッチ式（ノブが現在モードのアイコンを表示してスライド） -->
+    <!-- Actions: 40×40 の丸 button → 言語 pill → CTA（1024px 以上）→ menu button（1024px 未満） -->
+    <div class="flex items-center gap-2 sm:gap-2 lg:gap-3">
+      <!-- Theme toggle: 40×40 の丸。role/aria-checked/store の動きは従来どおり -->
       <button
         type="button"
         x-data
@@ -249,40 +267,35 @@ const langOptions = localeOrder.map((loc) => ({
         aria-checked="false"
         :aria-checked="($store.theme?.isDark || false).toString()"
         @click="$store.theme?.toggle()"
-        class="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border border-primary-900/10 bg-primary-500/10 transition focus:outline-none focus-visible:ring-2 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10"
+        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary-900/10 bg-primary-500/10 text-primary-950 transition focus:outline-none focus-visible:ring-2 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10 dark:text-primary-200"
       >
         <span class="sr-only">ライト / ダークモード切り替え</span>
-        <span
-          class="inline-flex h-6 w-6 translate-x-1 transform items-center justify-center rounded-full bg-primary-50 text-primary-950 shadow transition-transform dark:translate-x-7 dark:bg-primary-200"
-          :class="{ 'translate-x-7': $store.theme?.isDark, 'translate-x-1': !($store.theme?.isDark) }"
+        <!-- Moon (dark時)。Alpine 起動前も dark: バリアントで正しい方を出す -->
+        <svg
+          class="hidden h-[18px] w-[18px] dark:block"
+          :class="{ 'hidden': !($store.theme?.isDark) }"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
         >
-          <!-- Moon (dark時)。Alpine 起動前も dark: バリアントで正しい方を出す -->
-          <svg
-            class="hidden h-4 w-4 dark:block"
-            :class="{ 'hidden': !($store.theme?.isDark) }"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              d="M10 6C10 10.4183 13.5817 14 18 14C19.4386 14 20.7885 13.6203 21.9549 12.9556C21.4738 18.0302 17.2005 22 12 22C6.47715 22 2 17.5228 2 12C2 6.79948 5.9698 2.52616 11.0444 2.04507C10.3797 3.21152 10 4.56142 10 6ZM4 12C4 16.4183 7.58172 20 12 20C14.9654 20 17.5757 18.3788 18.9571 15.9546C18.6407 15.9848 18.3214 16 18 16C12.4772 16 8 11.5228 8 6C8 5.67863 8.01524 5.35933 8.04536 5.04293C5.62119 6.42426 4 9.03458 4 12Z"
-            ></path>
-          </svg>
-          <!-- Sun (light時) -->
-          <svg
-            class="h-4 w-4 dark:hidden"
-            :class="{ 'hidden': $store.theme?.isDark }"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM11 1H13V4H11V1ZM11 20H13V23H11V20ZM3.51472 4.92893L4.92893 3.51472L7.05025 5.63604L5.63604 7.05025L3.51472 4.92893ZM16.9497 18.364L18.364 16.9497L20.4853 19.0711L19.0711 20.4853L16.9497 18.364ZM19.0711 3.51472L20.4853 4.92893L18.364 7.05025L16.9497 5.63604L19.0711 3.51472ZM5.63604 16.9497L7.05025 18.364L4.92893 20.4853L3.51472 19.0711L5.63604 16.9497ZM23 11V13H20V11H23ZM4 11V13H1V11H4Z"
-            ></path>
-          </svg>
-        </span>
+          <path
+            d="M10 6C10 10.4183 13.5817 14 18 14C19.4386 14 20.7885 13.6203 21.9549 12.9556C21.4738 18.0302 17.2005 22 12 22C6.47715 22 2 17.5228 2 12C2 6.79948 5.9698 2.52616 11.0444 2.04507C10.3797 3.21152 10 4.56142 10 6ZM4 12C4 16.4183 7.58172 20 12 20C14.9654 20 17.5757 18.3788 18.9571 15.9546C18.6407 15.9848 18.3214 16 18 16C12.4772 16 8 11.5228 8 6C8 5.67863 8.01524 5.35933 8.04536 5.04293C5.62119 6.42426 4 9.03458 4 12Z"
+          ></path>
+        </svg>
+        <!-- Sun (light時) -->
+        <svg
+          class="h-[18px] w-[18px] dark:hidden"
+          :class="{ 'hidden': $store.theme?.isDark }"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM11 1H13V4H11V1ZM11 20H13V23H11V20ZM3.51472 4.92893L4.92893 3.51472L7.05025 5.63604L5.63604 7.05025L3.51472 4.92893ZM16.9497 18.364L18.364 16.9497L20.4853 19.0711L19.0711 20.4853L16.9497 18.364ZM19.0711 3.51472L20.4853 4.92893L18.364 7.05025L16.9497 5.63604L19.0711 3.51472ZM5.63604 16.9497L7.05025 18.364L4.92893 20.4853L3.51472 19.0711L5.63604 16.9497ZM23 11V13H20V11H23ZM4 11V13H1V11H4Z"
+          ></path>
+        </svg>
       </button>
       <!-- Language switch (プルダウン: 5言語を一覧から直接選択) -->
       <div
@@ -298,12 +311,13 @@ const langOptions = localeOrder.map((loc) => ({
           aria-expanded="false"
           :aria-expanded="langOpen.toString()"
           aria-haspopup="true"
-          class="inline-flex h-14 items-center justify-center gap-1.5 rounded-full px-4 text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:text-primary-200 dark:hover:bg-primary-400/10"
+          class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-primary-900/10 px-3.5 text-sm font-medium text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
         >
-          <span class="sr-only">言語を切り替え / Language</span>
-          <span class="text-2xl leading-none">{langFlags[currentLocale]}</span>
+          <span class="sr-only">言語を切り替え / Language（{langShort[currentLocale]}）</span>
+          <span class="text-base leading-none" aria-hidden="true">{langFlags[currentLocale]}</span>
+          <span aria-hidden="true">{langShort[currentLocale]}</span>
           <svg
-            class="h-4 w-4 transition"
+            class="h-3 w-3 transition"
             :class="{ 'rotate-180': langOpen }"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -358,10 +372,17 @@ const langOptions = localeOrder.map((loc) => ({
           }
         </ul>
       </div>
-      <!-- Toggle menu -->
+      <!-- CTA（パソコンだけ。nav の末尾からここへ移した） -->
+      <a
+        href={contactCta.href}
+        class="hidden h-10 min-w-[2.75rem] items-center justify-center rounded-full bg-[#2d4a6b] px-[18px] text-sm font-semibold whitespace-nowrap text-white no-underline transition hover:opacity-90 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-950 lg:inline-flex dark:focus-visible:outline-primary-200"
+      >
+        {contactCta.name}
+      </a>
+      <!-- Toggle menu（1024px 未満だけ。menu 内の link はすべてパソコンの nav か footer から辿れる） -->
       <button
         type="button"
-        class="inline-flex h-14 w-14 items-center justify-center rounded-full text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:text-primary-200 dark:hover:bg-primary-400/10"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-primary-900/10 text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10 lg:hidden"
         @click="open = !open"
         @mousedown="if (open) $event.preventDefault()"
         aria-controls="website-menu"
@@ -370,7 +391,7 @@ const langOptions = localeOrder.map((loc) => ({
       >
         <span class="sr-only">Toggle menu</span>
         <svg
-          class="block h-8 w-8"
+          class="block h-6 w-6"
           :class="{ 'hidden': open, 'block': !(open) }"
           xmlns="http://www.w3.org/2000/svg"
           fill="currentColor"
@@ -380,7 +401,7 @@ const langOptions = localeOrder.map((loc) => ({
           <path d="M19 8H5V10H19V8ZM19 14H5V16H19V14Z"></path>
         </svg>
         <svg
-          class="hidden h-8 w-8"
+          class="hidden h-6 w-6"
           :class="{ 'block': open, 'hidden': !(open) }"
           xmlns="http://www.w3.org/2000/svg"
           fill="currentColor"
