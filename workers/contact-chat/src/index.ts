@@ -22,6 +22,7 @@ import {
   containsTranscriptRoleLine,
   maskMessagesForLlm,
   maskSensitiveContent,
+  mergeStructuredLead,
   normalizeStructuredLead,
 } from './validate';
 import {
@@ -46,8 +47,11 @@ import {
   createDocumentRequest,
   createSubmission,
   getSubmissionForNotification,
+  listStrandedDocumentNotices,
   markOutboxFailed,
   markOutboxHeld,
+  markOutboxNotEnqueued,
+  markOutboxRequeued,
   markOutboxSent,
   newSessionId,
   normalizeIdempotencyKey,
@@ -59,10 +63,13 @@ import {
   upsertContactSession,
   type InquiryRecordContext,
 } from './storage';
-import { createMockEmailProvider, sendDocumentRequestEmail } from './email';
+import { createMockEmailProvider, sendDocumentRequestEmail, type DocumentNotice } from './email';
 import {
   DOCUMENT_REQUEST_CONSENT_VERSION,
   DOCUMENT_REQUEST_ID,
+  NOTICE_MAX_ATTEMPTS,
+  NOTICE_REQUEUE_AFTER_SECONDS,
+  decideDocumentNotice,
   documentNotifyMode,
   documentLocaleFrom,
   documentResultBody,
@@ -465,6 +472,8 @@ const NO_SESSION_CONTEXT: InquiryRecordContext = {
 /**
  * submit の時に、サーバー側の会話の状態で問い合わせを組み直す。
  * 要約・構造化の欄・分類・業種・path はブラウザが送った値で置き換えさせない。
+ * ただし session の lead に値が無い欄（会話の抽出が取りこぼした項目）だけは、
+ * 正規化を通したブラウザの structuredLead で埋める。
  * 会話が見つからないときは構造化の欄だけで要約を作り、分類は unknown（no_session）にする。
  */
 async function readTrustedInquiry(
@@ -473,11 +482,14 @@ async function readTrustedInquiry(
   sessionId: string | null,
 ): Promise<{ inquiry: NormalizedInquiry; context: InquiryRecordContext }> {
   const session = await readTrustedSession(env, sessionId);
-  const structuredLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
+  const sessionLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
+  const structuredLead = sessionLead
+    ? mergeStructuredLead(sessionLead, inquiry.structuredLead)
+    : undefined;
   const summary = session?.summary || buildDeterministicSummary({
     classification: inquiry.classification,
     intent: inquiry.intent,
-    structuredLead: inquiry.structuredLead,
+    structuredLead: structuredLead ?? inquiry.structuredLead,
   });
   return {
     inquiry: {
@@ -531,8 +543,10 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   // The server-side session summary is the email source of truth. Do not let a
   // stale or forged browser payload replace it; when the session is unavailable,
   // fall back to structured fields only. Structured lead fields are restored
-  // from the same server-side session so the browser cannot replace them at
-  // submit time (including discoverySource/contactReason).
+  // from the same server-side session so the browser cannot replace the values
+  // the session already has (including discoverySource/contactReason); fields
+  // the conversation missed are filled from the normalized submission lead
+  // (mergeStructuredLead) instead of being dropped.
   // 会話の状態を読めない（D1 の障害、migration を当てる前の版の D1 など）ときは、保存できないときと同じ 503 にそろえる。
   let trusted: { inquiry: NormalizedInquiry; context: InquiryRecordContext } | null = null;
   if (env.DB) {
@@ -627,6 +641,7 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
       discoveryOther: norm.value.discoveryOther,
       documentId: DOCUMENT_REQUEST_ID,
       consentVersion: DOCUMENT_REQUEST_CONSENT_VERSION,
+      locale: norm.value.locale,
     });
   } catch {
     logContactFailure('submission_storage_failed');
@@ -638,15 +653,19 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
     );
   }
 
+  // 通知の投入に失敗しても保存は残す。応答は stored + pending。行には notify_not_enqueued を残し、
+  // cron が Queue へ入れ直す。照会 SQL（RUNBOOK-document-request-notice.md）が未通知として見つける。
   let notification: 'queued' | 'pending' = 'pending';
   if (!env.CONTACT_NOTIFICATIONS) {
     logContactFailure('notification_queue_unconfigured');
+    await markNotEnqueued(env, created.submissionId);
   } else {
     try {
       await env.CONTACT_NOTIFICATIONS.send(queueMessage(created.submissionId, 'internal'));
       notification = 'queued';
     } catch {
       logContactFailure('notification_enqueue_failed');
+      await markNotEnqueued(env, created.submissionId);
     }
   }
   const body = documentResultBody({
@@ -663,28 +682,68 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
   );
 }
 
-async function deliverDocumentNotice(env: Env, stored: StoredSubmission): Promise<void> {
-  // キュー到着では送らない。mock も live も同じ。過去の held を設定変更で流さない。
-  const mode = documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE);
-  switch (mode) {
-    case 'hold':
-    case 'mock':
-    case 'live':
-      await markOutboxHeld(env, stored.submissionId, stored.messageType);
-      return;
-    default: {
-      const unexpected: never = mode;
-      throw new Error(unexpected);
-    }
+/** 印が付けられなくても受付は壊さない。印が無くても cron は pending/queued を拾う。 */
+async function markNotEnqueued(env: Env, submissionId: string): Promise<void> {
+  try {
+    await markOutboxNotEnqueued(env, submissionId);
+  } catch {
+    logContactFailure('notification_enqueue_failed');
   }
 }
 
+function documentNoticeFrom(stored: StoredSubmission): DocumentNotice {
+  return {
+    name: stored.inquiry.name,
+    email: stored.inquiry.email,
+    company: stored.inquiry.company,
+    industry: stored.industry,
+    documentId: stored.documentId,
+    consentVersion: stored.consentVersion,
+    receiptId: stored.receiptId,
+    locale: stored.locale,
+  };
+}
+
 /**
- * 将来の再処理の入口。HTTP には出さない。
- * mode が mock のときだけ、held の社内通知を擬似送信する。live では何も送らず行を残す。
+ * キュー到着の社内通知。live で、解放時刻以降に作られた行だけを送る。それ以外は held に戻す。
+ * 送れたら provider_accepted（outbox sent/accepted）。担当が読んだことでも、資料が渡ったことでもない。
+ * 送信器が使えない・失敗したときは throw し、queue consumer が failed にして Queue の再試行に任せる。
+ */
+async function deliverDocumentNotice(env: Env, stored: StoredSubmission): Promise<void> {
+  const decision = decideDocumentNotice(
+    documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE),
+    env.DOCUMENT_REQUEST_NOTIFY_RELEASED_AT,
+    stored.createdAt,
+  );
+  if (decision === 'hold') {
+    await markOutboxHeld(env, stored.submissionId, stored.messageType);
+    return;
+  }
+  const emailProvider = getEmailProvider(env);
+  if (!emailProvider.ok) throw new Error('email provider unavailable');
+  const sent = await sendDocumentRequestEmail(env, emailProvider.provider, documentNoticeFrom(stored));
+  await markOutboxSent(env, stored.submissionId, 'internal', sent.messageId, sent.deliveryStatus, {
+    updateSubmission: false,
+    clearError: true,
+  });
+}
+
+/**
+ * 再処理の関数。この波では呼ぶ入口が無い（HTTP にも、wrangler の CLI にも出していない。試験からだけ呼ぶ）。
+ * 呼べるようにするなら、別の変更で入口を足す。呼ぶこと自体が実送信になるので、足すときは人間ゲートにする。
+ * mock は擬似送信、live は実送信（解放時刻は見ない）、hold は何もしない。claim を通すので、同じ行は二重に送られない。
  */
 export async function replayHeldDocumentNotice(env: Env, submissionId: string): Promise<'replayed' | 'left-held'> {
-  if (documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE) !== 'mock') return 'left-held';
+  const mode = documentNotifyMode(env.DOCUMENT_REQUEST_NOTIFY_MODE);
+  if (mode === 'hold') return 'left-held';
+  let provider;
+  if (mode === 'live') {
+    const emailProvider = getEmailProvider(env);
+    if (!emailProvider.ok) return 'left-held';
+    provider = emailProvider.provider;
+  } else {
+    provider = createMockEmailProvider();
+  }
   if (!await claimOutbox(env, submissionId, 'internal')) return 'left-held';
   try {
     const stored = await getSubmissionForNotification(env, submissionId, 'internal');
@@ -692,22 +751,35 @@ export async function replayHeldDocumentNotice(env: Env, submissionId: string): 
       await markOutboxHeld(env, submissionId, 'internal');
       return 'left-held';
     }
-    const sent = await sendDocumentRequestEmail(env, createMockEmailProvider(), {
-      name: stored.inquiry.name,
-      email: stored.inquiry.email,
-      company: stored.inquiry.company,
-      industry: stored.industry,
-      documentId: stored.documentId,
-      consentVersion: stored.consentVersion,
-      receiptId: stored.receiptId,
-    });
+    const sent = await sendDocumentRequestEmail(env, provider, documentNoticeFrom(stored));
     await markOutboxSent(env, submissionId, 'internal', sent.messageId, sent.deliveryStatus, {
       updateSubmission: false,
+      clearError: true,
     });
     return 'replayed';
   } catch {
     await markOutboxHeld(env, submissionId, 'internal');
     return 'left-held';
+  }
+}
+
+/**
+ * Queue へ投入できなかった（または失敗が上限に達していない）資料請求の社内通知を入れ直す。
+ * 重複して入っても、consumer 側の claim が二重送信を止める。
+ */
+async function requeueStrandedDocumentNotices(env: Env): Promise<void> {
+  if (!env.DB || !env.CONTACT_NOTIFICATIONS) return;
+  const ids = await listStrandedDocumentNotices(env, {
+    olderThanSeconds: NOTICE_REQUEUE_AFTER_SECONDS,
+    maxAttempts: NOTICE_MAX_ATTEMPTS,
+  });
+  for (const submissionId of ids) {
+    try {
+      await env.CONTACT_NOTIFICATIONS.send(queueMessage(submissionId, 'internal'));
+      await markOutboxRequeued(env, submissionId);
+    } catch {
+      logContactFailure('notification_enqueue_failed');
+    }
   }
 }
 
@@ -814,6 +886,11 @@ export default {
       await purgeExpiredData(env);
     } catch {
       logContactFailure('retention_cleanup_failed');
+    }
+    try {
+      await requeueStrandedDocumentNotices(env);
+    } catch {
+      logContactFailure('notification_enqueue_failed');
     }
   },
 };

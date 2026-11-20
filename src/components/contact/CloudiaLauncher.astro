@@ -6,6 +6,7 @@ import {
   CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS,
 } from '../../config/contact';
 import { industryContactSource, industrySlugFromPath } from '../../config/industry-context';
+import { LAUNCHER_COPY, type LauncherCopy } from './cloudia-launcher-copy';
 import { CLOUDIA_UNAVAILABLE_PHONE_VISIBLE } from './chat/cloudiaUnavailableCopy';
 import { buildUnavailableNotice } from './chat/cloudiaUnavailableNotice';
 
@@ -49,48 +50,6 @@ const unavailableNotice = buildUnavailableNotice({
   phoneVisible: CLOUDIA_UNAVAILABLE_PHONE_VISIBLE,
   phone: unavailablePhone,
 });
-// 以前は ja/非ja の 2 分岐で、zh・ko・es のページでは英語のボタンが出ていた。
-// satisfies により、6 言語目を足したときに翻訳漏れが型エラーになる。
-type LauncherCopy = {
-  label: string;
-  title: string;
-  close: string;
-  // 開いている間の右下のボタンの文言。× ボタン（close）と同じ名前にすると、読み上げで 2 つの「閉じる」が並ぶ。
-  closeLauncher: string;
-};
-const LAUNCHER_COPY = {
-  ja: {
-    label: 'Cloudiaに相談する',
-    title: 'Cloudiaに相談する',
-    close: '閉じる',
-    closeLauncher: 'Cloudiaを閉じる',
-    // Cloudia が開けないときの文は ./chat/cloudiaUnavailableCopy.ts に置く（代わりのページと contact-edge と共通）。
-  },
-  en: {
-    label: 'Chat with Cloudia',
-    title: 'Chat with Cloudia',
-    close: 'Close',
-    closeLauncher: 'Close Cloudia',
-  },
-  zh: {
-    label: '咨询 Cloudia',
-    title: '咨询 Cloudia',
-    close: '关闭',
-    closeLauncher: '关闭 Cloudia',
-  },
-  ko: {
-    label: 'Cloudia에게 상담하기',
-    title: 'Cloudia에게 상담하기',
-    close: '닫기',
-    closeLauncher: 'Cloudia 닫기',
-  },
-  es: {
-    label: 'Consultar con Cloudia',
-    title: 'Consultar con Cloudia',
-    close: 'Cerrar',
-    closeLauncher: 'Cerrar Cloudia',
-  },
-} as const satisfies Record<Locale, LauncherCopy>;
 
 const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
 ---
@@ -338,8 +297,8 @@ const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
       revealFallback();
     };
 
-    // 開いている間もボタンが「Cloudiaに相談する」のままだと、もう一度押したら何が起きるか分からない
-    // （スマホではパネルのすぐ下に残る）。開いている間は「Cloudiaを閉じる」と表示し、押せば閉じる。
+    // 開いている間もボタンの文字が開く前のままだと、もう一度押したら何が起きるか分からない
+    // （スマホではパネルのすぐ下に残る）。開いている間は問い合わせを閉じる旨の文字に変え、押せば閉じる。
     const setOpenButtonLabel = (isOpen) => {
       const label = isOpen ? openButton.dataset.labelClose : openButton.dataset.labelOpen;
       if (label) openButton.textContent = label;

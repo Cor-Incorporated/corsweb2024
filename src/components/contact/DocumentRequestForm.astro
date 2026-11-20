@@ -6,11 +6,13 @@ import {
   DOCUMENT_REQUEST_INDUSTRIES,
   isDocumentRequestIndustry,
 } from '../../config/document-request';
+import { splitConsentAtPolicy } from '../../utils/consent-link';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 
 const locale = getCurrentLocale(Astro.url);
 const copy = getTranslations(locale).documentRequest;
 const privacyHref = getLocalizedUrl('/privacy', locale);
+const consentParts = splitConsentAtPolicy(copy.consent, copy.privacyLink);
 const labels = new Map(
   getTranslations(locale).homeIndustries.rows.map((row) => {
     const slug = row.link.split('/').filter(Boolean).pop() || '';
@@ -106,10 +108,7 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
       </label>
       <label class="flex min-h-[48px] items-start gap-3 text-sm leading-relaxed text-primary-950 dark:text-primary-200" for="document-request-consent">
         <input id="document-request-consent" name="consent" type="checkbox" value="yes" required class="mt-1 h-5 w-5" />
-        <span>
-          <a class="underline" href={privacyHref}>{copy.privacyLink}</a>
-          {` ${copy.consent}`}
-        </span>
+        <span>{consentParts ? <>{consentParts.before}<a class="underline" href={privacyHref}>{consentParts.term}</a>{consentParts.after}</> : <><a class="underline" href={privacyHref}>{copy.privacyLink}</a>{` ${copy.consent}`}</>}</span>
       </label>
       <button type="submit" class="min-h-[48px] rounded bg-primary-950 px-4 text-base font-medium text-white dark:bg-primary-200 dark:text-primary-950">{copy.submit}</button>
       <div id="document-request-result" role="status" aria-live="polite" tabindex="-1" class="text-base text-primary-950 outline-none dark:text-primary-200"></div>

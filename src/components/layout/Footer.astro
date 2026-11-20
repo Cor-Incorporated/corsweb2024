@@ -5,9 +5,13 @@ import { getContactCalendarUrl, getContactUrl } from '../../config/site';
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
+import { CURRENT_SITE, SITE_CHROME, commonLinksFor, siteChromeYear } from '../../config/site-chrome';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
+// 一番下の行（共通の帯）の中身。link とサイト切替の URL の正本は src/config/site-chrome.json。
+const chromeLinks = commonLinksFor(currentLocale);
+const chromeSites = SITE_CHROME.sites;
 
 const bottomLinks = [
   {
@@ -132,9 +136,6 @@ const linkGroups = bottomLinks.map((group) => ({
             （ブログ・実績・セキュリティ等）から流入した人にも届く。掲載条件（クリック遷移・2027年
             7月末の掲載期限）はコンポーネント側で担保しているため、ここでは配置とサイズのみ。 */}
         <Fukuoka100Emblem imgClass="h-16 w-auto" class="px-5 sm:px-0" />
-        {/* 年は SSG(output:static) のためビルド時評価で焼き込まれる。年初の定期再ビルド、または #44(SSR化) 後のリクエスト時評価で自動更新される。
-            著作権者は会社情報なので、各言語の正式な社名（ORGANIZATION_NAMES。ADR-0007）。検査: tests/build-output/company-name.test.ts */}
-        <p class="text-sm text-primary-950/70 dark:text-primary-200/70">© {new Date().getFullYear()} {ORGANIZATION_NAMES[currentLocale]}</p>
       </div>
 
       <!-- Bottom links -->
@@ -177,6 +178,56 @@ const linkGroups = bottomLinks.map((group) => ({
           ))
         }
       </div>
+    </div>
+  </div>
+
+  {/* 一番下の行を 3 サイト共通の帯に置き換えた（© の行はここへ移動）。ページの contentinfo は
+      この <footer> 1 つなので、帯は <div> にする。1024px 以上の高さは 64px（上の border 1px を含む）。
+      年は SSG のためビルド時評価で焼き込まれる（年初の定期再ビルドで更新）。
+      会社名は各言語の正式な社名（ORGANIZATION_NAMES）。 */}
+  <div class="border-t border-primary-900/10 text-[13px] dark:border-primary-300/10 lg:h-16">
+    <div
+      class="mx-auto flex max-w-2xl flex-col items-start gap-2.5 px-3 py-4 sm:px-6 lg:h-full lg:max-w-7xl lg:flex-row lg:items-center lg:gap-6 lg:px-6 lg:py-0"
+    >
+      <p class="whitespace-nowrap text-primary-600 dark:text-primary-400">
+        © {siteChromeYear()} {ORGANIZATION_NAMES[currentLocale]}
+      </p>
+      <nav
+        aria-label={t.footer.commonLinksLabel}
+        class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2.5 lg:flex-1 lg:justify-center lg:gap-x-6"
+      >
+        {
+          chromeLinks.map((link) => (
+            <a
+              href={link.href}
+              rel="noopener"
+              class="inline-flex min-h-[1.5rem] items-center rounded-md text-primary-950 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-950 dark:text-primary-200 dark:focus-visible:outline-primary-200"
+            >
+              {link.label}
+            </a>
+          ))
+        }
+      </nav>
+      {/* data-site-switch: この nav の中の link だけがサイト切替（contact-links の除外もこの属性で絞る） */}
+      <nav aria-label={t.footer.sitesLabel} data-site-switch class="flex items-center gap-3.5 lg:gap-4">
+        {
+          chromeSites.map((site) => (
+            <a
+              href={site.href}
+              rel="noopener"
+              aria-current={site.id === CURRENT_SITE ? 'page' : undefined}
+              class:list={[
+                'inline-flex min-h-[1.5rem] items-center rounded-md hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-950 dark:focus-visible:outline-primary-200',
+                site.id === CURRENT_SITE
+                  ? 'font-bold text-primary-950 dark:text-primary-200'
+                  : 'text-primary-600 dark:text-primary-400',
+              ]}
+            >
+              {site.label}
+            </a>
+          ))
+        }
+      </nav>
     </div>
   </div>
 </footer>

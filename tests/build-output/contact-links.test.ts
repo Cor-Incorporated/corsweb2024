@@ -21,6 +21,7 @@ import { JSDOM } from 'jsdom';
 import { CLOUDIA_CHAT_PATH, hasCalendarEmbed, isContactPagePath, normalizeSitePath } from '../../src/config/contact-guards';
 import jaJson from '../../src/i18n/locales/ja.json';
 import enJson from '../../src/i18n/locales/en.json';
+import { SITE_CHROME } from '../../src/config/site-chrome';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
 const BLOG_JA_DIR = path.resolve('src/content/blog/ja');
@@ -42,6 +43,8 @@ interface Link {
   kind: string;
   raw: string;
   url: URL;
+  /** html の中の、この link の出現位置（サイト切替の nav の中か外かの判定に使う） */
+  offset: number;
 }
 
 function htmlFiles(dir: string): string[] {
@@ -85,7 +88,7 @@ const META_REFRESH = new RegExp(String.raw`<meta\b(?=[^>]*http-equiv=["']?refres
 function sameOriginLinks(html: string, pagePath: string): Link[] {
   const base = new URL(pagePath, ORIGIN);
   const links: Link[] = [];
-  const push = (kind: string, raw: string) => {
+  const push = (kind: string, raw: string, offset: number) => {
     const value = decode(raw).trim();
     if (!value || /^(?:mailto|tel|javascript|data):/i.test(value) || value.startsWith('#')) return;
     let url: URL;
@@ -94,14 +97,14 @@ function sameOriginLinks(html: string, pagePath: string): Link[] {
     } catch {
       return;
     }
-    if (SAME_SITE_ORIGINS.has(url.origin)) links.push({ kind, raw: value, url });
+    if (SAME_SITE_ORIGINS.has(url.origin)) links.push({ kind, raw: value, url, offset });
   };
   for (const { kind, pattern } of LINK_PATTERNS) {
-    for (const match of html.matchAll(pattern)) push(kind, match[1] ?? match[2] ?? match[3] ?? '');
+    for (const match of html.matchAll(pattern)) push(kind, match[1] ?? match[2] ?? match[3] ?? '', match.index);
   }
   for (const match of html.matchAll(META_REFRESH)) {
     const target = decode(match[1] ?? match[2] ?? match[3] ?? '').match(/url\s*=\s*['"]?([^'"]+)/i)?.[1];
-    if (target) push('meta', target);
+    if (target) push('meta', target, match.index);
   }
   return links;
 }
@@ -129,6 +132,23 @@ const isLocalizedChatPath = (pathname: string) => /^\/(?:en|zh|ko|es)\/contact\/
 
 const isChatLink = (link: Link) => normalizeSitePath(link.url.pathname) === normalizeSitePath(CLOUDIA_CHAT_PATH);
 
+// 下の帯のサイト切替（src/config/site-chrome.json の sites）は、問い合わせの導線ではなく
+// サイト間の移動なので source を付けない。除外は href の一致だけでは広い（footer 以外に同じ
+// URL の link が増えると一緒に除外される）ので、Footer.astro のサイト切替の nav に付けた
+// data-site-switch の中の link だけに絞る。判定は link の出現位置で行う（同じ URL でも
+// nav の外なら除外しない）。圧縮後の HTML は属性値の引用符が外れるので
+// （data-site-switch・data-site-switch=""・data-site-switch='' の 3 通り）全部受ける。
+const siteSwitchNav = /<nav\b[^>]*?\sdata-site-switch(?:=(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=[\s>])[^>]*>[\s\S]*?<\/nav>/g;
+const siteSwitchHrefs = new Set(SITE_CHROME.sites.map((site) => site.href));
+
+/** html の中の、サイト切替の nav の範囲（[開始位置, 終了位置] の並び）。 */
+const siteSwitchNavRanges = (html: string): Array<[number, number]> =>
+  [...html.matchAll(siteSwitchNav)].map((m) => [m.index, m.index + m[0].length] as [number, number]);
+
+const isSiteSwitchLink = (page: { siteSwitchRanges: Array<[number, number]> }, link: Link) =>
+  siteSwitchHrefs.has(link.raw) &&
+  page.siteSwitchRanges.some(([start, end]) => link.offset >= start && link.offset < end);
+
 const files = existsSync(DIST_DIR) ? htmlFiles(DIST_DIR) : [];
 const pages = files.map((file) => {
   const pagePath = pagePathOf(file);
@@ -139,6 +159,7 @@ const pages = files.map((file) => {
     links: sameOriginLinks(html, pagePath),
     // 圧縮の後の HTML は属性の引用符を外す（id=footer-heading）ので、どちらの書き方でも見る
     hasSiteFooter: /\sid=["']?footer-heading["'\s>]/.test(html),
+    siteSwitchRanges: siteSwitchNavRanges(html),
   };
 });
 
@@ -260,6 +281,7 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
       .flatMap((page) =>
         page.links
           .filter(isChatLink)
+          .filter((link) => !isSiteSwitchLink(page, link))
           .filter((link) => !link.url.searchParams.get('source') || link.url.searchParams.get('locale') !== page.locale)
           .map((link) => `${page.pagePath}（${page.locale}）→ ${link.raw}`),
       );
