@@ -18,13 +18,13 @@
 
 ## 設定差分（既存の値は変えていない）
 
-`workers/contact-chat/wrangler.toml` の `CONTACT_TO_EMAIL`、`CONTACT_CC_EMAILS`、`CONTACT_FROM_EMAIL` は変えていない。新しい変数は toml に書いていない。本番で `live` にする手順は `workers/contact-chat/RUNBOOK-document-request-notice.md`（人間ゲート）。2 つの値は、専用の PR で `wrangler.toml` の本番側の `[vars]` に対で書く。この変更には足していない。
+`workers/contact-chat/wrangler.toml` の `CONTACT_TO_EMAIL`、`CONTACT_CC_EMAILS`、`CONTACT_FROM_EMAIL` は変えていない。本番の `[vars]` には、専用の PR で 2 つの値を対で書いた: `DOCUMENT_REQUEST_NOTIFY_MODE = "live"`、`DOCUMENT_REQUEST_NOTIFY_RELEASED_AT = "1795230600"`（2026-11-21 12:10 JST。解放時刻より前に作られた行は保留のまま送らない）。止めるとき・時刻を動かすときの手順は `workers/contact-chat/RUNBOOK-document-request-notice.md`（人間ゲート）。
 
 | 名前 | いま | 意味 |
 |---|---|---|
 | `DOCUMENT_REQUEST_NOTIFY_MODE` 未設定 | コードの既定 | Resend を呼ばない。outbox は `held` / `notify_not_released`。行は残る |
 | `mock` | テストだけ | キュー消費は送らず `held`。明示の再処理だけが擬似送信する。受付 status は `stored` のまま |
-| `live` + `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` | 未設定 | 解放時刻（10 桁の unix 秒）以降に作られた行の社内通知を、既存の問い合わせと同じ送信器・同じ宛先で送る。解放時刻が無い・不正なら送らない。mode は小文字の `live` だけ（`LIVE` や空白つきは hold）。解放時刻は配備が終わる予定より後にし、止めて再び live にするときは必ず新しくする（この境界は手順で閉じていて、コードでは閉じていない） |
+| `live` + `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` | `live` / `1795230600` | 解放時刻（10 桁の unix 秒）以降に作られた行の社内通知を、既存の問い合わせと同じ送信器・同じ宛先で送る。解放時刻が無い・不正なら送らない。mode は小文字の `live` だけ（`LIVE` や空白つきは hold）。解放時刻は配備が終わる予定より後にし、止めて再び live にするときは必ず新しくする（この境界は手順で閉じていて、コードでは閉じていない） |
 
 ## 社内通知の流れ
 
