@@ -537,7 +537,7 @@
             "p": "一开始只需提供业务概要即可。请不要在发送内容中包含患者的真实数据、病历或登录凭证（账号、密码等）。"
           }
         ],
-        "primary": "咨询 Cloudia",
+        "primary": "联系我们（AI 接待）",
         "downloadButton": "下载资料"
       },
       "sourcesTitle": "参考资料",
@@ -863,7 +863,7 @@
             "p": "一开始只需提供业务概要即可。请不要在发送内容中包含顾问客户或委托人的真实数据及登录凭证（账号、密码等）。"
           }
         ],
-        "primary": "咨询 Cloudia",
+        "primary": "联系我们（AI 接待）",
         "downloadButton": "下载资料"
       },
       "sourcesTitle": "参考资料",
@@ -1204,7 +1204,7 @@
             "p": "一开始只需提供业务概要即可。无需附上现场的真实数据或机密资料。"
           }
         ],
-        "primary": "咨询 Cloudia",
+        "primary": "联系我们（AI 接待）",
         "downloadButton": "下载资料"
       },
       "sourcesTitle": "参考资料",
@@ -1513,7 +1513,7 @@
             "p": "一开始只需提供业务概要即可。无需附上现场的真实数据或机密资料。"
           }
         ],
-        "primary": "咨询 Cloudia",
+        "primary": "联系我们（AI 接待）",
         "downloadButton": "下载资料"
       },
       "sourcesTitle": "参考资料",
@@ -1812,7 +1812,7 @@
             "p": "一开始只需提供业务概要即可。请不要在发送内容中包含学生的真实数据、机密资料或登录凭证（账号、密码等）。"
           }
         ],
-        "primary": "咨询 Cloudia",
+        "primary": "联系我们（AI 接待）",
         "downloadButton": "下载资料"
       },
       "sourcesTitle": "参考资料",
