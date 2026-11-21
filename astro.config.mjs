@@ -16,6 +16,8 @@ const blogLastmod = collectBlogLastmod(fileURLToPath(new URL('./src/content/blog
 
 export default defineConfig({
   site: 'https://cor-jp.com',
+  // ブラウザ検査では、開発ツールバーが固定ボタンへのクリックを遮らないようにする。
+  devToolbar: { enabled: process.env.COR_BROWSER_TEST !== '1' },
   prefetch: {
     prefetchAll: false,
     defaultStrategy: 'hover'
