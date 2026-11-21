@@ -4,6 +4,11 @@
 export const CONTACT_LOG_EVENTS = [
   'session_storage_failed',
   'llm_failed',
+  'llm_gateway_http_failed',
+  'llm_gateway_invalid_response',
+  'llm_output_missing',
+  'llm_output_max_tokens',
+  'llm_output_blocked',
   'llm_not_configured',
   'email_unconfigured',
   'submission_storage_failed',

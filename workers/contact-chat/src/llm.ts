@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { ContactLogEvent } from './log';
 import type { TrafficReading } from './industry-context';
 import { trafficPromptLine } from './industry-context';
 import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env, StructuredLead } from './types';
@@ -80,7 +81,27 @@ const VERTEX_CONTACT_RESPONSE_SCHEMA = {
   },
 };
 
+type VertexResponseFailure = Extract<ContactLogEvent,
+  | 'llm_gateway_http_failed'
+  | 'llm_gateway_invalid_response'
+  | 'llm_output_missing'
+  | 'llm_output_max_tokens'
+  | 'llm_output_blocked'
+>;
+
+export class VertexResponseError extends Error {
+  constructor(readonly code: VertexResponseFailure) {
+    super(code);
+  }
+}
+
+const VERTEX_BLOCK_REASONS = new Set([
+  'SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT',
+  'SPII', 'MODEL_ARMOR', 'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT',
+]);
+
 interface VertexResponse {
+  promptFeedback?: { blockReason?: string };
   candidates?: Array<{
     finishReason?: string;
     content?: { parts?: Array<{ text?: string; thought?: boolean }> };
@@ -129,16 +150,25 @@ class VertexGeminiProvider implements LlmProvider {
       },
       body,
     });
-    if (!response.ok) throw new Error(`Vertex gateway failed (${response.status})`);
-    const data = await response.json() as VertexResponse;
-    const candidate = data.candidates?.[0];
-    // Vertex v1 では終了理由の空欄も未完了。STOP の本文だけを会話や分類に渡す。
-    if (candidate?.finishReason !== 'STOP') {
-      throw new Error('Vertex candidate did not finish normally');
+    if (!response.ok) throw new VertexResponseError('llm_gateway_http_failed');
+    const data = await response.json().catch(() => {
+      throw new VertexResponseError('llm_gateway_invalid_response');
+    }) as VertexResponse | null;
+    const candidate = Array.isArray(data?.candidates) ? data.candidates[0] : undefined;
+    const finishReason = candidate?.finishReason;
+    if (finishReason === 'MAX_TOKENS') throw new VertexResponseError('llm_output_max_tokens');
+    if (VERTEX_BLOCK_REASONS.has(finishReason ?? '') || VERTEX_BLOCK_REASONS.has(data?.promptFeedback?.blockReason ?? '')) {
+      throw new VertexResponseError('llm_output_blocked');
     }
-    const output = candidate.content?.parts?.filter((part) => !part.thought)
-      .map((part) => part.text || '').join('').trim();
-    if (!output) throw new Error('Vertex candidate has no response text');
+    if (!candidate || finishReason !== 'STOP') throw new VertexResponseError('llm_gateway_invalid_response');
+
+    const parts = candidate.content?.parts ?? [];
+    if (!Array.isArray(parts) || parts.some((part) => !part || typeof part !== 'object'
+      || (part.text !== undefined && typeof part.text !== 'string'))) {
+      throw new VertexResponseError('llm_gateway_invalid_response');
+    }
+    const output = parts.filter((part) => !part.thought).map((part) => part.text ?? '').join('').trim();
+    if (!output) throw new VertexResponseError('llm_output_missing');
     return output;
   }
 }

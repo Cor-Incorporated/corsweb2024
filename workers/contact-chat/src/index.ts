@@ -40,7 +40,7 @@ import { logContactFailure, notificationFailureCode } from './log';
 import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
 import { classifyFromModel, unclassified } from './inquiry-classification';
 import { entryContextFromTraffic } from './inquiry-context';
-import { buildSystemPrompt, getProvider } from './llm';
+import { buildSystemPrompt, getProvider, VertexResponseError } from './llm';
 import { getEmailProvider, sendInquiryEmail, sendReceiptEmail } from './email';
 import {
   claimOutbox,
@@ -416,8 +416,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
     // only masked messages to Vertex/Anthropic; the original browser transcript
     // is never persisted by the chat endpoint.
     raw = await provider.chat(system, maskMessagesForLlm(norm.messages));
-  } catch {
-    logContactFailure('llm_failed');
+  } catch (error) {
+    logContactFailure(error instanceof VertexResponseError ? error.code : 'llm_failed');
     return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください', fallback: true }, 503);
   }
 
