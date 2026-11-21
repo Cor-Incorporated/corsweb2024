@@ -2,25 +2,63 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildSystemPrompt, getProvider } from '../llm';
 import type { Env } from '../types';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('VertexGeminiProvider', () => {
   it('global gemini-3.5-flash を構造化JSON設定でGatewayへ送る', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"reply":"ok"}' }] } }] }), { status: 200 }));
+    const reply = '{"reply":"次のご案内です","summary":"","classification":"genuine","readyForContact":true,"intent":null,"structuredLead":{}}';
+    const fetchMock = vi.fn(async () => Response.json({
+      candidates: [{
+        finishReason: 'STOP',
+        content: { parts: [{ text: 'internal thought', thought: true }, { text: reply.slice(0, 30) }, { text: reply.slice(30) }] },
+      }],
+    }));
     vi.stubGlobal('fetch', fetchMock);
     const provider = getProvider({ LLM_PROVIDER: 'vertex-gemini', VERTEX_GATEWAY_URL: 'https://gateway/generateContent', VERTEX_GATEWAY_SECRET: 'secret' } as Env);
-    expect(await provider.chat('system', [{ role: 'user', content: 'hello' }])).toBe('{"reply":"ok"}');
+    expect(await provider.chat('system', [{ role: 'user', content: 'hello' }])).toBe(reply);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://gateway/generateContent');
     const body = JSON.parse(init.body as string);
     expect(body).toMatchObject({ project: 'cor-jp-web', location: 'global', model: 'gemini-3.5-flash' });
-    expect(body.generationConfig.responseMimeType).toBe('application/json');
+    expect(body.generationConfig).toMatchObject({
+      responseMimeType: 'application/json',
+      maxOutputTokens: 1024,
+      responseSchema: {
+        type: 'OBJECT',
+        required: ['reply', 'summary', 'classification', 'readyForContact', 'intent', 'structuredLead'],
+        propertyOrdering: ['reply', 'summary', 'classification', 'readyForContact', 'intent', 'structuredLead'],
+        properties: {
+          reply: { type: 'STRING' },
+          summary: { type: 'STRING' },
+          classification: { type: 'STRING', enum: ['genuine', 'sales', 'spam'] },
+          readyForContact: { type: 'BOOLEAN' },
+          intent: { type: 'STRING', nullable: true },
+          structuredLead: {
+            type: 'OBJECT',
+            propertyOrdering: ['purpose', 'industryRole', 'dataSensitivity', 'stage', 'timingBudget', 'discoverySource', 'contactReason'],
+            properties: {
+              purpose: { type: 'STRING' },
+              industryRole: { type: 'STRING' },
+              dataSensitivity: { type: 'STRING' },
+              stage: { type: 'STRING' },
+              timingBudget: { type: 'STRING' },
+              discoverySource: { type: 'STRING' },
+              contactReason: { type: 'STRING' },
+            },
+          },
+        },
+      },
+    });
+    expect(body.generationConfig.responseSchema.properties.structuredLead.required).toBeUndefined();
     expect(body.tools).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain('secret');
   });
 
   it('Gateway経路はHMACヘッダを付け、secretを本文に入れない', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{}' }] } }] }), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{}' }] } }] }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     const provider = getProvider({
       LLM_PROVIDER: 'vertex-gemini', VERTEX_GATEWAY_URL: 'https://gateway/generateContent',
@@ -32,6 +70,23 @@ describe('VertexGeminiProvider', () => {
     expect((init.headers as Record<string, string>)['x-cloudia-signature']).toMatch(/^[a-f0-9]{64}$/);
     expect(init.body).not.toContain('gateway-secret');
     expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+  });
+
+  it.each([
+    ['MAX_TOKENS', '{"reply":"途中'],
+    ['MAX_TOKENS', '{"reply":"完了に見える","readyForContact":true}'],
+    [undefined, '{"reply":"完了に見える","readyForContact":true}'],
+    ['', '{"reply":"完了に見える","readyForContact":true}'],
+    ['SAFETY', '{"reply":"公開できない"}'],
+    ['STOP', ''],
+  ])('%s で公開できる完成応答が無ければ例外にする', async (finishReason, text) => {
+    const fetchMock = vi.fn(async () => Response.json({
+      candidates: [{ finishReason, content: { parts: [{ text }] } }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const provider = getProvider({ LLM_PROVIDER: 'vertex-gemini', VERTEX_GATEWAY_URL: 'https://gateway/generateContent', VERTEX_GATEWAY_SECRET: 'secret' } as Env);
+    await expect(provider.chat('system', [{ role: 'user', content: 'hello' }])).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('Vertex障害は生レスポンスを公開せず例外にする', async () => {

@@ -87,7 +87,7 @@ function postRaw(path: string, rawBody: string): Request {
 function stubModel(modelText: string) {
   const fetchMock = vi.fn(async (url: string) => {
     if (String(url).includes('generateContent')) {
-      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: modelText }] } }] }), { status: 200 });
+      return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: modelText }] } }] }), { status: 200 });
     }
     throw new Error(`unexpected fetch ${url}`);
   });
@@ -528,7 +528,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     const sent: NotificationMessage[] = [];
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
       if (String(url).includes('generateContent')) {
-        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: modelJson('genuine') }] } }] }), { status: 200 });
+        return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: modelJson('genuine') }] } }] }), { status: 200 });
       }
       if (String(url).includes('api.resend.com')) {
         return new Response(JSON.stringify({ id: 're_mock_lead_fill' }), { status: 200 });
@@ -728,7 +728,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     const sent: NotificationMessage[] = [];
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
       if (String(url).includes('generateContent')) {
-        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: modelJson('genuine') }] } }] }), { status: 200 });
+        return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: modelJson('genuine') }] } }] }), { status: 200 });
       }
       if (String(url).includes('api.resend.com')) {
         return new Response(JSON.stringify({ id: 're_mock_lead_redact' }), { status: 200 });
