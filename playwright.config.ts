@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = 'http://127.0.0.1:4324';
+
 export default defineConfig({
   testDir: './e2e',
   // CMS 管理画面はビルド済みの出力でだけ確かめる（playwright.admin.config.ts）。
@@ -10,7 +12,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4321',
+    baseURL,
     trace: 'on-first-retry',
   },
 
@@ -30,8 +32,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:4321',
-    reuseExistingServer: !process.env.CI,
+    command: 'npm run dev -- --host 127.0.0.1 --port 4324',
+    env: { COR_BROWSER_TEST: '1' },
+    url: baseURL,
   },
 });

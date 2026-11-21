@@ -166,7 +166,10 @@ test.describe('Cloudia contact routing', () => {
   test('fits a mobile safe-area viewport without horizontal scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/contact/${query}`);
-    await page.locator('#cloudia-launcher-open').click();
+    const openButton = page.locator('#cloudia-launcher-open');
+    await openButton.click();
+    await expect(openButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#cloudia-launcher-panel')).toBeVisible();
 
     const dimensions = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
