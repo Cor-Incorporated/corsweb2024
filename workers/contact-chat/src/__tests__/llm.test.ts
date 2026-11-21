@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildSystemPrompt, getProvider } from '../llm';
-import type { Env } from '../types';
+import type { ChatMessage, Env } from '../types';
+import { MAX_MESSAGE_LEN, MAX_MESSAGES } from '../validate';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -55,6 +56,66 @@ describe('VertexGeminiProvider', () => {
     expect(body.generationConfig.responseSchema.properties.structuredLead.required).toBeUndefined();
     expect(body.tools).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain('secret');
+  });
+
+  it('長い日本語の履歴を保持して Gateway の 64 KiB 境界に収める', async () => {
+    const gatewayLimit = 64 * 1024;
+    const system = buildSystemPrompt({ mode: 'intake', locale: 'ja' });
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      if (Buffer.byteLength(init.body as string) > gatewayLimit) {
+        return Response.json({ error: 'invalid request' }, { status: 413 });
+      }
+      return Response.json({
+        candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{}' }] } }],
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const provider = getProvider({ VERTEX_GATEWAY_URL: 'https://gateway/generateContent', VERTEX_GATEWAY_SECRET: 'fixture' } as Env);
+    const messages: ChatMessage[] = Array.from({ length: MAX_MESSAGES }, (_, index) => ({
+      role: index % 2 === 0 ? 'assistant' : 'user',
+      content: '相',
+    }));
+    const last = messages[messages.length - 1];
+    await provider.chat(system, messages);
+    const emptyHistoryBytes = Buffer.byteLength(fetchMock.mock.calls[0][1].body as string);
+    const available = gatewayLimit - emptyHistoryBytes;
+    const japaneseCharacters = Math.floor(available / 3);
+    const perMessage = Math.floor(japaneseCharacters / messages.length);
+    for (const message of messages) message.content += '相'.repeat(perMessage);
+    last.content += '相'.repeat(japaneseCharacters % messages.length) + 'x'.repeat(available % 3);
+    expect(last.content.length).toBeLessThanOrEqual(MAX_MESSAGE_LEN);
+
+    await expect(provider.chat(system, messages)).resolves.toBe('{}');
+    const exactBody = fetchMock.mock.calls[1][1].body as string;
+    expect(Buffer.byteLength(exactBody)).toBe(gatewayLimit);
+    expect(JSON.parse(exactBody).generationConfig.responseSchema).toBeDefined();
+
+    last.content += 'x';
+    await expect(provider.chat(system, messages)).resolves.toBe('{}');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const overflowBody = fetchMock.mock.calls[2][1].body as string;
+    const overflow = JSON.parse(overflowBody);
+    expect(Buffer.byteLength(overflowBody)).toBeLessThan(gatewayLimit);
+    expect(overflow.generationConfig).toEqual({
+      maxOutputTokens: 1024,
+      temperature: 0.3,
+      responseMimeType: 'application/json',
+    });
+    expect(overflow.contents).toEqual(messages.map(({ role, content }) => ({
+      role: role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: content }],
+    })));
+
+    const remaining = gatewayLimit - Buffer.byteLength(overflowBody);
+    last.content += 'x'.repeat(remaining);
+    expect(last.content.length).toBeLessThanOrEqual(MAX_MESSAGE_LEN);
+    await expect(provider.chat(system, messages)).resolves.toBe('{}');
+    const legacyAtLimit = fetchMock.mock.calls[3][1].body as string;
+    expect(Buffer.byteLength(legacyAtLimit)).toBe(gatewayLimit);
+
+    last.content += 'x';
+    await expect(provider.chat(system, messages)).rejects.toThrow('Vertex gateway request exceeds size limit');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('Gateway経路はHMACヘッダを付け、secretを本文に入れない', async () => {

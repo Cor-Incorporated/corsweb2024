@@ -11,6 +11,8 @@ export const DEFAULT_VERTEX_MODEL = 'gemini-3.5-flash';
 export const DEFAULT_VERTEX_PROJECT = 'cor-jp-web';
 export const DEFAULT_VERTEX_LOCATION = 'global';
 export const MAX_OUTPUT_TOKENS = 1024;
+// services/vertex-gateway/src/server.js が受信できる署名対象本文の上限。
+const VERTEX_GATEWAY_MAX_BODY_BYTES = 64 * 1024;
 
 // --- プロバイダ抽象化 ---
 // chat(system, messages) => string。既定実装はVertex Gateway。
@@ -91,7 +93,7 @@ class VertexGeminiProvider implements LlmProvider {
     const gatewayUrl = this.env.VERTEX_GATEWAY_URL?.trim();
     const gatewaySecret = this.env.VERTEX_GATEWAY_SECRET?.trim();
     if (!gatewayUrl || !gatewaySecret) throw new Error('Vertex gateway is not configured');
-    const body = JSON.stringify({
+    const request = {
       project: this.env.GOOGLE_CLOUD_PROJECT || DEFAULT_VERTEX_PROJECT,
       location: this.env.GOOGLE_CLOUD_LOCATION || DEFAULT_VERTEX_LOCATION,
       model: this.env.VERTEX_MODEL || DEFAULT_VERTEX_MODEL,
@@ -101,9 +103,20 @@ class VertexGeminiProvider implements LlmProvider {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0.3,
         responseMimeType: 'application/json',
-        responseSchema: VERTEX_CONTACT_RESPONSE_SCHEMA,
       },
+    };
+    const encoder = new TextEncoder();
+    let body = JSON.stringify({
+      ...request,
+      generationConfig: { ...request.generationConfig, responseSchema: VERTEX_CONTACT_RESPONSE_SCHEMA },
     });
+    // スキーマで上限を超えるときは会話履歴を残し、従来のJSON設定で一度だけ送る。
+    if (encoder.encode(body).byteLength > VERTEX_GATEWAY_MAX_BODY_BYTES) {
+      body = JSON.stringify(request);
+      if (encoder.encode(body).byteLength > VERTEX_GATEWAY_MAX_BODY_BYTES) {
+        throw new Error('Vertex gateway request exceeds size limit');
+      }
+    }
     const timestamp = String(Date.now());
     const nonce = crypto.randomUUID();
     const response = await fetch(gatewayUrl, {
