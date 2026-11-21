@@ -14,7 +14,7 @@ AI のレーンは Stripe の API を鍵付きで呼ばない。鍵の値を読�
 | [lib.sh](lib.sh) | 2 本が共有する部品（鍵の受け取り、モードの確認、API の呼出し、日付と明細の計算 `billing_lines`） |
 | [runbook.md](runbook.md) | 寺田が実行する手順（テストモード → 本番、顧客 1 社の契約 → 入口を開ける → 毎月の請求 → 解約 → 閉じる） |
 | [contract/](contract/) | 権利（`services`）の判定の見本と試験ベクトル。`judge.sh`（jq。`--services-json`・`--service`・`--date` で 4 つの結果を 1 行。形の違う行は `closed` を 1 行出して exit 0 にし、理由を標準エラーに 1 行。exit 64 は引数・`--date`・ファイルの使い方の誤りだけ）・`entitlement-vectors.json`（判定表の境界 55 件。うち 24 件は、形の違う行など fail closed を縛るために足した行。bd と XESM の試験もこれを読む）・`verify-sample.mjs`（Clerk のトークンの検証の見本。R1・R2） |
-| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 120 項目、`test-subscribe.sh` 766 項目、`test-entitlement-vectors.sh` 103 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
+| [tests/](tests/) | 通信しない検査（偽の curl で、鍵が漏れないこと・モード違いで止まること・事故入力を落とすこと・明細の金額が手で計算した値と合うこと）。`test-apply-plans.sh` 120 項目、`test-subscribe.sh` 773 項目、`test-entitlement-vectors.sh` 103 項目（判定表の境界 ↔ `judge.sh` ↔ plans.json）、`test-verify-sample.sh` 25 項目（トークンの検証の陽性 1・陰性 9）、`test-gitleaksignore.sh` 6 項目（リポジトリ直下の `.gitleaksignore` が除くのは plans.json の税率の識別子の 1 行だけであること）、`test-tokushoho-link.sh`（特商法ページの月額・支払時期・解約条件・最低利用期間 ↔ plans.json）。CI では回らないので手で回す |
 
 ## 0. 決まっていること（寺田、2026-11-06 13:5x）
 
@@ -271,7 +271,7 @@ ADR-0028 で足した 4 つの操作。手順の全文は runbook E1〜E6。
 | 解約 → 入口を閉じる | 6 章 | — | D1〜D5 | XESM の利用者の無効化手順が無い |
 | 未回収分 | 8 章 | — | C7 | 顧客ごとの数字は非公開の台帳 |
 | 特商法 | 別 PR | — | — | 文言は寺田が確定 |
-| 権利の写し（`services`）と hold | 1A・5 章 | `services` ↔ `contract/entitlement-vectors.json` ↔ `contract/judge.sh` | C7・E1〜E4 | Clerk の API のモード（test/live）は判別できない（未確認）。本物の Clerk では未実測 |
+| 権利の写し（`services`）と hold | 1A・5 章 | `services` ↔ `contract/entitlement-vectors.json` ↔ `contract/judge.sh` | C7・E1〜E4 | Clerk secret key の接頭辞と `--mode` を照合。実 API では未検証 |
 | 支払い方法の変更（段階 5） | 5 章 | `payment` | E5 | 本物のカードでは未実測。発行済みの請求書が変わらないことは偽の応答でだけ確かめた |
 | 手順書 | — | — | runbook.md | Stripe の画面の文言は確かめていない |
 
@@ -326,5 +326,5 @@ ADR-0028 で足した 4 つの操作。手順の全文は runbook E1〜E6。
 10. 入口を開けるのは、契約とカードの保存を確かめた時点でよいか（作り方 B では、最初の支払いは契約の月の翌月末日に来る。5 章）。
 11. 前からの顧客の `contract` は決まった: 元の契約日 + `--billing-from`（1C 章、2026-11-07 12:4x）。
 12. テストモードの `charge` は決まった: `--early-test` でテストモードだけ期限前に払える。本番では受け付けない（exit 64。2026-11-07 12:4x）。
-13. Clerk の鍵が test 用か live 用かを、`clerk-sync` は API で確かめられない（**未確認**）。`--mode` は意図の宣言で、`live` のときは端末で `live` と打つ確認だけがある。確かめる道があれば教えてほしい。
+13. Clerk secret key は `--mode test` に `sk_test_`、`--mode live` に `sk_live_` を使う。接頭辞が不明かモードが違う場合は Clerk API の呼び出し前に止まる。接頭辞から分かるのはインスタンスの種別であり、対象組織は [runbook](runbook.md) で確認する。
 14. `clerk-sync`・`hold`・`resync` は、契約の無くなったサービスを `null` にして Clerk から消す。`until` の無い契約では `until` のキーが残らない（PATCH の `null` がキーを消すため）。読み手は「`until` が無い = 終了日なし」として扱う（`contract/judge.sh` と試験ベクトル v31）。

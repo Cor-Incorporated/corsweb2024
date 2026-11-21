@@ -275,7 +275,7 @@ validate_command() {
     resync) ;;
     set-payment)
       need --customer "$OPT_CUSTOMER"; need --payment "$OPT_PAYMENT"
-      case "$OPT_PAYMENT" in card | transfer) ;; *) die 64 "--payment は card か transfer（観測: $OPT_PAYMENT）" ;; esac ;;
+      case "$OPT_PAYMENT" in card | transfer) ;; *) die 64 "--payment は card か transfer（観測: ${OPT_PAYMENT}）" ;; esac ;;
     cancel)
       need --customer "$OPT_CUSTOMER"; need --service "$OPT_SERVICE"; need --accepted "$OPT_ACCEPTED"
       check_service; check_accepted ;;
@@ -828,7 +828,7 @@ do_set_hold() {
   [ -n "$(cust_meta "$ks")" ] || die 3 "$OPT_CUSTOMER に $OPT_SERVICE の契約が無い（metadata に $ks が無い）。hold を書かない"
   org="$(cust_meta clerk_org_id)"
   [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に写せないので書かない"
-  [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。書かない"
+  [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: ${org}）。書かない"
   check_org_not_shared "$org"
   cur="$(cust_meta "$kh")"
   if [ "$cur" = "true" ]; then s_hold="true"; else s_hold="false"; fi
@@ -963,14 +963,14 @@ overdue_services() {
     after=""
     while :; do
       n=$((n + 1))
-      [ "$n" -le 1000 ] || die 3 "請求書の一覧のページが 1000 を超えた（顧客 $cus）。全件を見ていない"
+      [ "$n" -le 1000 ] || die 3 "請求書の一覧のページが 1000 を超えた（顧客 ${cus}）。全件を見ていない"
       if [ -z "$after" ]; then
         api_ok "$st の請求書の一覧" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=$st" --data-urlencode "limit=100"
       else
         api_ok "$st の請求書の一覧（続き）" GET /v1/invoices --data-urlencode "customer=$cus" --data-urlencode "status=$st" --data-urlencode "limit=100" --data-urlencode "starting_after=$after"
       fi
       # 形が違うのに「超過が無い」と読むと、hold を外す側に倒れる
-      check_list_shape "$st の請求書の一覧（顧客 $cus）" list '^in_'
+      check_list_shape "${st} の請求書の一覧（顧客 ${cus}）" list '^in_'
       page="$RESP_BODY"
       # 期限の無い請求書（open か uncollectible）は判定できない（hold を外さない）
       if jq -e '.data[] | select((.due_date // 0) == 0)' <<<"$page" >/dev/null; then unknown=1; fi
@@ -1071,7 +1071,7 @@ do_resync() {
     body=""
     svcs=""
     if [ -n "$org" ]; then
-      [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org、顧客 $cus）。送らない"
+      [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: ${org}、顧客 ${cus}）。送らない"
       check_clerk_rows
       printf 'RESYNC %s → Clerk の組織 %s: 送る本文は次のとおり（確認の前に出す）\n' "$cus" "$org"
       print_clerk_rows "$(clerk_services_json)"
@@ -1182,9 +1182,9 @@ check_clerk_rows() {
       fi
       continue
     fi
-    valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: $start）。Clerk に送らない"
-    [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: $end）。Clerk に送らない"
-    case "$hold" in "" | true | false) ;; *) die 3 "contract_${s}_hold が true か false でも空でもない（観測: $hold）。Clerk に送らない" ;; esac
+    valid_date "$start" || die 3 "contract_${s}_start が実在する日付ではない（観測: ${start}）。Clerk に送らない"
+    [ -z "$end" ] || valid_date "$end" || die 3 "contract_${s}_end が実在する日付ではない（観測: ${end}）。Clerk に送らない"
+    case "$hold" in "" | true | false) ;; *) die 3 "contract_${s}_hold が true か false でも空でもない（観測: ${hold}）。Clerk に送らない" ;; esac
   done < <(plans_services)
 }
 
@@ -1234,7 +1234,7 @@ clerk_send_payload() {
     | all' <<<"$RESP_BODY" >/dev/null \
     || die 3 "Clerk の応答の services が送った値と違う（観測: $(jq -c '.public_metadata.services // {}' <<<"$RESP_BODY")）。送ったあとなので戻せない。clerk-sync の dry-run か Clerk の画面で確かめる"
   key="$(jq -r --argjson want "$CLERK_SERVICES" '(.public_metadata.services // {}) as $got | [$want | keys[] | select(($want[.] != null) and ($got[.] == null))] | join(", ")' <<<"$RESP_BODY")"
-  [ -z "$key" ] || die 3 "Clerk の応答に、送ったはずのサービスが無い（観測: $key）。送ったあとなので戻せない"
+  [ -z "$key" ] || die 3 "Clerk の応答に、送ったはずのサービスが無い（観測: ${key}）。送ったあとなので戻せない"
   printf 'SENT clerk %s: services を送った（%s）\n' "$org" "$(jq -r 'to_entries | map(if .value == null then "\(.key)=null" else "\(.key)(from=\(.value.from))" end) | join(", ")' <<<"$CLERK_SERVICES")"
 }
 
@@ -1247,7 +1247,7 @@ do_clerk_sync() {
   load_customer
   org="$(cust_meta clerk_org_id)"
   [ -n "$org" ] || die 3 "$OPT_CUSTOMER に clerk_org_id が無い（customer --clerk-org で作った顧客を使う）。Clerk に送らない"
-  [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: $org）。Clerk に送らない"
+  [[ "$org" =~ ^[A-Za-z0-9_]{1,64}$ ]] || die 3 "clerk_org_id の形が違う（観測: ${org}）。Clerk に送らない"
   check_org_not_shared "$org"
   check_clerk_rows
   services="$(clerk_services_json)"
