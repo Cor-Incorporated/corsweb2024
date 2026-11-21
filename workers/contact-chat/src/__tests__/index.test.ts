@@ -175,7 +175,7 @@ describe('worker.fetch — ハンドラレベル', () => {
     const fixture = PRESS_FIXTURES.find((candidate) => candidate.name === 'ja speaking ready');
     if (!fixture) throw new Error('press speaking fixture missing');
     const gatewayFetch = vi.fn(async () => new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: fixture.raw }] } }],
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: fixture.raw }] } }],
     }), { status: 200 }));
     vi.stubGlobal('fetch', gatewayFetch);
     const env = {
@@ -204,6 +204,7 @@ describe('worker.fetch — ハンドラレベル', () => {
   it('all structured intake fields trigger the contact step even if the model under-reports readiness', async () => {
     const gatewayFetch = vi.fn(async () => new Response(JSON.stringify({
       candidates: [{
+        finishReason: 'STOP',
         content: {
           parts: [{
             text: JSON.stringify({
@@ -246,7 +247,7 @@ describe('worker.fetch — ハンドラレベル', () => {
 
   it('VertexリクエストへPIIをそのまま渡さない', async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: '{"reply":"ok","readyForContact":false}' }] } }],
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{"reply":"ok","readyForContact":false}' }] } }],
     }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     const env = {

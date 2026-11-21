@@ -156,7 +156,7 @@ describe('industry source on the contact worker', () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       if (String(url).includes('generateContent')) {
         return new Response(JSON.stringify({
-          candidates: [{ content: { parts: [{ text: JSON.stringify({
+          candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({
             reply: '作業の種類を確認しました。時期の目安だけ教えてください。',
             summary: '院内の調べものの種類を確認',
             classification: 'sales',

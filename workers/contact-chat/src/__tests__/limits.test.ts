@@ -29,7 +29,7 @@ describe('コードが持つ呼び出し上限', () => {
       };
       expect(body.generationConfig?.maxOutputTokens).toBe(MAX_OUTPUT_TOKENS);
       return new Response(JSON.stringify({
-        candidates: [{ content: { parts: [{ text: '{"reply":"確認しました","classification":"genuine","readyForContact":false,"summary":"目的を確認"}' }] } }],
+        candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{"reply":"確認しました","classification":"genuine","readyForContact":false,"summary":"目的を確認"}' }] } }],
       }), { status: 200 });
     }));
     const res = await worker.fetch(new Request('https://cor-jp.com/api/contact/chat', {

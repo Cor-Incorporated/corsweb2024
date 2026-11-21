@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { TrafficReading } from './industry-context';
 import { trafficPromptLine } from './industry-context';
-import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env } from './types';
+import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env, StructuredLead } from './types';
 import { CONTACT_INTENTS } from './types';
 import { COMPANY_KNOWLEDGE } from './company-knowledge';
 
@@ -11,6 +11,8 @@ export const DEFAULT_VERTEX_MODEL = 'gemini-3.5-flash';
 export const DEFAULT_VERTEX_PROJECT = 'cor-jp-web';
 export const DEFAULT_VERTEX_LOCATION = 'global';
 export const MAX_OUTPUT_TOKENS = 1024;
+// services/vertex-gateway/src/server.js が受信できる署名対象本文の上限。
+const VERTEX_GATEWAY_MAX_BODY_BYTES = 64 * 1024;
 
 // --- プロバイダ抽象化 ---
 // chat(system, messages) => string。既定実装はVertex Gateway。
@@ -47,20 +49,74 @@ async function signGateway(secret: string, timestamp: string, nonce: string, bod
   return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${nonce}.${body}`)));
 }
 
+// Vertex の JSON Schema に、会話が受け取る欄と型を指定する。未収集の lead は省略できる。
+const VERTEX_RESPONSE_FIELDS = ['reply', 'summary', 'classification', 'readyForContact', 'intent', 'structuredLead'];
+const VERTEX_LEAD_PROPERTIES = {
+  purpose: { type: 'STRING' },
+  industryRole: { type: 'STRING' },
+  dataSensitivity: { type: 'STRING' },
+  stage: { type: 'STRING' },
+  timingBudget: { type: 'STRING' },
+  discoverySource: { type: 'STRING' },
+  contactReason: { type: 'STRING' },
+} satisfies Record<keyof StructuredLead, { type: 'STRING' }>;
+
+const VERTEX_CONTACT_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  required: VERTEX_RESPONSE_FIELDS,
+  // REST の既定順ではなく、既存のプロンプトと同じ順にそろえる。
+  propertyOrdering: VERTEX_RESPONSE_FIELDS,
+  properties: {
+    reply: { type: 'STRING' },
+    summary: { type: 'STRING' },
+    classification: { type: 'STRING', enum: ['genuine', 'sales', 'spam'] },
+    readyForContact: { type: 'BOOLEAN' },
+    intent: { type: 'STRING', nullable: true },
+    structuredLead: {
+      type: 'OBJECT',
+      properties: VERTEX_LEAD_PROPERTIES,
+      propertyOrdering: Object.keys(VERTEX_LEAD_PROPERTIES),
+    },
+  },
+};
+
+interface VertexResponse {
+  candidates?: Array<{
+    finishReason?: string;
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+  }>;
+}
+
 class VertexGeminiProvider implements LlmProvider {
   constructor(private readonly env: Env) {}
   async chat(system: string, messages: ChatMessage[]): Promise<string> {
     const gatewayUrl = this.env.VERTEX_GATEWAY_URL?.trim();
     const gatewaySecret = this.env.VERTEX_GATEWAY_SECRET?.trim();
     if (!gatewayUrl || !gatewaySecret) throw new Error('Vertex gateway is not configured');
-    const body = JSON.stringify({
+    const request = {
       project: this.env.GOOGLE_CLOUD_PROJECT || DEFAULT_VERTEX_PROJECT,
       location: this.env.GOOGLE_CLOUD_LOCATION || DEFAULT_VERTEX_LOCATION,
       model: this.env.VERTEX_MODEL || DEFAULT_VERTEX_MODEL,
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3, responseMimeType: 'application/json' },
+      generationConfig: {
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        temperature: 0.3,
+        responseMimeType: 'application/json',
+      },
+    };
+    const encoder = new TextEncoder();
+    let body = JSON.stringify({
+      ...request,
+      generationConfig: { ...request.generationConfig, responseSchema: VERTEX_CONTACT_RESPONSE_SCHEMA },
     });
+    // スキーマで上限を超えるときは会話履歴を残し、従来のJSON設定で一度だけ送る。
+    if (encoder.encode(body).byteLength > VERTEX_GATEWAY_MAX_BODY_BYTES) {
+      body = JSON.stringify(request);
+      if (encoder.encode(body).byteLength > VERTEX_GATEWAY_MAX_BODY_BYTES) {
+        throw new Error('Vertex gateway request exceeds size limit');
+      }
+    }
     const timestamp = String(Date.now());
     const nonce = crypto.randomUUID();
     const response = await fetch(gatewayUrl, {
@@ -74,8 +130,16 @@ class VertexGeminiProvider implements LlmProvider {
       body,
     });
     if (!response.ok) throw new Error(`Vertex gateway failed (${response.status})`);
-    const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
+    const data = await response.json() as VertexResponse;
+    const candidate = data.candidates?.[0];
+    // Vertex v1 では終了理由の空欄も未完了。STOP の本文だけを会話や分類に渡す。
+    if (candidate?.finishReason !== 'STOP') {
+      throw new Error('Vertex candidate did not finish normally');
+    }
+    const output = candidate.content?.parts?.filter((part) => !part.thought)
+      .map((part) => part.text || '').join('').trim();
+    if (!output) throw new Error('Vertex candidate has no response text');
+    return output;
   }
 }
 
