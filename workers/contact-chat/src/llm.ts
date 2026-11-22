@@ -8,9 +8,33 @@ import { COMPANY_KNOWLEDGE } from './company-knowledge';
 // Anthropicへ切り替える場合の互換モデル（本番の既定プロバイダはVertex Gemini）。
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const DEFAULT_VERTEX_MODEL = 'gemini-3.5-flash';
+// 互換Gatewayを用意した検証環境で、明示指定したときだけ利用する。
+const HYDROGEN_VERTEX_MODEL = 'gemini-4-hydrogen';
+type VertexModel = typeof DEFAULT_VERTEX_MODEL | typeof HYDROGEN_VERTEX_MODEL;
 export const DEFAULT_VERTEX_PROJECT = 'cor-jp-web';
 export const DEFAULT_VERTEX_LOCATION = 'global';
 export const MAX_OUTPUT_TOKENS = 1024;
+// 短いテキストの構造化応答の打切り上限は据え置き（Hydrogen の LOW でも MAX_TOKENS は有り得るため、
+// 実モデルでの合格を仮定しない。合格判断は本番受入前の別承認の実接続試験で行う）。
+
+// Gemini 4 Hydrogen（正本: Google公式ドキュメント）は temperature・topP・topK の指定値を無視し、
+// generationConfig.thinkingConfig.thinkingLevel（LOW / MEDIUM / HIGH / XHIGH）で推理の深さを制御する。
+// thinkingBudget や thinkingLevel: 'MINIMAL' は HTTP 400 になるため送らない。
+function buildGenerationConfig(model: VertexModel) {
+  if (model === HYDROGEN_VERTEX_MODEL) {
+    return {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: 'LOW' },
+    };
+  }
+  // 旧モデル（gemini-3.5-flash）は従来どおり temperature を使う。
+  return {
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    temperature: 0.3,
+    responseMimeType: 'application/json',
+  };
+}
 // services/vertex-gateway/src/server.js が受信できる署名対象本文の上限。
 const VERTEX_GATEWAY_MAX_BODY_BYTES = 64 * 1024;
 
@@ -88,7 +112,7 @@ interface VertexResponse {
 }
 
 class VertexGeminiProvider implements LlmProvider {
-  constructor(private readonly env: Env) {}
+  constructor(private readonly env: Env, private readonly model: VertexModel) {}
   async chat(system: string, messages: ChatMessage[]): Promise<string> {
     const gatewayUrl = this.env.VERTEX_GATEWAY_URL?.trim();
     const gatewaySecret = this.env.VERTEX_GATEWAY_SECRET?.trim();
@@ -96,14 +120,10 @@ class VertexGeminiProvider implements LlmProvider {
     const request = {
       project: this.env.GOOGLE_CLOUD_PROJECT || DEFAULT_VERTEX_PROJECT,
       location: this.env.GOOGLE_CLOUD_LOCATION || DEFAULT_VERTEX_LOCATION,
-      model: this.env.VERTEX_MODEL || DEFAULT_VERTEX_MODEL,
+      model: this.model,
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: {
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-        temperature: 0.3,
-        responseMimeType: 'application/json',
-      },
+      generationConfig: buildGenerationConfig(this.model),
     };
     const encoder = new TextEncoder();
     let body = JSON.stringify({
@@ -148,13 +168,18 @@ class VertexGeminiProvider implements LlmProvider {
 export function getProvider(env: Env): LlmProvider {
   const provider = (env.LLM_PROVIDER || 'vertex-gemini').toLowerCase();
   switch (provider) {
-    case 'vertex-gemini':
+    case 'vertex-gemini': {
       // 1 日の上限の数を予約する前に止めるため、Gateway の設定が無ければここで投げる（anthropic の鍵と同じ形）。
       // 確かめ方は VertexGeminiProvider.chat と同じ（前後の空白を除いて空なら無い）。
       if (!env.VERTEX_GATEWAY_URL?.trim() || !env.VERTEX_GATEWAY_SECRET?.trim()) {
         throw new Error('LLM が未設定です（VERTEX_GATEWAY_URL・VERTEX_GATEWAY_SECRET）');
       }
-      return new VertexGeminiProvider(env);
+      const model = env.VERTEX_MODEL?.trim() || DEFAULT_VERTEX_MODEL;
+      if (model !== DEFAULT_VERTEX_MODEL && model !== HYDROGEN_VERTEX_MODEL) {
+        throw new Error('未対応の VERTEX_MODEL です');
+      }
+      return new VertexGeminiProvider(env, model);
+    }
     case 'anthropic':
       // vertex-gemini と同じく、前後の空白を除いて空なら無いと見る（空白だけの鍵で予約し、外へ送らないため）。
       if (!env.ANTHROPIC_API_KEY?.trim()) {

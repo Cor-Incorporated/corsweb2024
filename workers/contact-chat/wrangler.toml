@@ -24,6 +24,7 @@ crons = ["*/15 * * * *"]
 LLM_PROVIDER = "vertex-gemini"
 GOOGLE_CLOUD_PROJECT = "cor-jp-web"
 GOOGLE_CLOUD_LOCATION = "global"
+# Hydrogen の実接続検証と本番切替は別の作業。通常の配備は既定のモデルを使う。
 VERTEX_MODEL = "gemini-3.5-flash"
 # 1 日（JST の日付）に model を呼ぶ回数の上限（チャットの API）。0 以上の整数。0 はその日は呼ばない。
 CHAT_DAILY_MODEL_CALL_LIMIT = "300"
