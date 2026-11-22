@@ -17,7 +17,7 @@ type LocaleKey = keyof typeof LOCALES;
 const LOCALE_KEYS = Object.keys(LOCALES) as LocaleKey[];
 
 // 課題 → 実証 → 柱 → セキュリティ → 業種 → Grift のあとに FAQ と締め（docs/story-spine.md）。
-// 5 業種の入口（IndustryEntry）は ProblemHero の中、主ボタンの下にある。h2 の物語の並びは変えない。
+// 5 業種の入口（IndustryEntry）は ProblemHero の中、診断リンクの前にある。h2 の物語の並びは変えない。
 const SECTION_ORDER = [
   'ProblemHero',
   'ChallengeGrid',
@@ -132,8 +132,10 @@ describe('5 言語で同じ並び・同じリンク (#414)', () => {
     expect(template).not.toContain('data-reveal');
 
     const hero = readFileSync(path.join(ROOT, 'src/components/home/ProblemHero.astro'), 'utf8');
-    expect(hero).toContain('<IndustryEntry />');
-    expect(hero.indexOf('data-hero-primary-cta')).toBeLessThan(hero.indexOf('<IndustryEntry />'));
+    const industryEntry = hero.indexOf('<IndustryEntry />');
+    const diagnosisLink = hero.indexOf('data-hero-primary-cta');
+    expect(industryEntry).toBeGreaterThanOrEqual(0);
+    expect(diagnosisLink).toBeGreaterThan(industryEntry);
   });
 
   it('締めの入口は ADR-0011 の有料入口 3 本で、intent が契約の 7 キーに入っている', () => {
