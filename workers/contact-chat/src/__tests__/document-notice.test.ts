@@ -636,7 +636,7 @@ describe('状態を読み替えない', () => {
 describe('既存の経路を壊さない', () => {
   it('問い合わせ（/submit）の通知経路は資料請求の解放時刻に影響されない', async () => {
     const source = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
-    expect(source).toContain("sendInquiryEmail(env, emailProvider.provider, stored.inquiry)");
+    expect(source).toContain("sendInquiryEmail(env, emailProvider.provider, stored.inquiry, stored.receiptId)");
     const env = envFor(openDatabase(), live()).env as Env;
     expect(env.DOCUMENT_REQUEST_NOTIFY_MODE).toBe('live');
   });

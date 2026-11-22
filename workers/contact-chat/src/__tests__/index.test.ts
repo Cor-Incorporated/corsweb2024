@@ -490,7 +490,10 @@ describe('worker.fetch — ハンドラレベル', () => {
     expect(second.reply_to).toBeUndefined();
     expect(second.text).toContain('要約');
     expect(second.text).toContain('相談です');
-    expect((await res.json() as { receiptId?: string }).receiptId).toMatch(/^COR-/);
+    const { receiptId } = await res.json() as { receiptId: string };
+    expect(receiptId).toMatch(/^COR-/);
+    expect(first.text).toContain(`受付番号: ${receiptId}`);
+    expect(second.text).toContain(receiptId);
   });
 
   it('submit: D1 sessionのstructuredLeadを正本としてbrowser payloadを上書きする', async () => {

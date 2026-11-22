@@ -598,8 +598,8 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   }
 
   try {
-    await sendInquiryEmail(env, emailProvider.provider, inquiry);
     const receiptId = newReceiptId();
+    await sendInquiryEmail(env, emailProvider.provider, inquiry, receiptId);
     await sendReceiptEmail(env, emailProvider.provider, inquiry, receiptId);
     return json({ ok: true, receiptId, status: 'sent' });
   } catch {
@@ -868,7 +868,7 @@ export default {
         if (!emailProvider.ok) throw new Error('email provider unavailable');
         const sent = messageType === 'receipt'
           ? await sendReceiptEmail(env, emailProvider.provider, stored.inquiry, stored.receiptId)
-          : await sendInquiryEmail(env, emailProvider.provider, stored.inquiry);
+          : await sendInquiryEmail(env, emailProvider.provider, stored.inquiry, stored.receiptId);
         await markOutboxSent(env, submissionId, messageType, sent.messageId, sent.deliveryStatus);
         message.ack();
       } catch (error) {
