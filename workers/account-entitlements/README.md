@@ -69,8 +69,8 @@ Clerk組織の対応、両製品の実テナントと承認済み主体、組織
 - `ACCOUNT_SITE_ORIGIN` にサイトの HTTPS origin、`CLERK_ISSUER` に正規 Clerk issuer の origin、`CLERK_JWT_KEY` に同じインスタンスの署名検証用公開鍵、`CLERK_SIGN_IN_URL` に正規のログイン URL を設定する。Astro 側の `PUBLIC_CLERK_PUBLISHABLE_KEY` は公開可能なキーだけを使う。ClerkJS の組織切替から個人へ戻るには Clerk の Personal Accounts を有効にする。
 - 選択中の組織は署名済み v2 セッションの `o.id` で確定する。組織モードの `cor_svc` は選択組織の `org.public_metadata.services` をセッションテンプレートから供給する。token は署名・期限・発行元・認可済みオリジン・本人を検証し、保留中のセッションを拒否。組織の権利は最大60秒の新しい claim を使い、欠落・期限超過時は表示しない。停止や閲覧期間の表示は共有ベクトルに従う。
 - 個人モードは `ACCOUNT_GRANTS` の primary にあり、撤回されていない期限内の明示的な staff/legacy 付与から製品を選ぶ。組織の有償権利の停止で個別付与の行は変更しない。選択組織の停止を別テナントの個別付与で上書きすることもない。個人モードで表示されるリンク先でも、製品が既存の対象テナント・所属・操作権限を再検証する。
-- `BD_SERVICE_URL` と `XESM_SERVICE_URL` は製品担当が確認した個別の HTTPS 製品入口を設定する。設定を欠く入口を代替のテスト環境へつなげない。静的配信側に秘密値や製品用機械キーを入れない。
+- Worker の `BD_SERVICE_URL` と `XESM_SERVICE_URL` に、対象環境とテナントに対応する HTTPS の製品入口を設定する。必要な設定を欠くとサービス一覧のAPIは503を返す。入口の値は環境別の配備設定で管理し、静的配信側に秘密値や製品用機械キーを入れない。
 
-配備前に、独立 Worker を `cor-jp.com/api/account/services` だけへルーティングし、他の公開経路や製品のサーバー間APIは既存設定を確認する。現在はローカル候補。実ルート、Clerk Production のログイン・組織選択・個人選択、実ユーザーの有償 claim と D1、BD/XESM の正規 URL と製品側の拒否は未検証。公開前に同一ユーザーで組織の hold と個人の適用テナントを確認する。
+配備前に、独立 Worker を `cor-jp.com/api/account/services` だけへルーティングし、他の公開経路や製品のサーバー間APIは既存設定を確認する。現在はローカル候補。実ルート、Clerk Production のログイン・組織選択・個人選択、実ユーザーの有償 claim と D1、上記入口への実ログインと製品側の拒否は未検証。公開前に同一ユーザーで組織の hold と個人の適用テナントを確認する。
 
-ローカルでは Worker ディレクトリの `npm test` で既存の製品照会と #539 のAPIを確認する。Astroをビルド後、`ACCOUNT_PICKER_BROWSER_OUTPUT` を設定すると同じテストでChromium表示も検査する。ブラウザ証跡は合成セッションと隔離D1に限定し、実Clerk・実製品への通信を行わない。
+ローカルでは Worker ディレクトリの `npm test` で既存の製品照会と #539 のAPIを確認する。Astroをビルド後、`ACCOUNT_PICKER_BROWSER_OUTPUT` を設定すると同じテストでChromium表示も検査する。ブラウザ証跡は合成セッションと隔離D1に限定し、実Clerk・実製品への通信を行わない。既定のリンクは試験用の値。配備設定との照合が必要な場合は、同じ試験の環境変数 `BD_SERVICE_URL` と `XESM_SERVICE_URL` で検証対象の値を渡す。ブラウザ試験はリンクの値を検査し、リンク先への通信は遮断する。

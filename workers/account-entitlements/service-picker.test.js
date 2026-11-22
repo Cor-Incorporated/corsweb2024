@@ -48,23 +48,26 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
   const migration = await readFile(new URL('migrations/0001_account_grants.sql', import.meta.url), 'utf8');
   await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
-  const grant = async (id, subject, service) => db.prepare(`
-    INSERT INTO account_grants VALUES (?1, ?2, ?3, ?4, 'tenant-fixture', 'staff', '2020-01-01', '2099-01-01', 'fixture', NULL, NULL)
-  `).bind(id, issuer, subject, service).run();
+  const grant = async (id, subject, service, kind = 'staff') => db.prepare(`
+    INSERT INTO account_grants VALUES (?1, ?2, ?3, ?4, 'tenant-fixture', ?5, '2020-01-01', '2099-01-01', 'fixture', NULL, NULL)
+  `).bind(id, issuer, subject, service, kind).run();
   await grant('second', 'user_Two', 'business-dossier');
   await grant('third', 'user_Two', 'xesm');
-  await grant('single', 'user_One', 'xesm');
-  await grant('live-revoke', 'user_Revoke', 'business-dossier');
+  await grant('single', 'user_One', 'xesm', 'legacy');
+  await grant('live-revoke', 'user_Revoke', 'business-dossier', 'legacy');
   await grant('revoked', 'user_None', 'xesm');
-  await db.prepare("UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture' WHERE id = 'revoked'").run();
+  const revoke = async id => db.prepare(
+    "UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture' WHERE id = ?1"
+  ).bind(id).run();
+  await revoke('revoked');
 
   const env = {
     ACCOUNT_SITE_ORIGIN: origin,
     CLERK_ISSUER: issuer,
     CLERK_JWT_KEY: publicKey.export({ type: 'spki', format: 'pem' }),
     CLERK_SIGN_IN_URL: 'https://accounts.example.invalid/sign-in',
-    BD_SERVICE_URL: 'https://bd-fixture.cor-jp.com/',
-    XESM_SERVICE_URL: 'https://xesm-fixture.cor-jp.com/',
+    BD_SERVICE_URL: process.env.BD_SERVICE_URL ?? 'https://bd-fixture.cor-jp.com/',
+    XESM_SERVICE_URL: process.env.XESM_SERVICE_URL ?? 'https://xesm-fixture.cor-jp.com/',
     ACCOUNT_GRANTS: db,
   };
   const request = (token, pathname = '/api/account/services', bindings = env) => account.fetch(new Request(origin + pathname, {
@@ -82,7 +85,7 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   assert.deepEqual(await rows(session('user_None')), []);
   const revokeSession = session('user_Revoke');
   assert.deepEqual(await rows(revokeSession), ['business-dossier']);
-  await db.prepare("UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture' WHERE id = 'live-revoke'").run();
+  await revoke('live-revoke');
   assert.deepEqual(await rows(revokeSession), []);
 
   assert.equal((await request()).status, 401);
@@ -153,14 +156,18 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   const { chromium } = await import('@playwright/test');
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--disable-background-networking'] });
   t.after(() => browser.close());
-  for (const [name, expected] of [['Two', ['Business Dossier', 'XESM']], ['One', ['XESM']], ['None', []], ['Guest', []]]) {
+  await grant('browser-revoke', 'user_BrowserRevoke', 'business-dossier', 'legacy');
+  for (const [name, expected] of [
+    ['Two', ['Business Dossier', 'XESM']], ['One', ['XESM']], ['None', []],
+    ['Outside', []], ['BrowserRevoke', ['Business Dossier']], ['Guest', []],
+  ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
     await context.route('**/*', route => route.request().url().startsWith(localUrl + '/') ? route.continue() : route.abort());
     if (name !== 'Guest') await context.addCookies([{ name: '__session', value: session('user_' + name), url: localUrl, httpOnly: true }]);
     const page = await context.newPage();
     await page.goto(localUrl + '/account/services/');
     if (name === 'Guest') await page.getByRole('link', { name: 'Cor.アカウントでログイン' }).waitFor();
-    if (name === 'None') await page.getByText('現在利用できるサービスはありません。').waitFor();
+    if (name !== 'Guest' && !expected.length) await page.getByText('現在利用できるサービスはありません。').waitFor();
     if (expected.length) await page.getByText('開くサービスを選んでください。').waitFor();
     const productLinks = page.locator('#account-services a');
     assert.deepEqual(await productLinks.allTextContents(), expected);
@@ -180,7 +187,14 @@ test('self-service route and browser use signed user plus active D1 grants', asy
       assert.deepEqual(await productLinks.allTextContents(), expected);
     }
     await page.screenshot({ path: join(output, name + '.png') });
+    if (name === 'BrowserRevoke') {
+      await revoke('browser-revoke');
+      await page.reload();
+      await page.getByText('現在利用できるサービスはありません。').waitFor();
+      assert.equal(await productLinks.count(), 0);
+      await page.screenshot({ path: join(output, 'SameSessionRevoked.png') });
+    }
     await context.close();
   }
-  console.log('Chromium: 2/1/0 and signed-out; same user personal 2 → organization hold 1 → personal 2; live Clerk requests 0');
+  console.log('Chromium: staff 2, legacy 1, outside 0, same-session revocation 1 → 0, signed-out 0; configured hrefs; same user personal 2 → organization hold 1 → personal 2; live Clerk requests 0');
 });
