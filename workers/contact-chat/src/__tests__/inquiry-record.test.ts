@@ -209,7 +209,6 @@ describe('受付の分類はサーバーが決め、ブラウザの値で変わ�
   });
 
   it.each([
-    ['解析できない応答', 'not json at all', 'model_unparsed', 'fallback'],
     ['未知の分類の値', modelJson('lead'), 'model_unparsed', 'fallback'],
     ['spam の判定', modelJson('spam'), 'model_spam', 'model'],
   ])('%s は相談に倒さず unknown にする', async (_label, modelText, reason, origin) => {
@@ -293,13 +292,13 @@ async function startSession(env: Env, source: string, sessionId?: string): Promi
   return (await started.json() as { sessionId: string }).sessionId;
 }
 
-async function chatOnce(env: Env, sessionId: string, source: string, modelText: string): Promise<void> {
+async function chatOnce(env: Env, sessionId: string, source: string, modelText: string, expectedStatus = 200): Promise<void> {
   stubModel(modelText);
   const chatted = await worker.fetch(post('/api/contact/chat', {
     sessionId, intent: 'contract-dev', source, locale: 'ja',
     messages: [{ role: 'user', content: '相談です' }],
   }), env);
-  expect(chatted.status).toBe(200);
+  expect(chatted.status).toBe(expectedStatus);
 }
 
 async function submitOnce(env: Env, sessionId: string, source: string, extra: Record<string, unknown> = {}) {
@@ -331,9 +330,21 @@ describe('会話の分類は、モデルの判定でない値で上書きしな�
     const env = testEnv(db);
     const sessionId = await startSession(env, 'industry-shigyo');
     await chatOnce(env, sessionId, 'industry-shigyo', modelJson('sales'));
-    await chatOnce(env, sessionId, 'industry-shigyo', 'not json at all');
+    await chatOnce(env, sessionId, 'industry-shigyo', 'not json at all', 503);
     expect((await submitOnce(env, sessionId, 'industry-shigyo')).status).toBe(200);
     expect(submissionRow(db)).toMatchObject({ machine_classification: 'sales', classification_reason: 'model_sales', classification: 'sales' });
+  });
+
+  it('表示できない初回応答の後も、直接フォームから業種を保持して受け付ける', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const sessionId = await startSession(env, 'industry-education');
+    await chatOnce(env, sessionId, 'industry-education', 'not json at all', 503);
+    expect((await submitOnce(env, sessionId, 'industry-education')).status).toBe(200);
+    expect(submissionRow(db)).toMatchObject({
+      industry: 'education', entry_path: '/industries/education/',
+      machine_classification: 'unknown', classification_reason: 'no_model_turn',
+    });
   });
 
   it('モデルの有効な判定どうしは後の値を使う（sales → genuine）', async () => {

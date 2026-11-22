@@ -55,7 +55,7 @@ function expectFixedLog(logged: string): void {
   expect(logged).not.toContain('sk-live');
   expect(logged).not.toContain('山田');
   expect(logged).not.toContain('yamada@example.com');
-  expect(logged).not.toContain('http');
+  expect(logged).not.toMatch(/https?:\/\//);
 }
 
 describe('ログは固定コードだけ', () => {
@@ -83,6 +83,47 @@ describe('ログは固定コードだけ', () => {
     expectFixedLog(logs.lines());
     // この ENV には D1 の binding が無いので、1 日の上限を掛けずに呼んだことの記録が先に 1 行出る。
     expect(logs.lines()).toBe('contact-chat:daily_cap_without_db\ncontact-chat:llm_failed');
+  });
+
+  it.each([
+    ['llm_gateway_http_failed', () => new Response(LEAK, { status: 502 })],
+    ['llm_gateway_invalid_response', () => new Response(LEAK)],
+    ['llm_gateway_invalid_response', () => Response.json(null)],
+    ['llm_gateway_invalid_response', () => Response.json({ candidates: [{ finishReason: LEAK }] })],
+    ['llm_gateway_invalid_response', () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: { text: LEAK } } }],
+    })],
+    ['llm_output_missing', () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ thought: true, text: LEAK }, { text: ' ' }] } }],
+    })],
+    ['llm_output_unreadable', () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: LEAK }] } }],
+    })],
+    ['llm_output_unreadable', () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{"reply":"  ","readyForContact":true}' }] } }],
+    })],
+    ['llm_output_max_tokens', () => Response.json({
+      candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: LEAK }] } }],
+    })],
+    ['llm_output_blocked', () => Response.json({
+      candidates: [{ finishReason: 'SAFETY', content: { parts: [{ text: LEAK }] } }],
+    })],
+    ['llm_output_blocked', () => Response.json({ promptFeedback: { blockReason: 'PROHIBITED_CONTENT', blockReasonMessage: LEAK } })],
+  ])('Vertex の応答障害は %s として記録する', async (code, gatewayResponse) => {
+    const logs = captureLogs();
+    const fetchMock = vi.fn(async () => gatewayResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await worker.fetch(posted('/api/contact/chat', {
+      messages: [{ role: 'user', content: LEAK }],
+    }, '198.51.100.41'), ENV);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'AIが一時的に利用できません。時間をおいて再試行してください',
+      fallback: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expectFixedLog(logs.lines());
+    expect(logs.lines()).toBe(`contact-chat:daily_cap_without_db\ncontact-chat:${code}`);
   });
 
   it('LLM の設定が無いときのログに、本文も設定の名前も含めない', async () => {
