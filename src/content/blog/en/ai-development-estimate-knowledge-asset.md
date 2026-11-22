@@ -11,7 +11,7 @@ tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translationSourceHash: "f14b0407a5716bcca80ea70e6f3816f1bb5d02b5e4510dfd566ea394535b4a10"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 Why do estimates in contract development become reliant on specific individuals? The reason is simple: the information needed for estimation is scattered across past projects, GitHub, work-hour logs, risks, sales reps' memories, and the personal experience of the team members involved. As long as this information remains trapped in individuals' heads, the quality of a team's proposals cannot stay consistent.
 
 > **Update: October 20, 2026**
-> Grift ceased offering its estimation-support web application in September 2026, and its direction has shifted to an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' git histories. The descriptions of Grift in this article reflect what was current at the time of publication. For consultations regarding contract development and AI development estimates, please reach out via [Contact Us](/contact) under our AI contract development services.
+> Grift ceased offering its estimation-support web application in September 2026, and its direction has shifted to an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' git histories. The descriptions of Grift in this article reflect what was current at the time of publication. For consultations regarding contract development and AI development estimates, please reach out via [Contact Us](/contact?intent=contract-dev) under our AI contract development services.
 
 The first edition of this article introduced the Grift estimation-support web app that was offered at the time. That offering ended in September 2026. The current Grift CLI is a different form: it organizes facts that can be checked from development records. This article keeps the thinking about estimates and updates where to ask now. The current place to ask is AI contract development and adoption support.
 

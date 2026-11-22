@@ -11,7 +11,7 @@ tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translationSourceHash: "f14b0407a5716bcca80ea70e6f3816f1bb5d02b5e4510dfd566ea394535b4a10"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 软件定制开发（外包开发）的报价为什么会变得因人而异、过度依赖个人经验？原因很简单。报价所需的信息分散在过往项目、GitHub、工时、风险、销售人员的记忆以及负责人的经验之中。如果这些信息一直停留在个人脑海中，团队的提案质量就无法保持稳定。
 
 > **2026年10月20日 补充说明**
-> Grift已于2026年9月终止了报价辅助Web应用的提供，目前已调整方向为从工程师的git历史中提取可验证事实的开源CLI（[griftai.org](https://griftai.org)）。本文中关于Grift的描述均为发布当时的内容。如需咨询定制开发及AI开发的报价，我们通过AI定制开发业务在[联系我们](/contact)页面受理。
+> Grift已于2026年9月终止了报价辅助Web应用的提供，目前已调整方向为从工程师的git历史中提取可验证事实的开源CLI（[griftai.org](https://griftai.org)）。本文中关于Grift的描述均为发布当时的内容。如需咨询定制开发及AI开发的报价，我们通过AI定制开发业务在[联系我们](/contact?intent=contract-dev)页面受理。
 
 本文初版介绍了当时提供的Grift报价辅助Web应用。该提供已于2026年9月结束。现在的Grift CLI是另一种提供形态，用来整理开发记录中可以核对的事实。本文保留报价的想法，并更新了现在的咨询入口。现在的咨询入口是AI受托开发与导入支持。
 

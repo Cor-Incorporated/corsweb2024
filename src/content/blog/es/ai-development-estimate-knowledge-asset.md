@@ -11,7 +11,7 @@ tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translationSourceHash: "f14b0407a5716bcca80ea70e6f3816f1bb5d02b5e4510dfd566ea394535b4a10"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 ¿Por qué la estimación en el desarrollo por encargo depende tanto de personas concretas? La razón es sencilla: la información necesaria para estimar está dispersa entre proyectos anteriores, GitHub, horas de trabajo, riesgos, la memoria del equipo comercial y la experiencia de cada responsable. Si esto se queda únicamente en la cabeza de las personas, la calidad de las propuestas del equipo no podrá ser estable.
 
 > **Nota agregada el 20 de octubre de 2026**
-> Grift finalizó la oferta de su aplicación web de asistencia en estimaciones en septiembre de 2026 y actualmente ha cambiado su orientación hacia una CLI de código abierto ([griftai.org](https://griftai.org)) que extrae hechos verificables a partir del historial de Git de los ingenieros. Las descripciones sobre Grift en este artículo corresponden al contenido en el momento de su publicación. Para consultas sobre estimaciones de desarrollo por encargo y desarrollo de IA, las recibimos como desarrollo de IA por encargo a través de nuestra página de [contacto](/contact).
+> Grift finalizó la oferta de su aplicación web de asistencia en estimaciones en septiembre de 2026 y actualmente ha cambiado su orientación hacia una CLI de código abierto ([griftai.org](https://griftai.org)) que extrae hechos verificables a partir del historial de Git de los ingenieros. Las descripciones sobre Grift en este artículo corresponden al contenido en el momento de su publicación. Para consultas sobre estimaciones de desarrollo por encargo y desarrollo de IA, las recibimos como desarrollo de IA por encargo a través de nuestra página de [contacto](/contact?intent=contract-dev).
 
 La primera versión de este artículo presentaba la aplicación web de Grift para apoyar estimaciones, que se ofrecía entonces. Esa oferta terminó en septiembre de 2026. El Grift CLI actual es otra forma de oferta: ordena hechos comprobables a partir de los registros de desarrollo. Este artículo conserva la forma de pensar las estimaciones y actualiza a dónde consultar ahora. El destino actual es el desarrollo de IA por encargo y el apoyo a la adopción.
 

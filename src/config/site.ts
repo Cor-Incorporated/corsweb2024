@@ -156,8 +156,8 @@ export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): str
 
 export const HOME_INDUSTRY_ENTRY_ID = 'home-industry-entry';
 
-/** 共通ナビの相談リンクを、同じ言語の業種一覧へ向ける。 */
-export function getGeneralConsultationUrl(locale: Locale, source: 'header' | 'header-quick' | 'footer' | 'corsweb-launcher' | 'contact-industry'): string {
+/** 一般の相談リンクを、同じ言語の業種一覧へ向ける。 */
+export function getGeneralConsultationUrl(locale: Locale, source: string): string {
   if (!isContactChatPrimary()) return getContactUrl(locale, { source });
 
   const query = new URLSearchParams({ source });
