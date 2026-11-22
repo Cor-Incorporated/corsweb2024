@@ -117,7 +117,11 @@ describe.each(PROPOSAL_CASES)('#525 の本文の業種のページ $name', ({ lo
   it('問い合わせの入口が業種の source を持ち、行き先が浮きボタンと同じ。本文に問い合わせページへの link が無い', () => {
     const doc = load(locale, slug);
     const inquiry = doc.querySelectorAll(`[data-industry-inquiry="industry-${slug}"]`);
-    expect(inquiry.length).toBe(1);
+    expect(inquiry.length).toBe(2);
+    expect(inquiry[0].closest('[data-proposal-hero]')).not.toBeNull();
+    expect(inquiry[1].closest('[data-proposal-cta]')).not.toBeNull();
+    expect(inquiry[1].getAttribute('href')).toBe(inquiry[0].getAttribute('href'));
+    expect(squash(inquiry[1].textContent)).toBe(squash(inquiry[0].textContent));
     const url = new URL(inquiry[0].getAttribute('href') ?? '', 'https://cor-jp.com');
     expect(url.searchParams.get('source')).toBe(`industry-${slug}`);
     const chat = new URL(doc.querySelector('#cloudia-launcher')?.getAttribute('data-chat-path') ?? '', url);

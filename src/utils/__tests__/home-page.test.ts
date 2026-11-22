@@ -17,7 +17,7 @@ type LocaleKey = keyof typeof LOCALES;
 const LOCALE_KEYS = Object.keys(LOCALES) as LocaleKey[];
 
 // 課題 → 実証 → 柱 → セキュリティ → 業種 → Grift のあとに FAQ と締め（docs/story-spine.md）。
-// 5 業種の入口（IndustryEntry）は ProblemHero の中、主ボタンの下にある。h2 の物語の並びは変えない。
+// 5 業種の入口（IndustryEntry）は ProblemHero の中、診断リンクの前にある。h2 の物語の並びは変えない。
 const SECTION_ORDER = [
   'ProblemHero',
   'ChallengeGrid',
