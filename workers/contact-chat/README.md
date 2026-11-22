@@ -139,7 +139,9 @@ npx wrangler tail cor-contact-chat --format pretty | grep --line-buffered daily_
 
 ### 通知Outbox
 
-`/submit` はD1に `internal`（社内通知）と `receipt`（問い合わせ者本人向け受付確認）の2行を作り、Queueへ種別だけを送る。Queue payloadに氏名・メール・本文・会話抜粋は含めない。D1ではセッションの暗号化済み安全化抜粋をsubmissionへ引き継ぎ、Queue consumerがinternal通知時だけ復号する。receiptでは復号せず、メールにも載せない。各行にはResendの `provider_message_id` と `delivery_status`（`queued` → `sending` → `accepted`、失敗時 `failed`）を保存する。`accepted` はResend API受付済みを意味し、最終配信確認にはResendの配信イベント連携が必要。
+`/submit` はD1に `internal`（社内通知）と `receipt`（問い合わせ者本人向け受付確認）の2行を作り、Queueへ種別だけを送る。画面に表示する受付番号は、D1に保存した同じ番号を社内通知の本文先頭と本人向け受付確認にも記載する。担当者はこの番号で問い合わせと通知を照合できる。D1を使わない互換経路では、両通知と画面応答にその場で発行した同じ番号を使う。
+
+Queue payloadに氏名・メール・本文・会話抜粋は含めない。D1ではセッションの暗号化済み安全化抜粋をsubmissionへ引き継ぎ、Queue consumerがinternal通知時だけ復号する。receiptでは復号せず、メールにも載せない。各行にはResendの `provider_message_id` と `delivery_status`（`queued` → `sending` → `accepted`、失敗時 `failed`）を保存する。`accepted` はResend API受付済みを意味し、最終配信確認にはResendの配信イベント連携が必要。
 
 ## デプロイ手順（初回）
 
