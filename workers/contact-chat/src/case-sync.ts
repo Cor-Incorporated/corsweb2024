@@ -11,7 +11,7 @@ import type {
   Env,
 } from './types';
 
-const PRINCIPAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_FORMAT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type RememberedSync =
   | 'recorded'
@@ -50,7 +50,7 @@ export function documentCaseSyncReady(env: Env): boolean {
   if (!env.DOCUMENT_REQUEST_CASE_SYNC) return false;
   const principalId = env.DOCUMENT_REQUEST_SYNC_PRINCIPAL_ID?.trim() || '';
   const syncToken = env.DOCUMENT_REQUEST_SYNC_TOKEN?.trim() || '';
-  if (!PRINCIPAL_UUID.test(principalId)) return false;
+  if (!UUID_FORMAT.test(principalId)) return false;
   if (syncToken.length < 16 || syncToken.length > 200) return false;
   const ownerKeys = [env.PII_ENCRYPTION_KEY, env.PII_HMAC_KEY].filter((value): value is string => Boolean(value));
   if (ownerKeys.includes(principalId) || ownerKeys.includes(syncToken)) return false;
@@ -65,12 +65,22 @@ function authFor(env: Env): DocumentRequestSyncAuth | null {
   };
 }
 
-/** conflict は syncStatus が recorded でも成功にしない。not_connected は recorded にしない。 */
-export function rememberSyncResult(result: DocumentRequestSyncResult | null | undefined): RememberedSync {
+/** 同じ受付の Core 案件を確認できたときだけ記録済みとする。 */
+function rememberSyncResult(
+  receiptId: string,
+  result: DocumentRequestSyncResult | null | undefined,
+): RememberedSync {
   if (!result) return 'sync_failed';
+  if (result.receiptId !== undefined && result.receiptId !== receiptId) return 'sync_failed';
   switch (result.outcome) {
     case 'recorded':
-      return 'recorded';
+      return result.receiptId === receiptId
+        && typeof result.caseId === 'string'
+        && UUID_FORMAT.test(result.caseId)
+        && result.syncStatus === 'recorded'
+        && result.declaredIntakeStatus === 'stored'
+        ? 'recorded'
+        : 'sync_failed';
     case 'retry_scheduled':
       return 'retry_scheduled';
     case 'ack_unknown':
@@ -119,7 +129,7 @@ export async function syncStoredDocumentRequest(env: Env, receiptId: string): Pr
       return;
     }
     const result = await binding.acceptStored(auth, source);
-    const status = rememberSyncResult(result);
+    const status = rememberSyncResult(receiptId, result);
     await remember(env, receiptId, status);
     if (shouldLog(status)) logContactFailure('document_case_sync_failed');
   } catch {
@@ -146,7 +156,7 @@ export async function retryStoredDocumentRequest(env: Env, receiptId: string): P
   }
   try {
     const result = await binding.retry(auth, receiptId);
-    const status = rememberSyncResult(result);
+    const status = rememberSyncResult(receiptId, result);
     await remember(env, receiptId, status);
     if (shouldLog(status)) logContactFailure('document_case_sync_failed');
     return status === 'sync_failed' ? 'left' : 'retried';

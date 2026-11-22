@@ -54,7 +54,7 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - 受付言語は `submission_intake.locale`（migration 0010）に保存し、通知に「ページの言語」「返信の言語」（ja は日本語、それ以外は英語）を書く。0010 が未適用でも受付は止まらない。
 - 再処理の関数 `replayHeldDocumentNotice` は、この波では呼ぶ入口が無い（HTTP にも CLI にも出していない。試験からだけ呼ぶ）。届かなかった通知は、`DLQ` に入った行（`failed` で `attempts` 6 以上）と `sending` のまま 15 分以上残った行に限り、手順書の「もう一度送らせる」（D1 の outbox の行を投入待ちに戻す SQL、人間ゲート）で、既存の cron と consumer に送り直させる。`held` は対象外。申込者の連絡先を人が読む入口は作らない（担当は届いた通知の「返信」で連絡する）。
 - LLM と GA4 にはフォームの入力を渡さない。
-- 保存のあと、受付番号で元の行から `documentId`、初回の業種（未選択は空文字）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
+- 保存のあと、受付番号で元の行から `documentId`、初回の業種（未選択は空文字）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。記録済みとして保存する応答には、同じ受付番号・UUID 形式の案件 ID・保存済みの受付と記録済みの同期状態が必要。照合に失敗しても公開受付の保存と受付番号は維持する。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
 
 ### 業種の source
 
