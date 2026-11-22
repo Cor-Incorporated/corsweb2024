@@ -1,0 +1,31 @@
+---
+import { CONTACT_CALENDAR_ANCHOR, CONTACT_CALENDAR_SOURCE, CONTACT_INTENTS, getContactCalendarUrl, getGeneralConsultationUrl } from '../../config/site';
+import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
+import { getCurrentLocale, getLocalizedUrl } from '../../utils/i18n';
+
+const locale = getCurrentLocale(Astro.url);
+const industry = getGeneralConsultationUrl(locale, 'contact-industry');
+const location = `${getLocalizedUrl('/company/', locale)}#company-profile`;
+const calendar = CONTACT_CALENDAR_VISIBLE ? getContactCalendarUrl(locale) : location;
+const chooseIndustry = {
+  ja: '業種を選ぶ', en: 'Choose your industry', zh: '选择行业', ko: '업종 선택', es: 'Elegir sector',
+}[locale];
+---
+
+<script define:vars={{ industry, calendar, location, intents: CONTACT_INTENTS, calendarAnchor: CONTACT_CALENDAR_ANCHOR, calendarSource: CONTACT_CALENDAR_SOURCE }} data-astro-rerun>
+  const incoming = new URL(window.location.href);
+
+  if (incoming.hash === '#' + calendarAnchor || incoming.searchParams.get('source') === calendarSource) {
+    window.location.replace(calendar);
+  } else if (incoming.hash === '#contact-form-fallback') {
+    window.location.replace(location);
+  } else if (!intents.includes(incoming.searchParams.get('intent'))) {
+    window.location.replace(industry);
+  }
+</script>
+<noscript>
+  <style is:inline>header [x-cloak] { display: none !important; }</style>
+  <p class="mx-auto mb-6 max-w-3xl px-4 sm:px-6">
+    <a href={industry} class="inline-flex min-h-[44px] items-center font-medium underline">{chooseIndustry}</a>
+  </p>
+</noscript>

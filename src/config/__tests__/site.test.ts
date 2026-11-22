@@ -98,19 +98,19 @@ describe('getGriftUrl / getContactUrl (ADR-0010)', () => {
 
   // フッターのカレンダーへの 1 本。dist の試験（tests/build-output/contact-links.test.ts）は、この source と hash で
   // その 1 本を名指しして数えるので、値はここで固定する。
-  it('getContactCalendarUrl は、その言語の問い合わせページのカレンダーの区画を指す', async () => {
+  it('getContactCalendarUrl は、その言語の会社概要のカレンダーの区画を指す', async () => {
     const { getContactCalendarUrl } = await loadSite();
-    expect(getContactCalendarUrl('ja')).toBe('/contact/?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('en')).toBe('/en/contact/?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('zh')).toBe('/zh/contact/?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('ko')).toBe('/ko/contact/?source=footer-calendar#contact-calendar');
-    expect(getContactCalendarUrl('es')).toBe('/es/contact/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ja')).toBe('/company/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('en')).toBe('/en/company/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('zh')).toBe('/zh/company/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ko')).toBe('/ko/company/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('es')).toBe('/es/company/?source=footer-calendar#contact-calendar');
   });
 
-  it.each(['true', 'false'])('getContactCalendarUrl は、切り戻しの旗が %s でも同じ問い合わせページを指す', async (value) => {
+  it.each(['true', 'false'])('getContactCalendarUrl は、旗が %s のときカレンダーのあるページを指す', async (value) => {
     vi.stubEnv('PUBLIC_CLOUDIA_CONTACT_PRIMARY_ENABLED', value);
     const { getContactCalendarUrl } = await loadSite();
-    expect(getContactCalendarUrl('ko')).toBe('/ko/contact/?source=footer-calendar#contact-calendar');
+    expect(getContactCalendarUrl('ko')).toBe(`/ko/${value === 'false' ? 'contact' : 'company'}/?source=footer-calendar#contact-calendar`);
   });
 
   it('resolveExternalHref rewrites grift sentinel and absolute griftai URLs', async () => {

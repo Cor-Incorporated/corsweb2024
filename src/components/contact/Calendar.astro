@@ -12,7 +12,7 @@ const calendarTz = import.meta.env.PUBLIC_GCAL_TZ || 'Asia/Tokyo';
 const calendarParams = import.meta.env.PUBLIC_GCAL_PARAMS || '';
 
 // カレンダーIDが設定されていない場合は表示しない（判定は config に集約。
-// CloudiaContactEntry の説明文が同じ条件を見るため、ここで独自判定しない）。
+// フッターのリンクと同じ条件を使う）。
 const showCalendar = CONTACT_CALENDAR_VISIBLE;
 
 // カレンダーIDが設定されている場合のみURL構築
@@ -42,7 +42,7 @@ if (showCalendar) {
 ---
 
 {showCalendar && (
-  <section id="contact-calendar" class="py-16 sm:py-20">
+  <section id="contact-calendar" class="scroll-mt-24 py-16 sm:py-20">
     <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
       <div class="flex flex-col gap-8">
         <div class="text-center">

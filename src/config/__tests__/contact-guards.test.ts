@@ -481,29 +481,20 @@ function phoneLeadsInText(text: string) {
 const ENTRY_SOURCE = readSource('../../components/contact/CloudiaContactEntry.astro');
 const LOCALES = Object.keys(CONTACT_PAGE_PATHS) as Array<keyof typeof CONTACT_PAGE_PATHS>;
 
-// カレンダー表示時（PUBLIC_GCAL_ID あり＝本番の deploy.yml）だけ /contact に出る文言。CI の既定ビルド
-// （未設定）では描画されず dist 検査に掛からないため、ソースを読んで B-1 を当てる（#331 レビュー L7）。
-describe('B-1 カレンダー表示時だけ /contact に出る文言に電話誘導が無い', () => {
+// 設定されたカレンダーにだけ出る文言も、窓口の案内と混同しないことをソースで検査する。
+describe('B-1 会社概要に移したカレンダーに電話誘導が無い', () => {
   const calendarTexts = LOCALES.flatMap((locale) => {
     const calendar = JSON.parse(readSource(`../../i18n/locales/${locale}.json`)).calendar ?? {};
     return Object.entries(calendar)
       .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
       .map(([key, text]) => [locale, `calendar.${key}`, text] as const);
   });
-  const fallbackTexts = ['FALLBACK_WITH_CALENDAR', 'FALLBACK_WITHOUT_CALENDAR'].flatMap((name) =>
-    extractCopy(ENTRY_SOURCE, name).map((text) => [name, text] as const)
-  );
-
   it('全ロケールの calendar.note を読めている（検査対象が消えて素通りしない）', () => {
     const notes = calendarTexts.filter(([, key]) => key === 'calendar.note');
     expect(notes.map(([locale]) => locale)).toEqual(LOCALES);
   });
 
   it.each(calendarTexts)('%s の %s', (_locale, _key, text) => {
-    expect(phoneLeadsInText(text)).toEqual([]);
-  });
-
-  it.each(fallbackTexts)('%s:「%s」', (_name, text) => {
     expect(phoneLeadsInText(text)).toEqual([]);
   });
 
@@ -523,16 +514,10 @@ describe('判定基準 ↔ ソースの結合', () => {
   const entrySource = ENTRY_SOURCE;
   const localeCount = LOCALES.length;
 
-  it('カレンダーありの文言（全言語の title / description）はすべて時間帯の断言として検出できる', () => {
-    const withCalendar = extractCopy(entrySource, 'FALLBACK_WITH_CALENDAR');
-    expect(withCalendar).toHaveLength(localeCount * 2);
-    expect(withCalendar.filter((text) => !claims(text))).toEqual([]);
-  });
-
-  it('カレンダーなしの文言は時間帯の断言として検出しない', () => {
-    const withoutCalendar = extractCopy(entrySource, 'FALLBACK_WITHOUT_CALENDAR');
-    expect(withoutCalendar).toHaveLength(localeCount * 2);
-    expect(withoutCalendar.filter(claims)).toEqual([]);
+  it('旧URLに残す目的付き案内は、どの言語でも打ち合わせの時間帯を断言しない', () => {
+    const entryTexts = extractCopy(entrySource, 'ENTRY_COPY');
+    expect(entryTexts).toHaveLength(localeCount * 2);
+    expect(entryTexts.filter(claims)).toEqual([]);
   });
 
   it('プレースホルダの見出しは src/pages/contact/chat/index.astro の文言と一致する', () => {
