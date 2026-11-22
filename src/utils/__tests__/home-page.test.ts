@@ -132,8 +132,10 @@ describe('5 言語で同じ並び・同じリンク (#414)', () => {
     expect(template).not.toContain('data-reveal');
 
     const hero = readFileSync(path.join(ROOT, 'src/components/home/ProblemHero.astro'), 'utf8');
-    expect(hero).toContain('<IndustryEntry />');
-    expect(hero.indexOf('data-hero-primary-cta')).toBeLessThan(hero.indexOf('<IndustryEntry />'));
+    const industryEntry = hero.indexOf('<IndustryEntry />');
+    const diagnosisLink = hero.indexOf('data-hero-primary-cta');
+    expect(industryEntry).toBeGreaterThanOrEqual(0);
+    expect(diagnosisLink).toBeGreaterThan(industryEntry);
   });
 
   it('締めの入口は ADR-0011 の有料入口 3 本で、intent が契約の 7 キーに入っている', () => {
