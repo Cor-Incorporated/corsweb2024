@@ -214,6 +214,86 @@ describe('industry source on the contact worker', () => {
     }
   });
 
+  it.each([
+    ['medical', 'ja', '問い合わせたいです。', 'intake', 'genuine', 'user', true],
+    ['shigyo', 'ja', 'お問い合わせしたいです', 'intake', 'genuine', 'user', true],
+    ['construction', 'ja', '問い合わせたい', 'intake', 'genuine', 'user', true],
+    ['manufacturing', 'en', 'I want to send an inquiry.', 'intake', 'genuine', 'user', true],
+    ['education', 'en', 'I would like to contact your team.', 'intake', 'genuine', 'user', true],
+    ['education', 'ja', '問い合わせ方法を教えて', 'intake', 'genuine', 'user', false],
+    ['education', 'ja', 'まだ問い合わせたくない', 'intake', 'genuine', 'user', false],
+    ['education', 'ja', '「問い合わせたい」と書きました', 'intake', 'genuine', 'user', false],
+    ['education', 'ja', '問い合わせたい', 'ambassador', 'genuine', 'user', false],
+    ['education', 'ja', '問い合わせたい', 'intake', 'spam', 'user', false],
+    ['education', 'ja', '問い合わせたい', 'intake', 'genuine', 'assistant', false],
+  ])('明示した受付意思を扱う (%s, %s, %s, %s, %s, %s)', async (
+    industry, locale, content, mode, classification, role, readyForContact,
+  ) => {
+    const followUp = '追加情報を教えてください。';
+    const fetchMock = vi.fn(async () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({
+        reply: followUp,
+        summary: '業務の相談',
+        classification,
+        readyForContact: false,
+        structuredLead: { purpose: '作業の確認' },
+      }) }] } }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const env = {
+      LLM_PROVIDER: 'vertex-gemini',
+      VERTEX_GATEWAY_URL: 'https://gateway.example/generateContent',
+      VERTEX_GATEWAY_SECRET: 'gateway-test',
+    } as Env;
+    const response = await worker.fetch(post('/api/contact/chat', {
+      source: 'industry-' + industry, locale, mode,
+      messages: [
+        { role: 'user', content: readyForContact ? '業務の相談です。' : '問い合わせたい' },
+        { role, content },
+      ],
+    }, '198.51.100.73'), env);
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const result = await response.json();
+    expect(result).toMatchObject({
+      readyForContact,
+      stage: readyForContact ? 'ready' : 'qualifying',
+      classification,
+      structuredLead: { purpose: '作業の確認' },
+    });
+    const contactStep = locale === 'ja'
+      ? 'お問い合わせフォームに進み、用件を確認してください。'
+      : 'Please continue to the inquiry form to review your request.';
+    expect(result).toMatchObject({ reply: readyForContact ? contactStep : followUp });
+  });
+
+  it.each([
+    ['MAX_TOKENS', '{"reply":"途中の応答","classification":"genuine","readyForContact":true}'],
+    [undefined, '{"reply":"終了理由なし","classification":"genuine","readyForContact":true}'],
+    ['STOP', '{"reply":"  ","classification":"genuine","readyForContact":true}'],
+  ])('明示意思があっても使用できないモデル応答は従来の503にする (%s)', async (finishReason, text) => {
+    const fetchMock = vi.fn(async () => Response.json({
+      candidates: [{ finishReason, content: { parts: [{ text }] } }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const env = {
+      LLM_PROVIDER: 'vertex-gemini',
+      VERTEX_GATEWAY_URL: 'https://gateway.example/generateContent',
+      VERTEX_GATEWAY_SECRET: 'gateway-test',
+    } as Env;
+    const response = await worker.fetch(post('/api/contact/chat', {
+      source: 'industry-medical',
+      locale: 'ja',
+      messages: [{ role: 'user', content: '問い合わせたいです。' }],
+    }, '198.51.100.73'), env);
+    expect(response.status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await response.json()).toEqual({
+      error: 'AIが一時的に利用できません。時間をおいて再試行してください',
+      fallback: true,
+    });
+  });
+
   it('対話の業種文脈を保存し、mock の通知まで届ける。営業判定でも捨てない', async () => {
     const db = openDatabase();
     const sent: NotificationMessage[] = [];
