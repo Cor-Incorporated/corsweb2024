@@ -1,6 +1,7 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl } from '../../utils/i18n';
 import { industryRowsInOrder } from '../../config/industry-context';
+import { HOME_INDUSTRY_ENTRY_ID } from '../../config/site';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
@@ -15,8 +16,9 @@ const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIn
 ---
 
 <nav
-  id="home-industry-entry"
-  class="flex w-full flex-col items-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3"
+  id={HOME_INDUSTRY_ENTRY_ID}
+  tabindex="-1"
+  class="flex scroll-mt-24 w-full flex-col items-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-3"
   data-home-industry-entry
   aria-label={t.homeIndustries.eyebrow}
 >

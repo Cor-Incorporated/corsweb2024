@@ -1,6 +1,6 @@
 ---
 import { getCurrentLocale, getTranslations, getLocalizedUrl, type Locale } from '../../utils/i18n';
-import { getContactUrl, getGriftUrl } from '../../config/site';
+import { getGeneralConsultationUrl, getGriftUrl } from '../../config/site';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
 import { industryRowsInOrder } from '../../config/industry-context';
 import { ORGANIZATION_NAMES } from '../../config/organization';
@@ -55,7 +55,7 @@ const baseLinks = [
   ...aboutLinks,
   {
     name: nav.consult || t.nav.contact,
-    href: getContactUrl(currentLocale, { source: 'header' }),
+    href: getGeneralConsultationUrl(currentLocale, 'header'),
     isExternal: false,
   },
 ];
@@ -108,10 +108,10 @@ const desktopEntries: DesktopEntry[] = [
   { kind: 'link', name: t.nav.blog, href: getLocalizedUrl('/blog', currentLocale), isActive: false },
   { kind: 'menu', menu: 'about', label: t.nav.aboutMenu, items: aboutLinks, highlight: true, isActive: false },
 ];
-// 右の組の CTA。従来 nav の末尾にあった物と同じ href（source=header-quick）。
+// 右の組の相談 CTA は、その言語の業種一覧を開く。
 const contactCta = {
   name: nav.consult || t.nav.contact,
-  href: getContactUrl(currentLocale, { source: 'header-quick' }),
+  href: getGeneralConsultationUrl(currentLocale, 'header-quick'),
 };
 const desktopNav = desktopEntries.map((entry): DesktopEntry =>
   entry.kind === 'menu'

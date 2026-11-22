@@ -21,6 +21,7 @@
 - ~~fallback からの送信も intent / source を可能な範囲で引き継ぐ。~~ → **撤回（2026-09-13）**: fallback フォーム自体を持たないため対象外。なお Cloudia ランチャーのフォールバック**案内リンク**（`/contact` 以外のページで出る）は intent / source / locale を引き継ぐ（`e2e/contact-cloudia.spec.ts` で固定）。
 
 ### 公開順序との整合
+- Cor.サイトの共通ヘッダーとフッターの相談は、表示中の言語のトップにある業種一覧を開く。業種の提案ページから Cloudia へ進む。
 - Epic #243 の公開順序「導線の真実性 → 有料入口 → 信頼証拠 → Cloudia → 050 AI 受付 → 背景演出」を維持する。
 - `/contact/` は Cloudia への主導線（`/contact/chat/`、`embed=1`、`source`、`locale`、任意の `intent`）を表示する。~~従来の SSGFORM と日程調整は `details#contact-form-fallback` 内に残し、Cloudia 障害・JS 無効・a11y の fallback とする。~~ → **撤回（2026-09-13）**: `details#contact-form-fallback` の中身は所在地と（`PUBLIC_GCAL_ID` 設定時のみ）閲覧専用カレンダーで、**連絡手段としての fallback ではない**。日程調整は送信できないため問い合わせ手段として案内しない （ADR-0005「2026-09-13 改訂: 問い合わせ導線の Cloudia 一本化」を参照）。
 - 全ページ右下の Cloudia launcher は同じ iframe 契約で常駐し、スマートフォンでは safe-area を考慮したボトムシートとして開閉する。

@@ -154,6 +154,16 @@ export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): str
   return `/contact/chat/?${params.toString()}`;
 }
 
+export const HOME_INDUSTRY_ENTRY_ID = 'home-industry-entry';
+
+/** 共通ナビの相談リンクを、同じ言語の業種一覧へ向ける。 */
+export function getGeneralConsultationUrl(locale: Locale, source: 'header' | 'header-quick' | 'footer'): string {
+  if (!isContactChatPrimary()) return getContactUrl(locale, { source });
+
+  const query = new URLSearchParams({ source });
+  return getLocalizedUrl(`/?${query}#${HOME_INDUSTRY_ENTRY_ID}`, locale);
+}
+
 /**
  * i18n / CMS 由来の href を解決する。
  * - 'grift' / griftai.org を含む → getGriftUrl
