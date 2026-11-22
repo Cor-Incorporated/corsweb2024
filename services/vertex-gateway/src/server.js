@@ -62,7 +62,7 @@ async function readBody(req) {
 
 export function createHandler({ allowedModels = ALLOWED_MODELS } = {}) {
   // allowedModels を差し替えられる工場。旧構成（gemini-3.5-flash だけ）の Gateway に対して
-  // 新しい Worker の既定モデルを送ると 400 になることを、試験がこの工場で再現する。
+  // Worker が明示指定した新モデルを送ると 400 になることを、試験がこの工場で再現する。
   return async function handle(req, res) {
     if (req.method === 'GET' && req.url === '/health') return json(res, 200, { ok: true });
     if (req.method !== 'POST' || req.url !== '/generateContent') return json(res, 404, { error: 'not found' });
@@ -76,6 +76,7 @@ export function createHandler({ allowedModels = ALLOWED_MODELS } = {}) {
     if (!valid) return json(res, 401, { error: 'unauthorized' });
     let input;
     try { input = JSON.parse(body); } catch { return json(res, 400, { error: 'invalid request' }); }
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return json(res, 400, { error: 'invalid request' });
     if (input.project !== PROJECT || input.location !== LOCATION || !allowedModels.has(input.model)) return json(res, 400, { error: 'invalid model configuration' });
     const vertexBody = {
       systemInstruction: input.systemInstruction, contents: input.contents,

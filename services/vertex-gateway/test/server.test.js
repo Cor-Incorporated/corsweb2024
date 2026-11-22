@@ -111,6 +111,12 @@ test('rejects unknown model, project or location without outbound traffic', asyn
     assert.equal(response.status, 400);
     assert.deepEqual(JSON.parse(response.body), { error: 'invalid model configuration' });
   }
+  for (const invalid of [null, false, 'gemini-4-hydrogen', []]) {
+    const body = JSON.stringify(invalid);
+    const response = await postJson(port, '/generateContent', signedHeaders(body), body);
+    assert.equal(response.status, 400);
+    assert.deepEqual(JSON.parse(response.body), { error: 'invalid request' });
+  }
   assert.equal(outbound.length, 0);
 });
 
@@ -139,8 +145,7 @@ test('production and preview Worker configurations keep using Gemini 3.5 Flash',
 });
 
 test('a worker-only model swap fails closed against a legacy single-model gateway', async (t) => {
-  // 旧構成（gemini-3.5-flash だけ）の Gateway に、Worker の既定を差し替えただけの
-  // gemini-4-hydrogen 要求を送ると、署名が正しくても 400 で止まる。
+  // 旧構成の Gateway に gemini-4-hydrogen を明示すると、署名が正しくても 400 で止まる。
   const outbound = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
