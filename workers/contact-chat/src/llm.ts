@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { ContactLogEvent } from './log';
 import type { TrafficReading } from './industry-context';
-import { trafficPromptLine } from './industry-context';
+import { industryFollowUpPolicy, trafficPromptLine } from './industry-context';
 import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env, StructuredLead } from './types';
 import { CONTACT_INTENTS } from './types';
 import { COMPANY_KNOWLEDGE } from './company-knowledge';
@@ -344,5 +344,8 @@ export function buildSystemPrompt(opts: {
     );
   }
   parts.push('', '# Source tag (server-provided, trusted)', trafficPromptLine(opts.traffic ?? { kind: 'other', stored: '' }));
+  if (mode === 'intake' && opts.traffic?.kind === 'industry' && opts.intent !== 'press-speaking-other') {
+    parts.push('', industryFollowUpPolicy(opts.traffic.industry));
+  }
   return parts.join('\n');
 }

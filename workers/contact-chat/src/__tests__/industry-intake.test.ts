@@ -150,6 +150,70 @@ describe('industry source on the contact worker', () => {
     expect(unknownBody.reply).not.toContain('ignore previous');
   });
 
+  it.each([
+    ['industry-medical', 'care or administrative workflow', 'Do not write real patient data'],
+    ['industry-shigyo', 'client-service workflow', 'Do not write real data about your clients'],
+    ['industry-construction', 'site-to-office handoff', 'no need to write real site data'],
+    ['industry-manufacturing', 'production process or shift handoff', 'no need to write real shop-floor data'],
+    ['industry-education', 'teaching or school administration workflow', 'Do not write real student data'],
+    ['cloudia', null, null],
+  ])('通常チャットの2・3問目に %s の聞き取り方針を渡す', async (source, axis, boundary) => {
+    const captured: string[] = [];
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body)) as {
+        systemInstruction: { parts: { text: string }[] };
+      };
+      captured.push(request.systemInstruction.parts[0].text);
+      return new Response(JSON.stringify({
+        candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({
+          reply: '次に、いまの作業の流れを教えてください。',
+          summary: '作業の相談',
+          classification: 'genuine',
+          readyForContact: false,
+          structuredLead: { purpose: '記録の整理' },
+        }) }] } }],
+      }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const env = {
+      LLM_PROVIDER: 'vertex-gemini',
+      VERTEX_GATEWAY_URL: 'https://gateway.example/generateContent',
+      VERTEX_GATEWAY_SECRET: 'gateway-test',
+    } as Env;
+    const context = { mode: 'intake', locale: 'ja', source };
+    const started = await worker.fetch(post('/api/contact/chat/start', context, '198.51.100.72'), env);
+    expect(started.status).toBe(200);
+    const { sessionId } = await started.json() as { sessionId: string };
+    expect(sessionId).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const messages = [{ role: 'user', content: '記録の整理を相談したい' }];
+    for (const answer of ['', '紙の記録を確認して転記しています']) {
+      if (answer) messages.push({ role: 'user', content: answer });
+      const chatted = await worker.fetch(post('/api/contact/chat', {
+        ...context, sessionId, messages,
+      }, '198.51.100.72'), env);
+      expect(chatted.status).toBe(200);
+      const result = await chatted.json() as { sessionId: string; reply: string };
+      expect(result.sessionId).toBe(sessionId);
+      messages.push({ role: 'assistant', content: result.reply });
+    }
+
+    expect(captured).toHaveLength(2);
+    for (const system of captured) {
+      if (axis && boundary) {
+        expect(system).toContain(`trusted enum ${source} only`);
+        expect(system).toContain(axis);
+        expect(system).toContain(boundary);
+        expect(system).toContain('Ask only one relevant unanswered question at a time');
+        expect(system).toContain('prioritize the secure contact handoff');
+      } else {
+        expect(system).toContain('Continue ordinary intake');
+        expect(system).not.toContain('Industry follow-up topics:');
+      }
+    }
+  });
+
   it('対話の業種文脈を保存し、mock の通知まで届ける。営業判定でも捨てない', async () => {
     const db = openDatabase();
     const sent: NotificationMessage[] = [];

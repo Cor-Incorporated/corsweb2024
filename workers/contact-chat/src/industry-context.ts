@@ -273,6 +273,23 @@ export function industryStartReply(industry: IndustrySlug, intent: ContactIntent
   return `${BOUNDARY[industry][locale]}\n${QUESTION[industry][group][locale]}`;
 }
 
+const FOLLOW_UP_TOPICS: Record<IndustrySlug, string> = {
+  medical: 'The care or administrative workflow (such as referral letters or nursing summaries), which staff role reviews the output, and which categories of data must stay inside the organization.',
+  shigyo: 'The client-service workflow (such as document review or drafting a response), which professional role gives final approval, and whether the materials are public or confidential.',
+  construction: 'The site-to-office handoff (such as daily reports or safety paperwork), how staff currently submit it (paper, photos, or a system), and which project role reviews it.',
+  manufacturing: 'The production process or shift handoff that needs support, which record type operators use (such as an inspection log or a daily report), and which role approves the output.',
+  education: 'The teaching or school administration workflow (such as school document search or data entry), which staff role needs the output, and whether student information is involved as a category only.',
+};
+
+// 受付の追加方針。共有の v1 source policy と初回文はそのまま使う。
+export function industryFollowUpPolicy(industry: IndustrySlug): string {
+  return [
+    `Industry follow-up topics: ${FOLLOW_UP_TOPICS[industry]}`,
+    'For a relevant project inquiry, use these topics to choose the next question. Ask only one relevant unanswered question at a time, and use information already given without asking for it again. The topics are optional, not a checklist. Follow any intent-specific policy first.',
+    'If the visitor asks to speak to the team or proceed with a genuine inquiry, prioritize the secure contact handoff using what they have already provided. Do not require optional industry details before handing off. Do not collect contact details in chat.',
+  ].join(' ');
+}
+
 export function industrySystemPolicy(token: IndustryEntrySource): string {
   const industry = INDUSTRY_BY_TOKEN[token];
   const boundary = BOUNDARY[industry].en;
