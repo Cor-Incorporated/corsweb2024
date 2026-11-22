@@ -7,16 +7,16 @@ const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 ---
 
-<section class="py-16 sm:py-20">
-  <div class="mx-auto max-w-2xl px-4 text-left sm:px-6 lg:max-w-content lg:px-8">
+<section class="pb-6 pt-10 sm:pb-10 sm:pt-16">
+  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:max-w-content lg:px-8">
     <div class="flex flex-col gap-4 sm:gap-6">
       <LbHeading
         as="h1"
-        class="max-w-3xl text-balance text-4xl font-medium tracking-tight sm:text-5xl lg:text-6xl lg:max-w-content"
+        class="max-w-3xl text-balance text-3xl font-semibold sm:text-4xl lg:text-5xl"
         text={t.contact?.heading?.title ?? 'お問い合わせ'}
       />
       <LbText
-        class="max-w-[40em] text-pretty text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-xl"
+        class="max-w-[40em] text-pretty text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80 sm:text-lg"
         text={t.contact?.heading?.description ?? 'ご質問・ご相談・お見積もり依頼など、お気軽にご連絡ください。'}
       />
     </div>

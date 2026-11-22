@@ -28,7 +28,6 @@ const t = getTranslations(currentLocale);
   <div class="lb-heading-balance">
     <Heading />
   </div>
-  <DocumentRequestEntry />
   {
     CONTACT_CHAT_ENABLED ? (
       <ContactChat />
@@ -37,6 +36,7 @@ const t = getTranslations(currentLocale);
          ContactForm は下の切り戻し分岐（CLOUDIA_CONTACT_PRIMARY_ENABLED=false）に残しており、
          Cloudia 停止時にフラグ 1 つで非常口として復活させられる（config/contact.ts 参照）。 */
       <CloudiaContactEntry>
+        <DocumentRequestEntry slot="materials" />
         <ContactInfo />
         <Calendar />
       </CloudiaContactEntry>
@@ -48,4 +48,5 @@ const t = getTranslations(currentLocale);
       </section>
     )
   }
+  {(CONTACT_CHAT_ENABLED || !CLOUDIA_CONTACT_PRIMARY_ENABLED) && <DocumentRequestEntry />}
 </Layout>

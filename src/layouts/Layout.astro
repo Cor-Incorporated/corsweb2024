@@ -168,6 +168,11 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
         -moz-osx-font-smoothing: grayscale;
       }
 
+      /* 日本語の本文は端末にある和文ゴシックを優先し、フォントの配信を待たずに表示する。 */
+      html:lang(ja) main {
+        font-family: "Hiragino Sans", "Yu Gothic", Meiryo, "Noto Sans CJK JP", sans-serif;
+      }
+
       /* CJK/多言語の改行制御をLayout間で揃える。 */
       h1, h2, h3,
       .type-heading {
@@ -288,20 +293,6 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
       }
       .dark .scroll-progress { background: #7c9cbf; }
 
-      /* ファーストビューの「↓」スクロールヒント。少しスクロールしたら消える。 */
-      .scroll-hint {
-        transition: opacity 0.4s ease;
-      }
-      html.scrolled .scroll-hint { opacity: 0; }
-      .scroll-hint-arrow {
-        display: inline-block;
-        animation: hint-bounce 1.6s ease-in-out infinite;
-      }
-      @keyframes hint-bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(0.4rem); }
-      }
-
       /* アクセシビリティ: モーションを抑えたいユーザーには演出を完全無効化（即表示） */
       @media (prefers-reduced-motion: reduce) {
         html.js [data-reveal] {
@@ -310,8 +301,6 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
           transition: none !important;
         }
         .motion-bg { animation: none !important; }
-        .scroll-hint-arrow { animation: none !important; }
-        .scroll-hint { transition: none !important; }
       }
 
       /* TailwindのユーティリティクラスはHTMLのclass属性で指定、または@apply推奨 */
@@ -320,7 +309,7 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
     <Analytics enabled={analytics} />
   </head>
   <body
-    class="bg-primary-50 text-primary-950 antialiased transition dark:bg-primary-900 dark:text-primary-200"
+    class="bg-white text-primary-950 antialiased transition dark:bg-primary-900 dark:text-primary-200"
   >
     <div class="scroll-progress" aria-hidden="true"></div>
     <Header availableLocales={availableLocales} />
@@ -436,7 +425,7 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
       document.addEventListener('astro:page-load', initScrollReveal);
     </script>
 
-    <!-- スクロール進捗バー + 「↓」ヒントの表示制御（rAF スロットル・軽量） -->
+    <!-- スクロール進捗バーの表示制御（rAF スロットル） -->
     <script>
       let chromeBound = false;
       function updateScrollChrome() {
@@ -445,7 +434,6 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
         const max = document.documentElement.scrollHeight - window.innerHeight;
         const progress = max > 0 ? Math.min(Math.max(window.scrollY / max, 0), 1) : 0;
         if (bar instanceof HTMLElement) bar.style.transform = 'scaleX(' + progress + ')';
-        document.documentElement.classList.toggle('scrolled', window.scrollY > 40);
       }
       function initScrollChrome() {
         updateScrollChrome(); // ページ遷移ごとに新しいページ高さで進捗を再計算

@@ -76,38 +76,33 @@ const fallbackCopy: FallbackCopy = CONTACT_CALENDAR_VISIBLE
 // 説明文は「開いた後に何が起きるか」を書く（目的を選ぶ → 質問に答える → 担当者へ引き継ぐ、
 // 連絡先は最後だけ）。Cloudia 自体は日本語と英語だけなので、その旨は各言語で書く。
 // 返信の目安（原則3営業日以内）はページの見出しの説明（contactPage）が書いているので、ここでは繰り返さない。
-type EntryCopy = { eyebrow: string; title: string; description: string; cta: string };
+type EntryCopy = { title: string; description: string; cta: string };
 const ENTRY_COPY = {
   ja: {
-    eyebrow: 'Contact',
-    title: 'まずはお問い合わせください',
+    title: 'AIチャットで相談内容を伝える',
     description:
-      'ご相談の目的を選び、いくつかの質問に答えていただくと、Cloudiaが内容を整理して担当者へ引き継ぎます。連絡先をお伺いするのは最後だけです。日本語と英語に対応しています。',
-    cta: 'お問い合わせを始める',
+      'AI受付のCloudiaで、相談の目的を選び、質問にお答えください。最後に連絡先を入力して送信すると、相談内容を担当者に引き継ぎます。日本語と英語でご利用いただけます。',
+    cta: 'AIチャットを開く',
   },
   en: {
-    eyebrow: 'Contact',
     title: 'Start by contacting us',
     description:
       'Choose the purpose of your inquiry and answer a few questions. Cloudia organizes your inquiry and hands it to our team. We ask for your contact details only at the end. Cloudia supports Japanese and English.',
     cta: 'Start your inquiry',
   },
   zh: {
-    eyebrow: 'Contact',
     title: '请先联系我们',
     description:
       '选择咨询目的并回答几个问题后，Cloudia 会整理内容并转交给负责人。联系方式只在最后一步填写。Cloudia 支持日语和英语。',
     cta: '开始联系',
   },
   ko: {
-    eyebrow: 'Contact',
     title: '먼저 문의해 주세요',
     description:
       '문의 목적을 선택하고 몇 가지 질문에 답하시면 Cloudia가 내용을 정리해 담당자에게 전달합니다. 연락처는 마지막 단계에서만 여쭙니다. Cloudia는 일본어와 영어로 응대합니다.',
     cta: '문의 시작하기',
   },
   es: {
-    eyebrow: 'Contact',
     title: 'Empiece contactándonos',
     description:
       'Elija el motivo de su consulta y responda algunas preguntas. Cloudia organiza la información y la pasa a nuestro equipo. Solo le pedimos sus datos de contacto al final. Cloudia atiende en japonés e inglés.',
@@ -120,21 +115,20 @@ const chatPath = `${chatUrl.pathname}${chatUrl.search}`;
 ---
 
 <section class="mx-auto max-w-3xl px-4 pb-6 sm:px-6 lg:px-8 lg:max-w-content" aria-labelledby="cloudia-contact-entry-title">
-  <div class="overflow-hidden rounded-3xl bg-primary-950 px-6 py-8 text-primary-50 shadow-xl sm:px-8 sm:py-10 dark:bg-primary-100 dark:text-primary-950">
-    <p class="text-sm font-medium uppercase tracking-[0.18em] text-primary-300 dark:text-primary-700">{copy.eyebrow}</p>
-    <div class="mt-4 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-      <div class="max-w-2xl lg:max-w-content">
-        <LbHeading as="h2" id="cloudia-contact-entry-title" class="type-heading text-2xl font-medium sm:text-3xl" text={copy.title} />
-        <LbText class="type-copy mt-3 max-w-[40em] text-primary-200/80 dark:text-primary-800/80" text={copy.description} />
-      </div>
+  <div class="rounded-2xl border border-primary-200 bg-primary-50 px-5 py-6 dark:border-primary-700 dark:bg-primary-950 sm:px-8 sm:py-8">
+    <div class="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-8">
+      <LbHeading as="h2" id="cloudia-contact-entry-title" class="type-heading text-2xl font-semibold sm:text-3xl" text={copy.title} />
       <a
         href={chatPath}
         data-cloudia-query-link
-        class="inline-flex min-h-[3rem] shrink-0 items-center justify-center rounded-full bg-primary-300 px-5 py-3 text-base font-semibold text-primary-950 transition hover:bg-primary-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 dark:bg-primary-700 dark:text-primary-50 dark:hover:bg-primary-800"
+        class="inline-flex min-h-[48px] scroll-mb-24 items-center justify-center rounded-full bg-[#2d4a6b] px-6 py-3 text-center text-base font-semibold text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:bg-blue-200 dark:text-primary-950 dark:hover:bg-blue-100 dark:focus-visible:outline-blue-200 md:row-span-2 md:self-center"
       >{copy.cta}</a>
+      <LbText class="type-copy max-w-[40em] text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80" text={copy.description} />
     </div>
   </div>
 </section>
+
+<slot name="materials" />
 
 {/* open 必須: 中身は所在地と打ち合わせ可能な時間帯。問い合わせ自体は Cloudia に一本化して
     いるが、会社の所在が初期状態で見えないのは信頼性を欠くため畳まない。
