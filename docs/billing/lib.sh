@@ -10,13 +10,14 @@
 #   - curl は -q を最初に付けて ~/.curlrc を読ませない（verbose などで鍵がログに出るのを防ぐ）。
 #   - bash -x（set -x）では鍵がトレースに出るので、読み込んだ時点で止まる。
 #   - 鍵を聞く文と本番の確認の文は /dev/tty に出す（パイプやログに混ざらない）。
-# モード: 書く前・読む前に GET /v1/balance の livemode を読み、--mode と食い違えば止まる。
-#   鍵の接頭辞では見分けない（形式を決め打ちしない）。
+# Stripe のモード: 書く前・読む前に GET /v1/balance の livemode を読み、--mode と食い違えば止まる。
 # 冪等: POST は Idempotency-Key 付き。Stripe が前回の結果を返したとき（Idempotent-Replayed: true）は、
 #   check_replay で今の状態を読み直し、期待と違えば止まる（「作った」と誤って出さない）。
 #
 # Clerk の鍵（COR_CLERK_SECRET_KEY）も同じ扱い（表示しない・ファイルに書かない・curl の引数に載せない）。
 #   送る本文も curl の設定（標準入力）に載せるので、プロセス一覧に顧客の契約の値が出ない。
+#   Clerk は Stripe の livemode を使えないので、公式の sk_test_ / sk_live_ 接頭辞を --mode と照らす。
+#   それ以外の形式とモード違いは Clerk API を呼ばずに止める。
 
 readonly API_BASE="https://api.stripe.com"
 readonly CLERK_API_BASE="https://api.clerk.com/v1"
@@ -152,7 +153,7 @@ check_list_shape() {
     and (.[0].data | type) == "array" and (.[0].has_more | type) == "boolean"
     and all(.[0].data[]; type == "object" and (.id | type) == "string" and (.id | test($re)))
   ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
-    die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、data が配列、has_more が真偽値、どの要素にも空でない id、のどれかが無い）。全部を読めないので、何も書かない"
+    die 4 "${what} の答えの形が違う（JSON が 1 つ、object が ${want}、data が配列、has_more が真偽値、どの要素にも空でない id、のどれかが無い）。全部を読めないので、何も書かない"
 }
 
 # 1 つの物を id で読んだ答えが、読んだつもりの物かを確かめる。JSON がちょうど 1 つ、object が $2、id が $3。
@@ -162,7 +163,7 @@ check_object_shape() {
   jq -e -s --arg o "$want" --arg id "$id" '
     length == 1 and (.[0] | type) == "object" and .[0].object == $o and .[0].id == $id
   ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
-    die 4 "$what の答えの形が違う（JSON が 1 つ、object が $want、id が $id、のどれかが無い）。別の物の答えかもしれないので、何も書かない"
+    die 4 "${what} の答えの形が違う（JSON が 1 つ、object が ${want}、id が ${id}、のどれかが無い）。別の物の答えかもしれないので、何も書かない"
 }
 
 # 1 ページだけを読んで決める所で、check_list_shape の後に呼ぶ。has_more が true なら、読んでいない続きに
@@ -184,7 +185,7 @@ check_invoice_shape() {
     and (.[0].lines.data | type) == "array" and .[0].lines.has_more == false
     and (.[0].lines.total_count == null or .[0].lines.total_count == (.[0].lines.data | length))
   ' <<<"$RESP_BODY" >/dev/null 2>&1 ||
-    die 4 "$what の答えの形が違う（JSON が 1 つ、object が invoice、id が $id、lines.data が配列、lines.has_more が false、lines.total_count が明細の数と同じ、のどれかが無い）。明細を数えられないので、何も書かない"
+    die 4 "${what} の答えの形が違う（JSON が 1 つ、object が invoice、id が ${id}、lines.data が配列、lines.has_more が false、lines.total_count が明細の数と同じ、のどれかが無い）。明細を数えられないので、何も書かない"
 }
 
 read_key() {
@@ -212,6 +213,13 @@ read_clerk_key() {
   fi
   unset COR_CLERK_SECRET_KEY
   [ -n "$CLERK_KEY" ] || die 64 "Clerk の鍵が空"
+  local clerk_mode
+  case "$CLERK_KEY" in
+    sk_test_*) clerk_mode="test" ;;
+    sk_live_*) clerk_mode="live" ;;
+    *) die 3 "Clerk の鍵のモードを確認できない（sk_test_ / sk_live_ の形式ではない）。何も送っていない" ;;
+  esac
+  [ "$clerk_mode" = "$MODE" ] || die 3 "Clerk の鍵が --mode と違う（--mode ${MODE}、鍵の接頭辞は ${clerk_mode}）。何も送っていない"
 }
 
 # Clerk の Backend API を呼ぶ。鍵と本文は curl の設定（標準入力）で渡すので、引数にもプロセス一覧にも出ない。
@@ -227,7 +235,7 @@ clerk_api() {
     cfg="$cfg"$'\n'"$(printf 'data = "%s"' "$payload")"
   fi
   out="$(printf '%s' "$cfg" | curl -q -sS -X "$method" --max-time 30 -K - --write-out '\n%{http_code}' "$CLERK_API_BASE$path")" \
-    || die 4 "Clerk の API に届かなかった（$method $path）。PATCH なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、clerk-sync の dry-run か Clerk の画面で今の metadata を確かめる"
+    || die 4 "Clerk の API に届かなかった（${method} ${path}）。PATCH なら書き込みが届いた可能性がある。同じコマンドを続けて実行せず、clerk-sync の dry-run か Clerk の画面で今の metadata を確かめる"
   RESP_CODE="${out##*$'\n'}"
   RESP_BODY="${out%$'\n'*}"
   RESP_BODY="${RESP_BODY%$'\r'}"

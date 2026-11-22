@@ -1,16 +1,43 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { ContactLogEvent } from './log';
 import type { TrafficReading } from './industry-context';
 import { trafficPromptLine } from './industry-context';
-import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env } from './types';
+import type { ChatLocale, ChatMessage, ChatMode, ContactIntent, Env, StructuredLead } from './types';
 import { CONTACT_INTENTS } from './types';
 import { COMPANY_KNOWLEDGE } from './company-knowledge';
 
 // Anthropicへ切り替える場合の互換モデル（本番の既定プロバイダはVertex Gemini）。
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const DEFAULT_VERTEX_MODEL = 'gemini-3.5-flash';
+// 互換Gatewayを用意した検証環境で、明示指定したときだけ利用する。
+const HYDROGEN_VERTEX_MODEL = 'gemini-4-hydrogen';
+type VertexModel = typeof DEFAULT_VERTEX_MODEL | typeof HYDROGEN_VERTEX_MODEL;
 export const DEFAULT_VERTEX_PROJECT = 'cor-jp-web';
 export const DEFAULT_VERTEX_LOCATION = 'global';
 export const MAX_OUTPUT_TOKENS = 1024;
+// 短いテキストの構造化応答の打切り上限は据え置き（Hydrogen の LOW でも MAX_TOKENS は有り得るため、
+// 実モデルでの合格を仮定しない。合格判断は本番受入前の別承認の実接続試験で行う）。
+
+// Gemini 4 Hydrogen（正本: Google公式ドキュメント）は temperature・topP・topK の指定値を無視し、
+// generationConfig.thinkingConfig.thinkingLevel（LOW / MEDIUM / HIGH / XHIGH）で推理の深さを制御する。
+// thinkingBudget や thinkingLevel: 'MINIMAL' は HTTP 400 になるため送らない。
+function buildGenerationConfig(model: VertexModel) {
+  if (model === HYDROGEN_VERTEX_MODEL) {
+    return {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: 'LOW' },
+    };
+  }
+  // 旧モデル（gemini-3.5-flash）は従来どおり temperature を使う。
+  return {
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    temperature: 0.3,
+    responseMimeType: 'application/json',
+  };
+}
+// services/vertex-gateway/src/server.js が受信できる署名対象本文の上限。
+const VERTEX_GATEWAY_MAX_BODY_BYTES = 64 * 1024;
 
 // --- プロバイダ抽象化 ---
 // chat(system, messages) => string。既定実装はVertex Gateway。
@@ -47,20 +74,90 @@ async function signGateway(secret: string, timestamp: string, nonce: string, bod
   return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${nonce}.${body}`)));
 }
 
+// Vertex の JSON Schema に、会話が受け取る欄と型を指定する。未収集の lead は省略できる。
+const VERTEX_RESPONSE_FIELDS = ['reply', 'summary', 'classification', 'readyForContact', 'intent', 'structuredLead'];
+const VERTEX_LEAD_PROPERTIES = {
+  purpose: { type: 'STRING' },
+  industryRole: { type: 'STRING' },
+  dataSensitivity: { type: 'STRING' },
+  stage: { type: 'STRING' },
+  timingBudget: { type: 'STRING' },
+  discoverySource: { type: 'STRING' },
+  contactReason: { type: 'STRING' },
+} satisfies Record<keyof StructuredLead, { type: 'STRING' }>;
+
+const VERTEX_CONTACT_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  required: VERTEX_RESPONSE_FIELDS,
+  // REST の既定順ではなく、既存のプロンプトと同じ順にそろえる。
+  propertyOrdering: VERTEX_RESPONSE_FIELDS,
+  properties: {
+    reply: { type: 'STRING' },
+    summary: { type: 'STRING' },
+    classification: { type: 'STRING', enum: ['genuine', 'sales', 'spam'] },
+    readyForContact: { type: 'BOOLEAN' },
+    intent: { type: 'STRING', nullable: true },
+    structuredLead: {
+      type: 'OBJECT',
+      properties: VERTEX_LEAD_PROPERTIES,
+      propertyOrdering: Object.keys(VERTEX_LEAD_PROPERTIES),
+    },
+  },
+};
+
+type VertexResponseFailure = Extract<ContactLogEvent,
+  | 'llm_gateway_http_failed'
+  | 'llm_gateway_invalid_response'
+  | 'llm_output_missing'
+  | 'llm_output_max_tokens'
+  | 'llm_output_blocked'
+>;
+
+export class VertexResponseError extends Error {
+  constructor(readonly code: VertexResponseFailure) {
+    super(code);
+  }
+}
+
+const VERTEX_BLOCK_REASONS = new Set([
+  'SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT',
+  'SPII', 'MODEL_ARMOR', 'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT',
+]);
+
+interface VertexResponse {
+  promptFeedback?: { blockReason?: string };
+  candidates?: Array<{
+    finishReason?: string;
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+  }>;
+}
+
 class VertexGeminiProvider implements LlmProvider {
-  constructor(private readonly env: Env) {}
+  constructor(private readonly env: Env, private readonly model: VertexModel) {}
   async chat(system: string, messages: ChatMessage[]): Promise<string> {
     const gatewayUrl = this.env.VERTEX_GATEWAY_URL?.trim();
     const gatewaySecret = this.env.VERTEX_GATEWAY_SECRET?.trim();
     if (!gatewayUrl || !gatewaySecret) throw new Error('Vertex gateway is not configured');
-    const body = JSON.stringify({
+    const request = {
       project: this.env.GOOGLE_CLOUD_PROJECT || DEFAULT_VERTEX_PROJECT,
       location: this.env.GOOGLE_CLOUD_LOCATION || DEFAULT_VERTEX_LOCATION,
-      model: this.env.VERTEX_MODEL || DEFAULT_VERTEX_MODEL,
+      model: this.model,
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3, responseMimeType: 'application/json' },
+      generationConfig: buildGenerationConfig(this.model),
+    };
+    const encoder = new TextEncoder();
+    let body = JSON.stringify({
+      ...request,
+      generationConfig: { ...request.generationConfig, responseSchema: VERTEX_CONTACT_RESPONSE_SCHEMA },
     });
+    // スキーマで上限を超えるときは会話履歴を残し、従来のJSON設定で一度だけ送る。
+    if (encoder.encode(body).byteLength > VERTEX_GATEWAY_MAX_BODY_BYTES) {
+      body = JSON.stringify(request);
+      if (encoder.encode(body).byteLength > VERTEX_GATEWAY_MAX_BODY_BYTES) {
+        throw new Error('Vertex gateway request exceeds size limit');
+      }
+    }
     const timestamp = String(Date.now());
     const nonce = crypto.randomUUID();
     const response = await fetch(gatewayUrl, {
@@ -73,9 +170,26 @@ class VertexGeminiProvider implements LlmProvider {
       },
       body,
     });
-    if (!response.ok) throw new Error(`Vertex gateway failed (${response.status})`);
-    const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
+    if (!response.ok) throw new VertexResponseError('llm_gateway_http_failed');
+    const data = await response.json().catch(() => {
+      throw new VertexResponseError('llm_gateway_invalid_response');
+    }) as VertexResponse | null;
+    const candidate = Array.isArray(data?.candidates) ? data.candidates[0] : undefined;
+    const finishReason = candidate?.finishReason;
+    if (finishReason === 'MAX_TOKENS') throw new VertexResponseError('llm_output_max_tokens');
+    if (VERTEX_BLOCK_REASONS.has(finishReason ?? '') || VERTEX_BLOCK_REASONS.has(data?.promptFeedback?.blockReason ?? '')) {
+      throw new VertexResponseError('llm_output_blocked');
+    }
+    if (!candidate || finishReason !== 'STOP') throw new VertexResponseError('llm_gateway_invalid_response');
+
+    const parts = candidate.content?.parts ?? [];
+    if (!Array.isArray(parts) || parts.some((part) => !part || typeof part !== 'object'
+      || (part.text !== undefined && typeof part.text !== 'string'))) {
+      throw new VertexResponseError('llm_gateway_invalid_response');
+    }
+    const output = parts.filter((part) => !part.thought).map((part) => part.text ?? '').join('').trim();
+    if (!output) throw new VertexResponseError('llm_output_missing');
+    return output;
   }
 }
 
@@ -84,13 +198,18 @@ class VertexGeminiProvider implements LlmProvider {
 export function getProvider(env: Env): LlmProvider {
   const provider = (env.LLM_PROVIDER || 'vertex-gemini').toLowerCase();
   switch (provider) {
-    case 'vertex-gemini':
+    case 'vertex-gemini': {
       // 1 日の上限の数を予約する前に止めるため、Gateway の設定が無ければここで投げる（anthropic の鍵と同じ形）。
       // 確かめ方は VertexGeminiProvider.chat と同じ（前後の空白を除いて空なら無い）。
       if (!env.VERTEX_GATEWAY_URL?.trim() || !env.VERTEX_GATEWAY_SECRET?.trim()) {
         throw new Error('LLM が未設定です（VERTEX_GATEWAY_URL・VERTEX_GATEWAY_SECRET）');
       }
-      return new VertexGeminiProvider(env);
+      const model = env.VERTEX_MODEL?.trim() || DEFAULT_VERTEX_MODEL;
+      if (model !== DEFAULT_VERTEX_MODEL && model !== HYDROGEN_VERTEX_MODEL) {
+        throw new Error('未対応の VERTEX_MODEL です');
+      }
+      return new VertexGeminiProvider(env, model);
+    }
     case 'anthropic':
       // vertex-gemini と同じく、前後の空白を除いて空なら無いと見る（空白だけの鍵で予約し、外へ送らないため）。
       if (!env.ANTHROPIC_API_KEY?.trim()) {

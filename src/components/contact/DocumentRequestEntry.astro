@@ -6,7 +6,9 @@ const copy = getTranslations(locale).documentRequest;
 const href = getLocalizedUrl('/contact/materials/', locale);
 ---
 
-<p class="mx-auto max-w-3xl px-4 pt-10 text-base text-primary-950 dark:text-primary-200 sm:px-6">
-  <a class="underline" href={href}>{copy.entryLabel}</a>
-  <span class="mt-1 block text-sm text-primary-950/70 dark:text-primary-200/70">{copy.entryNote}</span>
-</p>
+<div class="mx-auto max-w-3xl px-4 pb-8 sm:px-6 sm:pb-10 lg:max-w-content lg:px-8">
+  <p class="pt-2">
+    <a class="inline-flex min-h-[44px] items-center font-medium text-[#2d4a6b] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-blue-200" href={href}>{copy.entryLabel}</a>
+    <span class="block text-sm text-primary-950/75 dark:text-primary-200/80">{copy.entryNote}</span>
+  </p>
+</div>

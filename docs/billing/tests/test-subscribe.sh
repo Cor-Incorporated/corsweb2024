@@ -19,7 +19,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BILLING="$(cd "$HERE/.." && pwd)"
 PLANS="$BILLING/plans.json"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/billing-sub-test.XXXXXX")"
-trap 'rm -rf "$WORK"' EXIT
+cleanup() {
+  local status=$?
+  trap - EXIT
+  rm -rf "$WORK"
+  exit "$status"
+}
+trap cleanup EXIT
 mkdir -p "$WORK/bin"
 OLD_PLANS="$WORK/plans-same-day.json"
 jq '.billing = {closing: "same_day_advance", payment_due: "at_period_start", first_month: "full_month"}' "$PLANS" >"$OLD_PLANS"
@@ -66,6 +72,20 @@ check_no_arg() { if printf '%s\n' "$LOG" | grep '^ARGV' | grep -qF -- "$2"; then
 # lib.sh の関数を 1 つ呼ぶ
 lib_fn() { bash -c '. "$1/lib.sh"; PLANS="$2"; shift 2; "$@"' _ "$BILLING" "$PLANS" "$@"; }
 eq() { if [ "$2" = "$3" ]; then ok "$1"; else ng "$1: 期待 $3 観測 $2"; fi; }
+
+check_clerk_key_mode() {
+  local mode="$1" key="$2" want_rc="$3" want_text="$4" output rc
+  set +e
+  output="$(bash -c '. "$1/lib.sh"; PLANS="$2"; MODE="$3"; COR_CLERK_SECRET_KEY="$4"; read_clerk_key' \
+    _ "$BILLING" "$PLANS" "$mode" "$key" 2>&1)"
+  rc=$?
+  set -e
+  if [ "$rc" -eq "$want_rc" ] && { [ -z "$want_text" ] || printf '%s' "$output" | grep -qF -- "$want_text"; }; then
+    ok "Clerk の $mode mode は適合する鍵だけを受ける"
+  else
+    ng "Clerk の $mode mode の鍵照合: rc=${rc}・出力=$output"
+  fi
+}
 
 # 月の計算（実装の lib.sh と別に書く）
 ym_shift() {
@@ -377,8 +397,8 @@ eq "POST の順は draft → 両サービスの明細 4 行 → finalize → sen
 eq "明細 4 行は全部、作った下書き in_new に足す" "$(argv_count 'invoice=in_new')" "4"
 eq "$SVC1 の明細は利用料と開発費の 2 行" "$(argv_count "metadata[service]=$SVC1")" "2"
 eq "$SVC2 の明細も利用料と開発費の 2 行" "$(argv_count "metadata[service]=$SVC2")" "2"
-check_arg "$SVC1 の利用料の明細（初月 1 か月分）" "description=$(svc_name "$SVC1" basic) $LAST（初月。1 か月分）"
-check_arg "$SVC2 の利用料の明細（初月 1 か月分）" "description=$(svc_name "$SVC2" basic) $LAST（初月。1 か月分）"
+check_arg "$SVC1 の利用料の明細（初月 1 か月分）" "description=$(svc_name "$SVC1" basic) ${LAST}（初月。1 か月分）"
+check_arg "$SVC2 の利用料の明細（初月 1 か月分）" "description=$(svc_name "$SVC2" basic) ${LAST}（初月。1 か月分）"
 check_arg "$SVC1 の開発費の明細は 6 回の契約の 1 回目" "description=$(svc_name "$SVC1" dev) 1/6 回目"
 check_arg "$SVC2 の開発費の明細は 12 回の契約の 1 回目" "description=$(svc_name "$SVC2" dev) 1/12 回目"
 # 比べる対: 1 つのサービスだけの顧客の明細は、そのサービスの分だけ
@@ -570,6 +590,15 @@ printf '%s' "$LOG" | grep -q '^STDIN_AUTH no' && ng "標準入力に鍵の無い
 eq "Clerk の state に xesm が入った" "$(clerk_state | jq -r '.services.xesm.from')" "$LAST-15"
 printf '%s' "$OUT" | grep -qF 'until の null は Clerk の deep merge でキーを消す' && ok "until の null がキーを消すことを NOTE で出す" || ng "until の NOTE が無い: $OUT"
 eq "until の無い契約では until のキーが残らない（from と hold）" "$(clerk_state | jq -r '.services.xesm | has("until")')" "false"
+# Clerk には Stripe の livemode endpoint が無いので、key prefix を --mode と照合する。
+CKEY="sk_live_dummy_for_mode_test" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
+expect "test mode に Clerk の live key を渡すと止まる" 3 0 "Clerk の鍵が --mode と違う"
+eq "Clerk key mode が違えば Clerk API を呼ばない" "$(clerk_calls)" "0"
+check_clerk_key_mode test sk_test_fixture_test 0 ""
+check_clerk_key_mode test sk_live_fixture_test 3 "--mode test"
+check_clerk_key_mode live sk_live_fixture_live 0 ""
+check_clerk_key_mode live sk_test_fixture_live 3 "--mode live"
+check_clerk_key_mode test legacy_fixture_key 3 "モードを確認できない"
 # 終了日の書いてある契約（cancel の後）は、until に終了日を写す（ADR-0028 の 2 節: until は終了日）
 END_META="$(jq -c '. + {contract_xesm_end: "2027-04-05"}' <<<"$CLERK_META")"
 FAKE_CUST_META="$END_META" run clerk-sync --customer cus_x --mode test
@@ -602,12 +631,12 @@ eq "空の開始日では Clerk を呼ばない" "$(clerk_calls)" "0"
 CKEY="" FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode test --apply
 expect "Clerk の鍵が無ければ書かない（端末も無い）" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ PATCH しない" "$(clerk_patches)" "0"
-SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+CKEY="sk_live_dummy_for_mode_test" SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
 expect "本番の clerk-sync は live と打たなければ送らない" 64 0 "本番は端末から実行する"
 # 本番の確認より前に、送る本文（消えるキーを含む）を出す。確認した内容だけを送る
 rm -f "$WORK/log.clerk"
 FAKE_CLERK_META='{"services":{"stale-svc":{"from":"2025-01-01","until":null,"hold":false},"xesm":{"from":"2026-11-01","until":null,"hold":false}}}' \
-  SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
+  CKEY="sk_live_dummy_for_mode_test" SCN=live FAKE_CUST_META="$CLERK_META" run clerk-sync --customer cus_x --mode live --apply
 expect "本番の clerk-sync は live と打つ前に止まる" 64 0 "本番は端末から実行する"
 printf '%s' "$OUT" | grep -qF 'NOTE plans.json に無いサービスを Clerk から消す: stale-svc' && ok "確認より前に、消えるキーを出す" || ng "確認より前に消えるキーが出ない: $OUT"
 printf '%s' "$OUT" | grep -qF '"stale-svc":null' && ok "確認より前に、送る本文（null を含む）を出す" || ng "確認より前に本文が出ない: $OUT"
@@ -674,7 +703,7 @@ CKEY="" FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --a
 expect "Clerk の鍵が無ければ hold にしない（片方だけ書かない）" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ Stripe にも書かない" "$(posts)" "0"
 rm -f "$WORK/log.clerk"
-SCN=live FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode live
+CKEY="sk_live_dummy_for_mode_test" SCN=live FAKE_CUST_META="$HOLD_META" run hold --customer cus_x --service xesm --apply --mode live
 expect "本番の hold は live と打たなければ書かない" 64 0 "本番は端末から実行する"
 printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata":{"services":' && ok "確認より前に、送る本文を出す" || ng "確認より前に本文が出ない: $OUT"
 printf '%s' "$OUT" | grep -qF '"xesm":{"from":"'"$LAST"'-15","until":null,"hold":true}' && ok "確認より前に、hold=true の本文を出す" || ng "本文の hold が違う: $OUT"
@@ -775,7 +804,7 @@ CKEY="" FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_OPEN_INVOICES="" run res
 expect "Clerk の鍵が無ければ resync は書かない" 64 0 "Clerk の鍵が無い"
 eq "Clerk の鍵が無ければ 1 件も書かない" "$(posts)" "0"
 rm -f "$WORK/log.customers" "$WORK/log.clerk"
-SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
+CKEY="sk_live_dummy_for_mode_test" SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
 expect "本番の resync は live と打たなければ書かない" 64 0 "本番は端末から実行する"
 printf '%s' "$OUT" | grep -qF 'JSON {"public_metadata"' && ok "確認より前に、送る本文を出す（下見）" || ng "確認より前に本文が出ない: $OUT"
 printf '%s' "$OUT" | grep -qF 'RESYNC これから' && ok "確認より前に、何件に書くかを出す" || ng "件数の行が無い: $OUT"
@@ -896,7 +925,7 @@ check_arg "open の 2 ページ目は、open の 1 ページ目の最後の id �
 printf '%s' "$OUT" | grep -qF 'PLAN hold cus_a xesm' && ok "2 つの状態を読んだうえで hold を決める" || ng "hold を決めていない: $OUT"
 # 重なりの検査は、本番の確認より前に止める（確認の後に置くと、確認で止まって重なりが見えない）
 rm -f "$WORK/log.customers" "$WORK/log.clerk"
-SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
+CKEY="sk_live_dummy_for_mode_test" SCN=live FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --apply --mode live
 expect "本番の resync でも、重なりは確認より前に止める" 3 0 "同じ Clerk の組織 org_a を 2 人以上の顧客が持っている"
 printf '%s' "$OUT" | grep -qF '本番は端末から実行する' && ng "重なりより先に確認で止まった: $OUT" || ok "確認より前に、重なりで止まる"
 
@@ -966,7 +995,7 @@ printf '%s\n' "$OUT" | sed -n 1p | grep -qF 'mode: resync --mode test --preview�
 printf '%s' "$OUT" | grep -qF 'PLAN resync --preview:' && ! printf '%s' "$OUT" | grep -qF 'resync_at を書く' && ok "resync --preview の PLAN は、書くとは言わない" || ng "preview の PLAN の行: $(printf '%s\n' "$OUT" | grep '^PLAN resync' || true)"
 FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$DUP_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode test
 expect "resync --preview も、組織の重なりで止まる" 3 0 "同じ Clerk の組織 org_a を 2 人以上の顧客が持っている"
-SCN=live FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode live
+CKEY="sk_live_dummy_for_mode_test" SCN=live FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1="$RESYNC_P1" FAKE_CUST_PAGE2="$RESYNC_P2" FAKE_OPEN_INVOICES="$OPEN_INV" run resync --preview --mode live
 expect "本番の resync --preview は、確認を聞かずに読む" 0 0 "DONE preview: 何も書いていない"
 eq "本番の resync --preview も書く API を呼ばない" "$(count "$LOG" '^WRITE_REFUSED')$(clerk_patches)" "00"
 FAKE_NO_WRITE=1 FAKE_RESYNC=1 FAKE_CUST_PAGE1='[]' FAKE_OPEN_INVOICES="" run resync --preview --mode test

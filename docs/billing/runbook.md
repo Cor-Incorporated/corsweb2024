@@ -633,7 +633,9 @@ XESM はお客様用の無効化の手順がまだ無い（xesm の報告 W6）�
 
 Clerk の鍵は環境変数 `COR_CLERK_SECRET_KEY`。無ければスクリプトが表示しない入力で聞く（Stripe の鍵と同じ扱い。表示しない・ファイルに書かない・引数に載せない）。既定は dry-run で、書くのは `--apply --mode test|live` のとき。`live` は端末で `live` と打つ確認がある。
 
-**`--mode` は Clerk を守らない。** `--mode` が確かめるのは Stripe の鍵のモード（`livemode`）だけで、Clerk の鍵が test 用か live 用かは API では分からない（未確認。README 12 章の 13）。だから `--mode test` でも、貼った Clerk の鍵の組織にそのまま PATCH する。**試験は開発用のインスタンスの鍵と組織で行い、`--apply` の前に dry-run の `PLAN services.…` と、顧客の `clerk_org_id` が開発用の `org_…` であることを確かめる。** 本番の組織に試験の `services` を書かない。
+Stripe は `/v1/balance` の `livemode` を、Clerk は secret key の接頭辞を `--mode` と照合する。Clerk の開発用鍵 `sk_test_` は `--mode test`、本番用鍵 `sk_live_` は `--mode live` に対応する。接頭辞が不明かモードが違う場合は Clerk API の呼び出し前に止まる。[Clerk 公式ドキュメント](https://clerk.com/docs/guides/development/clerk-environment-variables)
+
+試験は開発インスタンスで行う。`--apply` の前に dry-run の `PLAN services.…` と、顧客の `clerk_org_id` が開発用の組織であることを確認する。
 
 E2〜E5 のコマンドは、本番の形（`--mode live`）で書いてある。テストモードで流すときは、`--mode live` を `--mode test` に替えて打つ（E1 は、テストの形で書いてある）。
 

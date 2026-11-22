@@ -7,6 +7,7 @@ export interface Env {
   LLM_PROVIDER: string; // 既定 'vertex-gemini'。'anthropic' でロールバック可能。
   GOOGLE_CLOUD_PROJECT?: string;
   GOOGLE_CLOUD_LOCATION?: string;
+  /** 既定は gemini-3.5-flash。gemini-4-hydrogen は互換 Gateway で明示指定した場合に使う。 */
   VERTEX_MODEL?: string;
   /** 1 日（JST）に model を呼ぶ回数の上限。0 以上の整数。無い・読めないときは daily-cap.ts の既定の値。 */
   CHAT_DAILY_MODEL_CALL_LIMIT?: string;

@@ -146,7 +146,7 @@ function stubModel() {
   });
   const fetchMock = vi.fn(async (url: string) => {
     if (String(url).includes('generateContent')) {
-      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: modelText }] } }] }), { status: 200 });
+      return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: modelText }] } }] }), { status: 200 });
     }
     throw new Error(`unexpected fetch ${url}`);
   });
@@ -353,6 +353,21 @@ describe('1 日の model の呼び出しの上限', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const response = await chatTurn(testEnv(db, '3'));
     expect(response.status).toBe(503);
+    expect(storedCalls(db, '2026-11-17')).toBe(1);
+  });
+
+  it('Vertex の途中終了は公開用の 503 を返し、予約を残して呼び直さない', async () => {
+    fixClock('2026-11-17T03:00:00.000Z');
+    const db = openDatabase();
+    const fetchMock = vi.fn(async () => Response.json({
+      candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"reply":"途中の応答' }] } }],
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const response = await chatTurn(testEnv(db, '3'));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: AI_UNAVAILABLE, fallback: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(storedCalls(db, '2026-11-17')).toBe(1);
   });
 

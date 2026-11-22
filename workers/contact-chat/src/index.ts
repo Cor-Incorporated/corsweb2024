@@ -40,7 +40,7 @@ import { logContactFailure, notificationFailureCode } from './log';
 import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
 import { classifyFromModel, unclassified } from './inquiry-classification';
 import { entryContextFromTraffic } from './inquiry-context';
-import { buildSystemPrompt, getProvider } from './llm';
+import { buildSystemPrompt, getProvider, VertexResponseError } from './llm';
 import { getEmailProvider, sendInquiryEmail, sendReceiptEmail } from './email';
 import {
   claimOutbox,
@@ -188,14 +188,14 @@ export function parseChatResult(raw: string, fallbackIntent: ContactIntent | '' 
 }
 
 /**
- * parseChatResult と同じ。加えて、モデルが有効な classification を返したかを返す。
+ * 表示できるモデルの返答と有効な分類があったかを返す。
  * 応答の classification は読めないとき genuine に倒すが、受付の記録はそれを相談と数えない。
  */
 export function parseChatResultDetailed(
   raw: string,
   fallbackIntent: ContactIntent | '' = '',
   locale: ChatLocale = 'ja',
-): { result: ChatResult; modelClassification: Classification | null } {
+): { result: ChatResult; modelClassification: Classification | null; hasModelReply: boolean } {
   if (new TextEncoder().encode(raw).length > 16 * 1024) raw = '';
   const trimmed = raw.trim();
   let classification: Classification = 'genuine';
@@ -214,7 +214,6 @@ export function parseChatResultDetailed(
   if (extracted) candidates.push(extracted);
 
   let reply = '';
-  let parsedOk = false;
   for (const candidate of candidates) {
     try {
       const obj = JSON.parse(candidate);
@@ -242,16 +241,13 @@ export function parseChatResultDetailed(
       if (!fallbackIntent && llmIntent) intent = llmIntent;
       const lead = normalizeStructuredLead(o.structuredLead);
       if (Object.keys(lead).length > 0) structuredLead = lead;
-      parsedOk = true;
       break;
     } catch {
       // 次の候補へ。
     }
   }
 
-  // どの候補も object として parse できなければ、素の文章を reply とする（会話を止めない）。
-  // ただし生の JSON ブロブをそのまま返さないよう、parse 成功時は reply のみを使う。
-  if (!parsedOk) reply = '';
+  const hasModelReply = reply.length > 0;
   if (!reply) reply = locale === 'en'
     ? 'Sorry, could you please tell me that again?'
     : '申し訳ありません、もう一度お聞かせいただけますか？';
@@ -271,7 +267,7 @@ export function parseChatResultDetailed(
       ? fallbackSummary
       : EMPTY_SUMMARY[locale];
   }
-  return { result, modelClassification: parsedOk ? modelClassification : null };
+  return { result, modelClassification, hasModelReply };
 }
 
 function leadMissingFields(lead: StructuredLead | undefined): string[] {
@@ -306,6 +302,10 @@ function startReply(
   return locale === 'en'
     ? 'Thank you. I will ask a few quick questions so we can understand your request. What would you like to achieve?'
     : 'ありがとうございます。ご相談内容を正確に把握するため、いくつか質問します。まず、今回実現したいことを教えてください。';
+}
+
+function chatModelUnavailable(): Response {
+  return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください', fallback: true }, 503);
 }
 
 // POST /api/contact/chat — 会話による問い合わせの絞り込み。PIIは扱わない。
@@ -416,12 +416,16 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
     // only masked messages to Vertex/Anthropic; the original browser transcript
     // is never persisted by the chat endpoint.
     raw = await provider.chat(system, maskMessagesForLlm(norm.messages));
-  } catch {
-    logContactFailure('llm_failed');
-    return json({ error: 'AIが一時的に利用できません。時間をおいて再試行してください', fallback: true }, 503);
+  } catch (error) {
+    logContactFailure(error instanceof VertexResponseError ? error.code : 'llm_failed');
+    return chatModelUnavailable();
   }
 
   const parsedChat = parseChatResultDetailed(raw, initialIntent, locale);
+  if (!parsedChat.hasModelReply) {
+    logContactFailure('llm_output_unreadable');
+    return chatModelUnavailable();
+  }
   const result = parsedChat.result;
   result.reply = normalizeCompanyNameReply(result.reply, norm.messages);
   const sessionId = normalizeSessionId(body.sessionId) || newSessionId();

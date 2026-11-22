@@ -166,7 +166,10 @@ test.describe('Cloudia contact routing', () => {
   test('fits a mobile safe-area viewport without horizontal scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/contact/${query}`);
-    await page.locator('#cloudia-launcher-open').click();
+    const openButton = page.locator('#cloudia-launcher-open');
+    await openButton.click();
+    await expect(openButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#cloudia-launcher-panel')).toBeVisible();
 
     const dimensions = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
@@ -179,6 +182,33 @@ test.describe('Cloudia contact routing', () => {
     expect(dimensions.panel?.right).toBeLessThanOrEqual(390);
     expect(dimensions.panel?.bottom).toBeLessThanOrEqual(844);
   });
+
+  for (const width of [320, 390]) {
+    test(`puts the primary contact action before materials and above the launcher at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await page.goto('/contact/');
+
+      const primary = page.getByRole('link', { name: 'AIチャットを開く', exact: true });
+      await expect(primary).toBeInViewport({ ratio: 1 });
+      const materials = page.getByRole('link', { name: '会社紹介資料の請求', exact: true });
+      const launcher = page.locator('#cloudia-launcher-open');
+      const [primaryBox, materialsBox, launcherBox] = await Promise.all(
+        [primary, materials, launcher].map((locator) => locator.boundingBox()),
+      );
+      expect(primaryBox).not.toBeNull();
+      expect(materialsBox).not.toBeNull();
+      expect(launcherBox).not.toBeNull();
+      const primaryBottom = primaryBox!.y + primaryBox!.height;
+      expect(primaryBox!.height).toBeGreaterThanOrEqual(44);
+      expect(primaryBottom).toBeLessThan(materialsBox!.y);
+      expect(primaryBottom).toBeLessThan(launcherBox!.y);
+
+      await primary.focus();
+      await expect(primary).toBeFocused();
+      await expect(primary).toHaveCSS('outline-style', 'solid');
+      await primary.click({ trial: true });
+    });
+  }
 
   test('uses the localized route locale for Cloudia', async ({ page }) => {
     await page.goto('/en/contact/?intent=estimate-audit&source=grift-lp-estimate');
