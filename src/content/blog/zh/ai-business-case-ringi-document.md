@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "zh"
 featured: false
 isDraft: false
-translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
+translationSourceHash: "29ef0f3e93e446d17a788bbfeed88aa5253376a2e167d514062604997ae4a760"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 AI引入的审批资料要先回答的，不是技术说明，而是“为什么现在做”、“需要花多少钱”以及“风险是否可控”。需要的不是期待感，而是经得起业务决策考验的资料。
 
 > **2026年10月20日 补充说明**
-> Grift已于2026年9月终止了估算支持Web应用的提供，目前已调整方向为从工程师的git历史中提取可核实事实的开源CLI（[griftai.org](https://griftai.org)）。本文中关于Grift的描述均为发布当时的内容。有关受托开发、AI开发估算的咨询，我们以AI受托开发的形式通过[联系我们](/contact)受理。
+> Grift已于2026年9月终止了估算支持Web应用的提供，目前已调整方向为从工程师的git历史中提取可核实事实的开源CLI（[griftai.org](https://griftai.org)）。本文中关于Grift的描述均为发布当时的内容。有关受托开发、AI开发估算的咨询，我们以AI受托开发的形式通过[联系我们](/contact?intent=contract-dev)受理。
 
 本文初版介绍了当时提供的Grift估算支持Web应用。该提供已于2026年9月结束。现在的Grift CLI是另一种提供形态，用来整理开发记录中可以核对的事实。本文保留审批的想法，并更新了现在的咨询入口。现在的咨询入口是AI受托开发与导入支持。
 

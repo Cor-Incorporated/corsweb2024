@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
+translationSourceHash: "29ef0f3e93e446d17a788bbfeed88aa5253376a2e167d514062604997ae4a760"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 AI 도입 품의에서 먼저 답할 것은 기술 설명이 아닙니다. "왜 지금 해야 하는가", "비용이 얼마나 드는가", "리스크를 관리할 수 있는가"입니다. 기대감이 아니라 사업 판단을 견딜 자료가 필요합니다.
 
 > **2026년 10월 20일 추가 내용**
-> Grift는 2026년 9월 견적 지원 웹 애플리케이션 제공을 종료하고, 현재는 엔지니어의 git 이력에서 검증 가능한 사실을 추출하는 OSS CLI([griftai.org](https://griftai.org))로 방향을 전환했습니다. 본 기사의 Grift 관련 서술은 공개 당시의 내용입니다. 위탁 개발·AI 개발 견적 문의는 AI 위탁 개발 서비스로서 [문의하기](/contact)를 통해 접수하고 있습니다.
+> Grift는 2026년 9월 견적 지원 웹 애플리케이션 제공을 종료하고, 현재는 엔지니어의 git 이력에서 검증 가능한 사실을 추출하는 OSS CLI([griftai.org](https://griftai.org))로 방향을 전환했습니다. 본 기사의 Grift 관련 서술은 공개 당시의 내용입니다. 위탁 개발·AI 개발 견적 문의는 AI 위탁 개발 서비스로서 [문의하기](/contact?intent=contract-dev)를 통해 접수하고 있습니다.
 
 본 기사의 초판은 당시 제공하던 Grift 견적 지원 웹 앱을 소개했습니다. 그 제공은 2026년 9월에 끝났습니다. 지금의 Grift CLI는 개발 기록에서 확인할 수 있는 사실을 정리하는 다른 제공 형태입니다. 본 기사는 품의의 생각을 남기고, 지금의 상담처를 갱신했습니다. 지금의 상담처는 AI 수탁 개발·도입 지원입니다.
 

@@ -8,18 +8,12 @@ import TeamIntro from '../components/about/TeamIntro.astro';
 import NextStep from '../components/common/NextStep.astro';
 import Layout from '../layouts/Layout.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../utils/i18n';
-import { COMPANY_DECK_URL, getContactUrl } from '../config/site';
+import { COMPANY_DECK_URL } from '../config/site';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-// About 下部的 CTA“首先咨询课题”在所有语言中均导向各自的咨询页面。
-// #313 で /[lang]/works も生成されるようになったが、非ja の CTA 文言は「相談する」系のため
-// リンク先は文言に合わせて同言語の相談ページのままにする（文言と遷移先の不一致を避ける）。
-const nextStepHref =
-  currentLocale === 'ja'
-    ? getLocalizedUrl('/works', currentLocale)
-    : getContactUrl(currentLocale, { source: 'about' });
+const nextStepHref = getLocalizedUrl('/works', currentLocale);
 ---
 
 <Layout

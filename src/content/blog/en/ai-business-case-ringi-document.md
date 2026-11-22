@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "en"
 featured: false
 isDraft: false
-translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
+translationSourceHash: "29ef0f3e93e446d17a788bbfeed88aa5253376a2e167d514062604997ae4a760"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 What an approval request for AI adoption should answer first is not the technical explanation. It is "Why do this now?", "How much will it cost?", and "Can the risks be managed?". What is needed is documentation that can withstand a business decision, not expectations.
 
 > **Update: October 20, 2026**
-> In September 2026, Grift discontinued its estimation-support web app and shifted its direction toward an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' git histories. The descriptions of Grift in this article reflect the content at the time of publication. For consultations regarding estimates for custom software development and AI development, we accept inquiries as AI contract development via our [contact form](/contact).
+> In September 2026, Grift discontinued its estimation-support web app and shifted its direction toward an open-source CLI ([griftai.org](https://griftai.org)) that extracts verifiable facts from engineers' git histories. The descriptions of Grift in this article reflect the content at the time of publication. For consultations regarding estimates for custom software development and AI development, we accept inquiries as AI contract development via our [contact form](/contact?intent=contract-dev).
 
 The first edition of this article introduced the Grift estimation-support web app that was offered at the time. That offering ended in September 2026. The current Grift CLI is a different form: it organizes facts that can be checked from development records. This article keeps the thinking about approval requests and updates where to ask now. The current place to ask is AI contract development and adoption support.
 
