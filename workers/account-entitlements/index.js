@@ -67,19 +67,26 @@ export default {
       return json({ error: 'invalid_input' }, 400);
     }
     const { service, issuer, subject, tenantId } = body;
-    if ((service !== 'business-dossier' && service !== 'xesm')
+    const credentials = {
+      'business-dossier': env.BD_ENTITLEMENT_QUERY_TOKEN,
+      xesm: env.XESM_ENTITLEMENT_QUERY_TOKEN,
+      harbor: env.HARBOR_ENTITLEMENT_QUERY_TOKEN,
+    };
+    if (typeof service !== 'string' || !Object.hasOwn(credentials, service)
         || typeof issuer !== 'string' || issuer.length > 255
         || typeof subject !== 'string' || !/^user_[A-Za-z0-9_]{1,123}$/.test(subject)
         || typeof tenantId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(tenantId)) {
       return json({ error: 'invalid_input' }, 400);
     }
 
-    const bd = env.BD_ENTITLEMENT_QUERY_TOKEN;
-    const xesm = env.XESM_ENTITLEMENT_QUERY_TOKEN;
-    const expected = service === 'business-dossier' ? bd : xesm;
-    if (!TOKEN_PATTERN.test(expected ?? '') || !isHttpsOrigin(env.CLERK_ISSUER)
-        || (bd && xesm && await tokensMatch(bd, xesm))) {
+    const expected = credentials[service];
+    if (!TOKEN_PATTERN.test(expected ?? '') || !isHttpsOrigin(env.CLERK_ISSUER)) {
       return json({ error: 'unavailable' }, 503);
+    }
+    for (const [otherService, token] of Object.entries(credentials)) {
+      if (otherService !== service && token && await tokensMatch(expected, token)) {
+        return json({ error: 'unavailable' }, 503);
+      }
     }
     if (!(await tokensMatch(expected, supplied))) return json({ error: 'unauthorized' }, 401);
     if (issuer !== env.CLERK_ISSUER) return json({ allowed: false }, 200);
