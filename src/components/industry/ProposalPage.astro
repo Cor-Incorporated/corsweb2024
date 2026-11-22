@@ -45,14 +45,13 @@ const ctaParagraphs = page.cta.body.flatMap((block) => {
 });
 ---
 
-<section class="relative isolate overflow-hidden pb-12 pt-16 sm:pb-16 sm:pt-24" data-proposal-hero>
-  <div class="motion-bg" aria-hidden="true"></div>
-  <div class="relative z-10 mx-auto max-w-reading px-4 sm:px-6 lg:px-8">
+<section class="pb-10 pt-12 sm:pb-14 sm:pt-20" data-proposal-hero>
+  <div class="mx-auto max-w-reading px-4 sm:px-6 lg:px-8">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
       {page.eyebrow}
     </p>
-    <ProposalHeading as="h1" text={page.title} class="mt-6 text-3xl font-semibold leading-tight tracking-tight sm:text-5xl" />
-    <div class="mt-8">
+    <ProposalHeading as="h1" text={page.title} class="mt-4 text-3xl font-semibold leading-tight sm:text-5xl" />
+    <div class="mt-6 sm:mt-8">
       <ProposalBlocks blocks={page.lead} industry={industry} page={page} />
     </div>
   </div>
@@ -68,16 +67,16 @@ const ctaParagraphs = page.cta.body.flatMap((block) => {
 
 <section class="py-16 sm:py-24">
   <div class="mx-auto max-w-reading px-4 sm:px-6 lg:px-8">
-    <div class="flex flex-col gap-6 rounded-3xl bg-[#2d4a6b] px-6 py-12 text-white sm:px-12 sm:py-16" data-proposal-cta>
-      <ProposalHeading as="h2" text={page.cta.title} class="text-3xl font-medium tracking-tight sm:text-4xl" />
+    <div class="flex flex-col gap-5 rounded-2xl border border-primary-200 bg-primary-50 px-5 py-8 dark:border-primary-700 dark:bg-primary-950 sm:px-10 sm:py-12" data-proposal-cta>
+      <ProposalHeading as="h2" text={page.cta.title} class="text-2xl font-semibold sm:text-3xl" />
       {
         ctaParagraphs.map((paragraph) => (
-          <p class="text-pretty text-lg leading-relaxed text-white/80"><ProposalInline value={paragraph} industry={industry} mode="sentences" /></p>
+          <p class="text-pretty text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80 sm:text-lg"><ProposalInline value={paragraph} industry={industry} mode="sentences" /></p>
         ))
       }
       <a
         href={inquiryHref}
-        class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full border border-transparent bg-white px-6 py-4 text-center text-lg font-semibold text-[#2d4a6b] shadow-sm transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-auto sm:px-8"
+        class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full bg-[#2d4a6b] px-6 py-3 text-center text-base font-semibold text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:bg-blue-200 dark:text-primary-950 dark:hover:bg-blue-100 dark:focus-visible:outline-blue-200 sm:w-auto"
         data-industry-inquiry={industryContactSource(industry)}
       >
         {page.cta.primary}
@@ -86,7 +85,7 @@ const ctaParagraphs = page.cta.body.flatMap((block) => {
         downloadHref && (
           <a
             href={downloadHref}
-            class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full border border-white/30 px-5 py-3 text-center text-base font-medium text-white transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:w-auto"
+            class="inline-flex min-h-[48px] w-full max-w-sm scroll-mb-28 items-center justify-center rounded-full border border-primary-300 px-5 py-3 text-center text-base font-medium transition hover:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-primary-600 dark:hover:bg-primary-900 sm:w-auto"
             data-document-download
           >
             {page.cta.downloadButton}

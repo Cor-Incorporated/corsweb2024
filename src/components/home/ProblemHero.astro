@@ -73,8 +73,6 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
     e2e/first-view.spec.ts が測る。スマホでは「実績を見る」を入口の下に出し、3 つの短い文とエンブレムが続く。
     並べ替えに CSS の order を使わない（見た目と Tab の順がずれるため）。 */}
 <section class={`relative isolate flex items-center overflow-hidden pb-28 sm:pb-32 ${heroSpacing.section}`}>
-  {/* 抽象モーション背景（装飾・読み上げ対象外）。prefers-reduced-motion で静止。 */}
-  <div class="motion-bg" aria-hidden="true"></div>
   <div class="relative z-10 mx-auto w-full max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8 2xl:max-w-content">
     <div class={`flex flex-col items-center text-center ${heroSpacing.column}`} data-hero-content>
       <p
@@ -143,8 +141,4 @@ const secondaryHref = getLocalizedUrl('/works', currentLocale);
   </div>
   {/* ロゴのペンギンがヒーロー下部を歩く演出（装飾）。クリックで飛び立ち、下から再登場。 */}
   <PenguinWalker bubble={t.homeHero.penguinBubble} locale={currentLocale} />
-  {/* 「↓」スクロールヒント: 下に続きがあると気づかせ離脱を防ぐ。少しスクロールで消える。 */}
-  <div class="scroll-hint pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center" aria-hidden="true">
-    <span class="scroll-hint-arrow text-2xl text-primary-950/40 dark:text-primary-200/40">↓</span>
-  </div>
 </section>

@@ -36,15 +36,15 @@ function loadIndustryPrimary(
 }
 
 // /contact/ の入口の部品の文字は .astro の中にあるので、source から取り出す。
-// 説明文（description）は受付 AI を説明する文で対象外のため、eyebrow・title・cta だけを数える。
+// 説明文（description）は受付 AI を説明する文で対象外のため、title・cta だけを数える。
 function loadEntryCopyValues(): string[] {
   const source = readFileSync(join(here, '../CloudiaContactEntry.astro'), 'utf8');
   const block = source.split('const ENTRY_COPY = {')[1]?.split('} as const')[0] ?? '';
   const values: string[] = [];
-  const pattern = /(?:eyebrow|title|cta): '([^']*)'/g;
+  const pattern = /(?:title|cta): '([^']*)'/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(block)) !== null) values.push(match[1]);
-  expect(values).toHaveLength(LOCALES.length * 3);
+  expect(values).toHaveLength(LOCALES.length * 2);
   return values;
 }
 
@@ -67,7 +67,7 @@ describe('Cloudia のボタンの文字（浮きボタンの開く前と開い�
       for (const key of INDUSTRY_KEYS) buttonCopy.push(loadIndustryPrimary(locale, key));
     }
     buttonCopy.push(...loadEntryCopyValues());
-    expect(buttonCopy).toHaveLength(5 * (3 + 5) + 15);
+    expect(buttonCopy).toHaveLength(5 * (3 + 5 + 2));
     for (const value of buttonCopy) expect(value, JSON.stringify(value)).not.toMatch(/Cloudia/);
   });
 });
