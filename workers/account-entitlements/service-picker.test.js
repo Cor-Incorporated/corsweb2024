@@ -39,9 +39,10 @@ test('Clerk organization entitlement policy matches shared vectors', async () =>
 
 test('self-service route and browser use signed user plus active D1 grants', async t => {
   const productKey = randomBytes(32).toString('base64url');
+  const xesmKey = randomBytes(32).toString('base64url');
   const mf = new Miniflare(convertV4MiniflareOptions({
     modules: true, scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
-    bindings: { CLERK_ISSUER: issuer, BD_ENTITLEMENT_QUERY_TOKEN: productKey },
+    bindings: { CLERK_ISSUER: issuer, BD_ENTITLEMENT_QUERY_TOKEN: productKey, XESM_ENTITLEMENT_QUERY_TOKEN: xesmKey },
     compatibilityDate: '2026-10-26', d1Databases: ['ACCOUNT_GRANTS'], cf: false,
   }));
   t.after(() => mf.dispose());
@@ -126,6 +127,47 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     });
     assert.deepEqual(await product.json(), { allowed });
   }
+  const paidSubject = 'user_PaidOnly';
+  const jstDate = days => new Date(Date.now() + (days * 24 + 9) * 3_600_000).toISOString().slice(0, 10);
+  const paidPhases = [
+    { name: 'Open', until: null, hold: false, access: 'open', label: 'Business Dossier' },
+    { name: 'Held', until: null, hold: true, access: 'view_only', label: 'Business Dossier（閲覧のみ）' },
+    { name: 'ReadExport', until: jstDate(-1), hold: false, access: 'read_export_only', label: 'Business Dossier（閲覧・書き出しのみ）' },
+    { name: 'Closed', until: jstDate(-31), hold: false },
+  ];
+  const paidPhaseSession = ({ until, hold }) => session(paidSubject, {
+    o: { id: 'org_PaidOnly' },
+    cor_svc: { 'business-dossier': { from: jstDate(-90), until, hold } },
+  });
+  const products = [['business-dossier', productKey], ['xesm', xesmKey]];
+  const grantSubjects = [['user_Two', [true, true]], ['user_One', [false, true]], [paidSubject, [false, false]]];
+  const grantRows = () => db.prepare('SELECT * FROM account_grants ORDER BY id').all().then(result => result.results);
+  const initialGrants = await grantRows();
+  await t.test('paid stop and grace do not mutate independent personal product grants', async () => {
+    for (const phase of paidPhases) {
+      const response = await request(paidPhaseSession(phase));
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json()).services, phase.access
+        ? [{ id: 'business-dossier', href: env.BD_SERVICE_URL, access: phase.access }]
+        : [], phase.name);
+      for (const [subject, expected] of grantSubjects) {
+        const allowedServices = [];
+        for (const [index, [service, key]] of products.entries()) {
+          const product = await mf.dispatchFetch('https://entitlements.example.invalid/v1/entitlements/check', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ service, issuer, subject, tenantId: 'tenant-fixture' }),
+          });
+          assert.equal(product.status, 200);
+          assert.deepEqual(await product.json(), { allowed: expected[index] }, phase.name);
+          if (expected[index]) allowedServices.push(service);
+        }
+        assert.deepEqual(await rows(session(subject)), allowedServices, phase.name);
+      }
+      assert.deepEqual(await grantRows(), initialGrants, phase.name);
+    }
+    console.log('Paid lifecycle: open → held → read/export → closed; staff 2 and legacy 1 stable at both entry points; paid-only personal 0; D1 unchanged.');
+  });
   console.log('D1 revocation reflected on the next request; stopped or stale paid claims exposed zero links; personal access only for the granted tenant.');
   const output = process.env.ACCOUNT_PICKER_BROWSER_OUTPUT;
   if (!output) return;
@@ -196,5 +238,23 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     }
     await context.close();
   }
+  const paidContext = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  await paidContext.route('**/*', route => route.request().url().startsWith(localUrl + '/') ? route.continue() : route.abort());
+  const paidPage = await paidContext.newPage();
+  for (const phase of paidPhases) {
+    await paidContext.addCookies([{ name: '__session', value: paidPhaseSession(phase), url: localUrl, httpOnly: true }]);
+    await paidPage.goto(localUrl + '/account/services/');
+    const links = paidPage.locator('#account-services a');
+    if (phase.label) {
+      await paidPage.getByRole('link', { name: phase.label, exact: true }).waitFor();
+      assert.deepEqual(await links.allTextContents(), [phase.label]);
+    } else {
+      await paidPage.getByText('現在利用できるサービスはありません。').waitFor();
+      assert.equal(await links.count(), 0);
+    }
+    await paidPage.screenshot({ path: join(output, 'Paid' + phase.name + '.png') });
+  }
+  await paidContext.close();
+  console.log('Chromium paid-only: open 1 → held 1 → read/export 1 → closed 0, same user and organization.');
   console.log('Chromium: staff 2, legacy 1, outside 0, same-session revocation 1 → 0, signed-out 0; configured hrefs; same user personal 2 → organization hold 1 → personal 2; live Clerk requests 0');
 });
