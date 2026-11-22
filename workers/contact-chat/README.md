@@ -64,7 +64,7 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 
 最初の返事は、業種と intent の組み合わせで変わる。患者の記録、依頼者名、図面、生徒の名前は聞かない。診断、法律・税務の結論、効果の保証はしない。文の状態は言語ごとに `INDUSTRY_COPY_STATUS` に持つ。ja は `page-body-checked-2026-11-13`（5 業種のページの掲載用本文と 1 文ずつ照らした）、en は `provisional-2026-11-08`（ja にそろえた訳で、まだ確かめていない）。
 
-`corsweb-contact-primary`、`corsweb-launcher`、`corsweb-launcher-fallback`、`cloudia` は業種ではない既知のタグ。それ以外の source は保存用のタグとしては残し、モデルへの文には入れない。不明、無効、営業の分類でも、その理由だけでは受付を終わらせない。
+`corsweb-contact-primary`、`corsweb-launcher`、`corsweb-launcher-fallback`、`cloudia` は業種ではない既知のタグ。それ以外の source は保存用のタグとしては残し、モデルへの文には入れない。不明、無効、営業の分類でも、その理由だけでは受付を終わらせない。 モデル応答から表示できる返答を取り出せない場合、チャットは503を返し、Cloudiaは既存の代替フォームを案内する。失敗した往復は会話に保存せず、既存の業種・分類を保つ。記録には固定コード `contact-chat:llm_output_unreadable` を出す。
 
 ### 受付の記録の文脈（migration `0005_inquiry_context.sql`）
 

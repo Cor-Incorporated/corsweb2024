@@ -7,6 +7,7 @@ export const CONTACT_LOG_EVENTS = [
   'llm_gateway_http_failed',
   'llm_gateway_invalid_response',
   'llm_output_missing',
+  'llm_output_unreadable',
   'llm_output_max_tokens',
   'llm_output_blocked',
   'llm_not_configured',

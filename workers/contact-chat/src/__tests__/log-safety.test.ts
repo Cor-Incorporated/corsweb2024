@@ -96,6 +96,12 @@ describe('ログは固定コードだけ', () => {
     ['llm_output_missing', () => Response.json({
       candidates: [{ finishReason: 'STOP', content: { parts: [{ thought: true, text: LEAK }, { text: ' ' }] } }],
     })],
+    ['llm_output_unreadable', () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: LEAK }] } }],
+    })],
+    ['llm_output_unreadable', () => Response.json({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{"reply":"  ","readyForContact":true}' }] } }],
+    })],
     ['llm_output_max_tokens', () => Response.json({
       candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: LEAK }] } }],
     })],
