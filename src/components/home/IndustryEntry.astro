@@ -7,7 +7,7 @@ const t = getTranslations(currentLocale);
 // 並びは src/config/industry-context.ts の INDUSTRY_SLUGS。locale の行と食い違うと build を止める。
 const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIndustries`);
 
-// ヒーローの主ボタンの下に置く、既存の業種ページへの入口（ProblemHero.astro の中）。
+// ヒーローの診断リンクの前に置く、既存の業種ページへの入口（ProblemHero.astro の中）。
 // 最初の画面（scroll 0）に 5 つとも入ることを e2e/first-view.spec.ts が 4 つの画面の大きさ × 5 言語で測る。
 // 文言は homeIndustries の見出しの小さな文字と業種名だけ。各業種のテーマはトップの業種の欄（IndustryList）にある。
 // h2 は付けない。本文の見出し順は IndustryList 以降のまま（tests/build-output/home-page.test.ts）。
@@ -20,7 +20,7 @@ const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIn
   data-home-industry-entry
   aria-label={t.homeIndustries.eyebrow}
 >
-  <p class="text-xs font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400 sm:text-sm">
+  <p class="text-sm font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
     {t.homeIndustries.eyebrow}
   </p>
   <ul class="flex max-w-3xl flex-wrap justify-center gap-1.5 sm:gap-2 lg:max-w-content">
@@ -30,10 +30,10 @@ const rows = industryRowsInOrder(t.homeIndustries.rows, `${currentLocale}.homeIn
           <a
             href={getLocalizedUrl(row.link, currentLocale)}
             data-industry-entry={row.slug}
-            class="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-primary-900/15 bg-primary-50/80 px-3 text-[13px] font-medium text-primary-950 transition hover:border-primary-900/30 hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:border-primary-300/20 dark:bg-primary-950/60 dark:text-primary-100 dark:hover:bg-primary-400/10 dark:focus-visible:outline-[#d5e4f2] sm:px-4 sm:text-sm"
+            class="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-transparent bg-[#2d4a6b] px-3 text-[13px] font-semibold text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:bg-blue-200 dark:text-primary-950 dark:hover:bg-blue-100 dark:focus-visible:outline-[#d5e4f2] sm:px-4 sm:text-sm"
           >
             {row.industry}
-            <span aria-hidden="true" class="hidden text-[#2d4a6b] dark:text-[#d5e4f2] sm:inline">→</span>
+            <span aria-hidden="true" class="hidden sm:inline">→</span>
           </a>
         </li>
       ))

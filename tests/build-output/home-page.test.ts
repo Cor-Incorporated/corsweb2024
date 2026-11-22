@@ -95,12 +95,13 @@ describe('トップの見出しの並び (#414)', () => {
     }
   });
 
-  it.each(LOCALE_KEYS)('%s: 業種の入口はヒーローの中、診断の主ボタンより後にある', (locale) => {
+  it.each(LOCALE_KEYS)('%s: 業種の入口はヒーローの中、診断リンクより前にある', (locale) => {
     const hero = mainOf(readHome(locale)).match(/<section\b[\s\S]*?<\/section>/)?.[0] ?? '';
     expect(hero, 'ヒーローの section が無い').not.toBe('');
     const entryAt = hero.indexOf('data-home-industry-entry');
     expect(entryAt, 'ヒーローの中に業種の入口が無い').toBeGreaterThanOrEqual(0);
-    expect(hero.search(/intent=confidential-ai-assessment/)).toBeLessThan(entryAt);
+    const diagnosisAt = hero.search(/intent=confidential-ai-assessment/);
+    expect(diagnosisAt, 'ヒーローに診断リンクが無い').toBeGreaterThan(entryAt);
   });
 });
 
@@ -123,7 +124,7 @@ describe('最初の画面 (#414)', () => {
     expect(hidden, '入口を隠している要素').toEqual([]);
   });
 
-  it.each(LOCALE_KEYS)('%s: 入口の nav の名前、ヒーローの実績へのリンク 2 本（パソコン用とスマホ用）、信頼の印', (locale) => {
+  it.each(LOCALE_KEYS)('%s: 入口の nav の名前、ヒーローの実績へのリンク 1 本、信頼の印', (locale) => {
     const t = LOCALES[locale];
     const hero = mainOf(readHome(locale)).match(/<section\b[\s\S]*?<\/section>/)?.[0] ?? '';
     const nav = hero.match(/<nav\b[^>]*data-home-industry-entry[^>]*>/)?.[0] ?? '';
@@ -131,7 +132,7 @@ describe('最初の画面 (#414)', () => {
       t.homeIndustries.eyebrow,
     );
     const works = locale === 'ja' ? '/works' : `/${locale}/works`;
-    expect([...hero.matchAll(new RegExp(`href=["']?${works}/?["'\\s>]`, 'g'))], 'ヒーローの実績へのリンク').toHaveLength(2);
+    expect([...hero.matchAll(new RegExp(`href=["']?${works}/?["'\\s>]`, 'g'))], 'ヒーローの実績へのリンク').toHaveLength(1);
     const text = textOf(hero);
     expect(t.homeHero.trustBadges.filter((badge) => !text.includes(badge.label)), 'ヒーローに無い信頼の印').toEqual([]);
   });
