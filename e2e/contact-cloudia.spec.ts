@@ -4,12 +4,100 @@ import { CLOUDIA_UNAVAILABLE_COPY } from '../src/components/contact/chat/cloudia
 const query = '?intent=grift-team-beta&source=grift-lp-hero&utm_source=grift&utm_medium=cta';
 
 test.describe('Cloudia contact routing', () => {
+  for (const locale of ['ja', 'en', 'zh', 'ko', 'es']) {
+    for (const width of [320, 1280]) {
+      test(`routes direct contact through industry selection (${locale}, ${width}px)`, async ({ page }) => {
+        const prefix = locale === 'ja' ? '' : `/${locale}`;
+        await page.setViewportSize({ width, height: 800 });
+        await page.route('https://calendar.google.com/**', (route) => route.abort());
+        await page.goto(`${prefix}/contact/`);
+        const link = page.locator('[data-contact-industry-link]');
+        await expect(link).toBeVisible();
+        await expect(page.locator('[data-cloudia-query-link]')).toBeHidden();
+        const support = page.locator('[data-existing-customer-link]');
+        await expect(support).toBeVisible();
+        const supportUrl = new URL((await support.getAttribute('href')) ?? '', page.url());
+        expect(supportUrl.pathname).toBe('/contact/chat/');
+        expect(supportUrl.searchParams.get('locale')).toBe(locale);
+        await expect(page.locator(`main a[href="${prefix}/contact/materials/"]`)).toBeVisible();
+        for (const path of ['/privacy', '/legal/tokushoho']) {
+          await expect(page.locator(`footer a[href="${prefix}${path}"]`).first()).toBeVisible();
+        }
+        const calendar = page.locator('#contact-calendar');
+        await expect(calendar).toHaveCount(process.env.PUBLIC_GCAL_ID ? 1 : 0);
+        if (process.env.PUBLIC_GCAL_ID) {
+          const embed = new URL((await calendar.locator('iframe').getAttribute('src')) ?? '');
+          expect(embed.hostname).toBe('calendar.google.com');
+          expect(embed.searchParams.get('src')).toBe(process.env.PUBLIC_GCAL_ID);
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+
+        for (let tabs = 0; tabs < 100 && !(await link.evaluate((element) => element === document.activeElement)); tabs += 1) {
+          await page.keyboard.press('Tab');
+        }
+        await expect(link).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(page).toHaveURL(new RegExp(`${prefix}/\\?source=contact-industry#home-industry-entry$`));
+        await expect(page.locator('[data-home-industry-entry] a')).toHaveCount(5);
+        await page.keyboard.press('Tab');
+        await expect(page.locator('[data-industry-entry="medical"]')).toBeFocused();
+      });
+    }
+  }
+
+  test('keeps the existing-customer entry with an unrelated contact query', async ({ page }) => {
+    await page.route('**/contact/chat/**', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<title>Existing customer support</title>' })
+    );
+    await page.goto('/contact/?intent=unknown&source=grift-lp-hero');
+    await expect(page.locator('[data-contact-industry-link]')).toBeVisible();
+    await expect(page.locator('[data-cloudia-query-link]')).toBeHidden();
+    await page.locator('[data-existing-customer-link]').click();
+    await expect(page).toHaveURL(/\/contact\/chat\/\?source=corsweb-contact-primary&locale=ja$/);
+    await expect(page).toHaveTitle('Existing customer support');
+  });
+
+  for (const path of ['/about/', '/en/about/?intent=unknown&source=grift-lp-hero']) {
+    test(`sends the general launcher to the industry list from ${path}`, async ({ page }) => {
+      await page.goto(path);
+      const launcher = page.locator('#cloudia-launcher');
+      const selection = launcher.getByRole('link');
+      await expect(selection).toBeVisible();
+      await selection.focus();
+      await page.keyboard.press('Enter');
+      const locale = path.startsWith('/en/') ? '/en/' : '/';
+      await expect(page).toHaveURL(new RegExp(`${locale}\\?source=corsweb-launcher#home-industry-entry$`));
+      await expect(page.locator('[data-home-industry-entry] a')).toHaveCount(5);
+      await page.keyboard.press('Tab');
+      await expect(page.locator('[data-industry-entry="medical"]')).toBeFocused();
+    });
+  }
+
+  test('opens the approved Grift launcher with context and a separate-chat fallback', async ({ page }) => {
+    await page.route('**/contact/chat/**', (route) => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
+    await page.goto(`/contact/${query}`);
+    await page.locator('#cloudia-launcher-open').click();
+    await expect(page.locator('#cloudia-launcher-panel')).toBeVisible();
+    const frame = new URL((await page.locator('#cloudia-launcher-frame').getAttribute('src')) ?? '', page.url());
+    const fallback = new URL((await page.locator('[data-cloudia-fallback-link]').getAttribute('href')) ?? '', page.url());
+    expect(frame.searchParams.get('embed')).toBe('1');
+    expect(fallback.searchParams.has('embed')).toBe(false);
+    for (const destination of [frame, fallback]) {
+      expect(destination.pathname).toBe('/contact/chat/');
+      expect(destination.searchParams.get('intent')).toBe('grift-team-beta');
+      expect(destination.searchParams.get('source')).toBe('grift-lp-hero');
+      expect(destination.searchParams.get('locale')).toBe('ja');
+    }
+  });
+
   test('keeps LP intent and source in the primary link and launcher iframe', async ({ page }) => {
     await page.goto(`/contact/${query}`);
 
     const primaryLink = page.locator(
       'section[aria-labelledby="cloudia-contact-entry-title"] [data-cloudia-query-link]'
     );
+    await expect(primaryLink).toBeVisible();
+    await expect(page.locator('[data-contact-industry-link]')).toBeHidden();
     await expect(primaryLink).toHaveAttribute('href', /\/contact\/chat\/\?/);
 
     const primaryUrl = new URL((await primaryLink.getAttribute('href')) ?? '', page.url());
@@ -95,7 +183,7 @@ test.describe('Cloudia contact routing', () => {
   });
 
   test('opens and closes accessibly and restores focus', async ({ page }) => {
-    await page.goto('/contact/');
+    await page.goto('/industries/medical/');
 
     const openButton = page.locator('#cloudia-launcher-open');
     const closeButton = page.locator('#cloudia-launcher-close');
@@ -122,7 +210,7 @@ test.describe('Cloudia contact routing', () => {
   // 開いている間もボタンの文字が開く前のままだと、もう一度押すと何が起きるか分からない。
   // 開いている間は問い合わせを閉じる旨の文字を表示し（× ボタンの「閉じる」とは名前を分ける）、押せば閉じてラベルが戻ることを固定する。
   test('turns the launcher button into a close button while the panel is open', async ({ page }) => {
-    await page.goto('/contact/');
+    await page.goto('/industries/medical/');
 
     const openButton = page.locator('#cloudia-launcher-open');
     const panel = page.locator('#cloudia-launcher-panel');
@@ -148,7 +236,7 @@ test.describe('Cloudia contact routing', () => {
     { lang: 'es', title: 'Empiece contactándonos', cta: 'Iniciar contacto', launcher: 'Contacto (recepción con IA)', close: 'Cerrar', closeLauncher: 'Cerrar contacto' },
   ]) {
     test(`shows the Cloudia entry and launcher in the page language (${lang})`, async ({ page }) => {
-      await page.goto(`/${lang}/contact/`);
+      await page.goto(`/${lang}/contact/${query}`);
 
       const entry = page.locator('section[aria-labelledby="cloudia-contact-entry-title"]');
       await expect(entry.locator('#cloudia-contact-entry-title')).toHaveText(title);
@@ -188,10 +276,10 @@ test.describe('Cloudia contact routing', () => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/contact/');
 
-      const primary = page.getByRole('link', { name: 'AIチャットを開く', exact: true });
+      const primary = page.getByRole('link', { name: '業種を選ぶ', exact: true });
       await expect(primary).toBeInViewport({ ratio: 1 });
       const materials = page.getByRole('link', { name: '会社紹介資料の請求', exact: true });
-      const launcher = page.locator('#cloudia-launcher-open');
+      const launcher = page.locator('#cloudia-launcher-industry');
       const [primaryBox, materialsBox, launcherBox] = await Promise.all(
         [primary, materials, launcher].map((locator) => locator.boundingBox()),
       );

@@ -24,7 +24,8 @@
 - Cor.サイトの共通ヘッダーとフッターの相談は、表示中の言語のトップにある業種一覧を開く。業種の提案ページから Cloudia へ進む。
 - Epic #243 の公開順序「導線の真実性 → 有料入口 → 信頼証拠 → Cloudia → 050 AI 受付 → 背景演出」を維持する。
 - `/contact/` は Cloudia への主導線（`/contact/chat/`、`embed=1`、`source`、`locale`、任意の `intent`）を表示する。~~従来の SSGFORM と日程調整は `details#contact-form-fallback` 内に残し、Cloudia 障害・JS 無効・a11y の fallback とする。~~ → **撤回（2026-09-13）**: `details#contact-form-fallback` の中身は所在地と（`PUBLIC_GCAL_ID` 設定時のみ）閲覧専用カレンダーで、**連絡手段としての fallback ではない**。日程調整は送信できないため問い合わせ手段として案内しない （ADR-0005「2026-09-13 改訂: 問い合わせ導線の Cloudia 一本化」を参照）。
-- 全ページ右下の Cloudia launcher は同じ iframe 契約で常駐し、スマートフォンでは safe-area を考慮したボトムシートとして開閉する。
+- `/contact/` の一般相談は同じ言語の業種一覧を開く。既存顧客の問い合わせ、目的が指定された相談、資料請求、所在地・カレンダーに必要な入口を提供する。
+- 右下の共通相談リンクは表示中の言語の業種一覧を開く。業種ページと既知の相談目的付きリンクからの訪問では、埋込み Cloudia と既存の復旧案内を使う。スマートフォンでは safe-area を考慮したボトムシートとして開閉する。
 
 ## 影響
 - corsweb: #250（contact-chat 構造化 intent フロー）、#254（Cloudia 埋め込み）、#252（計測）
