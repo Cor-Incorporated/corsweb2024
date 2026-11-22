@@ -57,19 +57,34 @@ test.describe('Cloudia contact routing', () => {
     await expect(page).toHaveTitle('Existing customer support');
   });
 
-  for (const path of ['/about/', '/en/about/?intent=unknown&source=grift-lp-hero']) {
-    test(`sends the general launcher to the industry list from ${path}`, async ({ page }) => {
-      await page.goto(path);
-      const launcher = page.locator('#cloudia-launcher');
-      const selection = launcher.getByRole('link');
+  for (const [locale, label] of [
+    ['ja', '業種を選ぶ'],
+    ['en', 'Choose your industry'],
+    ['zh', '选择行业'],
+    ['ko', '업종 선택'],
+    ['es', 'Elegir sector'],
+  ]) {
+    test(`opens the industry list from the general launcher and restores it on back (${locale})`, async ({ page }) => {
+      const prefix = locale === 'ja' ? '' : `/${locale}`;
+      const about = `${prefix}/about/?intent=unknown&source=grift-lp-hero`;
+      await page.goto(about);
+      const selection = page.locator('#cloudia-launcher').getByRole('link', { name: label, exact: true });
       await expect(selection).toBeVisible();
       await selection.focus();
       await page.keyboard.press('Enter');
-      const locale = path.startsWith('/en/') ? '/en/' : '/';
-      await expect(page).toHaveURL(new RegExp(`${locale}\\?source=corsweb-launcher#home-industry-entry$`));
+      await expect(page).toHaveURL(`${prefix}/?source=corsweb-launcher#home-industry-entry`);
       await expect(page.locator('[data-home-industry-entry] a')).toHaveCount(5);
       await page.keyboard.press('Tab');
-      await expect(page.locator('[data-industry-entry="medical"]')).toBeFocused();
+      const medical = page.locator('[data-industry-entry="medical"]');
+      await expect(medical).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('#cloudia-launcher-open')).toBeVisible();
+      await expect(selection).toHaveCount(0);
+      await page.goBack();
+      await expect(selection).toBeVisible();
+      await page.goBack();
+      await expect(page).toHaveURL(about);
+      await expect(selection).toBeVisible();
     });
   }
 
@@ -276,7 +291,7 @@ test.describe('Cloudia contact routing', () => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/contact/');
 
-      const primary = page.getByRole('link', { name: '業種を選ぶ', exact: true });
+      const primary = page.locator('main').getByRole('link', { name: '業種を選ぶ', exact: true });
       await expect(primary).toBeInViewport({ ratio: 1 });
       const materials = page.getByRole('link', { name: '会社紹介資料の請求', exact: true });
       const launcher = page.locator('#cloudia-launcher-industry');
