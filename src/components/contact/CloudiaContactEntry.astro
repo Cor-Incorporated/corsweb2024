@@ -1,5 +1,6 @@
 ---
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
+import { CONTACT_INTENTS, getGeneralConsultationUrl } from '../../config/site';
 import { getCurrentLocale, type Locale } from '../../utils/i18n';
 import LbHeading from '../common/LbHeading.astro';
 import LbText from '../common/LbText.astro';
@@ -110,23 +111,71 @@ const ENTRY_COPY = {
   },
 } as const satisfies Record<Locale, EntryCopy>;
 
+const INDUSTRY_ENTRY_COPY = {
+  ja: {
+    title: '業種を選んで相談する',
+    description: '業種別のページで、相談できる内容をご確認いただけます。',
+    cta: '業種を選ぶ',
+    support: 'ご契約中のお客様のお問い合わせ',
+  },
+  en: {
+    title: 'Find the right page for your industry',
+    description: 'Your industry page explains what you can discuss with us.',
+    cta: 'Choose your industry',
+    support: 'Support for existing customers',
+  },
+  zh: {
+    title: '按行业咨询',
+    description: '请在行业页面查看可咨询的内容。',
+    cta: '选择行业',
+    support: '现有客户支持',
+  },
+  ko: {
+    title: '업종별 문의',
+    description: '업종별 페이지에서 상담할 수 있는 내용을 확인하세요.',
+    cta: '업종 선택',
+    support: '기존 고객 지원',
+  },
+  es: {
+    title: 'Consultas por sector',
+    description: 'En la página de su sector puede ver qué temas puede consultar.',
+    cta: 'Elegir sector',
+    support: 'Soporte para clientes actuales',
+  },
+} as const satisfies Record<Locale, EntryCopy & { support: string }>;
+
 const copy: EntryCopy = ENTRY_COPY[currentLocale];
+const industryCopy = INDUSTRY_ENTRY_COPY[currentLocale];
+const primaryLinkClass = 'inline-flex min-h-[48px] scroll-mb-24 items-center justify-center rounded-full bg-[#2d4a6b] px-6 py-3 text-center text-base font-semibold text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:bg-blue-200 dark:text-primary-950 dark:hover:bg-blue-100 dark:focus-visible:outline-blue-200 md:row-span-2 md:self-center';
 const chatPath = `${chatUrl.pathname}${chatUrl.search}`;
 ---
 
-<section class="mx-auto max-w-3xl px-4 pb-6 sm:px-6 lg:px-8 lg:max-w-content" aria-labelledby="cloudia-contact-entry-title">
+<section class="mx-auto max-w-3xl px-4 pb-6 sm:px-6 lg:px-8 lg:max-w-content" aria-labelledby="contact-industry-entry-title" data-contact-industry-entry>
   <div class="rounded-2xl border border-primary-200 bg-primary-50 px-5 py-6 dark:border-primary-700 dark:bg-primary-950 sm:px-8 sm:py-8">
     <div class="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-8">
-      <LbHeading as="h2" id="cloudia-contact-entry-title" class="type-heading text-2xl font-semibold sm:text-3xl" text={copy.title} />
-      <a
-        href={chatPath}
-        data-cloudia-query-link
-        class="inline-flex min-h-[48px] scroll-mb-24 items-center justify-center rounded-full bg-[#2d4a6b] px-6 py-3 text-center text-base font-semibold text-white transition hover:bg-[#1e3350] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2d4a6b] dark:bg-blue-200 dark:text-primary-950 dark:hover:bg-blue-100 dark:focus-visible:outline-blue-200 md:row-span-2 md:self-center"
-      >{copy.cta}</a>
-      <LbText class="type-copy max-w-[40em] text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80" text={copy.description} />
+      <LbHeading as="h2" id="contact-industry-entry-title" class="type-heading text-2xl font-semibold sm:text-3xl" text={industryCopy.title} />
+      <a href={getGeneralConsultationUrl(currentLocale, 'contact-industry')} data-contact-industry-link class={primaryLinkClass}>{industryCopy.cta}</a>
+      <LbText class="type-copy max-w-[40em] text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80" text={industryCopy.description} />
     </div>
   </div>
+  <a href={chatPath} data-existing-customer-link class="mt-3 inline-flex min-h-[44px] items-center font-medium text-[#2d4a6b] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-blue-200">{industryCopy.support}</a>
 </section>
+
+<div hidden data-contact-intent-entry={CONTACT_INTENTS.join(' ')}>
+  <section class="mx-auto max-w-3xl px-4 pb-6 sm:px-6 lg:px-8 lg:max-w-content" aria-labelledby="cloudia-contact-entry-title">
+    <div class="rounded-2xl border border-primary-200 bg-primary-50 px-5 py-6 dark:border-primary-700 dark:bg-primary-950 sm:px-8 sm:py-8">
+      <div class="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-8">
+        <LbHeading as="h2" id="cloudia-contact-entry-title" class="type-heading text-2xl font-semibold sm:text-3xl" text={copy.title} />
+        <a
+          href={chatPath}
+          data-cloudia-query-link
+          class={primaryLinkClass}
+        >{copy.cta}</a>
+        <LbText class="type-copy max-w-[40em] text-base leading-relaxed text-primary-950/80 dark:text-primary-200/80" text={copy.description} />
+      </div>
+    </div>
+  </section>
+</div>
 
 <slot name="materials" />
 
@@ -143,19 +192,22 @@ const chatPath = `${chatUrl.pathname}${chatUrl.search}`;
   </div>
 </details>
 
-<script is:inline>
+<script is:inline data-astro-rerun>
   (() => {
     const incoming = new URLSearchParams(window.location.search);
     const intent = incoming.get('intent');
     const source = incoming.get('source');
-    if (!intent && !source) return;
+    const purposeEntry = document.querySelector('[data-contact-intent-entry]');
+    const industryEntry = document.querySelector('[data-contact-industry-entry]');
+    const link = purposeEntry?.querySelector('[data-cloudia-query-link]');
+    if (!intent || !purposeEntry?.dataset.contactIntentEntry.split(' ').includes(intent) ||
+        !industryEntry || !(link instanceof HTMLAnchorElement)) return;
 
-    document.querySelectorAll('[data-cloudia-query-link]').forEach((element) => {
-      if (!(element instanceof HTMLAnchorElement)) return;
-      const target = new URL(element.href, window.location.href);
-      if (intent) target.searchParams.set('intent', intent);
-      if (source) target.searchParams.set('source', source);
-      element.href = `${target.pathname}${target.search}${target.hash}`;
-    });
+    const target = new URL(link.href, window.location.href);
+    target.searchParams.set('intent', intent);
+    if (source) target.searchParams.set('source', source);
+    link.href = `${target.pathname}${target.search}`;
+    industryEntry.hidden = true;
+    purposeEntry.hidden = false;
   })();
 </script>
