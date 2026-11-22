@@ -275,6 +275,13 @@ function leadMissingFields(lead: StructuredLead | undefined): string[] {
   return fields.filter((field) => !lead?.[field]);
 }
 
+function requestedInquiryForm(message: ChatMessage | undefined): boolean {
+  if (message?.role !== 'user') return false;
+  const text = message.content.normalize('NFKC').trim();
+  return /^(?:お?問い合わせ(?:を)?したい|お?問い合わせたい)(?:です)?[。.!！]?$/u.test(text)
+    || /^I (?:want|would like) to (?:send an inquiry|contact your team)[.!]?$/i.test(text);
+}
+
 function resultStage(result: ChatResult): string {
   if (result.readyForContact) return 'ready';
   return result.structuredLead && Object.keys(result.structuredLead).length > 0 ? 'qualifying' : 'intent';
@@ -431,6 +438,19 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
   const sessionId = normalizeSessionId(body.sessionId) || newSessionId();
   result.sessionId = sessionId;
   result.missingFields = leadMissingFields(result.structuredLead);
+  // A direct request for the form takes precedence over optional intake questions.
+  if (
+    mode === 'intake'
+    && traffic.kind === 'industry'
+    && parsedChat.modelClassification === 'genuine'
+    && !result.readyForContact
+    && requestedInquiryForm(norm.messages.at(-1))
+  ) {
+    result.readyForContact = true;
+    result.reply = locale === 'ja'
+      ? 'お問い合わせフォームに進み、用件を確認してください。'
+      : 'Please continue to the inquiry form to review your request.';
+  }
   // Keep the model free to choose its questioning path, but do not leave the
   // visitor stranded when every non-PII intake field is already present and
   // the model under-reports readiness. This is a completeness gate, not a
