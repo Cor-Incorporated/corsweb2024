@@ -807,6 +807,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     expect(resendCall).toBeTruthy();
     const mail = JSON.parse(String((resendCall as unknown as [string, RequestInit])[1].body)) as { to: string; text: string };
     expect(mail.to).toBe('info@cor-jp.com');
+    expect(mail.text).toContain(`受付番号: ${receiptId}`);
     expect(mail.text).toContain('流入経路: [redacted]');
     expect(mail.text).toContain('時期・予算: [redacted]');
     expect(mail.text).toContain(`進捗段階: ${'あ'.repeat(240)}`);

@@ -1,7 +1,7 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
-import { getContactCalendarUrl, getContactUrl } from '../../config/site';
+import { getContactCalendarUrl, getGeneralConsultationUrl } from '../../config/site';
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
 import { SERVICE_PAGES, getServiceUrl } from '../../config/services';
@@ -58,10 +58,10 @@ const bottomLinks = [
         href: getLocalizedUrl('/news', currentLocale),
         isExternal: false,
       },
-      // 問い合わせは Cloudia のチャットへ直接向ける（問い合わせページは通さない）
+      // 共通の相談リンクは、その言語の業種一覧を開く。
       {
         name: t.footer.links.contact,
-        href: getContactUrl(currentLocale, { source: 'footer' }),
+        href: getGeneralConsultationUrl(currentLocale, 'footer'),
         isExternal: false,
       },
       // 問い合わせページのカレンダーの区画（代表の公開スケジュール）へ直接向ける 1 本。

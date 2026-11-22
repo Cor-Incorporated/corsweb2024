@@ -1,6 +1,6 @@
 // ビルド済み dist の、サイト内の問い合わせの link の検査（設定: vitest.dist.config.ts。`npm run build` の後に `npm run test:dist`）。
-// サイト内の問い合わせの入口は、問い合わせページ（/contact、/<lang>/contact）を通さず、Cloudia のチャット（/contact/chat/）へ
-// 直接向ける。行き先は src/config/site.ts の getContactUrl が作る（intent・source・locale を link 自身が運ぶ）。
+// 共通ナビの相談は、その言語のトップの業種一覧へ向ける。Cloudia への直リンクは getContactUrl が作り、
+// intent・source・locale を link 自身が運ぶ。
 // 見るもの:
 // 1. 5 言語の全ページで、問い合わせページへの link（a・area・form・button と input の formaction・meta refresh）が 0。
 //    www の host も同じ site として数える。言語つきのチャットの path（/<lang>/contact/chat/。そのページは無い）も落とす。
@@ -22,6 +22,7 @@ import { CLOUDIA_CHAT_PATH, hasCalendarEmbed, isContactPagePath, normalizeSitePa
 import jaJson from '../../src/i18n/locales/ja.json';
 import enJson from '../../src/i18n/locales/en.json';
 import { SITE_CHROME } from '../../src/config/site-chrome';
+import { HOME_INDUSTRY_ENTRY_ID } from '../../src/config/site';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
 const BLOG_JA_DIR = path.resolve('src/content/blog/ja');
@@ -288,32 +289,44 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(wrong).toEqual([]);
   });
 
+  it.each(['ja', ...NON_JA] as const)('%s: 共通ナビの相談3リンクは業種一覧を開く', (locale) => {
+    const homePath = locale === 'ja' ? '/' : `/${locale}/`;
+    const homePage = pages.find((page) => page.pagePath === homePath);
+    expect(homePage).toBeDefined();
+    const homeFile = path.join(DIST_DIR, homePath, 'index.html');
+    const document = new JSDOM(readFileSync(homeFile, 'utf8')).window.document;
+    const selection = document.getElementById(HOME_INDUSTRY_ENTRY_ID);
+    expect(selection?.querySelectorAll('a[data-industry-entry]')).toHaveLength(5);
+
+    for (const source of ['header', 'header-quick', 'footer']) {
+      const links = homePage?.links.filter((link) => link.url.searchParams.get('source') === source) ?? [];
+      expect(links.map((link) => [link.url.pathname, link.url.hash])).toEqual([
+        [homePath, `#${HOME_INDUSTRY_ENTRY_ID}`],
+      ]);
+    }
+  });
+
   // 主な入口と、そこから出る source（と intent）。問い合わせページを通していた頃は、source の無い入口は
   // ページの主ボタンの corsweb-contact-primary になっていた。今は入口ごとに付ける。
   const ENTRIES: ReadonlyArray<{ name: string; pagePath: string; expected: ReadonlyArray<Partial<ReturnType<typeof describeLink>>> }> = [
     {
-      name: 'ja のトップ（ヘッダー・最初の画面・締め・フッター）',
+      name: 'ja のトップ（最初の画面と締め）',
       pagePath: '/',
       expected: [
-        { source: 'header', locale: 'ja' },
-        { source: 'header-quick', locale: 'ja' },
         { source: 'home-hero', intent: 'confidential-ai-assessment', locale: 'ja' },
         ...jaJson.finalCta.items
           .filter((item) => !item.intent.startsWith('grift'))
           .map((item) => ({ source: 'final-cta', intent: item.intent, locale: 'ja' })),
-        { source: 'footer', locale: 'ja' },
       ],
     },
     {
       name: 'en のトップ',
       pagePath: '/en/',
       expected: [
-        { source: 'header', locale: 'en' },
         { source: 'home-hero', intent: 'confidential-ai-assessment', locale: 'en' },
         ...enJson.finalCta.items
           .filter((item) => !item.intent.startsWith('grift'))
           .map((item) => ({ source: 'final-cta', intent: item.intent, locale: 'en' })),
-        { source: 'footer', locale: 'en' },
       ],
     },
     { name: 'ja の会社概要', pagePath: '/company/', expected: [{ source: 'company', locale: 'ja' }] },

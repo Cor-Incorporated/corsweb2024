@@ -415,6 +415,83 @@ describe('document request case sync', () => {
     expect(binding.retry).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { label: '別の受付番号', useReturnedReceipt: false, caseId: '40000000-0000-4000-8000-000000000004', expected: 'sync_failed' },
+    { label: '案件IDなし', useReturnedReceipt: true, caseId: undefined, expected: 'sync_failed' },
+    { label: '同一受付の案件ID', useReturnedReceipt: true, caseId: '40000000-0000-4000-8000-000000000004', expected: 'recorded' },
+  ])('資料請求POSTの同期応答を照合する ($label)', async ({ useReturnedReceipt, caseId, expected }) => {
+    const db = openDatabase();
+    const binding: DocumentRequestCaseSyncBinding = {
+      acceptStored: vi.fn(async (_auth, { receiptId }) => wire({
+        outcome: 'recorded',
+        code: 'recorded',
+        syncStatus: 'recorded',
+        receiptId: useReturnedReceipt ? receiptId : 'COR-20261108-DEADBEEF',
+        caseId,
+      })),
+      retry: vi.fn(),
+    };
+    const env = {
+      ...mockReady(db, binding),
+      CONTACT_NOTIFICATIONS: { send: async () => undefined },
+    } as unknown as Env;
+    const request = () => new Request('https://cor-jp.com/api/contact/document-request', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: 'https://cor-jp.com',
+        'cf-connecting-ip': '198.51.100.82',
+      },
+      body: JSON.stringify({ ...record, consent: true, locale: 'ja' }),
+    });
+    const first = await worker.fetch(request(), env);
+    expect(first.status).toBe(200);
+    const firstBody = await first.json() as { receiptId: string };
+    const second = await worker.fetch(request(), env);
+    expect(second.status).toBe(202);
+    expect(await second.json()).toMatchObject({ receiptId: firstBody.receiptId, duplicate: true });
+    expect(binding.acceptStored).toHaveBeenCalledTimes(1);
+    expect(binding.acceptStored).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      receiptId: firstBody.receiptId,
+      industry: record.industry,
+    }));
+    expect(binding.retry).not.toHaveBeenCalled();
+    expect(db.prepare('SELECT receipt_id, status, case_sync_status FROM submission_intake').all()).toEqual([
+      { receipt_id: firstBody.receiptId, status: 'stored', case_sync_status: expected },
+    ]);
+  });
+
+  it.each([
+    { label: '同じ受付', matches: true, returnValue: 'retried', state: 'recorded' },
+    { label: '別の受付', matches: false, returnValue: 'left', state: 'sync_failed' },
+  ])('明示再試行の同期応答を照合する ($label)', async ({ matches, returnValue, state }) => {
+    const db = openDatabase();
+    const binding: DocumentRequestCaseSyncBinding = {
+      acceptStored: vi.fn(async (_auth, { receiptId }) => wire({
+        outcome: 'retry_scheduled',
+        code: 'retry_scheduled',
+        syncStatus: 'retry_scheduled',
+        receiptId,
+      })),
+      retry: vi.fn(async (_auth, receiptId) => wire({
+        outcome: 'recorded',
+        code: 'recorded',
+        syncStatus: 'recorded',
+        receiptId: matches ? receiptId : 'COR-20261108-DEADBEEF',
+        caseId: '40000000-0000-4000-8000-000000000004',
+      })),
+    };
+    const env = mockReady(db, binding);
+    const { receiptId } = await createDocumentRequest(env, record);
+    await syncStoredDocumentRequest(env, receiptId);
+    await expect(retryStoredDocumentRequest(env, receiptId)).resolves.toBe(returnValue);
+    await expect(retryStoredDocumentRequest(env, receiptId)).resolves.toBe('left');
+    expect(binding.retry).toHaveBeenCalledTimes(1);
+    expect(db.prepare('SELECT receipt_id, status, case_sync_status FROM submission_intake').all()).toEqual([
+      { receipt_id: receiptId, status: 'stored', case_sync_status: state },
+    ]);
+  });
+
   it('同じ受付の並行同期は acceptStored を1回だけ呼ぶ', async () => {
     const db = openDatabase();
     let release: () => void = () => undefined;
@@ -427,11 +504,17 @@ describe('document request case sync', () => {
     });
     let calls = 0;
     const binding: DocumentRequestCaseSyncBinding = {
-      acceptStored: vi.fn(async () => {
+      acceptStored: vi.fn(async (_auth, { receiptId }) => {
         calls += 1;
         entered();
         await gate;
-        return wire({ outcome: 'recorded', code: 'recorded', syncStatus: 'recorded' });
+        return wire({
+          outcome: 'recorded',
+          code: 'recorded',
+          syncStatus: 'recorded',
+          receiptId,
+          caseId: '40000000-0000-4000-8000-000000000004',
+        });
       }),
       retry: vi.fn(async () => wire({ outcome: 'recorded', code: 'recorded', syncStatus: 'recorded' })),
     };

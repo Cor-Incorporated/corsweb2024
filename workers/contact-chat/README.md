@@ -54,7 +54,7 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 - 受付言語は `submission_intake.locale`（migration 0010）に保存し、通知に「ページの言語」「返信の言語」（ja は日本語、それ以外は英語）を書く。0010 が未適用でも受付は止まらない。
 - 再処理の関数 `replayHeldDocumentNotice` は、この波では呼ぶ入口が無い（HTTP にも CLI にも出していない。試験からだけ呼ぶ）。届かなかった通知は、`DLQ` に入った行（`failed` で `attempts` 6 以上）と `sending` のまま 15 分以上残った行に限り、手順書の「もう一度送らせる」（D1 の outbox の行を投入待ちに戻す SQL、人間ゲート）で、既存の cron と consumer に送り直させる。`held` は対象外。申込者の連絡先を人が読む入口は作らない（担当は届いた通知の「返信」で連絡する）。
 - LLM と GA4 にはフォームの入力を渡さない。
-- 保存のあと、受付番号で元の行から `documentId`、初回の業種（未選択は空文字）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
+- 保存のあと、受付番号で元の行から `documentId`、初回の業種（未選択は空文字）、同意の版、初回の記録時刻だけを読む。暗号文は読まない。氏名、メール、本文は cor-os へ送らない。`DOCUMENT_REQUEST_CASE_SYNC_MODE` が `mock` で、専用の principal と token と binding があるときだけ、テスト用の `acceptStored` を呼ぶ。未設定や `live` では binding があっても呼ばない。記録済みとして保存する応答には、同じ受付番号・UUID 形式の案件 ID・保存済みの受付と記録済みの同期状態が必要。照合に失敗しても公開受付の保存と受付番号は維持する。`retry` は状態が `retry_scheduled` のときだけ。公開の HTTP は増やしていない。service binding は wrangler ではコメントのまま。
 
 ### 業種の source
 
@@ -139,7 +139,11 @@ npx wrangler tail cor-contact-chat --format pretty | grep --line-buffered daily_
 
 ### 通知Outbox
 
-`/submit` はD1に `internal`（社内通知）と `receipt`（問い合わせ者本人向け受付確認）の2行を作り、Queueへ種別だけを送る。Queue payloadに氏名・メール・本文・会話抜粋は含めない。D1ではセッションの暗号化済み安全化抜粋をsubmissionへ引き継ぎ、Queue consumerがinternal通知時だけ復号する。receiptでは復号せず、メールにも載せない。各行にはResendの `provider_message_id` と `delivery_status`（`queued` → `sending` → `accepted`、失敗時 `failed`）を保存する。`accepted` はResend API受付済みを意味し、最終配信確認にはResendの配信イベント連携が必要。
+`/submit` はD1に `internal`（社内通知）と `receipt`（問い合わせ者本人向け受付確認）の2行を作り、Queueへ種別だけを送る。画面に表示する受付番号は、D1に保存した同じ番号を社内通知の本文先頭と本人向け受付確認にも記載する。担当者はこの番号で問い合わせと通知を照合できる。D1ありの本番・プレビューでは、D1に受付行が残っている限り、同じ冪等キーで送信を再試行しても元の受付番号を引き継ぐ。
+
+D1を使わない互換経路では、両通知と画面応答で番号が一致するのは1リクエスト内に限る。社内通知の送信後に本人向け受付確認が失敗すると、再送で新しい番号が発行され、担当者に番号の異なる通知が届くことがある。同じ相談の再送と確認した通知は、番号が異なっても別々の営業案件として登録しない。
+
+Queue payloadに氏名・メール・本文・会話抜粋は含めない。D1ではセッションの暗号化済み安全化抜粋をsubmissionへ引き継ぎ、Queue consumerがinternal通知時だけ復号する。receiptでは復号せず、メールにも載せない。各行にはResendの `provider_message_id` と `delivery_status`（`queued` → `sending` → `accepted`、失敗時 `failed`）を保存する。`accepted` はResend API受付済みを意味し、最終配信確認にはResendの配信イベント連携が必要。
 
 ## デプロイ手順（初回）
 

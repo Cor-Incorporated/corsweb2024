@@ -7,6 +7,7 @@ import type { Locale } from '../../utils/i18n';
 // 以前は ja/非ja の 2 分岐で、zh・ko・es のページでは英語のボタンが出ていた。
 // satisfies により、6 言語目を足したときに翻訳漏れが型エラーになる。
 export type LauncherCopy = {
+  industryLink: string;
   label: string;
   title: string;
   close: string;
@@ -16,6 +17,7 @@ export type LauncherCopy = {
 
 export const LAUNCHER_COPY = {
   ja: {
+    industryLink: '業種を選ぶ',
     label: 'お問い合わせ（AI受付）',
     title: 'お問い合わせ（AI受付）',
     close: '閉じる',
@@ -23,24 +25,28 @@ export const LAUNCHER_COPY = {
     // Cloudia が開けないときの文は ./chat/cloudiaUnavailableCopy.ts に置く（代わりのページと contact-edge と共通）。
   },
   en: {
+    industryLink: 'Choose your industry',
     label: 'Contact us (AI reception)',
     title: 'Contact us (AI reception)',
     close: 'Close',
     closeLauncher: 'Close contact',
   },
   zh: {
+    industryLink: '选择行业',
     label: '联系我们（AI 接待）',
     title: '联系我们（AI 接待）',
     close: '关闭',
     closeLauncher: '关闭联系窗口',
   },
   ko: {
+    industryLink: '업종 선택',
     label: '문의하기 (AI 접수)',
     title: '문의하기 (AI 접수)',
     close: '닫기',
     closeLauncher: '문의 닫기',
   },
   es: {
+    industryLink: 'Elegir sector',
     label: 'Contacto (recepción con IA)',
     title: 'Contacto (recepción con IA)',
     close: 'Cerrar',

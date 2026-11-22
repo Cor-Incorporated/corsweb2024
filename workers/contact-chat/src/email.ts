@@ -208,12 +208,13 @@ export async function sendInquiryEmail(
   env: Env,
   provider: EmailProvider,
   inquiry: NormalizedInquiry,
+  receiptId: string,
 ): Promise<EmailSendResult> {
   return provider.send(
     env.CONTACT_TO_EMAIL || 'cloudia@cor-jp.com',
     env.CONTACT_FROM_EMAIL,
     buildSubject(inquiry),
-    buildBody(inquiry),
+    `受付番号: ${receiptId}\n\n${buildBody(inquiry)}`,
     inquiry.email, // reply_to: isValidEmail 済みの単一アドレス
     getInternalCcRecipients(env),
   );
