@@ -1,0 +1,98 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="契約中のサービス | Cor." description="利用できるCor.のサービスを開きます。" availableLocales={['ja']} analytics={false} cloudiaLauncher={false}>
+  <main class="mx-auto w-full max-w-3xl px-5 py-12 sm:py-20">
+    <h1 class="text-balance text-3xl font-semibold sm:text-4xl">契約中のサービス</h1>
+    <div class="mt-6" id="account-context-switcher" aria-label="個人と組織の切り替え"></div>
+    <p class="mt-4 text-pretty" id="account-status" role="status">利用できるサービスを確認しています。</p>
+    <a class="mt-6 inline-flex min-h-11 items-center underline" id="account-sign-in" hidden>Cor.アカウントでログイン</a>
+    <ul id="account-services" class="mt-6 grid gap-3"></ul>
+    <noscript>サービスの確認にはJavaScriptが必要です。</noscript>
+  </main>
+</Layout>
+
+<style>
+  [hidden] { display: none; }
+</style>
+
+<script>
+  const labels = new Map([
+    ['business-dossier', 'Business Dossier'],
+    ['xesm', 'XESM'],
+  ]);
+  const accessLabels = new Map([
+    ['view_only', '閲覧のみ'],
+    ['read_export_only', '閲覧・書き出しのみ'],
+  ]);
+
+  const pickerPath = '/account/services/';
+  const publishableKey = import.meta.env.PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const clerk = publishableKey ? import('@clerk/clerk-js').then(async ({ Clerk }) => {
+    const client = new Clerk(publishableKey);
+    await client.load();
+    return client;
+  }) : null;
+  let mountedSwitch: HTMLDivElement | null = null;
+  let requestNumber = 0;
+
+  async function showAccountServices() {
+    const status = document.querySelector<HTMLParagraphElement>('#account-status');
+    const list = document.querySelector<HTMLUListElement>('#account-services');
+    const signIn = document.querySelector<HTMLAnchorElement>('#account-sign-in');
+    const switcher = document.querySelector<HTMLDivElement>('#account-context-switcher');
+    if (!status || !list || !signIn || !switcher) return;
+    const currentRequest = ++requestNumber;
+    list.replaceChildren();
+    signIn.hidden = true;
+    try {
+      const client = await clerk;
+      if (client && client.session && mountedSwitch !== switcher) {
+        if (mountedSwitch) client.unmountOrganizationSwitcher(mountedSwitch);
+        client.mountOrganizationSwitcher(switcher, {
+          hidePersonal: false,
+          afterSelectOrganizationUrl: pickerPath,
+          afterSelectPersonalUrl: pickerPath,
+        });
+        mountedSwitch = switcher;
+      }
+      const token = client?.session ? await client.session.getToken({ skipCache: true }) : null;
+      const response = await fetch('/api/account/services', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+      });
+      if (requestNumber !== currentRequest) return;
+      const payload = await response.json();
+      if (response.status === 401 && typeof payload.signInUrl === 'string' && new URL(payload.signInUrl).protocol === 'https:') {
+        status.textContent = 'サービスを確認するにはログインしてください。';
+        signIn.href = payload.signInUrl;
+        signIn.hidden = false;
+        return;
+      }
+      if (!response.ok || !Array.isArray(payload.services)) throw new Error('Unavailable');
+      const entries = document.createDocumentFragment();
+      for (const service of payload.services) {
+        const label = labels.get(service.id);
+        if (!label || (service.access !== 'open' && !accessLabels.has(service.access))) throw new Error('Invalid service');
+        const destination = new URL(service.href);
+        if (destination.protocol !== 'https:' || !destination.hostname.endsWith('.cor-jp.com')) throw new Error('Invalid destination');
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = destination.href;
+        link.className = 'block rounded-lg border border-primary-200 px-4 py-4 font-medium hover:underline';
+        const mode = accessLabels.get(service.access);
+        link.textContent = mode ? label + '（' + mode + '）' : label;
+        item.append(link);
+        entries.append(item);
+      }
+      list.replaceChildren(entries);
+      status.textContent = list.children.length ? '開くサービスを選んでください。' : '現在利用できるサービスはありません。';
+    } catch {
+      if (requestNumber !== currentRequest) return;
+      status.textContent = 'サービスを確認できませんでした。時間をおいて再読み込みしてください。';
+    }
+  }
+  document.addEventListener('astro:page-load', showAccountServices);
+  window.addEventListener('pageshow', event => { if (event.persisted) void showAccountServices(); });
+</script>

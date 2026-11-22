@@ -12,6 +12,7 @@ const LOCALE_PREFIX = '(?:/(?:en|zh|ko|es))?';
 
 /** 検索結果に出す価値が無い（薄い・重複・利用者向けでない）ページ。noindex, follow にする。 */
 const NOINDEX_PATTERNS: readonly RegExp[] = [
+  /^\/account(?:\/|$)/,
   // タグ一覧: ja 76 タグ中 66 が記事 1 本だけの薄いページで、sitemap の過半を占めていた
   new RegExp(`^${LOCALE_PREFIX}/blog/tags(?:/|$)`),
   // 検証用ページ・決済コールバック・404（ロケール直下のみ。/blog/test-blog-xxx 等の記事は対象外）
