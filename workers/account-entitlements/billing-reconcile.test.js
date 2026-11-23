@@ -205,6 +205,11 @@ test('billing notifications reconcile current paid rights and preserve personal 
   assert.equal((await fetch(webhook, {
     method: 'POST', body: 'x'.repeat(262145), headers: { 'Content-Type': 'application/json' },
   })).status, 413);
+  const unsigned = await fetch(webhook, {
+    method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' },
+  });
+  assert.equal(unsigned.status, 400);
+  assert.deepEqual(await unsigned.json(), { result: 'bad_signature' });
   assert.deepEqual(await send('evt_bad', 'invoice.paid', invoice, { secretOverride: 'wrong' }),
     { status: 400, result: 'bad_signature' });
   assert.deepEqual(await send('evt_stale', 'invoice.paid', invoice, { signedAt: NOW - 301 }),
@@ -225,7 +230,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
   await checkPaid('view_only', ['view']);
   rejectNext = false;
   const repeated = await Promise.all([send('evt_paid', 'invoice.paid', invoice), send('evt_paid', 'invoice.paid', invoice)]);
-  assert.deepEqual(repeated.map(result => result.result), ['reconciled', 'duplicate']);
+  assert.deepEqual(repeated.map(result => result.result).sort(), ['duplicate', 'reconciled']);
   assert.equal(await judge(dateFromToday(0)), 'open');
   await checkPaid('open', ['view', 'edit', 'export']);
   await checkPaid('closed', [], { organizationId: 'org_wrong' });
