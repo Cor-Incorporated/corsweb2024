@@ -235,11 +235,12 @@ describe('ランチャーのボタンは開いている間「閉じる」の文�
     closeLauncherRun(run);
   });
 
-  it.each(['zh', 'ko', 'es'] as const)('%s の /contact の Cloudia の案内が英語のままでない', (locale) => {
-    const enTitle = loadDistPage(CONTACT_PAGE_PATHS.en).document.getElementById('cloudia-contact-entry-title')?.textContent;
-    const title = loadDistPage(CONTACT_PAGE_PATHS[locale]).document.getElementById('cloudia-contact-entry-title')?.textContent;
-    expect(title).toBeTruthy();
-    expect(title).not.toBe(enTitle);
+  it.each(['zh', 'ko', 'es'] as const)('%s の旧URLから業種を選ぶリンクが表示言語と一致する', (locale) => {
+    const english = loadDistPage(CONTACT_PAGE_PATHS.en).document.querySelector('[data-legacy-industry-link]');
+    const link = loadDistPage(CONTACT_PAGE_PATHS[locale]).document.querySelector('[data-legacy-industry-link]');
+    expect(link?.textContent?.trim()).toBeTruthy();
+    expect(link?.textContent?.trim()).not.toBe(english?.textContent?.trim());
+    expect(link?.getAttribute('href')).toBe(`/${locale}/?source=contact-industry#home-industry-entry`);
   });
 
   // ランチャーの無いページを経て戻ると、スクリプトがもう一度実行される。開閉を 2 回束縛すると、

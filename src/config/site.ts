@@ -154,6 +154,10 @@ export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): str
   return `/contact/chat/?${params.toString()}`;
 }
 
+export function getExistingCustomerContactUrl(locale: Locale): string {
+  return getContactUrl(locale, { source: 'corsweb-contact-primary' });
+}
+
 export const HOME_INDUSTRY_ENTRY_ID = 'home-industry-entry';
 
 /** 一般の相談リンクを、同じ言語の業種一覧へ向ける。 */

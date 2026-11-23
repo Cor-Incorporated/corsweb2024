@@ -1,31 +1,54 @@
 ---
-import { CONTACT_CALENDAR_ANCHOR, CONTACT_CALENDAR_SOURCE, CONTACT_INTENTS, getContactCalendarUrl, getGeneralConsultationUrl } from '../../config/site';
+import { CONTACT_CALENDAR_ANCHOR, CONTACT_CALENDAR_SOURCE, CONTACT_INTENTS, getContactCalendarUrl, getContactUrl, getGeneralConsultationUrl } from '../../config/site';
+import { INDUSTRY_SLUGS, industryContactSource } from '../../config/industry-context';
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
+import { LAUNCHER_COPY } from './cloudia-launcher-copy';
 import { getCurrentLocale, getLocalizedUrl } from '../../utils/i18n';
 
 const locale = getCurrentLocale(Astro.url);
 const industry = getGeneralConsultationUrl(locale, 'contact-industry');
 const location = `${getLocalizedUrl('/company/', locale)}#company-profile`;
 const calendar = CONTACT_CALENDAR_VISIBLE ? getContactCalendarUrl(locale) : location;
-const chooseIndustry = {
-  ja: '業種を選ぶ', en: 'Choose your industry', zh: '选择行业', ko: '업종 선택', es: 'Elegir sector',
-}[locale];
+const chat = getContactUrl(locale);
+const sources = [
+  ...INDUSTRY_SLUGS.map(industryContactSource),
+  'corsweb-contact-primary', 'corsweb-launcher', 'corsweb-launcher-fallback',
+  'grift-contact', 'grift-faq', 'grift-pricing', 'grift-tep', 'grift-tep-final',
+  'grift-lp-hero', 'grift-lp-mid', 'grift-lp-final', 'grift-lp-floating',
+  'grift-lp-pricing-trial', 'grift-lp-estimate',
+];
+const chooseIndustry = LAUNCHER_COPY[locale].industryLink;
 ---
 
-<script define:vars={{ industry, calendar, location, intents: CONTACT_INTENTS, calendarAnchor: CONTACT_CALENDAR_ANCHOR, calendarSource: CONTACT_CALENDAR_SOURCE }} data-astro-rerun>
+<script define:vars={{ industry, calendar, location, chat, sources, intents: CONTACT_INTENTS, calendarAnchor: CONTACT_CALENDAR_ANCHOR, calendarSource: CONTACT_CALENDAR_SOURCE }} data-astro-rerun>
   const incoming = new URL(window.location.href);
+  const only = (key) => {
+    const values = incoming.searchParams.getAll(key);
+    return values.length === 1 ? values[0] : null;
+  };
 
-  if (incoming.hash === '#' + calendarAnchor || incoming.searchParams.get('source') === calendarSource) {
+  if (incoming.hash === '#' + calendarAnchor || only('source') === calendarSource) {
     window.location.replace(calendar);
   } else if (incoming.hash === '#contact-form-fallback') {
     window.location.replace(location);
-  } else if (!intents.includes(incoming.searchParams.get('intent'))) {
-    window.location.replace(industry);
+  } else {
+    const intent = only('intent');
+    if (!intents.includes(intent)) {
+      window.location.replace(industry);
+    } else {
+      const target = new URL(chat, incoming.origin);
+      target.searchParams.set('intent', intent);
+      const source = only('source');
+      if (sources.includes(source)) target.searchParams.set('source', source);
+      if (only('utm_source') === 'grift') target.searchParams.set('utm_source', 'grift');
+      if (only('utm_medium') === 'cta') target.searchParams.set('utm_medium', 'cta');
+      window.location.replace(target.pathname + target.search);
+    }
   }
 </script>
 <noscript>
   <style is:inline>header [x-cloak] { display: none !important; }</style>
   <p class="mx-auto mb-6 max-w-3xl px-4 sm:px-6">
-    <a href={industry} class="inline-flex min-h-[44px] items-center font-medium underline">{chooseIndustry}</a>
+    <a data-legacy-industry-link href={industry} class="inline-flex min-h-[44px] items-center font-medium underline">{chooseIndustry}</a>
   </p>
 </noscript>

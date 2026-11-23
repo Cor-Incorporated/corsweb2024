@@ -16,7 +16,8 @@ import {
   WEBSITE_ID,
 } from '../config/organization';
 import { KOUSUKE_TERADA } from '../config/author';
-import { getLocalizedUrl, getTranslations, type Locale } from './i18n';
+import { getExistingCustomerContactUrl, isContactChatPrimary } from '../config/site';
+import { getTranslations, type Locale } from './i18n';
 
 export type JsonLd = Record<string, unknown>;
 
@@ -46,13 +47,15 @@ export function buildOrganizationJsonLd(locale: Locale): JsonLd {
     url: `${SITE_ORIGIN}/`,
     logo: ORGANIZATION_LOGO,
     description: getTranslations(locale).meta.home.description,
-    // 電話・メールは公開していない（問い合わせは Cloudia に一本化）ため、ロケール別の問い合わせページを示す
-    contactPoint: {
-      '@type': 'ContactPoint',
-      contactType: 'customer service',
-      url: `${SITE_ORIGIN}${getLocalizedUrl('/contact/', locale)}`,
-      availableLanguage: ['Japanese', 'English'],
-    },
+    // 表示上の既存利用者の窓口はフッターと同じURLを示す。
+    ...(isContactChatPrimary() && {
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'customer service',
+        url: `${SITE_ORIGIN}${getExistingCustomerContactUrl(locale)}`,
+        availableLanguage: ['Japanese', 'English'],
+      },
+    }),
     // 所在地・設立・選出は会社概要ページ（/company）に表示している事実（ADR-0017・ADR-0022）
     address: {
       '@type': 'PostalAddress',

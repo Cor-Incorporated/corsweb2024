@@ -459,16 +459,6 @@ describe('C inspectCloudiaChatDocument（#322 合成監視と共有）', () => {
   );
 });
 
-// CloudiaContactEntry.astro の文言表（FALLBACK_WITH_CALENDAR など）から title / description を取り出す。
-function extractCopy(source: string, name: string): string[] {
-  const start = source.indexOf(`const ${name} = {`);
-  const end = source.indexOf('} as const satisfies', start);
-  if (start < 0 || end < 0) {
-    throw new Error(`CloudiaContactEntry.astro に ${name} の定義が見つからない（判定基準の更新が必要）`);
-  }
-  return Array.from(source.slice(start, end).matchAll(/(?:title|description):\s*'([^']*)'/gu), (m) => m[1]);
-}
-
 // 文字列を /contact の本文として置いたときの B-1（語・番号・tel:）の判定。HTML としては解釈させない。
 function phoneLeadsInText(text: string) {
   const document = parsePage('<main><p></p></main>');
@@ -478,7 +468,6 @@ function phoneLeadsInText(text: string) {
   return findPhoneLeads(document);
 }
 
-const ENTRY_SOURCE = readSource('../../components/contact/CloudiaContactEntry.astro');
 const LOCALES = Object.keys(CONTACT_PAGE_PATHS) as Array<keyof typeof CONTACT_PAGE_PATHS>;
 
 // 設定されたカレンダーにだけ出る文言も、窓口の案内と混同しないことをソースで検査する。
@@ -509,17 +498,6 @@ describe('B-1 会社概要に移したカレンダーに電話誘導が無い', 
 // 判定基準と、それが前提にしているソース側の文言・識別子を機械的に結ぶ。
 // ソースだけ書き換えると、ここが両側の値を挙げて落ちる。
 describe('判定基準 ↔ ソースの結合', () => {
-  const claims = (text: string) =>
-    Object.values(AVAILABILITY_CLAIM_PATTERNS).some((pattern) => pattern.test(text));
-  const entrySource = ENTRY_SOURCE;
-  const localeCount = LOCALES.length;
-
-  it('旧URLに残す目的付き案内は、どの言語でも打ち合わせの時間帯を断言しない', () => {
-    const entryTexts = extractCopy(entrySource, 'ENTRY_COPY');
-    expect(entryTexts).toHaveLength(localeCount * 2);
-    expect(entryTexts.filter(claims)).toEqual([]);
-  });
-
   it('プレースホルダの見出しは src/pages/contact/chat/index.astro の文言と一致する', () => {
     const chatSource = readSource('../../pages/contact/chat/index.astro');
     const missing = Object.values(CLOUDIA_CHAT_PLACEHOLDER_TITLES).filter(

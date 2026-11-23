@@ -1,7 +1,7 @@
 ---
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
-import { getContactCalendarUrl, getContactUrl, getGeneralConsultationUrl, isContactChatPrimary } from '../../config/site';
+import { getContactCalendarUrl, getExistingCustomerContactUrl, getGeneralConsultationUrl, isContactChatPrimary } from '../../config/site';
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 import { CONTACT_SUPPORT_LABEL } from '../contact/contact-support-copy';
 import { ORGANIZATION_NAMES, SOCIAL_LINKS } from '../../config/organization';
@@ -68,7 +68,7 @@ const bottomLinks = [
       ...(isContactChatPrimary()
         ? [{
             name: CONTACT_SUPPORT_LABEL[currentLocale],
-            href: getContactUrl(currentLocale, { source: 'corsweb-contact-primary' }),
+            href: getExistingCustomerContactUrl(currentLocale),
             isExternal: false,
           }]
         : []),

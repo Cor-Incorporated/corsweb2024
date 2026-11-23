@@ -4,7 +4,6 @@ import ContactChat from './ContactChat.astro';
 import ContactForm from './ContactForm.astro';
 import ContactInfo from './ContactInfo.astro';
 import LegacyContactEntry from './LegacyContactEntry.astro';
-import CloudiaContactEntry from './CloudiaContactEntry.astro';
 import DocumentRequestEntry from './DocumentRequestEntry.astro';
 import Heading from './Heading.astro';
 import Layout from '../../layouts/Layout.astro';
@@ -21,22 +20,23 @@ const legacy = CLOUDIA_CONTACT_PRIMARY_ENABLED && !CONTACT_CHAT_ENABLED;
 )}
 
 <Layout description={t.meta.contact.description} title={t.meta.contact.title}>
-  <div class="lb-heading-balance">
-    <Heading />
-  </div>
-  {legacy && <LegacyContactEntry />}
-  {CONTACT_CHAT_ENABLED ? (
-    <ContactChat />
-  ) : legacy ? (
-    <CloudiaContactEntry>
-      <DocumentRequestEntry slot="materials" />
-    </CloudiaContactEntry>
+  {legacy ? (
+    <LegacyContactEntry />
   ) : (
-    <section id="contact-form-fallback" data-cloudia-fallback={CLOUDIA_LAUNCHER_ENABLED ? 'true' : 'false'}>
-      <ContactInfo />
-      <Calendar />
-      <ContactForm />
-    </section>
+    <>
+      <div class="lb-heading-balance">
+        <Heading />
+      </div>
+      {CONTACT_CHAT_ENABLED ? (
+        <ContactChat />
+      ) : (
+        <section id="contact-form-fallback" data-cloudia-fallback={CLOUDIA_LAUNCHER_ENABLED ? 'true' : 'false'}>
+          <ContactInfo />
+          <Calendar />
+          <ContactForm />
+        </section>
+      )}
+      <DocumentRequestEntry />
+    </>
   )}
-  {!legacy && <DocumentRequestEntry />}
 </Layout>
