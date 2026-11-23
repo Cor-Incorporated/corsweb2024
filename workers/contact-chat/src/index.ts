@@ -67,6 +67,7 @@ import { createMockEmailProvider, sendDocumentRequestEmail, type DocumentNotice 
 import {
   DOCUMENT_REQUEST_CONSENT_VERSION,
   DOCUMENT_REQUEST_ID,
+  DOCUMENT_REQUEST_VERSION,
   NOTICE_MAX_ATTEMPTS,
   NOTICE_REQUEUE_AFTER_SECONDS,
   decideDocumentNotice,
@@ -665,6 +666,10 @@ async function handleDocumentRequest(req: Request, env: Env): Promise<Response> 
       discoveryOther: norm.value.discoveryOther,
       documentId: DOCUMENT_REQUEST_ID,
       consentVersion: DOCUMENT_REQUEST_CONSENT_VERSION,
+      documentVersion: DOCUMENT_REQUEST_VERSION,
+      // 元のページの path とトークンは、画面が送ったものを検査した値（検査を通らなければ ''）。
+      entryPath: norm.value.entryPath,
+      formToken: norm.value.formToken,
       locale: norm.value.locale,
     });
   } catch {

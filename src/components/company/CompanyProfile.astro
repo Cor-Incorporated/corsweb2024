@@ -21,7 +21,8 @@ const relatedLinks = [
   { label: c.links.security, href: getLocalizedUrl('/security', currentLocale) },
   { label: c.links.news, href: getLocalizedUrl('/news', currentLocale) },
   { label: c.links.legal, href: getLocalizedUrl('/legal/tokushoho', currentLocale) },
-  { label: t.documentRequest.entryLabel, href: getLocalizedUrl('/contact/materials/', currentLocale) },
+  // 資料請求は通常のページ遷移にし、会社情報の URL を参照元として引き継ぐ。
+  { label: t.documentRequest.entryLabel, href: getLocalizedUrl('/contact/materials/', currentLocale), reload: true },
 ];
 ---
 
@@ -156,6 +157,7 @@ const relatedLinks = [
           <li>
             <a
               href={link.href}
+              data-astro-reload={link.reload || undefined}
               class="underline underline-offset-4 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
             >
               {link.label}

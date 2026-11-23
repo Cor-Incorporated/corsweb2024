@@ -3,6 +3,7 @@ import { COMPANY_DECK_URL } from '../../config/site';
 import {
   DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX,
   DOCUMENT_REQUEST_DISCOVERY_SOURCES,
+  DOCUMENT_REQUEST_ENTRY_PATHS,
   DOCUMENT_REQUEST_INDUSTRIES,
   isDocumentRequestIndustry,
 } from '../../config/document-request';
@@ -56,6 +57,7 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
       action="/api/contact/document-request"
       accept-charset="UTF-8"
       data-document-request
+      data-entry-paths={DOCUMENT_REQUEST_ENTRY_PATHS.join(' ')}
       data-clarity-mask="true"
       data-msg-success={copy.success}
       data-msg-duplicate={copy.duplicate}
@@ -72,6 +74,10 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
     >
       <p class="text-sm text-primary-950/70 dark:text-primary-200/70">{copy.noscript}</p>
       <input type="hidden" name="locale" value={locale} />
+      {/* #537: トークンと元のページの path は、フォームを表示したときに下の script が入れる。
+          静的な HTML には値を置かない（ビルドした瞬間に全員共通になるため）。JS が無いときは空のまま送られる。 */}
+      <input type="hidden" name="formToken" value="" />
+      <input type="hidden" name="pagePath" value="" />
       <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
         <label for="document-request-website">Website</label>
         <input id="document-request-website" name="website" type="text" tabindex="-1" autocomplete="off" value="" />
@@ -119,7 +125,51 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
 <script is:inline>
   (function () {
     var form = document.querySelector('[data-document-request]');
-    if (!form || typeof fetch !== 'function') return;
+    if (!form) return;
+    // #537: フォームを表示するたびに短い乱数（16 バイトを hex にした 32 文字）を発行する。
+    // 同じトークンと同じ内容の再送は、Worker が 1 件にまとめる。乱数が使えないときは空のまま（従来の受付）。
+    function issueToken() {
+      var bytes = new Uint8Array(16);
+      if (!window.crypto || typeof window.crypto.getRandomValues !== 'function') return '';
+      window.crypto.getRandomValues(bytes);
+      var hex = '';
+      for (var i = 0; i < bytes.length; i++) hex += (bytes[i] + 0x100).toString(16).slice(1);
+      return hex;
+    }
+    // #537: どのページから来たか。自社の同一 origin の referrer だけを、query と hash を除いた path で送る。
+    // 外部の site の referrer、referrer が無いとき、ページ内遷移（View Transitions）で来たときは空（記録なし）。
+    // ページ内遷移では document.referrer が初回の読み込みのときのまま残るので、それを元のページにしない。
+    function documentUrl(value) {
+      try {
+        var url = new URL(value);
+        return url.origin + url.pathname + url.search;
+      } catch (e) {
+        return '';
+      }
+    }
+    function pagePath() {
+      var referrer = document.referrer;
+      if (!referrer) return '';
+      try {
+        var entries = window.performance && typeof window.performance.getEntriesByType === 'function'
+          ? window.performance.getEntriesByType('navigation')
+          : [];
+        if (entries && entries[0] && documentUrl(entries[0].name) !== documentUrl(window.location.href)) return '';
+        var url = new URL(referrer);
+        if (url.origin !== window.location.origin) return '';
+        var path = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
+        var entryPaths = (form.dataset.entryPaths || '').split(' ');
+        return entryPaths.includes(path) ? path : '';
+      } catch (e) {
+        return '';
+      }
+    }
+    var tokenInput = form.querySelector('input[name="formToken"]');
+    var pathInput = form.querySelector('input[name="pagePath"]');
+    // 表示するたびに新しく発行する（ブラウザが前の表示の値を欄に戻しても使わない）。
+    if (tokenInput) tokenInput.value = issueToken();
+    if (pathInput) pathInput.value = pagePath();
+    if (typeof fetch !== 'function') return;
     var result = document.getElementById('document-request-result');
     var discovery = form.querySelector('[data-discovery-source]');
     var discoveryOther = form.querySelector('[data-discovery-other]');
@@ -159,7 +209,10 @@ const discoveries = DOCUMENT_REQUEST_DISCOVERY_SOURCES.map((slug) => ({
         discoveryOther: String(payload.get('discoverySource') === 'other' ? (payload.get('discoveryOther') || '') : ''),
         consent: payload.get('consent') === 'yes',
         website: String(payload.get('website') || ''),
-        locale: String(payload.get('locale') || '')
+        locale: String(payload.get('locale') || ''),
+        // #537: 表示ごとのトークンと元のページの path（上で入れた値。無いときは空）。
+        formToken: String(payload.get('formToken') || ''),
+        pagePath: String(payload.get('pagePath') || '')
       };
       function show(message, alert) {
         if (!result) return;

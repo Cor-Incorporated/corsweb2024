@@ -530,3 +530,12 @@ const langOptions = localeOrder.map((loc) => ({
     </div>
   </div>
 </header>
+
+<style>
+  @media (scripting: none) {
+    /* Layout exposes the navigation links when Alpine is unavailable. Keep
+       that expanded navigation in the page's scroll flow. */
+    header { position: static; }
+    button[aria-controls="website-menu"] { display: none; }
+  }
+</style>
