@@ -2697,6 +2697,7 @@
     "contactLabel": "Press inquiries"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Grift CLI {version} release notes",
     "breadcrumbWorks": "Works",
     "ndaHeading": "* Parts of this case are abstracted due to NDA and confidentiality.",
     "updatedLabel": "Updated",

@@ -2697,6 +2697,7 @@
     "contactLabel": "Consultas de prensa"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Notas de la versión {version} de Grift CLI",
     "breadcrumbWorks": "Proyectos",
     "ndaHeading": "* Parte de este caso se presenta de forma abstracta por NDA y confidencialidad.",
     "updatedLabel": "Actualizado",
