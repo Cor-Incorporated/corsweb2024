@@ -327,3 +327,41 @@ for (const size of LOAD_VISIBLE_SIZES) {
     });
   }
 }
+
+test('390px 日本語: 文字を200%にしても見出しと説明が欠けない', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const baseURL = process.env.FIRST_VIEW_BASE_URL ?? testInfo.project.use.baseURL;
+  expect(baseURL).toBeTruthy();
+  await page.route('**/*', route => route.request().method() === 'GET' ? route.continue() : route.abort());
+  await page.goto(new URL('/', baseURL!).toString());
+  await page.evaluate(() => document.fonts.ready);
+  const title = page.locator('[data-hero-content] h1');
+  await expect(title).toBeVisible();
+
+  const textBounds = await title.evaluate((heading) => {
+    const description = heading.nextElementSibling!;
+    const textElements = [heading, description].flatMap(element => [element, ...element.querySelectorAll('*')])
+      .filter(element => [...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()));
+    const sizes = textElements.map(element => ({ element, px: parseFloat(getComputedStyle(element).fontSize) }));
+    for (const { element, px } of sizes) {
+      (element as HTMLElement).style.setProperty('font-size', `${px * 2}px`, 'important');
+    }
+    const clip = heading.closest('section')!.getBoundingClientRect();
+    return [heading, description].map(element => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const rects = [...range.getClientRects()].filter(rect => rect.width > 1);
+      return {
+        tag: element.tagName,
+        count: rects.length,
+        clipped: rects.some(rect => rect.left < Math.max(0, clip.left) - 1 ||
+          rect.right > Math.min(innerWidth, clip.right) + 1),
+      };
+    });
+  });
+  expect(textBounds).toEqual([
+    { tag: 'H1', count: expect.any(Number), clipped: false },
+    { tag: 'P', count: expect.any(Number), clipped: false },
+  ]);
+  expect(textBounds.every(({ count }) => count > 0)).toBe(true);
+});
