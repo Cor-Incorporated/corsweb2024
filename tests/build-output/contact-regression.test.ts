@@ -35,6 +35,7 @@ import {
 } from '../../src/components/contact/chat/cloudiaUnavailableCopy';
 import { buildUnavailableNotice } from '../../src/components/contact/chat/cloudiaUnavailableNotice';
 import { PHONE_INQUIRY_ACCIDENTS } from '../fixtures/phone-inquiry-accidents';
+import { getLocalizedUrl } from '../../src/utils/i18n';
 
 // 反証の実測では、壊した dist の複製を CONTACT_GUARD_DIST_DIR で渡す（既定は ./dist）。
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
@@ -282,23 +283,28 @@ describe('B-1 5 言語の /privacy に「電話で受け付ける」旨・電話
   });
 });
 
-describe('B-2 <details> の文言とカレンダーが整合している', () => {
-  it.each(LOCALES)('%s', (locale) => {
+describe('B-2 カレンダーは会社概要にのみ表示される', () => {
+  it.each(LOCALES)('%s: 旧問い合わせ案内にカレンダーや時間帯の案内を表示しない', (locale) => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
-    // 検査対象が消えて素通りになっていないこと（details が無ければ判定は常に空になる）。
-    expect(document.querySelectorAll('details').length).toBeGreaterThan(0);
+    expect(document.getElementById('contact-calendar')).toBeNull();
+    expect(hasCalendarEmbed(document)).toBe(false);
     expect(findCalendarCopyMismatches(document)).toEqual([]);
   });
 });
 
-// ビルド条件どおりにカレンダーが描画されたか（#331 再レビュー MEDIUM-1）。これが無いと、
-// カレンダーありのビルドが何かの理由でカレンダーなしの HTML になっても B-2 の逆向き
-// （calendar-without-claim）は評価されず、2 回目の test:dist が気づかれずに空振りする。
-describe.runIf(EXPECT_CALENDAR !== undefined)('ビルド条件どおりのカレンダー状態（CONTACT_GUARD_EXPECT_CALENDAR）', () => {
+// 無設定時は会社概要からもカレンダーと見出しを除き、カレンダーありのビルドでは
+// 旧URLの遷移先となる区画の中に見出しと Google カレンダーが揃うことを確認する。
+describe.runIf(EXPECT_CALENDAR !== undefined)('ビルド条件どおりの会社概要カレンダー', () => {
   it.each(LOCALES)('%s', (locale) => {
-    const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
-    const rendered = Array.from(document.querySelectorAll('details')).some(hasCalendarEmbed);
-    expect({ locale, rendered }).toEqual({ locale, rendered: EXPECT_CALENDAR === '1' });
+    const { document } = loadDistPage(getLocalizedUrl('/company/', locale));
+    const section = document.getElementById('contact-calendar');
+    if (EXPECT_CALENDAR === '0') {
+      expect(section).toBeNull();
+      expect(hasCalendarEmbed(document)).toBe(false);
+    } else {
+      expect(section?.querySelector('h2')?.textContent?.trim()).toBeTruthy();
+      expect(section && hasCalendarEmbed(section)).toBe(true);
+    }
   });
 });
 
@@ -541,25 +547,18 @@ describe('反証: dist の実物へ事故を注入すると検出する', () => 
 
   it.each(LOCALES)('%s: カレンダーが無いのに時間帯を断言する（#323 背景 4）', (locale) => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
-    const details = document.querySelector('details');
-    const summary = details?.querySelector('summary');
-    if (!details || !summary) throw new Error(`${locale}: details / summary が無い`);
-    details.querySelectorAll('iframe').forEach((iframe) => iframe.remove());
-    summary.textContent = '所在地・打ち合わせ可能な時間を見る';
+    lastMain(document).insertAdjacentHTML('beforeend',
+      '<details><summary>所在地・打ち合わせ可能な時間を見る</summary></details>');
     expect(findCalendarCopyMismatches(document).map((finding) => finding.kind)).toEqual([
       'claim-without-calendar',
     ]);
   });
 
-  // 逆向き（#331 再レビュー MEDIUM-1）: カレンダーがあるのに見出しが案内しない。カレンダーありの dist では
-  // 実物のカレンダーをそのまま使い、カレンダーなしの dist では架空の埋め込みを足して同じ状態を作る。
+  // 旧ページにカレンダーを戻す事故を模擬する。
   it.each(LOCALES)('%s: カレンダーがあるのに見出しが時間帯を案内しない（calendar-without-claim）', (locale) => {
     const { document } = loadDistPage(CONTACT_PAGE_PATHS[locale]);
-    const details = document.querySelector('details');
-    const summary = details?.querySelector('summary');
-    if (!details || !summary) throw new Error(`${locale}: details / summary が無い`);
-    if (!hasCalendarEmbed(details)) details.insertAdjacentHTML('beforeend', CALENDAR_IFRAME_FIXTURE);
-    summary.textContent = '所在地を見る';
+    lastMain(document).insertAdjacentHTML('beforeend',
+      `<details><summary>所在地を見る</summary>${CALENDAR_IFRAME_FIXTURE}</details>`);
     expect(findCalendarCopyMismatches(document).map((finding) => finding.kind)).toEqual([
       'calendar-without-claim',
     ]);
