@@ -222,6 +222,49 @@ test.describe('Cloudia contact routing', () => {
     await expect(openButton).toHaveText('お問い合わせ（AI受付）');
   });
 
+  test('keeps the embedded draft and launcher title accessible at 200% text size', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.route('**/contact/chat/**', (route) => route.fulfill({
+      contentType: 'text/html',
+      body: '<div id="root"><input aria-label="相談の下書き"></div>',
+    }));
+    await page.goto('/industries/medical/');
+
+    const launcher = page.locator('#cloudia-launcher');
+    await launcher.locator('h2, button, button span').evaluateAll((elements) => {
+      const sizes = elements.map((element) => parseFloat(getComputedStyle(element).fontSize));
+      elements.forEach((element, index) => {
+        (element as HTMLElement).style.fontSize = `${sizes[index] * 2}px`;
+      });
+    });
+    const openButton = page.locator('#cloudia-launcher-open');
+    await openButton.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'お問い合わせ（AI受付）' });
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+
+    const titleLine = await dialog.locator('h2').evaluate((title) => {
+      const style = getComputedStyle(title);
+      return { font: parseFloat(style.fontSize), line: parseFloat(style.lineHeight) };
+    });
+    expect(titleLine.font).toBe(28);
+    expect(titleLine.line).toBeGreaterThanOrEqual(titleLine.font);
+
+    const draft = page.frameLocator('#cloudia-launcher-frame').getByRole('textbox', { name: '相談の下書き' });
+    await draft.fill('合成の下書き');
+    await draft.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(openButton).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(draft).toHaveValue('合成の下書き');
+    await draft.evaluate((input) => input.addEventListener('keydown', (event) => {
+      if (event instanceof KeyboardEvent && event.key === 'Escape') event.preventDefault();
+    }, { once: true }));
+    await draft.press('Escape');
+    await expect(dialog).toBeVisible();
+    await expect(draft).toHaveValue('合成の下書き');
+  });
+
   // 開いている間もボタンの文字が開く前のままだと、もう一度押すと何が起きるか分からない。
   // 開いている間は問い合わせを閉じる旨の文字を表示し（× ボタンの「閉じる」とは名前を分ける）、押せば閉じてラベルが戻ることを固定する。
   test('turns the launcher button into a close button while the panel is open', async ({ page }) => {
