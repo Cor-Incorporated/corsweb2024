@@ -1,5 +1,5 @@
 // ビルド済み dist の、サイト内の問い合わせの link の検査（設定: vitest.dist.config.ts。`npm run build` の後に `npm run test:dist`）。
-// 共通ナビの相談は、その言語のトップの業種一覧へ向ける。Cloudia への直リンクは getContactUrl が作り、
+// 共通ナビの相談は、その言語のチャットへ向ける。Cloudia への直リンクは getContactUrl が作り、
 // intent・source・locale を link 自身が運ぶ。
 // 見るもの:
 // 1. 5 言語の全ページで、問い合わせページへの link（a・area・form・button と input の formaction・meta refresh）が 0。
@@ -229,18 +229,16 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(articlesWithBodyLinks.length).toBeGreaterThan(0);
   });
 
-  it.each(articlesWithBodyLinks)('記事の本文の link: $slug（5 言語のページで、その言語の業種一覧またはチャットへ）', ({ slug, intents }) => {
+  it.each(articlesWithBodyLinks)('記事の本文の link: $slug（5 言語のページで、その言語のチャットへ）', ({ slug, intents }) => {
     const localized = ['ja', ...NON_JA].map((locale) => (locale === 'ja' ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`));
     const problems = localized
       .filter((pagePath) => byPath.has(pagePath))
       .flatMap((pagePath) => {
         const page = byPath.get(pagePath)!;
-        const home = page.locale === 'ja' ? '/' : `/${page.locale}/`;
         const fromArticle = page.links.filter((link) => link.url.searchParams.get('source') === `blog/${slug}`);
-        const selection = fromArticle.filter((link) => link.url.pathname === home && link.url.hash === `#${HOME_INDUSTRY_ENTRY_ID}`);
         const chat = fromArticle.filter(isChatLink);
         const count = (intent: string | null) =>
-          intent === null ? selection.length : chat.filter((link) => link.url.searchParams.get('intent') === intent).length;
+          chat.filter((link) => link.url.searchParams.get('intent') === intent).length;
         const wanted = new Map<string | null, number>();
         for (const intent of intents) wanted.set(intent, (wanted.get(intent) ?? 0) + 1);
         return [
@@ -292,7 +290,7 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(wrong).toEqual([]);
   });
 
-  it.each(['ja', ...NON_JA] as const)('%s: 共通ナビの相談3リンクは業種一覧を開く', (locale) => {
+  it.each(['ja', ...NON_JA] as const)('%s: 共通ナビの相談3リンクはチャットを開く', (locale) => {
     const homePath = locale === 'ja' ? '/' : `/${locale}/`;
     const homePage = pages.find((page) => page.pagePath === homePath);
     expect(homePage).toBeDefined();
@@ -303,19 +301,19 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
 
     for (const source of ['header', 'header-quick', 'footer']) {
       const links = homePage?.links.filter((link) => link.url.searchParams.get('source') === source) ?? [];
-      expect(links.map((link) => [link.url.pathname, link.url.hash])).toEqual([
-        [homePath, `#${HOME_INDUSTRY_ENTRY_ID}`],
+      expect(links.map((link) => [link.url.pathname, link.url.searchParams.get('locale')])).toEqual([
+        [CLOUDIA_CHAT_PATH, locale],
       ]);
     }
   });
 
-  it.each(['ja', ...NON_JA])('%s の会社概要と About の一般相談は同じ言語の業種一覧へ進む', (locale) => {
+  it.each(['ja', ...NON_JA])('%s の会社概要と About の一般相談は同じ言語のチャットへ進む', (locale) => {
     const home = locale === 'ja' ? '/' : `/${locale}/`;
     const sources = locale === 'ja' ? ['company'] : ['company', 'about'];
     for (const source of sources) {
       const links = byPath.get(`${home}${source}/`)?.links.filter((link) => link.url.searchParams.get('source') === source);
-      expect(links?.map((link) => [link.url.pathname, link.url.hash])).toEqual([
-        [home, `#${HOME_INDUSTRY_ENTRY_ID}`],
+      expect(links?.map((link) => [link.url.pathname, link.url.searchParams.get('locale')])).toEqual([
+        [CLOUDIA_CHAT_PATH, locale],
       ]);
     }
   });

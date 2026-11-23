@@ -154,18 +154,11 @@ export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): str
   return `/contact/chat/?${params.toString()}`;
 }
 
-export function getExistingCustomerContactUrl(locale: Locale): string {
-  return getContactUrl(locale, { source: 'corsweb-contact-primary' });
-}
-
 export const HOME_INDUSTRY_ENTRY_ID = 'home-industry-entry';
 
-/** 一般の相談リンクを、同じ言語の業種一覧へ向ける。 */
+/** 一般の相談リンクを、その言語の問い合わせ窓口へ向ける。 */
 export function getGeneralConsultationUrl(locale: Locale, source: string): string {
-  if (!isContactChatPrimary()) return getContactUrl(locale, { source });
-
-  const query = new URLSearchParams({ source });
-  return getLocalizedUrl(`/?${query}#${HOME_INDUSTRY_ENTRY_ID}`, locale);
+  return getContactUrl(locale, { source });
 }
 
 /**
