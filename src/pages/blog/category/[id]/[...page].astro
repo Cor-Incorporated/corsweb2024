@@ -86,7 +86,7 @@ const availableLocales = await blogIndexLocales((d) => d.category === id, page.c
       <nav class="mt-12 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
         {page.url.prev ? (
           <a
-            href={`${base}blog/category/${id}${page.url.prev}`}
+            href={page.url.prev}
             class="rounded-lg bg-white px-3 py-2 text-sm font-medium text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-200 dark:ring-stone-800 dark:hover:bg-stone-800"
           >
             {currentLocale === 'ja' ? '前へ' : 'Previous'}
@@ -117,7 +117,7 @@ const availableLocales = await blogIndexLocales((d) => d.category === id, page.c
 
         {page.url.next ? (
           <a
-            href={`${base}blog/category/${id}${page.url.next}`}
+            href={page.url.next}
             class="rounded-lg bg-white px-3 py-2 text-sm font-medium text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-200 dark:ring-stone-800 dark:hover:bg-stone-800"
           >
             {currentLocale === 'ja' ? '次へ' : 'Next'}
