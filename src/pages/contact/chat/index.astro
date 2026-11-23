@@ -62,7 +62,7 @@ const localizedCopies = Object.fromEntries(
   cloudiaLauncher={false}
   analytics={false}
 >
-  <main
+  <div
     data-cloudia-unavailable-page
     data-unavailable-copies={JSON.stringify(localizedCopies)}
     class="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-center justify-center gap-5 px-4 py-20 text-center sm:px-6 lg:max-w-content"
@@ -79,7 +79,7 @@ const localizedCopies = Object.fromEntries(
         </p>
       )
     }
-  </main>
+  </div>
   {/* locale の query は 1 つだけ、埋めた文の鍵（en・zh・ko・es）のときだけ受ける。ほかの値・2 つ以上・ja は ja のまま。
       query の値そのものは文に写さない（lang に入れるのは鍵と一致した値だけ）。 */}
   <script is:inline data-astro-rerun>

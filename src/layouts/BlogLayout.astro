@@ -504,7 +504,7 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
   </head>
   <body class="bg-primary-50 text-primary-950 antialiased transition dark:bg-primary-950 dark:text-primary-200">
     <Header availableLocales={articleLocales} />
-    <main>
+    <main id="main-content" tabindex="-1" class="scroll-mt-16">
       <slot />
     </main>
     <Footer />

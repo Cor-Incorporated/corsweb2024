@@ -157,6 +157,7 @@ const langOptions = localeOrder.map((loc) => ({
 }));
 ---
 
+<a class="skip-to-content" href="#main-content" data-astro-reload>{t.header.skipToContent}</a>
 <header
   x-data="{ open: false }"
   class="sticky top-0 z-40 border-b border-primary-900/10 bg-primary-50 transition dark:border-primary-300/10 dark:bg-primary-950"
@@ -537,5 +538,23 @@ const langOptions = localeOrder.map((loc) => ({
        that expanded navigation in the page's scroll flow. */
     header { position: static; }
     button[aria-controls="website-menu"] { display: none; }
+  }
+</style>
+
+<style>
+  .skip-to-content {
+    position: fixed;
+    inset-block-start: .5rem;
+    inset-inline-start: .5rem;
+    z-index: 60;
+    transform: translateY(calc(-100% - 1rem));
+    padding: .75rem 1rem;
+    background: white;
+    color: #172d40;
+    text-decoration: underline;
+  }
+  .skip-to-content:focus {
+    transform: none;
+    outline: 3px solid currentColor;
   }
 </style>
