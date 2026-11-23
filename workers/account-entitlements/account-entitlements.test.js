@@ -49,8 +49,8 @@ test('product query against local Workers and D1 runtime', async (t) => {
   await grant('expired', 'user_Expired', bd, 'ws-a', 'legacy', '2000-01-01', '2001-01-01');
   await grant('future', 'user_Future', bd, 'ws-a', 'staff', '2099-01-01', '2099-12-31');
 
-  const query = async (body, token = bdToken) => {
-    const res = await mf.dispatchFetch(requestUrl, {
+  const query = async (body, token = bdToken, url = requestUrl) => {
+    const res = await mf.dispatchFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,6 +110,8 @@ test('product query against local Workers and D1 runtime', async (t) => {
     await grant('harbor-staff', shared.subject, 'harbor', shared.tenantId, 'staff', today, today);
     await grant('harbor-existing', known.subject, 'harbor', shared.tenantId, 'legacy', today, today);
     assert.deepEqual(await query(shared, harborToken), [200, { allowed: true }]);
+    assert.deepEqual(await query({ ...shared, organizationId: null, operation: 'view' },
+      harborToken, requestUrl.replace('/v1/', '/v2/')), [400, { error: 'invalid_input' }]);
     assert.deepEqual(await query({ ...shared, subject: known.subject }, harborToken), [200, { allowed: true }]);
     assert.deepEqual(await query({ ...shared, tenantId: 'other-team' }, harborToken), [200, { allowed: false }]);
     for (const wrongToken of [bdToken, xesmToken]) {
