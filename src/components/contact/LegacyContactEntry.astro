@@ -6,7 +6,7 @@ import { LAUNCHER_COPY } from './cloudia-launcher-copy';
 import { getCurrentLocale, getLocalizedUrl } from '../../utils/i18n';
 
 const locale = getCurrentLocale(Astro.url);
-const industry = getGeneralConsultationUrl(locale, 'contact-industry');
+const generalChat = getGeneralConsultationUrl(locale, 'contact-legacy');
 const location = `${getLocalizedUrl('/company/', locale)}#company-profile`;
 const calendar = CONTACT_CALENDAR_VISIBLE ? getContactCalendarUrl(locale) : location;
 const chat = getContactUrl(locale);
@@ -17,10 +17,10 @@ const sources = [
   'grift-lp-hero', 'grift-lp-mid', 'grift-lp-final', 'grift-lp-floating',
   'grift-lp-pricing-trial', 'grift-lp-estimate',
 ];
-const chooseIndustry = LAUNCHER_COPY[locale].industryLink;
+const chatLabel = LAUNCHER_COPY[locale].label;
 ---
 
-<script define:vars={{ industry, calendar, location, chat, sources, intents: CONTACT_INTENTS, calendarAnchor: CONTACT_CALENDAR_ANCHOR, calendarSource: CONTACT_CALENDAR_SOURCE }} data-astro-rerun>
+<script define:vars={{ generalChat, calendar, location, chat, sources, intents: CONTACT_INTENTS, calendarAnchor: CONTACT_CALENDAR_ANCHOR, calendarSource: CONTACT_CALENDAR_SOURCE }} data-astro-rerun>
   const incoming = new URL(window.location.href);
   const only = (key) => {
     const values = incoming.searchParams.getAll(key);
@@ -34,7 +34,7 @@ const chooseIndustry = LAUNCHER_COPY[locale].industryLink;
   } else {
     const intent = only('intent');
     if (!intents.includes(intent)) {
-      window.location.replace(industry);
+      window.location.replace(generalChat);
     } else {
       const target = new URL(chat, incoming.origin);
       target.searchParams.set('intent', intent);
@@ -49,6 +49,6 @@ const chooseIndustry = LAUNCHER_COPY[locale].industryLink;
 <noscript>
   <style is:inline>header [x-cloak] { display: none !important; }</style>
   <p class="mx-auto mb-6 max-w-3xl px-4 sm:px-6">
-    <a data-legacy-industry-link href={industry} class="inline-flex min-h-[44px] items-center font-medium underline">{chooseIndustry}</a>
+    <a data-legacy-chat-link href={generalChat} class="inline-flex min-h-[44px] items-center font-medium underline">{chatLabel}</a>
   </p>
 </noscript>

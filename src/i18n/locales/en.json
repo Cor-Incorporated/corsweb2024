@@ -512,7 +512,7 @@
             "p": "An outline of your work is enough to start. Please do not include real patient data, medical charts or login credentials."
           }
         ],
-        "primary": "Contact us (AI reception)",
+        "primary": "Contact via AI chat",
         "downloadButton": "Download materials"
       },
       "sourcesTitle": "References",
@@ -838,7 +838,7 @@
             "p": "An outline of your work is enough to start. Please do not include real client data or login credentials."
           }
         ],
-        "primary": "Contact us (AI reception)",
+        "primary": "Contact via AI chat",
         "downloadButton": "Download materials"
       },
       "sourcesTitle": "References",
@@ -1179,7 +1179,7 @@
             "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
           }
         ],
-        "primary": "Contact us (AI reception)",
+        "primary": "Contact via AI chat",
         "downloadButton": "Download materials"
       },
       "sourcesTitle": "References",
@@ -1488,7 +1488,7 @@
             "p": "An outline of your work is enough to start. There is no need to attach real site data or confidential documents."
           }
         ],
-        "primary": "Contact us (AI reception)",
+        "primary": "Contact via AI chat",
         "downloadButton": "Download materials"
       },
       "sourcesTitle": "References",
@@ -1787,7 +1787,7 @@
             "p": "An outline of your work is enough to start. Please do not include real data on students, confidential documents or login credentials."
           }
         ],
-        "primary": "Contact us (AI reception)",
+        "primary": "Contact via AI chat",
         "downloadButton": "Download materials"
       },
       "sourcesTitle": "References",
@@ -2014,8 +2014,8 @@
       "about": "About Cor.Inc.",
       "products": "Products&Insights",
       "news": "News",
-      "contact": "Contact",
-      "calendar": "Meeting availability",
+      "contact": "Contact via AI chat",
+      "calendar": "Representative’s schedule",
       "privacy": "Privacy",
       "security": "Security",
       "legal": "Legal Notice",
@@ -2211,6 +2211,7 @@
     ]
   },
   "calendar": {
+    "openStandalone": "View schedule in Google Calendar",
     "title": "CEO Schedule",
     "description": "This is the CEO's public schedule. If you would like to schedule a meeting, please check available time slots and contact us.",
     "ariaLabel": "CEO Schedule Calendar",

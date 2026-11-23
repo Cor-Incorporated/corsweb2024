@@ -50,10 +50,10 @@ describe('Cloudia のボタンの文字（浮きボタンの開く前と開い�
     const buttonCopy: string[] = [];
     for (const locale of LOCALES) {
       const launcher = LAUNCHER_COPY[locale];
-      buttonCopy.push(launcher.label, launcher.title, launcher.closeLauncher, launcher.industryLink);
+      buttonCopy.push(launcher.label, launcher.title, launcher.closeLauncher);
       for (const key of INDUSTRY_KEYS) buttonCopy.push(loadIndustryPrimary(locale, key));
     }
-    expect(buttonCopy).toHaveLength(5 * (4 + 5));
+    expect(buttonCopy).toHaveLength(5 * (3 + 5));
     for (const value of buttonCopy) expect(value, JSON.stringify(value)).not.toMatch(/Cloudia/);
   });
 });

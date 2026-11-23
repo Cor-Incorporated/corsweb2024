@@ -3,15 +3,17 @@
 // 会社の基本情報は回答エンジン（AIO）が引用しやすいよう dl の表で出す。表に出した事実
 // （設立・所在地・選出）は Organization JSON-LD（utils/structured-data.ts）にも載せている。
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../../utils/i18n';
-import { ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL, isContactChatPrimary } from '../../config/site';
+import { CONTACT_CALENDAR_ANCHOR, ENGINEER_CAFE_CASE_PATH, FUKUOKA100_PAGE_URL, isContactChatPrimary } from '../../config/site';
 import Fukuoka100Emblem from '../common/Fukuoka100Emblem.astro';
 import LbHeading from '../common/LbHeading.astro';
 import LbText from '../common/LbText.astro';
 import Calendar from '../contact/Calendar.astro';
+import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
 
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 const c = t.companyPage;
+const showCalendar = isContactChatPrimary() && CONTACT_CALENDAR_VISIBLE;
 
 const relatedLinks = [
   { label: c.links.about, href: getLocalizedUrl('/about', currentLocale) },
@@ -23,13 +25,18 @@ const relatedLinks = [
 ];
 ---
 
-<div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+<div class="mx-auto max-w-reading px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8">
   <div class="flex flex-col gap-4 pb-12 text-start sm:pb-16">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">
       {c.kicker}
     </p>
     <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={c.title} />
     <LbText class="type-copy text-lg leading-relaxed text-primary-950/70 dark:text-primary-200/70" text={c.lead} />
+    {showCalendar && (
+      <a href={`#${CONTACT_CALENDAR_ANCHOR}`} class="inline-flex min-h-11 w-fit items-center rounded font-medium text-primary-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:text-primary-200 dark:focus-visible:outline-primary-200">
+        {t.footer.links.calendar}
+      </a>
+    )}
   </div>
 
   <section aria-labelledby="company-profile">
@@ -48,9 +55,11 @@ const relatedLinks = [
       }
     </dl>
   </section>
+</div>
 
-  {isContactChatPrimary() && <Calendar />}
+{showCalendar && <Calendar />}
 
+<div class="mx-auto max-w-reading px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
   <section id="business" aria-labelledby="company-business" class="mt-16 scroll-mt-24">
     <LbHeading as="h2" id="company-business" class="type-heading text-xl font-medium sm:text-2xl" text={c.businessTitle} />
     <LbText class="mt-4 text-base leading-relaxed text-primary-950/70 dark:text-primary-200/70 sm:text-lg" text={c.businessLead} />
