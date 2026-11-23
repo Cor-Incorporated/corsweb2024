@@ -1,6 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import LbHeading from '../../../components/common/LbHeading.astro';
+import ScrollableTable from '../../../components/common/ScrollableTable.astro';
 import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
 ---
@@ -14,9 +15,9 @@ import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
     <p class="mb-6 rounded-md border border-primary-900/15 bg-primary-900/[0.03] px-4 py-3 text-sm dark:border-primary-300/15 dark:bg-primary-300/[0.04]">Este aviso se rige por las leyes de Japón. La versión en japonés es el texto auténtico. Esta traducción al español se ofrece únicamente a título informativo.</p>
 
-    <div class="overflow-x-auto">
-    <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
-      <caption class="sr-only">Información del vendedor requerida bajo la Ley de Transacciones Comerciales Específicas de Japón</caption>
+    <ScrollableTable labelledBy="legal-notice-table">
+    <table class="w-full table-fixed border-collapse text-left [overflow-wrap:anywhere] sm:table-auto">
+      <caption id="legal-notice-table" class="sr-only">Información del vendedor requerida bajo la Ley de Transacciones Comerciales Específicas de Japón</caption>
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
         <tr><th class="py-4 pr-6 align-top font-medium">Vendedor</th><td class="py-4">{`${ORGANIZATION_NAMES.es} (${LEGAL_NAME})`}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">Gerente de Operaciones</th><td class="py-4">CEO&nbsp;Kousuke&nbsp;Terada</td></tr>
@@ -43,6 +44,6 @@ import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
         <tr><th class="py-4 pr-6 align-top font-medium">Licencia de Comerciante de Segunda Mano</th><td class="py-4">No aplica</td></tr>
       </tbody>
     </table>
-    </div>
+    </ScrollableTable>
   </div>
 </Layout>
