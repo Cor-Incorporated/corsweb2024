@@ -213,6 +213,8 @@ export interface ChatResult {
 // /submit の受け取り。PII を含む。LLM には絶対に渡さない（メールにのみ送る）。
 export interface InquiryInput {
   sessionId?: unknown;
+  /** false の場合は本人が確定した用件だけを提出する。 */
+  shareConversation?: unknown;
   idempotencyKey?: unknown;
   name?: unknown;
   email?: unknown;
@@ -233,6 +235,7 @@ export interface InquiryInput {
 
 // 検証・正規化済みの問い合わせ（メール本文に使う）。
 export interface NormalizedInquiry {
+  shareConversation?: false;
   name: string;
   email: string;
   company: string;

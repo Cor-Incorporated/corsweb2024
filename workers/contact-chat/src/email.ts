@@ -142,6 +142,7 @@ export function getReceiptSummaryText(inquiry: NormalizedInquiry): string {
 
 /** Internal-only context. Apply a final mask at the email boundary as defense in depth. */
 export function getConversationExcerptText(inquiry: NormalizedInquiry): string {
+  if (inquiry.shareConversation === false) return '';
   const raw = typeof inquiry.conversationExcerpt === 'string' ? inquiry.conversationExcerpt : '';
   return maskSensitiveContent(raw.replace(/\r\n?/g, '\n').trim())
     .slice(0, MAX_CONVERSATION_EXCERPT_LEN)
@@ -164,7 +165,7 @@ export function buildBody(inquiry: NormalizedInquiry): string {
     '── 本文 ──',
     inquiry.message,
   ];
-  const lead = inquiry.structuredLead || {};
+  const lead = inquiry.shareConversation === false ? {} : inquiry.structuredLead || {};
   const leadLines: string[] = [];
   if (lead.purpose) leadLines.push(`目的　　: ${lead.purpose}`);
   if (lead.industryRole) leadLines.push(`業種・役割: ${lead.industryRole}`);
@@ -190,7 +191,9 @@ export function buildBody(inquiry: NormalizedInquiry): string {
       '※会話抜粋はサーバー側でマスキング・文字数制限済みです。',
     );
   }
-  lines.push('', '── AI要約（AIチャットの会話サマリ / summaryText） ──', getSummaryText(inquiry));
+  if (inquiry.shareConversation !== false) {
+    lines.push('', '── AI要約（AIチャットの会話サマリ / summaryText） ──', getSummaryText(inquiry));
+  }
   lines.push(
     '',
     '── AIによる分類（参考） ──',
@@ -208,12 +211,13 @@ export async function sendInquiryEmail(
   env: Env,
   provider: EmailProvider,
   inquiry: NormalizedInquiry,
+  receiptId: string,
 ): Promise<EmailSendResult> {
   return provider.send(
     env.CONTACT_TO_EMAIL || 'cloudia@cor-jp.com',
     env.CONTACT_FROM_EMAIL,
     buildSubject(inquiry),
-    buildBody(inquiry),
+    `受付番号: ${receiptId}\n\n${buildBody(inquiry)}`,
     inquiry.email, // reply_to: isValidEmail 済みの単一アドレス
     getInternalCcRecipients(env),
   );
@@ -230,10 +234,9 @@ export function buildReceiptBody(inquiry: NormalizedInquiry, receiptId: string):
     '',
     'お問い合わせを受け付けました。担当者が内容を確認のうえ、改めてご連絡します。',
     '',
-    '── ご相談の要約 ──',
-    getReceiptSummaryText(inquiry),
-    '',
-    '── ご入力の補足 ──',
+    ...(inquiry.shareConversation !== false
+      ? ['── ご相談の要約 ──', getReceiptSummaryText(inquiry), '', '── ご入力の補足 ──']
+      : ['── 受付内容 ──']),
     inquiry.message || '（補足なし）',
     '',
     // cor-jp.com にお問い合わせフォームは無い（ADR-0005 の 2026-09-13 改訂）。このメールは返信先を付けて

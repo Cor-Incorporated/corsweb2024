@@ -65,6 +65,14 @@ describe('buildBody — 構造化本文（PIIはここにのみ載る）', () =>
   it('会話サマリが無ければ決定的fallbackを使う', () => {
     expect(buildBody({ ...inquiry, conversationSummary: '', summaryText: '' })).toContain('要約未生成');
   });
+  it('本人が確認した用件だけを社内と本人に通知できる', () => {
+    const reviewed = { ...inquiry, shareConversation: false as const, summaryText: '', conversationSummary: '', structuredLead: { purpose: '削除した用件' }, conversationExcerpt: '削除した会話' };
+    for (const text of [buildBody(reviewed), buildReceiptBody(reviewed, 'COR-TEST')]) {
+      expect(text).toContain(reviewed.message);
+      expect(text).not.toContain('要約');
+      expect(text).not.toContain('削除した');
+    }
+  });
   it('旧クライアントの全文トランスクリプトは本文へ出さない', () => {
     const body = buildBody({
       ...inquiry,
@@ -119,7 +127,7 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
     const r = getEmailProvider(env);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    await expect(sendInquiryEmail(env, r.provider, inquiry)).resolves.toEqual({
+    await expect(sendInquiryEmail(env, r.provider, inquiry, 'COR-20260713-ABCD1234')).resolves.toEqual({
       messageId: 're_msg_123',
       deliveryStatus: 'accepted',
     });
@@ -144,20 +152,20 @@ describe('sendInquiryEmail — Resend 呼び出し（fetchモック）', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('err', { status: 500 })));
     const r = getEmailProvider(env);
     if (!r.ok) throw new Error('provider should be ok');
-    await expect(sendInquiryEmail(env, r.provider, inquiry)).rejects.toThrow(/500/);
+    await expect(sendInquiryEmail(env, r.provider, inquiry, 'COR-20260713-ABCD1234')).rejects.toThrow(/500/);
   });
 
   it('Resend応答にIDがなければ送信成功扱いにしない', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"id":""}', { status: 200 })));
     const r = getEmailProvider(env);
     if (!r.ok) throw new Error('provider should be ok');
-    await expect(sendInquiryEmail(env, r.provider, inquiry)).rejects.toThrow(/受付応答/);
+    await expect(sendInquiryEmail(env, r.provider, inquiry, 'COR-20260713-ABCD1234')).rejects.toThrow(/受付応答/);
   });
   it('Resend IDにメールアドレス等が混入したら保存しない', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"id":"user@example.com"}', { status: 200 })));
     const r = getEmailProvider(env);
     if (!r.ok) throw new Error('provider should be ok');
-    await expect(sendInquiryEmail(env, r.provider, inquiry)).rejects.toThrow(/受付応答/);
+    await expect(sendInquiryEmail(env, r.provider, inquiry, 'COR-20260713-ABCD1234')).rejects.toThrow(/受付応答/);
   });
 
   it('本人向け受付確認は社内CC・reply_to・分類を含めない', async () => {

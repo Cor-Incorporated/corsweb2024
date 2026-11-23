@@ -489,17 +489,26 @@ describe('worker.fetch — ハンドラレベル', () => {
     expect(second.reply_to).toBeUndefined();
     expect(second.text).toContain('要約');
     expect(second.text).toContain('相談です');
-    expect((await res.json() as { receiptId?: string }).receiptId).toMatch(/^COR-/);
+    const { receiptId } = await res.json() as { receiptId: string };
+    expect(receiptId).toMatch(/^COR-/);
+    expect(first.text).toContain(`受付番号: ${receiptId}`);
+    expect(second.text).toContain(receiptId);
   });
 
-  it('submit: D1 sessionのstructuredLeadを正本としてbrowser payloadを上書きする', async () => {
+  it.each([
+    { sector: '', flag: undefined, reviewedOnly: false },
+    { sector: '', flag: false, reviewedOnly: true },
+    { sector: 'medical', flag: false, reviewedOnly: true },
+    { sector: 'medical', flag: undefined, reviewedOnly: true },
+    { sector: 'medical', flag: true, reviewedOnly: true },
+  ])('submit: 業種 $sector、共有指定 $flag の受付と機械判定を保存する', async ({sector, flag, reviewedOnly}) => {
     const calls: Array<{ sql: string; bindings: unknown[] }> = [];
     const trustedLead = {
       purpose: '社内AI基盤のPoC',
       discoverySource: '検索',
       contactReason: '導入相談',
     };
-    const encryptedEmptyExcerpt = await encryptText('storage-secret', '');
+    const encryptedExcerpt = await encryptText('storage-secret', '撤回した会話の一部');
     const db = {
       prepare(sql: string) {
         return {
@@ -510,11 +519,14 @@ describe('worker.fetch — ハンドラレベル', () => {
                 if (sql.includes('SELECT summary_text, structured_lead_json')) {
                   return {
                     summary_text: 'server summary',
+                    industry: sector,
+                    entry_path: sector ? '/industries/medical/' : '',
+                    classification: 'genuine',
                     structured_lead_json: JSON.stringify(trustedLead),
                   } as T;
                 }
                 if (sql.includes('SELECT session_id, conversation_excerpt_ciphertext')) {
-                  return { session_id: 'session-1', conversation_excerpt_ciphertext: encryptedEmptyExcerpt } as T;
+                  return { session_id: 'session-1', conversation_excerpt_ciphertext: encryptedExcerpt } as T;
                 }
                 return null as T;
               },
@@ -541,13 +553,19 @@ describe('worker.fetch — ハンドラレベル', () => {
       email: 'taro@example.com',
       message: '相談です',
       summaryText: 'browser forged summary',
+      ...(flag === undefined ? {} : { shareConversation: flag }),
+      classification: 'spam',
       structuredLead: { discoverySource: 'browser', contactReason: 'forged' },
     }, { 'cf-connecting-ip': '198.51.100.21' }), env);
     expect(res.status).toBe(200);
     const insert = calls.find((call) => call.sql.includes('INSERT INTO submission_intake'));
     expect(insert).toBeDefined();
-    expect(JSON.parse(String(insert?.bindings[13]))).toEqual(trustedLead);
-    await expect(decryptText('storage-secret', String(insert?.bindings[8]))).resolves.toBe('server summary');
+    expect(JSON.parse(String(insert?.bindings[13]))).toEqual(reviewedOnly ? {} : trustedLead);
+    await expect(decryptText('storage-secret', String(insert?.bindings[7]))).resolves.toBe('相談です');
+    await expect(decryptText('storage-secret', String(insert?.bindings[8]))).resolves.toBe(reviewedOnly ? '' : 'server summary');
+    await expect(decryptText('storage-secret', String(insert?.bindings[9]))).resolves.toBe(reviewedOnly ? '' : '撤回した会話の一部');
+    expect(insert?.bindings[15]).toBe('genuine');
+    expect(insert?.bindings[16]).toBe(sector);
     expect(queueSend).toHaveBeenCalledTimes(2);
   });
 });

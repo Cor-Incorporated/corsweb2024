@@ -449,11 +449,11 @@ function intakeLead(db: DatabaseSync, receiptId: string): Record<string, unknown
   return JSON.parse(row.structured_lead_json) as Record<string, unknown>;
 }
 
-describe('送信時に、会話が取りこぼした受付の欄を拾う（structuredLead の埋め合わせ）', () => {
+describe('一般相談の送信時に、会話が取りこぼした受付の欄を拾う（structuredLead の埋め合わせ）', () => {
   it('session の lead に discoverySource が無いとき、ブラウザが送った discoverySource が受付の記録に入る', async () => {
     const db = openDatabase();
     const { receiptId } = await runInquiry(testEnv(db), db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: modelJson('genuine'), // model の lead は purpose だけ。discoverySource は会話で取りこぼしたままとする
       submitExtra: { structuredLead: { discoverySource: '知人の紹介' } },
     });
@@ -465,7 +465,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
   it('session の lead に値が在る欄はブラウザの値で置き換えず、値が無い欄だけ埋める', async () => {
     const db = openDatabase();
     const { receiptId } = await runInquiry(testEnv(db), db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: JSON.stringify({
         reply: '作業の種類を確認しました。時期の目安だけ教えてください。',
         summary: '業務の整理の相談',
@@ -484,7 +484,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
   it('埋める値は許可リスト・長さ上限・個人情報の伏せ字を通る（許可リスト外の欄は捨てる）', async () => {
     const db = openDatabase();
     const { receiptId } = await runInquiry(testEnv(db), db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: modelJson('genuine'),
       submitExtra: {
         structuredLead: {
@@ -510,7 +510,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     const db = openDatabase();
     const response = await worker.fetch(post('/api/contact/submit', {
       sessionId: 'missing-session', name: '山田太郎', email: 'taro@example.com', message: '相談です',
-      intent: 'contract-dev', source: 'industry-medical',
+      intent: 'contract-dev', source: 'cloudia',
       structuredLead: { discoverySource: '検索エンジン' },
     }), testEnv(db));
     expect(response.status).toBe(200);
@@ -552,16 +552,16 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     } as unknown as Env;
 
     const started = await worker.fetch(post('/api/contact/chat/start', {
-      start: true, event: 'intent_selected', intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+      start: true, event: 'intent_selected', intent: 'contract-dev', source: 'cloudia', locale: 'ja',
     }), env);
     const { sessionId } = await started.json() as { sessionId: string };
     await worker.fetch(post('/api/contact/chat', {
-      sessionId, intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+      sessionId, intent: 'contract-dev', source: 'cloudia', locale: 'ja',
       messages: [{ role: 'user', content: '業務の整理を相談したい' }],
     }), env);
     const submitted = await worker.fetch(post('/api/contact/submit', {
       sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です',
-      intent: 'contract-dev', source: 'industry-medical',
+      intent: 'contract-dev', source: 'cloudia',
       structuredLead: { discoverySource: '知人の紹介' },
     }), env);
     expect(submitted.status).toBe(200);
@@ -584,7 +584,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
   it('session の空文字・null・空白だけの欄はブラウザの値で埋まり、数値・真偽値・オブジェクトは文字列のまま残る', async () => {
     const db = openDatabase();
     const { receiptId } = await runInquiry(testEnv(db), db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: JSON.stringify({
         reply: '作業の種類を確認しました。時期の目安だけ教えてください。',
         summary: '業務の整理の相談',
@@ -628,8 +628,8 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
   it('許可リスト外のキー・入れ子・配列・__proto__・constructor・prototype は保存されず prototype も汚れない', async () => {
     const db = openDatabase();
     const env = testEnv(db);
-    const sessionId = await startSession(env, 'industry-medical');
-    await chatOnce(env, sessionId, 'industry-medical', modelJson('genuine'));
+    const sessionId = await startSession(env, 'cloudia');
+    await chatOnce(env, sessionId, 'cloudia', modelJson('genuine'));
     const leadJson = [
       '{',
       '"freeNote":"許可リスト外の欄",',
@@ -644,7 +644,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     ].join('');
     const outer = JSON.stringify({
       sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です',
-      intent: 'contract-dev', source: 'industry-medical',
+      intent: 'contract-dev', source: 'cloudia',
     });
     const rawBody = `${outer.slice(0, -1)},"structuredLead":${leadJson}}`;
     expect(rawBody).toContain('"__proto__"');
@@ -683,7 +683,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     expect('leadProtoPolluted' in {}).toBe(false);
 
     const { receiptId: arrayId } = await runInquiry(env, db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: modelJson('genuine'),
       submitExtra: { structuredLead: ['配列だけの送信', { inner: '入れ子だけの送信' }] },
     });
@@ -700,7 +700,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     const env = testEnv(db);
     const exact = 'あ'.repeat(240);
     const { receiptId: longId } = await runInquiry(env, db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: modelJson('genuine'),
       submitExtra: { structuredLead: { stage: 'あ'.repeat(600) } },
     });
@@ -710,7 +710,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     expect(longLead.stage).toBe(exact);
 
     const { receiptId: exactId } = await runInquiry(env, db, {
-      source: 'industry-medical',
+      source: 'cloudia',
       modelText: modelJson('genuine'),
       submitExtra: { structuredLead: { stage: exact } },
     });
@@ -752,16 +752,16 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     } as unknown as Env;
 
     const started = await worker.fetch(post('/api/contact/chat/start', {
-      start: true, event: 'intent_selected', intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+      start: true, event: 'intent_selected', intent: 'contract-dev', source: 'cloudia', locale: 'ja',
     }), env);
     const { sessionId } = await started.json() as { sessionId: string };
     await worker.fetch(post('/api/contact/chat', {
-      sessionId, intent: 'contract-dev', source: 'industry-medical', locale: 'ja',
+      sessionId, intent: 'contract-dev', source: 'cloudia', locale: 'ja',
       messages: [{ role: 'user', content: '業務の整理を相談したい' }],
     }), env);
     const submitted = await worker.fetch(post('/api/contact/submit', {
       sessionId, name: '山田太郎', email: 'taro@example.com', message: '相談です',
-      intent: 'contract-dev', source: 'industry-medical',
+      intent: 'contract-dev', source: 'cloudia',
       structuredLead: {
         discoverySource: rawEmail,
         timingBudget: rawPhone,
@@ -796,6 +796,7 @@ describe('送信時に、会話が取りこぼした受付の欄を拾う（stru
     expect(resendCall).toBeTruthy();
     const mail = JSON.parse(String((resendCall as unknown as [string, RequestInit])[1].body)) as { to: string; text: string };
     expect(mail.to).toBe('info@cor-jp.com');
+    expect(mail.text).toContain(`受付番号: ${receiptId}`);
     expect(mail.text).toContain('流入経路: [redacted]');
     expect(mail.text).toContain('時期・予算: [redacted]');
     expect(mail.text).toContain(`進捗段階: ${'あ'.repeat(240)}`);

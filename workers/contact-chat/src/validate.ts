@@ -342,14 +342,17 @@ export function normalizeInquiry(input: InquiryInput | undefined): InquiryValida
   const company = sanitizeLine(input.company, MAX_COMPANY_LEN);
   const message = sanitizeMessage(input.message, MAX_INQUIRY_MESSAGE_LEN);
   // summaryText が正本。conversationSummary は段階移行中の旧クライアント専用。
-  const summary = normalizeConversationSummary(input.summaryText ?? input.conversationSummary);
+  const shareConversation = input.shareConversation !== false;
+  const summary = normalizeConversationSummary(shareConversation ? input.summaryText ?? input.conversationSummary : undefined);
   if (!summary.ok) return summary;
   const classification = normalizeClassification(input.classification);
   const intent = normalizeIntent(input.intent);
   const source = normalizeSource(input.source);
-  const structuredLead = normalizeStructuredLead(input.structuredLead);
+  const structuredLead = shareConversation ? normalizeStructuredLead(input.structuredLead) : {};
   const utm = normalizeUtm(input.utm);
-  const conversationSummary = summary.text || buildDeterministicSummary({ classification, intent, structuredLead });
+  const conversationSummary = shareConversation
+    ? summary.text || buildDeterministicSummary({ classification, intent, structuredLead })
+    : '';
 
   if (!name) {
     return { ok: false, error: 'お名前は必須です', status: 400 };
@@ -368,6 +371,7 @@ export function normalizeInquiry(input: InquiryInput | undefined): InquiryValida
       email,
       company,
       message,
+      ...(shareConversation ? {} : { shareConversation: false }),
       summaryText: conversationSummary,
       conversationSummary,
       classification,

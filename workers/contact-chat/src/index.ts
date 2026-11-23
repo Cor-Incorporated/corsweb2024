@@ -482,6 +482,22 @@ async function readTrustedInquiry(
   sessionId: string | null,
 ): Promise<{ inquiry: NormalizedInquiry; context: InquiryRecordContext }> {
   const session = await readTrustedSession(env, sessionId);
+  // サーバー上の分類・業種は処理に使う。確認画面から提出されなかった会話内容は引き渡さない。
+  // Keep already-open industry tabs on the same disclosure policy as the new form.
+  // Only a stored, validated industry can identify those legacy submissions.
+  if (inquiry.shareConversation === false || session?.context.entry.industry) {
+    return {
+      inquiry: {
+        ...inquiry,
+        shareConversation: false,
+        summaryText: '',
+        conversationSummary: '',
+        structuredLead: {},
+        classification: session?.classification ?? '',
+      },
+      context: session?.context ?? NO_SESSION_CONTEXT,
+    };
+  }
   const sessionLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
   const structuredLead = sessionLead
     ? mergeStructuredLead(sessionLead, inquiry.structuredLead)
@@ -594,8 +610,8 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   }
 
   try {
-    await sendInquiryEmail(env, emailProvider.provider, inquiry);
     const receiptId = newReceiptId();
+    await sendInquiryEmail(env, emailProvider.provider, inquiry, receiptId);
     await sendReceiptEmail(env, emailProvider.provider, inquiry, receiptId);
     return json({ ok: true, receiptId, status: 'sent' });
   } catch {
@@ -864,7 +880,7 @@ export default {
         if (!emailProvider.ok) throw new Error('email provider unavailable');
         const sent = messageType === 'receipt'
           ? await sendReceiptEmail(env, emailProvider.provider, stored.inquiry, stored.receiptId)
-          : await sendInquiryEmail(env, emailProvider.provider, stored.inquiry);
+          : await sendInquiryEmail(env, emailProvider.provider, stored.inquiry, stored.receiptId);
         await markOutboxSent(env, submissionId, messageType, sent.messageId, sent.deliveryStatus);
         message.ack();
       } catch (error) {
