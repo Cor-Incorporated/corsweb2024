@@ -1,0 +1,19 @@
+---
+interface Props {
+  value: string;
+}
+
+const { value } = Astro.props;
+const containsMailbox = value.includes('company@cor-jp.com');
+---
+
+{/* Cloudflareの復号が動かない場合は、noscriptの同じ原文を表示する。 */}
+{containsMailbox ? (
+  <><span class="privacy-decoded-address">{value}</span><noscript>{value}</noscript></>
+) : value}
+
+<style>
+  @media (scripting: none) {
+    .privacy-decoded-address { display: none; }
+  }
+</style>
