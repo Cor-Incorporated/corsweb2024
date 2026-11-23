@@ -267,7 +267,7 @@ const langOptions = localeOrder.map((loc) => ({
         aria-checked="false"
         :aria-checked="($store.theme?.isDark || false).toString()"
         @click="$store.theme?.toggle()"
-        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary-900/10 bg-primary-500/10 text-primary-950 transition focus:outline-none focus-visible:ring-2 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10 dark:text-primary-200"
+        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary-900/10 bg-primary-500/10 text-primary-950 transition focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10 dark:text-primary-200"
       >
         <span class="sr-only">ライト / ダークモード切り替え</span>
         <!-- Moon (dark時)。Alpine 起動前も dark: バリアントで正しい方を出す -->
@@ -311,7 +311,7 @@ const langOptions = localeOrder.map((loc) => ({
           aria-expanded="false"
           :aria-expanded="langOpen.toString()"
           aria-haspopup="true"
-          class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-primary-900/10 px-3.5 text-sm font-medium text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
+          class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-primary-900/10 px-3.5 text-sm font-medium text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
         >
           <span class="sr-only">言語を切り替え / Language（{langShort[currentLocale]}）</span>
           <span class="text-base leading-none" aria-hidden="true">{langFlags[currentLocale]}</span>
@@ -382,7 +382,7 @@ const langOptions = localeOrder.map((loc) => ({
       <!-- Toggle menu（1024px 未満だけ。menu 内の link はすべてパソコンの nav か footer から辿れる） -->
       <button
         type="button"
-        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-primary-900/10 text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10 lg:hidden"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-primary-900/10 text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10 lg:hidden"
         @click="open = !open"
         @mousedown="if (open) $event.preventDefault()"
         aria-controls="website-menu"
