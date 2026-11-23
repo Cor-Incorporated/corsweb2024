@@ -140,6 +140,20 @@ test('self-service route and browser use signed user plus active D1 grants', asy
       assert.equal((await productAccess(subject, null, service, 'tenant-fixture')).allowed, visible.includes(service));
     }
   }
+  // The same member may hold personal rights in this organization's tenant.
+  // These rights survive a billing hold or an expired paid projection.
+  await bind('org_Fixture', 'user_Mixed', 'business-dossier', 'tenant-fixture');
+  await grant('mixed-free', 'user_Mixed', 'business-dossier', 'staff');
+  const mixedAccess = async () => (await (await request(session('user_Mixed', paidClerkClaims))).json()).services;
+  const mixedOpen = [{ id: 'business-dossier', access: 'open', href: env.BD_SERVICE_URL }];
+  assert.deepEqual(await mixedAccess(), mixedOpen);
+  assert.deepEqual(await productAccess('user_Mixed', 'org_Fixture', 'business-dossier', 'tenant-fixture'), { allowed: true, access: 'open' });
+  await setSnapshot('org_Fixture', paidClerkClaims.cor_svc, Date.now() - 1000);
+  assert.deepEqual(await mixedAccess(), mixedOpen);
+  await revoke('mixed-free');
+  assert.deepEqual(await mixedAccess(), []);
+  assert.equal((await productAccess('user_Mixed', 'org_Fixture', 'business-dossier', 'tenant-fixture')).allowed, false);
+  await setSnapshot('org_Fixture', paidClerkClaims.cor_svc);
   const paidResponse = await request(session('user_Two', paidClerkClaims));
   assert.equal(paidResponse.status, 200);
   assert.deepEqual((await paidResponse.json()).services, [{ id: 'business-dossier', access: 'view_only', href: env.BD_SERVICE_URL }]);

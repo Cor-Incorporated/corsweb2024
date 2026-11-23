@@ -75,14 +75,20 @@ export async function fetchServicePicker(request, env) {
       // Product roots resolve the user's existing workspace. An organization subscription
       // can list a product only when this user is enrolled in one of its product tenants.
       const { results } = await db.prepare(`
-        SELECT DISTINCT m.service, s.services_json
+        SELECT m.service, s.services_json, MAX(g.id IS NOT NULL) AS personal_access
         FROM paid_contract_members AS m
-        JOIN paid_contract_snapshots AS s ON s.issuer = m.issuer AND s.organization_id = m.organization_id
-        WHERE m.issuer = ?1 AND m.subject = ?2 AND m.organization_id = ?3 AND m.revoked_at IS NULL
+        LEFT JOIN paid_contract_snapshots AS s
+          ON s.issuer = m.issuer AND s.organization_id = m.organization_id
           AND unixepoch(s.expires_at) > unixepoch('now')
-      `).bind(issuer.origin, claims.sub, organizationId).all();
+        LEFT JOIN account_grants AS g
+          ON g.issuer = m.issuer AND g.subject = m.subject AND g.service = m.service AND g.tenant_id = m.tenant_id
+          AND g.revoked_at IS NULL AND g.starts_on <= ?4 AND g.ends_on >= ?4
+        WHERE m.issuer = ?1 AND m.subject = ?2 AND m.organization_id = ?3 AND m.revoked_at IS NULL
+        GROUP BY m.service, s.services_json
+      `).bind(issuer.origin, claims.sub, organizationId, today).all();
       for (const row of results) {
-        accessByService.set(row.service, paidEntitlement(JSON.parse(row.services_json), row.service, today));
+        const access = row.personal_access ? 'open' : paidEntitlement(JSON.parse(row.services_json), row.service, today);
+        accessByService.set(row.service, access);
       }
     } else {
       const { results } = await db.prepare(`
