@@ -629,6 +629,106 @@ test('markdown body paragraphs carry line-break marks (line breaks)', async ({ p
   }
 });
 
+test('Markdown heading permalinks have names without repeating their headings', async ({ page }) => {
+  for (const prefix of ['', '/en', '/zh', '/ko', '/es']) {
+    await page.goto(`${prefix}/blog/abe-hiroshi-website-challenge/`);
+    const links = page.locator('main a.heading-link');
+    test.expect(await links.count()).toBeGreaterThan(0);
+
+    for (const permalink of await links.all()) {
+      const heading = permalink.locator('..');
+      const text = (await heading.innerText()).replace(/\s+/gu, '');
+      test.expect(text).not.toBe('');
+      // 読み上げの木は視覚の改行 span の間に空白を挟むことがある（\s* で許容）。
+      const letters = Array.from(text, (character) => `\\u{${character.codePointAt(0)!.toString(16)}}`);
+      const name = new RegExp(`^${letters.join('\\s*')}$`, 'u');
+      await test.expect(permalink).toHaveAccessibleName(name);
+      await test.expect(heading).toHaveAccessibleName(name);
+    }
+  }
+});
+
+// Playwright の toHaveAccessibleName は通っても、実 Chrome の読み上げの木では別の名前に
+// なることがある。そこで CDP の Accessibility.getFullAXTree で本物の木を検査する:
+// 見出しと permalink の両方の AX 名が表示文と一致し、飛び先の id が 1 つだけ在って
+// href の hash と一致し、role が link で、名前が空でなく、main の中に link の入れ子が無いこと。
+test('markdown heading permalinks keep their names in the Chrome accessibility tree (CDP)', async ({ page }) => {
+  test.setTimeout(180_000);
+  const norm = (value: string) => value.replace(/\s/gu, '');
+  const failures: string[] = [];
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Accessibility.enable');
+
+  for (const prefix of ['', '/en', '/zh', '/ko', '/es']) {
+    const route = `${prefix}/blog/abe-hiroshi-website-challenge/`;
+    await page.goto(route, { waitUntil: 'load', timeout: 60_000 });
+
+    const nested = await page.evaluate(() => document.querySelectorAll('main a a').length);
+    if (nested > 0) failures.push(`${route}: main の中に link の入れ子が ${nested} 個`);
+
+    const { root } = await cdp.send('DOM.getDocument');
+    const { nodeIds } = await cdp.send('DOM.querySelectorAll', {
+      nodeId: root.nodeId,
+      selector: 'main a.heading-link',
+    });
+    if (nodeIds.length === 0) {
+      failures.push(`${route}: main a.heading-link が 1 つも無い`);
+      continue;
+    }
+    const items = await page.locator('main a.heading-link').evaluateAll((links) =>
+      links.map((link) => ({
+        text: (link.parentElement as HTMLElement).innerText,
+        heading: link.parentElement.tagName,
+        uniqueId: document.querySelectorAll(`#${CSS.escape(link.parentElement.id)}`).length === 1,
+        sameHash: (() => {
+          try {
+            return decodeURIComponent(link.hash.substring(1)) === link.parentElement.id;
+          } catch {
+            return false;
+          }
+        })(),
+      })),
+    );
+    const { nodes } = await cdp.send('Accessibility.getFullAXTree');
+    type AxNode = {
+      nodeId: string;
+      backendDOMNodeId?: number;
+      parentId?: string;
+      role?: { value?: string };
+      name?: { value?: string };
+    };
+    const axNodes = nodes as AxNode[];
+    const ax = new Map(
+      axNodes.filter((node) => node.backendDOMNodeId != null).map((node) => [node.backendDOMNodeId as number, node]),
+    );
+    const byNodeId = new Map(axNodes.map((node) => [node.nodeId, node]));
+    for (const [index, nodeId] of nodeIds.entries()) {
+      const described = await cdp.send('DOM.describeNode', { nodeId });
+      const backendId = (described as { node: { backendNodeId?: number } }).node.backendNodeId;
+      const entry = backendId != null ? ax.get(backendId) : undefined;
+      let ancestor = entry ? byNodeId.get(entry.parentId ?? '') : undefined;
+      while (ancestor && ancestor.role?.value !== 'heading') ancestor = byNodeId.get(ancestor.parentId ?? '');
+      const item = items[index];
+      const linkName = entry?.name?.value ?? '';
+      const headingName = ancestor?.name?.value ?? '';
+      const pass =
+        item.uniqueId &&
+        item.sameHash &&
+        entry?.role?.value === 'link' &&
+        norm(item.text) !== '' &&
+        norm(linkName) === norm(item.text) &&
+        norm(headingName) === norm(item.text);
+      if (!pass) {
+        failures.push(
+          `${route} #${index} <${item.heading}>: text="${norm(item.text).slice(0, 50)}" link="${norm(linkName).slice(0, 50)}" heading="${norm(headingName).slice(0, 80)}" uniqueId=${item.uniqueId} sameHash=${item.sameHash} role=${entry?.role?.value ?? '(none)'}`,
+        );
+      }
+    }
+  }
+
+  test.expect(failures, failures.join('\n')).toEqual([]);
+});
+
 test('reading pages break headings and sentences at meaning boundaries (line breaks)', async ({ page }) => {
   test.setTimeout(300_000);
   const failures: string[] = [];

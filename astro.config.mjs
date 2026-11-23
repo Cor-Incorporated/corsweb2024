@@ -14,6 +14,62 @@ import { collectBlogLastmod } from './src/config/sitemap';
 // 記事 URL → lastmod（updatedDate ?? pubDate）。記事以外の URL には lastmod を付けない（Epic #330 / #334）。
 const blogLastmod = collectBlogLastmod(fileURLToPath(new URL('./src/content/blog/', import.meta.url)));
 
+// 見出しテキスト用の span の id。aria-labelledby が題自身を指すと、Chrome が題の名前を
+// 計算する時に link の名前（題自身への参照）がもう一度入り、題の名前が 2 回現れる。
+// 参照先を見出し link の外の span にすれば重複しない。
+function headingTextIdOf(heading) {
+  const id = heading.properties?.id;
+  return typeof id === 'string' && id !== '' ? `${id}--text` : null;
+}
+
+// 見出し link（rehype-autolink-headings が題に足す a.heading-link）。className は配列と文字列の両方を受ける。
+function isHeadingLinkNode(node) {
+  if (node?.type !== 'element' || node.tagName !== 'a') return false;
+  const className = node.properties?.className;
+  if (Array.isArray(className)) return className.includes('heading-link');
+  if (typeof className === 'string') return className.split(/\s+/).includes('heading-link');
+  return false;
+}
+
+// rehypePlugins の最後（rehype-line-breaks の後）に掛ける。題の直接の子のうち見出し link
+// 以外を 1 つの span にまとめ、題と link の両方の aria-labelledby の参照先にする。
+// 文字は変えない。link の入れ子も名前の参照の輪も作らず、空の題は参照を作らない（試験で落ちる）。
+function rehypeHeadingNameSpan() {
+  const collectIds = (node, ids) => {
+    const id = node.properties?.id;
+    if (typeof id === 'string' && id !== '') ids.add(id);
+    for (const child of node.children ?? []) collectIds(child, ids);
+  };
+  const transform = (node, usedIds) => {
+    if (node.type !== 'element' || !/^h[1-6]$/.test(node.tagName) || !Array.isArray(node.children)) return;
+    const textId = headingTextIdOf(node);
+    if (!textId) return;
+    // slug が --text で終わる題が同じ page に在る時は、重ならない suffix を決める
+    let spanId = textId;
+    let suffix = 2;
+    while (usedIds.has(spanId)) spanId = `${textId}-${suffix++}`;
+    const textChildren = node.children.filter((child) => !isHeadingLinkNode(child));
+    const headingLinks = node.children.filter((child) => isHeadingLinkNode(child));
+    if (textChildren.length === 0 || headingLinks.length === 0) return;
+    usedIds.add(spanId);
+    node.children = [
+      { type: 'element', tagName: 'span', properties: { id: spanId }, children: textChildren },
+      ...headingLinks,
+    ];
+    node.properties.ariaLabelledBy = spanId;
+    for (const link of headingLinks) link.properties.ariaLabelledBy = spanId;
+  };
+  const walk = (node, usedIds) => {
+    transform(node, usedIds);
+    for (const child of node.children ?? []) walk(child, usedIds);
+  };
+  return (tree) => {
+    const usedIds = new Set();
+    collectIds(tree, usedIds);
+    walk(tree, usedIds);
+  };
+}
+
 export default defineConfig({
   site: 'https://cor-jp.com',
   // ブラウザ検査では、開発ツールバーが固定ボタンへのクリックを遮らないようにする。
@@ -46,12 +102,18 @@ export default defineConfig({
     ],
     rehypePlugins: [
       'rehype-slug',
-      ['rehype-autolink-headings', { behavior: 'append', properties: { class: 'heading-link' } }],
+      ['rehype-autolink-headings', {
+        behavior: 'append',
+        // aria-labelledby は rehypeHeadingNameSpan で題と一緒に付ける（参照先の決め方を 1 つに揃えるため）
+        properties: { className: ['heading-link'] },
+      }],
       'rehype-katex',
       // 記事の本文の問い合わせページへの link を、その記事の言語の Cloudia のチャットへ向ける（本文と訳は変えない）
       rehypeContactLinks,
       // 本文と題に、文と塊の印を付ける（docs/design/layout-rules.md の R1）。文字は変えない
       rehypeLineBreaks,
+      // 題の名前の参照先の span（rehypeHeadingNameSpan を参照）。line-breaks の後で掛け、塊の構造を残す
+      rehypeHeadingNameSpan,
     ],
     shikiConfig: {
       theme: 'dracula',
