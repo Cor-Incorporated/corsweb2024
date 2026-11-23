@@ -48,6 +48,20 @@ describe('cor-contact-edge', () => {
     }));
   });
 
+  it.each(['GET', 'HEAD'])('redirects the bare ambassador path for %s while preserving the query', async (method) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('unexpected origin'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await fetchContactEdge(
+      new Request('https://cor-jp.com/contact/chat/ambassador?locale=en', { method }),
+      {},
+    );
+
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe('https://cor-jp.com/contact/chat/ambassador/?locale=en');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('falls back to Firebase when Pages is unavailable', async () => {
     const fetchMock = vi
       .fn()
