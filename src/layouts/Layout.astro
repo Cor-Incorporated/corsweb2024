@@ -7,7 +7,7 @@ import AlpineInit from '../components/layout/AlpineInit.astro';
 import ThemeInit from '../components/layout/ThemeInit.astro';
 import Analytics from '../components/analytics/Analytics.astro';
 import { CLOUDIA_LAUNCHER_ENABLED } from '../config/contact';
-import { getCurrentLocale, type Locale } from '../utils/i18n';
+import { getCurrentLocale, getTranslations, type Locale } from '../utils/i18n';
 import { getRobotsContent } from '../config/site';
 import { safeJsonLd } from '../utils/json-ld';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '../utils/structured-data';
@@ -293,6 +293,22 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
       }
       .dark .scroll-progress { background: #7c9cbf; }
 
+      .skip-to-content {
+        position: fixed;
+        inset-block-start: .5rem;
+        inset-inline-start: .5rem;
+        z-index: 60;
+        transform: translateY(calc(-100% - 1rem));
+        padding: .75rem 1rem;
+        background: white;
+        color: #172d40;
+        text-decoration: underline;
+      }
+      .skip-to-content:focus {
+        transform: none;
+        outline: 3px solid currentColor;
+      }
+
       /* アクセシビリティ: モーションを抑えたいユーザーには演出を完全無効化（即表示） */
       @media (prefers-reduced-motion: reduce) {
         html.js [data-reveal] {
@@ -312,8 +328,9 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
     class="bg-white text-primary-950 antialiased transition dark:bg-primary-900 dark:text-primary-200"
   >
     <div class="scroll-progress" aria-hidden="true"></div>
+    <a class="skip-to-content" href="#main-content" data-astro-reload>{getTranslations(currentLocale).header.skipToContent}</a>
     <Header availableLocales={availableLocales} />
-    <main>
+    <main id="main-content" tabindex="-1" class="scroll-mt-16">
       <slot />
     </main>
     <Footer />
