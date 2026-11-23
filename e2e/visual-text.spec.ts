@@ -682,7 +682,7 @@ test('markdown heading permalinks keep their names in the Chrome accessibility t
         uniqueId: document.querySelectorAll(`#${CSS.escape(link.parentElement.id)}`).length === 1,
         sameHash: (() => {
           try {
-            return decodeURIComponent(link.hash.substring(1)) === link.parentElement.id;
+            return link instanceof HTMLAnchorElement && decodeURIComponent(link.hash.substring(1)) === link.parentElement.id;
           } catch {
             return false;
           }
