@@ -2697,6 +2697,7 @@
     "contactLabel": "媒体咨询"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Grift CLI {version} 发行说明",
     "breadcrumbWorks": "实绩",
     "ndaHeading": "※ 因 NDA・机密案件，部分内容已作抽象化处理。",
     "updatedLabel": "更新",

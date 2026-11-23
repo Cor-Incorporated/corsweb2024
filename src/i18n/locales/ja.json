@@ -2705,6 +2705,7 @@
     "contactLabel": "プレスに関するお問い合わせ"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Grift CLI {version} の変更点",
     "breadcrumbWorks": "実績",
     "ndaHeading": "※ NDA・機密案件のため一部を抽象化しています。",
     "updatedLabel": "更新",

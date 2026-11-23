@@ -3,6 +3,7 @@
 // /llms.txt の版の行が正本と同じで、ほかの版を「最新」として書いていないことを照合する。
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 
 const DIST_DIR = path.resolve(process.env.CONTACT_GUARD_DIST_DIR || 'dist');
@@ -13,6 +14,15 @@ const release = JSON.parse(readFileSync(path.resolve('src/config/grift-cli-relea
 };
 
 describe('dist の Grift CLI の版', () => {
+  it.each(['', 'en', 'zh', 'ko', 'es'])('Grift事例のヘッダーから公開版の変更点を確認できる（%s）', (locale) => {
+    const html = readFileSync(path.join(DIST_DIR, locale, 'works/grift/index.html'), 'utf8');
+    const header = new JSDOM(html).window.document.querySelector('article header');
+    const releaseUrl = 'https://github.com/Cor-Incorporated/grift-cli/releases/tag/v' + release.version;
+    const links = [...header!.querySelectorAll('a')].filter(a => a.href === releaseUrl);
+    expect(links.map(a => a.textContent)).toEqual([expect.stringContaining('v' + release.version)]);
+    expect(links[0].parentElement?.querySelector('time')?.dateTime).toBe(release.releasedOn);
+  });
+
   it('/llms.txt がある', () => {
     expect(existsSync(LLMS), `${LLMS} が無い。先に npm run build を実行する`).toBe(true);
   });

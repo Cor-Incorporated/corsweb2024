@@ -2697,6 +2697,7 @@
     "contactLabel": "언론 문의"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Grift CLI {version} 릴리스 노트",
     "breadcrumbWorks": "실적",
     "ndaHeading": "※ NDA・기밀 안건이므로 일부를 추상화하여 게재하고 있습니다.",
     "updatedLabel": "업데이트",

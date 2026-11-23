@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import LbHeading from '../../components/common/LbHeading.astro';
+import ScrollableTable from '../../components/common/ScrollableTable.astro';
 import LbText from '../../components/common/LbText.astro';
 import { ORGANIZATION_NAMES } from '../../config/organization';
 
@@ -11,7 +12,7 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
   description={`${ORGANIZATION_NAMES.ja}の特定商取引法に基づくビジネス情報開示ページ。所在地・連絡先・支払方法などの法定事項を記載しています。`}
 >
   <div class="mx-auto max-w-reading px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-    <LbHeading as="h1" class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text="特定商取引法に基づく表記" />
+    <LbHeading as="h1" id="legal-notice-title" class="type-heading mb-10 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text="特定商取引法に基づく表記" />
 
     <LbText
       class="mb-8 text-base leading-[1.8] text-primary-950/80 dark:text-primary-200/80 sm:text-lg"
@@ -22,8 +23,8 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
       ]}
     />
 
-    <div class="overflow-x-auto">
-    <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
+    <ScrollableTable labelledBy="legal-notice-title">
+    <table class="w-full table-fixed border-collapse text-left [overflow-wrap:anywhere] sm:table-auto">
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
         <tr><th class="py-4 pr-6 align-top font-medium">販売業者</th><td class="py-4">{ORGANIZATION_NAMES.ja}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">運営責任者</th><td class="py-4">代表取締役&nbsp;寺田&nbsp;康佑</td></tr>
@@ -32,12 +33,12 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
         <tr><th class="py-4 pr-6 align-top font-medium">メールアドレス</th><td class="py-4">company@cor-jp.com</td></tr>
       </tbody>
     </table>
-    </div>
+    </ScrollableTable>
 
-    <LbHeading as="h2" class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl" text="月額・受託サービスについて" />
+    <LbHeading as="h2" id="monthly-services" class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl" text="月額・受託サービスについて" />
 
-    <div class="overflow-x-auto">
-    <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
+    <ScrollableTable labelledBy="monthly-services">
+    <table class="w-full table-fixed border-collapse text-left [overflow-wrap:anywhere] sm:table-auto">
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
         <tr><th class="py-4 pr-6 align-top font-medium">販売価格</th><td class="py-4">月額でご提供するサービス：1&nbsp;サービスにつき月額&nbsp;10,000&nbsp;円（税別）。サービスとプランはご契約の際にお示しします。設計開発費用がかかる場合は、その金額とお支払いの回数もご契約の際にお示しします。<br />それ以外のサービス：サービスごと、または案件ごとに個別にお見積もりいたします。お見積もりは無料ですので、お問い合わせページよりお気軽にご連絡ください。</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">商品代金以外の必要料金</th><td class="py-4">
@@ -59,7 +60,7 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
         <tr><th class="py-4 pr-6 align-top font-medium">古物営業法の許可番号</th><td class="py-4">該当なし</td></tr>
       </tbody>
     </table>
-    </div>
+    </ScrollableTable>
 
     <LbHeading as="h2" id="used-equipment" class="mb-6 mt-12 text-xl font-medium tracking-tight sm:text-2xl" text="中古機材の売却について" />
 
@@ -68,8 +69,8 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
       text="本セクションは、会社所有の中古機器を販売する場合に適用されます。商品・販売価格・販売数量・配送方法は、販売のつど、告知および決済ページに表示します。月額サービスおよび受託開発などの役務の条件は、上の「月額・受託サービスについて」をご覧ください。"
     />
 
-    <div class="overflow-x-auto">
-    <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
+    <ScrollableTable labelledBy="used-equipment">
+    <table class="w-full table-fixed border-collapse text-left [overflow-wrap:anywhere] sm:table-auto">
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
         <tr><th class="py-4 pr-6 align-top font-medium">商品</th><td class="py-4">当社が業務で使用していた中古機器です。商品の名称・仕様・付属品・状態は、販売のつど、告知および決済ページに表示します</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">販売価格</th><td class="py-4">販売のつど、税込みの金額を告知および決済ページに表示します</td></tr>
@@ -83,6 +84,6 @@ import { ORGANIZATION_NAMES } from '../../config/organization';
         <tr><th class="py-4 pr-6 align-top font-medium">古物営業法の許可番号</th><td class="py-4">該当なし（当社が業務で使用していた機器の売却です）</td></tr>
       </tbody>
     </table>
-    </div>
+    </ScrollableTable>
   </div>
 </Layout>

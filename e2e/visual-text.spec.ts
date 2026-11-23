@@ -629,6 +629,38 @@ test('markdown body paragraphs carry line-break marks (line breaks)', async ({ p
   }
 });
 
+test('Markdown task checkboxes share a line with the first letter of their label', async ({ page }) => {
+  test.setTimeout(90_000);
+  for (const locale of ['', '/zh', '/en', '/es', '/ko']) {
+    for (const slug of ['complete-markdown-guide', 'codex-mcp-troubleshooting']) {
+      await page.goto(`${locale}/blog/${slug}/`);
+      await page.evaluate(() => document.fonts.ready);
+      const checkboxes = page.locator('main li.task-list-item input[type=checkbox]');
+      test.expect(await checkboxes.count()).toBeGreaterThan(0);
+      for (const width of [320, 1280]) {
+        await page.setViewportSize({ width, height: 850 });
+        for (const fontSize of ['100%', '200%']) {
+          await page.evaluate((size) => { document.documentElement.style.fontSize = size; }, fontSize);
+          const aligned = await checkboxes.evaluateAll((inputs) => inputs.every((input) => {
+            const walker = document.createTreeWalker(input.parentElement!, NodeFilter.SHOW_TEXT);
+            let text = walker.nextNode();
+            while (text && !text.textContent?.trim()) text = walker.nextNode();
+            if (!text?.textContent) return false;
+            const start = text.textContent.search(/\S/u);
+            const letter = document.createRange();
+            letter.setStart(text, start);
+            letter.setEnd(text, start + 1);
+            const firstLetter = letter.getBoundingClientRect();
+            const box = input.getBoundingClientRect();
+            return firstLetter.top < box.bottom && box.top < firstLetter.bottom;
+          }));
+          test.expect(aligned, `${locale || '/ja'}/${slug} @ ${width}px ${fontSize}`).toBe(true);
+        }
+      }
+    }
+  }
+});
+
 test('Markdown heading permalinks have names without repeating their headings', async ({ page }) => {
   for (const prefix of ['', '/en', '/zh', '/ko', '/es']) {
     await page.goto(`${prefix}/blog/abe-hiroshi-website-challenge/`);

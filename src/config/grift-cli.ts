@@ -5,7 +5,7 @@ import { GRIFT_CLI_GITHUB_URL } from './site';
 /**
  * Grift CLI の「いま公開している版」（ADR-0023）。値は grift-cli-release.json の 1 か所だけに書き、ここはそれを読む。
  *
- * - いまの版を出すページ（/llms.txt）は、ここを読む。版を文字で書かない
+ * - /llms.txt と Grift 事例の見出し下のリリース案内は、ここから版と公開日を読む
  * - 記事は版を「執筆時点では v0.x」のように、その時点の記録として書き、ここを読まない。
  *   「公開中」「最新」「現在」と一緒に書いた版がここと違えば、scripts/check-grift-version-claims.mjs（npm run test:run）が落とす
  * - .github/workflows/grift-cli-release-watch.yml が毎日 PyPI の最新と照合し、違えば Issue を開く

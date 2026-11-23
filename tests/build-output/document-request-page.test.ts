@@ -85,6 +85,12 @@ describe('資料請求のページ', () => {
     expect(html).not.toContain('data-document-id');
     expect(html).not.toContain('data-entry-surface');
     expect(html).not.toContain('data-industries');
+    // #537: トークンと元のページの path の欄は、ビルドした HTML では空。値はフォームを表示したときに画面が入れる
+    // （ビルドした瞬間に全員共通のトークンは置かない）。script は乱数を画面で作る。
+    const tokenInputs = [...html.matchAll(/<input(?=[^>]*\bname="?formToken"?)[^>]*>/g)].map((match) => match[0]);
+    expect(tokenInputs).toHaveLength(1);
+    expect(tokenInputs[0]).toMatch(/\bvalue=""/);
+    expect(tokenInputs[0]).not.toMatch(/\bvalue=(?!"")\S/);
     expect(html).toContain('name=discoverySource');
     for (const slug of ['x', 'linkedin', 'note', 'qiita', 'search', 'referral', 'event', 'other']) {
       expect(html).toContain(`value=${slug}`);
@@ -96,6 +102,8 @@ describe('資料請求のページ', () => {
     expect(html).toContain('資料は送っていません');
     expect(html).not.toContain('送付しました');
     const script = formScript(html);
+    // トークンは画面が乱数で作る（Math.random ではない）。
+    expect(script).toContain('getRandomValues');
 
     // (a) 計測の gtag 呼び出しはページにちょうど 1 つ、イベント名は完了イベント。
     const calls = gtagCallArguments(script);

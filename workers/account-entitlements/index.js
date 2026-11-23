@@ -13,7 +13,7 @@ function dateEpoch(value) {
   return Number.isFinite(epoch) && new Date(epoch).toISOString().slice(0, 10) === value ? epoch : NaN;
 }
 
-function paidEntitlement(services, service, today) {
+export function paidEntitlement(services, service, today) {
   const row = object(services) && Object.hasOwn(services, service) ? services[service] : null;
   if (!object(row) || typeof row.hold !== 'boolean') return 'closed';
   const now = dateEpoch(today);

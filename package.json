@@ -42,6 +42,7 @@
     "@astrojs/sitemap": "^3.4.1",
     "@astrojs/tailwind": "^5.1.2",
     "@astrojs/ts-plugin": "^1.8.0",
+    "@clerk/clerk-js": "6.46.3",
     "@fontsource/inter": "5.0.8",
     "@google/genai": "2.24.0",
     "@resvg/resvg-js": "^2.6.2",

@@ -140,13 +140,13 @@ describe('document request case sync', () => {
     expect(sqlLog.some((sql) => sql.includes('ciphertext') || sql.includes('email_hmac'))).toBe(false);
   });
 
-  it('未選択の業種は null。再送で業種を変えても初回の行のまま', async () => {
+  it('未選択の業種は空文字。再送で初回の行は変わらず、業種を変えた再送は別の受付になる（#537）', async () => {
     const db = openDatabase();
     const env = baseEnv(db);
     const first = await createDocumentRequest(env, { ...record, industry: '' }, new Date('2026-11-08T02:00:00Z'));
     const again = await createDocumentRequest(
       env,
-      { ...record, industry: 'education', email: 'Taro@Example.COM' },
+      { ...record, industry: '', email: 'Taro@Example.COM' },
       new Date('2026-11-08T03:00:00Z'),
     );
     expect(again.duplicate).toBe(true);
@@ -154,6 +154,13 @@ describe('document request case sync', () => {
     const source = await readDocumentRequestSyncSource(env, first.receiptId);
     expect(source?.industry).toBe('');
     expect(source?.recordedAt).toBe('2026-11-08T02:00:00.000Z');
+
+    // 業種を変えた再送は別の依頼。先の行（業種・記録時刻）は変わらない。
+    const changed = await createDocumentRequest(env, { ...record, industry: 'education' }, new Date('2026-11-08T03:30:00Z'));
+    expect(changed.duplicate).toBe(false);
+    expect(changed.receiptId).not.toBe(first.receiptId);
+    expect(await readDocumentRequestSyncSource(env, first.receiptId)).toEqual(source);
+    expect((await readDocumentRequestSyncSource(env, changed.receiptId))?.industry).toBe('education');
   });
 
   it('日付をまたぐと別の受付になり、それぞれの初回時刻を読む', async () => {
