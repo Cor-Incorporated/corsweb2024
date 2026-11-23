@@ -11,6 +11,7 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
 ---
 
 <Layout
+  cloudiaLauncher="desktop"
   description={t.meta.privacy.description}
   title={t.meta.privacy.title}
 >
@@ -74,7 +75,7 @@ const securityUrl = getLocalizedUrl('/security', currentLocale);
             <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={section.title} />
             {Array.isArray(section.body) && section.body.map((para) => <LbText class="mb-4" text={para} />)}
             {Array.isArray(section.list) && (
-              <ul class="mb-4 list-inside list-disc space-y-3">
+              <ul class="mb-4 list-outside list-disc space-y-3 pl-6">
                 {section.list.map((item) => (
                   <LbText as="li" text={item} />
                 ))}

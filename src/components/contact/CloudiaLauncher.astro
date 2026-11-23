@@ -11,6 +11,11 @@ import { LAUNCHER_COPY, type LauncherCopy } from './cloudia-launcher-copy';
 import { CLOUDIA_UNAVAILABLE_PHONE_VISIBLE } from './chat/cloudiaUnavailableCopy';
 import { buildUnavailableNotice } from './chat/cloudiaUnavailableNotice';
 
+interface Props {
+  desktopOnly?: boolean;
+}
+
+const { desktopOnly = false } = Astro.props;
 const currentLocale = getCurrentLocale(Astro.url);
 const industrySlug = industrySlugFromPath(Astro.url.pathname);
 const chatUrl = new URL('/contact/chat/', Astro.url);
@@ -59,7 +64,10 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
 
 <aside
   id="cloudia-launcher"
-  class="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-max max-w-[calc(100vw-2rem)] flex-col items-end sm:right-5"
+  class:list={[
+    'pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-max max-w-[calc(100vw-2rem)] flex-col items-end sm:right-5',
+    desktopOnly ? 'hidden sm:flex' : 'flex',
+  ]}
   data-chat-path={embedChatPath}
   data-grift-handoff-origins={JSON.stringify(CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS)}
   data-grift-handoff-max-ttl-ms={CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS}

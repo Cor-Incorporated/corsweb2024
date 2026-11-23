@@ -84,7 +84,7 @@ const availableLocales = await blogIndexLocales((d) => d.category === id, page.c
     {page.lastPage > 1 && (
       <nav class="mt-12 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
         <a
-          href={page.url.prev ? `${currentLocale === 'ja' ? '' : '/en'}/blog/category/${id}/${page.url.prev.replace(/^\//, '')}` : '#'}
+          href={page.url.prev ?? '#'}
           class={`rounded-lg px-3 py-2 text-sm font-medium ${
             !page.url.prev
               ? 'cursor-not-allowed bg-stone-100 text-stone-400 dark:bg-stone-700 dark:text-stone-500'
@@ -112,7 +112,7 @@ const availableLocales = await blogIndexLocales((d) => d.category === id, page.c
         </div>
 
         <a
-          href={page.url.next ? `${currentLocale === 'ja' ? '' : '/en'}/blog/category/${id}/${page.url.next.replace(/^\//, '')}` : '#'}
+          href={page.url.next ?? '#'}
           class={`rounded-lg px-3 py-2 text-sm font-medium ${
             !page.url.next
               ? 'cursor-not-allowed bg-stone-100 text-stone-400 dark:bg-stone-700 dark:text-stone-500'
