@@ -11,6 +11,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+import { createD1NotificationReceipts } from '../../docs/billing/notification-receipts.mjs';
 import { writePaidProjection } from './paid-projection.js';
 import { createClerkPaidProjector } from '../../docs/billing/project-paid-contracts.mjs';
 import { createSandboxBillingRuntime } from '../../docs/billing/notification-reconcile.mjs';
@@ -38,7 +39,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
   }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
-  for (const name of ['0001_account_grants.sql', '0002_paid_contract_projection.sql', '0003_paid_projection_revision.sql']) {
+  for (const name of ['0001_account_grants.sql', '0002_paid_contract_projection.sql', '0003_paid_projection_revision.sql', '0004_billing_notification_receipts.sql']) {
     const migration = await readFile(new URL('migrations/' + name, import.meta.url), 'utf8');
     await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
   }
@@ -92,6 +93,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
   let members = ['user_PaidOnly', 'user_Unbound'];
   let approvalRef = 'fixture';
   let incompleteMemberships = false;
+  let beforeReconciliation;
   const project = createClerkPaidProjector({
     db, issuer: ISSUER, clerkSecret: 'sk_test_fixture',
     loadApprovedBindings: async (issuer, org) => {
@@ -117,9 +119,11 @@ test('billing notifications reconcile current paid rights and preserve personal 
       });
     },
   });
-  const runtime = createSandboxBillingRuntime({ secret, customer: CUSTOMER, now: () => NOW, project,
+  const createReceiver = () => createSandboxBillingRuntime({
+    secret, customer: CUSTOMER, now: () => NOW, project, receipts: createD1NotificationReceipts(db),
     reconcile: async customer => {
     assert.equal(customer, CUSTOMER);
+    if (beforeReconciliation) await beforeReconciliation();
     const log = join(scratch, `curl-${++calls}`);
     const metadata = {
       customer_code: 'fixture', clerk_org_id: 'org_fixture',
@@ -162,6 +166,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
     return { organizationId: 'org_fixture', resyncAt };
   } });
 
+  let runtime = createReceiver();
   const listener = createServer(async (request, response) => {
     try {
       const method = request.method;
@@ -352,6 +357,55 @@ test('billing notifications reconcile current paid rights and preserve personal 
       }, 10);
     });
     assert.equal((await scheduled).result, 'reconciled');
+    await checkPaid('open', ['view', 'edit', 'export']);
+  });
+
+  await t.test('a restarted webhook receiver returns a durable receipt without repeating the billing sync', async () => {
+    const id = 'evt_restartReplay';
+    assert.equal((await send(id, 'invoice.paid', invoice)).result, 'reconciled');
+    const beforeRestart = calls;
+    runtime = createReceiver();
+    assert.equal((await send(id, 'invoice.paid', invoice)).result, 'duplicate');
+    assert.equal(calls, beforeRestart);
+  });
+
+  await t.test('separate receivers and the scheduler cannot run the same customer simultaneously', async () => {
+    const id = 'evt_replicaRace';
+    const ready = Promise.withResolvers();
+    const unblock = Promise.withResolvers();
+    const previous = calls;
+    beforeReconciliation = () => {
+      ready.resolve();
+      return unblock.promise;
+    };
+    const inflight = send(id, 'invoice.paid', invoice);
+    try {
+      await ready.promise;
+      runtime = createReceiver();
+      assert.deepEqual(await send(id, 'invoice.paid', invoice), { status: 503, result: 'retry' });
+      assert.deepEqual(await runtime.scheduled(), { status: 503, result: 'retry' });
+      assert.equal(calls, previous);
+    } finally {
+      beforeReconciliation = undefined;
+      unblock.resolve();
+      assert.deepEqual(await inflight, { status: 200, result: 'reconciled' });
+    }
+    assert.deepEqual(await send(id, 'invoice.paid', invoice), { status: 200, result: 'duplicate' });
+    assert.equal(calls, previous + 1);
+  });
+
+  await t.test('delivery recovers when a crashed receiver’s unfinished lease expires', async () => {
+    const id = 'evt_crashRecovery';
+    await db.prepare('INSERT INTO billing_reconciliation_leases VALUES (?, ?, ?)')
+      .bind(CUSTOMER, 'crashed-fixture', Date.now() + 60_000).run();
+    const previous = calls;
+    assert.deepEqual(await send(id, 'invoice.paid', invoice), { status: 503, result: 'retry' });
+    assert.equal(calls, previous);
+    await db.prepare('UPDATE billing_reconciliation_leases SET expires_at_ms = ? WHERE customer_id = ?')
+      .bind(Date.now() - 1, CUSTOMER).run();
+    assert.deepEqual(await send(id, 'invoice.paid', invoice), { status: 200, result: 'reconciled' });
+    assert.deepEqual(await send(id, 'invoice.paid', invoice), { status: 200, result: 'duplicate' });
+    assert.equal(calls, previous + 1);
     await checkPaid('open', ['view', 'edit', 'export']);
   });
 

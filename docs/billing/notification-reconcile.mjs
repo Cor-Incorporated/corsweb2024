@@ -24,28 +24,33 @@ function customerFor(event) {
   return undefined;
 }
 
-export function createSandboxBillingReconciler({ secret, customer, reconcile, project, now = () => Date.now() / 1000 }) {
+export function createSandboxBillingReconciler({ secret, customer, reconcile, project, receipts, now = () => Date.now() / 1000 }) {
   if (typeof secret !== 'string' || secret.length < 32 ||
       typeof customer !== 'string' || !/^cus_[A-Za-z0-9]{1,64}$/.test(customer) ||
-      typeof reconcile !== 'function' || (project !== undefined && typeof project !== 'function')) {
+      typeof reconcile !== 'function' || (project !== undefined && typeof project !== 'function') ||
+      !['reserve', 'complete', 'abandon'].every(method => typeof receipts?.[method] === 'function')) {
     throw new Error('Invalid sandbox configuration');
   }
 
-  const completed = new Set();
   let pending = Promise.resolve();
   let queued = 0;
-  function enqueue(eventId) {
+  function enqueue(eventId = null) {
     if (queued >= 100) return Promise.resolve({ status: 503, result: 'retry' });
     queued++;
     const run = pending.then(async () => {
-      if (eventId && completed.has(eventId)) return { status: 200, result: 'duplicate' };
+      let lease;
       try {
+        lease = await receipts.reserve(customer, eventId);
+        if (lease.state === 'duplicate') return { status: 200, result: 'duplicate' };
+        if (lease.state !== 'reserved') return { status: 503, result: 'retry' };
         const confirmed = await reconcile(customer);
         if (project) await project(confirmed);
-      } catch { return { status: 503, result: 'retry' }; }
-      if (eventId) {
-        completed.add(eventId);
-        if (completed.size > 1000) completed.delete(completed.values().next().value);
+        await receipts.complete(customer, eventId, lease.owner);
+      } catch {
+        if (lease?.owner) {
+          try { await receipts.abandon(customer, lease.owner); } catch { /* lease expires automatically */ }
+        }
+        return { status: 503, result: 'retry' };
       }
       return { status: 200, result: 'reconciled' };
     });
