@@ -100,6 +100,14 @@ D1は契約を更新するSQLの中で、通知の処理者とリースの残り
 
 静的 Astro の `/account/services/` から同じオリジンの `GET /api/account/services` を読む。Worker の入口は `account.js`。製品サーバー用の `index.js` とは別の Worker として構成し、製品用照会キーをこの入口へ付与しない。
 
+サービス一覧は `workers/account-services/wrangler.toml` から組み立てる。リポジトリのルートで
+`wrangler deploy --dry-run --config workers/account-services/wrangler.toml --outdir /tmp/cor-account-services`
+を実行すると、配備せずに一覧専用の生成物を確認できる。配備時は、既存の利用権台帳と同じD1を
+`ACCOUNT_GRANTS` に結び、`GET /api/account/services` を同一オリジンに割り当てる。
+生成後、`workers/account-entitlements` から
+`ACCOUNT_PICKER_BUNDLE=/tmp/cor-account-services/account.js npm run test:picker-bundle` を実行すると、
+署名済みの合成セッションで付与・撤回を確かめ、製品サーバー用の照会がこの入口に届かないことも確認できる。
+
 - `ACCOUNT_SITE_ORIGIN` にサイトの HTTPS origin、`CLERK_ISSUER` に正規 Clerk issuer の origin、`CLERK_JWT_KEY` に同じインスタンスの署名検証用公開鍵、`CLERK_SIGN_IN_URL` に正規のログイン URL を設定する。Astro 側の `PUBLIC_CLERK_PUBLISHABLE_KEY` は公開可能なキーだけを使う。ClerkJS の組織切替から個人へ戻るには Clerk の Personal Accounts を有効にする。
 - 選択組織は署名済みセッションの `o.id` から取得する。署名・有効期限・発行元・正規オリジン・本人を照合し、保留中のセッションを拒否する。利用可能な製品と操作は、本人・組織・製品テナントの有効な対応とD1の期限内の契約から算出する。
 - 個人モードは `ACCOUNT_GRANTS` の primary にあり、撤回されていない期限内の明示的な staff/legacy 付与から製品を選ぶ。組織の有償権利の停止で個別付与の行は変更しない。選択組織の停止を別テナントの個別付与で上書きすることもない。個人モードで表示されるリンク先でも、製品が既存の対象テナント・所属・操作権限を再検証する。
