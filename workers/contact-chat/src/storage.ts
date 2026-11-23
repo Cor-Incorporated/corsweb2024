@@ -302,7 +302,7 @@ export async function createSubmission(
     ).bind(sessionId).first<{ session_id: string; conversation_excerpt_ciphertext?: string }>();
     if (!session) {
       sessionId = null;
-    } else {
+    } else if (inquiry.shareConversation !== false) {
       conversationExcerptCiphertext = session.conversation_excerpt_ciphertext || '';
     }
   }
@@ -783,6 +783,10 @@ export async function getSubmissionForNotification(
       email,
       company,
       message,
+      // Legacy inquiries always store either the AI summary or a deterministic fallback.
+      ...(row.request_kind !== 'document' && !conversationSummary && !Object.keys(structuredLead).length
+        ? { shareConversation: false }
+        : {}),
       summaryText: conversationSummary,
       conversationSummary,
       classification: row.classification,

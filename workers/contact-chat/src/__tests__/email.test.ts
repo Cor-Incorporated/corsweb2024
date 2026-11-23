@@ -65,6 +65,13 @@ describe('buildBody — 構造化本文（PIIはここにのみ載る）', () =>
   it('会話サマリが無ければ決定的fallbackを使う', () => {
     expect(buildBody({ ...inquiry, conversationSummary: '', summaryText: '' })).toContain('要約未生成');
   });
+  it('本人が確認した用件だけを社内と本人に通知できる', () => {
+    const reviewed = { ...inquiry, shareConversation: false as const, summaryText: '', conversationSummary: '', structuredLead: {} };
+    for (const text of [buildBody(reviewed), buildReceiptBody(reviewed, 'COR-TEST')]) {
+      expect(text).toContain(reviewed.message);
+      expect(text).not.toContain('要約');
+    }
+  });
   it('旧クライアントの全文トランスクリプトは本文へ出さない', () => {
     const body = buildBody({
       ...inquiry,

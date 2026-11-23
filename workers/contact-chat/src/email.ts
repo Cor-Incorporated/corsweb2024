@@ -190,7 +190,9 @@ export function buildBody(inquiry: NormalizedInquiry): string {
       '※会話抜粋はサーバー側でマスキング・文字数制限済みです。',
     );
   }
-  lines.push('', '── AI要約（AIチャットの会話サマリ / summaryText） ──', getSummaryText(inquiry));
+  if (inquiry.shareConversation !== false) {
+    lines.push('', '── AI要約（AIチャットの会話サマリ / summaryText） ──', getSummaryText(inquiry));
+  }
   lines.push(
     '',
     '── AIによる分類（参考） ──',
@@ -231,10 +233,9 @@ export function buildReceiptBody(inquiry: NormalizedInquiry, receiptId: string):
     '',
     'お問い合わせを受け付けました。担当者が内容を確認のうえ、改めてご連絡します。',
     '',
-    '── ご相談の要約 ──',
-    getReceiptSummaryText(inquiry),
-    '',
-    '── ご入力の補足 ──',
+    ...(inquiry.shareConversation !== false
+      ? ['── ご相談の要約 ──', getReceiptSummaryText(inquiry), '', '── ご入力の補足 ──']
+      : ['── 受付内容 ──']),
     inquiry.message || '（補足なし）',
     '',
     // cor-jp.com にお問い合わせフォームは無い（ADR-0005 の 2026-09-13 改訂）。このメールは返信先を付けて

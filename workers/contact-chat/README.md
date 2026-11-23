@@ -30,6 +30,9 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
   **必須の Cloudflare WAF レート制限ルール（`cor-jp.com/api/contact/*`）** で担保する（下記チェックリスト参照）。
 
 ### POST /api/contact/submit
+
+`shareConversation: false` は、本人が確認した用件（`message`）だけを担当へ引き継ぐ指定。提出時に会話要約・抜粋・構造化された発言を受付行やメールに転記しない。受付番号・連絡先・サーバーが決定した業種と分類は従来どおり。5業種ではサーバーに記録した業種を照合し、旧画面から指定を省いたときも同じ扱いにする。一般受付で指定を省く既存クライアントは従来の処理に従う。この指定は相談履歴とその保存期限を変更しない。
+
 - リクエスト: `{ "name", "email", "company"?, "message", "summaryText"?, "conversationSummary"?, "classification"?, "intent"?, "source"?, "structuredLead"?, "utm"?, "turnstileToken"?, "website"? }`
   - 新規クライアントは `summaryText` を正本として送る。形式は `{ version: 1, locale: "ja"|"en", intent, classification, readyForContact, stage, structuredLead, text }`（`text` はPIIなしの要約本文）。`summaryText` が無い場合のみ旧 `conversationSummary` を受理する。
   - roleラベル付き会話全文やPIIを含む要約は保存・メール本文への採用を拒否し、構造化フィールドから決定的fallbackを生成する。
