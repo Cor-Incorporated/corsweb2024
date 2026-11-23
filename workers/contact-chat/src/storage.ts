@@ -753,20 +753,23 @@ export async function getSubmissionForNotification(
     LIMIT 1
   `).bind(submissionId, messageType).first<SubmissionRow>();
   if (!row) return null;
-  const [name, email, company, message, conversationSummary, conversationExcerpt] = await Promise.all([
+  const [name, email, company, message, conversationSummary] = await Promise.all([
     decryptText(env.PII_ENCRYPTION_KEY, row.name_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.email_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.company_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.message_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.summary_ciphertext),
-    messageType === 'internal' && row.conversation_excerpt_ciphertext
-      ? decryptText(env.PII_ENCRYPTION_KEY, row.conversation_excerpt_ciphertext)
-      : Promise.resolve(''),
   ]);
   let structuredLead: StructuredLead = {};
   let utm: Record<string, string> = {};
   try { structuredLead = normalizeStructuredLead(JSON.parse(row.structured_lead_json)); } catch { /* safe default */ }
   try { utm = JSON.parse(row.utm_json) as Record<string, string>; } catch { /* safe default */ }
+  // Legacy shared inquiries contain a summary or structured lead. A residual
+  // encrypted excerpt alone does not establish permission to forward it.
+  const reviewedOnly = row.request_kind !== 'document' && !conversationSummary && !Object.keys(structuredLead).length;
+  const conversationExcerpt = !reviewedOnly && messageType === 'internal' && row.conversation_excerpt_ciphertext
+    ? await decryptText(env.PII_ENCRYPTION_KEY, row.conversation_excerpt_ciphertext)
+    : '';
   return {
     submissionId: row.submission_id,
     receiptId: row.receipt_id,
@@ -783,10 +786,7 @@ export async function getSubmissionForNotification(
       email,
       company,
       message,
-      // Legacy inquiries always store either the AI summary or a deterministic fallback.
-      ...(row.request_kind !== 'document' && !conversationSummary && !Object.keys(structuredLead).length
-        ? { shareConversation: false }
-        : {}),
+      ...(reviewedOnly ? { shareConversation: false } : {}),
       summaryText: conversationSummary,
       conversationSummary,
       classification: row.classification,

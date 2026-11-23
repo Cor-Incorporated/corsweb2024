@@ -142,6 +142,7 @@ export function getReceiptSummaryText(inquiry: NormalizedInquiry): string {
 
 /** Internal-only context. Apply a final mask at the email boundary as defense in depth. */
 export function getConversationExcerptText(inquiry: NormalizedInquiry): string {
+  if (inquiry.shareConversation === false) return '';
   const raw = typeof inquiry.conversationExcerpt === 'string' ? inquiry.conversationExcerpt : '';
   return maskSensitiveContent(raw.replace(/\r\n?/g, '\n').trim())
     .slice(0, MAX_CONVERSATION_EXCERPT_LEN)
@@ -164,7 +165,7 @@ export function buildBody(inquiry: NormalizedInquiry): string {
     '── 本文 ──',
     inquiry.message,
   ];
-  const lead = inquiry.structuredLead || {};
+  const lead = inquiry.shareConversation === false ? {} : inquiry.structuredLead || {};
   const leadLines: string[] = [];
   if (lead.purpose) leadLines.push(`目的　　: ${lead.purpose}`);
   if (lead.industryRole) leadLines.push(`業種・役割: ${lead.industryRole}`);
