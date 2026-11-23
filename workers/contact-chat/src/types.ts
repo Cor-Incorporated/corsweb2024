@@ -235,7 +235,7 @@ export interface InquiryInput {
 
 // 検証・正規化済みの問い合わせ（メール本文に使う）。
 export interface NormalizedInquiry {
-  shareConversation?: false;
+  shareConversation?: boolean;
   name: string;
   email: string;
   company: string;

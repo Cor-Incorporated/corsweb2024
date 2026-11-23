@@ -502,6 +502,9 @@ describe('worker.fetch — ハンドラレベル', () => {
     { sector: 'medical', flag: undefined, reviewedOnly: true },
     { sector: 'medical', flag: true, reviewedOnly: true },
   ])('submit: 業種 $sector、共有指定 $flag の受付と機械判定を保存する', async ({sector, flag, reviewedOnly}) => {
+    const authoredMessage = '[intent:contract-dev] という文字列を含めた相談です';
+    const legacyClient = flag === undefined;
+    const wireMessage = legacyClient ? '[intent:contract-dev] ' + authoredMessage : authoredMessage;
     const calls: Array<{ sql: string; bindings: unknown[] }> = [];
     const trustedLead = {
       purpose: '社内AI基盤のPoC',
@@ -551,7 +554,8 @@ describe('worker.fetch — ハンドラレベル', () => {
       idempotencyKey: 'idempotency-session-lead',
       name: '太郎',
       email: 'taro@example.com',
-      message: '相談です',
+      intent: 'contract-dev',
+      message: wireMessage,
       summaryText: 'browser forged summary',
       ...(flag === undefined ? {} : { shareConversation: flag }),
       classification: 'spam',
@@ -561,7 +565,7 @@ describe('worker.fetch — ハンドラレベル', () => {
     const insert = calls.find((call) => call.sql.includes('INSERT INTO submission_intake'));
     expect(insert).toBeDefined();
     expect(JSON.parse(String(insert?.bindings[13]))).toEqual(reviewedOnly ? {} : trustedLead);
-    await expect(decryptText('storage-secret', String(insert?.bindings[7]))).resolves.toBe('相談です');
+    await expect(decryptText('storage-secret', String(insert?.bindings[7]))).resolves.toBe(legacyClient && !sector ? wireMessage : authoredMessage);
     await expect(decryptText('storage-secret', String(insert?.bindings[8]))).resolves.toBe(reviewedOnly ? '' : 'server summary');
     await expect(decryptText('storage-secret', String(insert?.bindings[9]))).resolves.toBe(reviewedOnly ? '' : '撤回した会話の一部');
     expect(insert?.bindings[15]).toBe('genuine');
