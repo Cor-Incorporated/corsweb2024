@@ -1,3 +1,4 @@
+import { DOCUMENT_REQUEST_INDUSTRIES as SITE_DOCUMENT_REQUEST_INDUSTRIES } from '../../../../src/config/document-request';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
@@ -9,6 +10,7 @@ import {
   DOCUMENT_REQUEST_CONSENT_VERSION,
   DOCUMENT_REQUEST_ID,
   DOCUMENT_REQUEST_INDUSTRIES,
+  DOCUMENT_REQUEST_VERSION,
 } from '../document-request';
 import { DOCUMENT_REQUEST_COPY, type DocumentRequestCopy } from '../document-request-copy';
 import { resetRateLimits } from '../security';
@@ -547,13 +549,14 @@ describe('document request intake', () => {
   it('画面の文・業種・資料 URL がサイト側と一致する', () => {
     const root = resolve(__dirname, '../../../..');
     const config = readFileSync(resolve(root, 'src/config/document-request.ts'), 'utf8');
-    const industries = [...config.match(/export const DOCUMENT_REQUEST_INDUSTRIES = \[([\s\S]*?)\] as const/)![1].matchAll(/'([^']+)'/g)].map((item) => item[1]);
-    expect(industries).toEqual([...DOCUMENT_REQUEST_INDUSTRIES]);
+    expect(SITE_DOCUMENT_REQUEST_INDUSTRIES).toEqual(DOCUMENT_REQUEST_INDUSTRIES);
     const discovery = [...config.match(/export const DOCUMENT_REQUEST_DISCOVERY_SOURCES = \[([\s\S]*?)\] as const/)![1].matchAll(/'([^']+)'/g)].map((item) => item[1]);
     expect(discovery).toEqual(['x', 'linkedin', 'note', 'qiita', 'search', 'referral', 'event', 'other']);
     expect(config).toContain('DOCUMENT_REQUEST_DISCOVERY_OTHER_MAX = 100');
     expect(config).toContain(`'${DOCUMENT_REQUEST_CONSENT_VERSION}'`);
     expect(config).toContain(`'${DOCUMENT_REQUEST_ID}'`);
+    // 資料の版（#537）もサイト側と同じ値。
+    expect(config).toContain(`export const DOCUMENT_REQUEST_VERSION = '${DOCUMENT_REQUEST_VERSION}';`);
     const site = readFileSync(resolve(root, 'src/config/site.ts'), 'utf8');
     expect(site).toContain(`'${DOCUMENT_DECK_URL}'`);
     for (const locale of ['ja', 'en', 'zh', 'ko', 'es'] as const) {

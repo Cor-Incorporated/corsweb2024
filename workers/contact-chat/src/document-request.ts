@@ -1,3 +1,4 @@
+import { DOCUMENT_REQUEST_ENTRY_PATHS, DOCUMENT_REQUEST_VERSION } from '../../../src/config/document-request';
 import { readJsonBody, readLimitedBody, type JsonBodyFailure } from './body';
 import {
   DOCUMENT_LOCALES,
@@ -9,6 +10,33 @@ import { isValidEmail, MAX_COMPANY_LEN, MAX_NAME_LEN, sanitizeLine } from './val
 
 export const DOCUMENT_REQUEST_ID = 'company-deck';
 export const DOCUMENT_REQUEST_CONSENT_VERSION = 'document-request-1';
+
+export { DOCUMENT_REQUEST_VERSION };
+
+/**
+ * フォームを表示するたびに画面が発行する短い乱数（16 バイトを hex にした 32 文字）。
+ * 静的な HTML には置かない（ビルドした瞬間に全員共通になるため）。送られてこなければ ''（トークンなし）。
+ * 形が違うものは「無い」扱いにせず拒む（誤って従来の規則でまとめ直さないため）。
+ */
+export const DOCUMENT_FORM_TOKEN_PATTERN = /^[0-9a-f]{32}$/;
+
+/** トークンを読む。無い・空は ''、形が違うものは null。 */
+export function readDocumentFormToken(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return '';
+  if (typeof raw !== 'string') return null;
+  const token = raw.trim();
+  if (!token) return '';
+  return DOCUMENT_FORM_TOKEN_PATTERN.test(token) ? token : null;
+}
+
+/** 自社の会社情報・業種ページの標準パスだけ保存する。 */
+export function sanitizeDocumentEntryPath(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const path = raw.split(/[?#]/, 1)[0] ?? '';
+  if (!path) return '';
+  const canonicalPath = path.endsWith('/') ? path : path + '/';
+  return DOCUMENT_REQUEST_ENTRY_PATHS.includes(canonicalPath) ? canonicalPath : '';
+}
 export const DOCUMENT_REQUEST_INDUSTRIES = [
   'medical',
   'shigyo',
@@ -106,6 +134,10 @@ export interface ValidDocumentRequest {
   discoverySource: DocumentRequestDiscoverySource | '';
   discoveryOther: string;
   locale: DocumentLocale;
+  /** フォームを表示するたびに発行される乱数。JS 無し・既存のクライアントは ''（トークンなし）。 */
+  formToken: string;
+  /** 元のページの path（自社の同一 origin だけ）。分からない・保存できないものは ''（記録なし）。 */
+  entryPath: string;
 }
 
 export type DocumentRequestValidation =
@@ -164,6 +196,10 @@ export function validateDocumentRequest(input: Record<string, unknown> | undefin
     discoveryOther = normalized;
   }
 
+  // トークンは既存の欄の検査のあとに読む（既存のクライアントの応答を変えないため）。
+  const formToken = readDocumentFormToken(input.formToken);
+  if (formToken === null) return { ok: false, code: 'invalid' };
+
   return {
     ok: true,
     value: {
@@ -174,6 +210,8 @@ export function validateDocumentRequest(input: Record<string, unknown> | undefin
       discoverySource,
       discoveryOther,
       locale: asLocale(input.locale),
+      formToken,
+      entryPath: sanitizeDocumentEntryPath(input.pagePath),
     },
   };
 }
