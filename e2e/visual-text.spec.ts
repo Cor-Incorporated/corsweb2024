@@ -1340,3 +1340,70 @@ test('production pages do not have hard responsive text failures', async ({ page
     throw new Error(`Responsive visual text audit failed with ${failureCount} hard failure(s). See test-results/visual-text/summary.md.`);
   }
 });
+
+test('privacy and security list markers stay alongside the first sentence', async ({ page }) => {
+  const routes = [
+    '/privacy/', '/en/privacy/', '/zh/privacy/', '/ko/privacy/', '/es/privacy/',
+    '/en/security/', '/zh/security/', '/ko/security/', '/es/security/',
+  ];
+  const layouts = [
+    { width: 1280, zoom: 1 },
+    { width: 320, zoom: 1 },
+    { width: 640, zoom: 2 },
+  ];
+
+  for (const { width, zoom } of layouts) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of routes) {
+      await page.goto(route);
+      await page.evaluate((scale) => { document.documentElement.style.zoom = String(scale); }, zoom);
+      // The separate ordered security guidelines already use outside numbering.
+      const markers = await page.locator('main ul > li.lb-text').evaluateAll((items, scale) =>
+        items.map((item) => {
+          const style = getComputedStyle(item);
+          const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT);
+          let firstText = walker.nextNode();
+          while (firstText && !firstText.textContent?.trim()) firstText = walker.nextNode();
+          const line = document.createRange();
+          if (firstText) {
+            const start = firstText.textContent!.search(/\S/);
+            line.setStart(firstText, start);
+            line.setEnd(firstText, start + 1);
+          }
+
+          const textOffset = line.getBoundingClientRect().top - item.getBoundingClientRect().top;
+          return {
+            type: style.listStyleType,
+            position: style.listStylePosition,
+            startsOnFirstLine: !!firstText && Math.abs(textOffset) < parseFloat(style.lineHeight) * scale * 0.75,
+          };
+        }),
+        zoom,
+      );
+
+      test.expect(markers.length, route).toBeGreaterThan(0);
+      test.expect(markers, `${route}, width ${width}, zoom ${zoom}`).toEqual(
+        markers.map(() => ({ type: 'disc', position: 'outside', startsOnFirstLine: true })),
+      );
+    }
+  }
+});
+
+test('privacy links can receive keyboard focus without the mobile launcher covering them', async ({ page }) => {
+  const routes = ['/privacy/', '/en/privacy/', '/zh/privacy/', '/ko/privacy/', '/es/privacy/'];
+  await page.setViewportSize({ width: 320, height: 650 });
+
+  for (const route of routes) {
+    await page.goto(route);
+    await test.expect(page.locator('#cloudia-launcher'), route).toBeHidden();
+    const links = await page.locator('main a[href]').all();
+    test.expect(links.length, route).toBeGreaterThan(0);
+    for (const link of links) {
+      await link.focus();
+      await test.expect(link).toBeFocused();
+    }
+  }
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await test.expect(page.locator('#cloudia-launcher')).toBeVisible();
+});

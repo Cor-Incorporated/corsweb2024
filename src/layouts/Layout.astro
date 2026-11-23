@@ -34,8 +34,8 @@ interface Props {
   // SEO用 <title> と SNS用 og:title を分離したい場合に指定する。
   ogTitle?: string;
   ogDescription?: string;
-  // Cloudiaのfallbackページ自身ではLauncherを重ねない。
-  cloudiaLauncher?: boolean;
+  // 固定ランチャーを省くページと、広い画面でだけ表示するページを指定する。
+  cloudiaLauncher?: boolean | 'desktop';
   // iframe 埋め込み専用のページでは計測タグを出さない（Clarity の二重計測を防ぐ）。
   analytics?: boolean;
 }
@@ -317,7 +317,7 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
       <slot />
     </main>
     <Footer />
-    {CLOUDIA_LAUNCHER_ENABLED && cloudiaLauncher && <CloudiaLauncher />}
+    {CLOUDIA_LAUNCHER_ENABLED && cloudiaLauncher && <CloudiaLauncher desktopOnly={cloudiaLauncher === 'desktop'} />}
     <!-- Alpine.js（npm 同梱。ストア登録 → start を 1 モジュールで順序保証） -->
     <AlpineInit />
     <!-- no-JS fallback -->
