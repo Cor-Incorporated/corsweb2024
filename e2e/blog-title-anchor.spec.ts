@@ -31,3 +31,35 @@ for (const [locale, anchor] of Object.entries(publishedAnchors)) {
     await expect(page.getByRole('heading', { level: 2 }).first()).toBeAttached();
   });
 }
+
+test('390pxの記事見出しは固定リンクと重ならず、最終行に話の1文字を残さない', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/blog/zundamon-lt-project/');
+  await page.evaluate(() => document.fonts.ready);
+  // 端末間の字幅の差を含め、CIの390pxで観測された折り返しを再現する。
+  for (const spacing of ['0px', '0.5px', '1px']) {
+    const lines = await page.getByRole('heading', { level: 1 }).evaluate((heading, spacing) => {
+      const clause = heading.querySelector<HTMLElement>('.lb-clause')!;
+      clause.style.letterSpacing = spacing;
+      const text = clause.firstChild as Text;
+      const link = heading.parentElement!.querySelector('a')!.getBoundingClientRect();
+      const range = document.createRange();
+      const byLine = new Map<number, string>();
+      let overlaps = false;
+      for (let i = 0; i < text.length; i++) {
+        range.setStart(text, i);
+        range.setEnd(text, i + 1);
+        // WebKitは行頭の文字に、前の行末の幅0の矩形も返す。
+        const box = Array.from(range.getClientRects()).find(rect => rect.width > 0);
+        if (!box) continue;
+        byLine.set(box.top, (byLine.get(box.top) ?? '') + text.data[i]);
+        overlaps ||= box.top < link.bottom && box.bottom > link.top &&
+          box.left < link.right && box.right > link.left;
+      }
+      return { last: [...byLine.values()].at(-1), overlaps, linkWidth: link.width, linkHeight: link.height };
+    }, spacing);
+    expect(lines.last).toMatch(/.話$/u);
+    expect(lines.overlaps).toBe(false);
+    expect(Math.min(lines.linkWidth, lines.linkHeight)).toBeGreaterThanOrEqual(44);
+  }
+});
