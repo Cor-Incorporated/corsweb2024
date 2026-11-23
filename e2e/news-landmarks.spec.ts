@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 for (const locale of ['ja', 'en', 'zh', 'ko', 'es']) {
-  test(`${locale}のニュースと報道向けページは本文ランドマークを各1つ持つ`, async ({ page }) => {
+  test(`${locale}のニュースと報道向けページは本文ランドマークを各1つ持つ`, async ({ page, browserName }) => {
     const prefix = locale === 'ja' ? '' : '/' + locale;
     const news = prefix + '/news/';
     const press = news + 'press/';
@@ -12,7 +12,11 @@ for (const locale of ['ja', 'en', 'zh', 'ko', 'es']) {
     const newsTitle = await main.getByRole('heading', { level: 1 }).innerText();
     const pressLink = main.locator(`a[href="${press}"]`);
     await expect(pressLink).toHaveAccessibleName(/\S/);
-    await pressLink.focus();
+    const next = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+    for (let i = 0; i < 40 && !(await pressLink.evaluate(el => el.matches(':focus'))); i++) {
+      await page.keyboard.press(next);
+    }
+    await expect(pressLink).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(new RegExp(press + '$'));
     await expect(main).toHaveCount(1);
