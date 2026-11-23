@@ -67,6 +67,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
   let state = 'overdue';
   let calls = 0;
   let expires = dateFromToday(-1);
+  let endingService;
   const checkPaid = async (access, allowedOperations, overrides = {}) => {
     for (const [service, tenantId] of PRODUCTS) {
       for (const operation of ['view', 'edit', 'export']) {
@@ -93,15 +94,15 @@ test('billing notifications reconcile current paid rights and preserve personal 
       customer_code: 'fixture', clerk_org_id: 'org_fixture',
       'contract_business-dossier_start': dateFromToday(-70),
       'contract_business-dossier_hold': state === 'cancelled' ? 'false' : 'true',
-      ...(state === 'cancelled' ? { 'contract_business-dossier_end': '2026-12-30' } : {}),
     };
     Object.assign(metadata, {
       'contract_xesm_start': metadata['contract_business-dossier_start'],
       'contract_xesm_hold': metadata['contract_business-dossier_hold'],
     });
     if (state === 'cancelled') {
-      metadata['contract_business-dossier_end'] = expires;
-      metadata.contract_xesm_end = expires;
+      for (const [service] of PRODUCTS) {
+        if (!endingService || service === endingService) metadata[`contract_${service}_end`] = expires;
+      }
     }
     const env = {
       PATH: `${scratch}:${process.env.PATH}`, FAKE_LOG: log, FAKE_RESYNC: '1',
@@ -219,6 +220,35 @@ test('billing notifications reconcile current paid rights and preserve personal 
   assert.equal(services['business-dossier'].until, expires);
   await checkPaid('closed', []);
   assert.equal(calls, 7);
+
+  const boundaryCases = [
+    [1, 'open', ['view', 'edit', 'export']],
+    [0, 'open', ['view', 'edit', 'export']],
+    [-1, 'read_export_only', ['view', 'export']],
+    [-30, 'read_export_only', ['view', 'export']],
+    [-31, 'closed', []],
+  ];
+  for (const [endedService] of PRODUCTS) {
+    endingService = endedService;
+    for (const [daysRemaining, expectedAccess, allowedOperations] of boundaryCases) {
+      await t.test(`ending ${endedService} at day ${daysRemaining} leaves the other service open`, async () => {
+        expires = dateFromToday(daysRemaining);
+        const eventId = `evt_boundary${calls}`;
+        assert.equal((await send(eventId, 'customer.updated', customer)).result, 'reconciled');
+        assert.equal(services[endedService].until, expires);
+        for (const [service, tenantId] of PRODUCTS) {
+          const credential = service === 'xesm' ? xesmToken : token;
+          for (const operation of ['view', 'edit', 'export']) {
+            const ending = service === endedService;
+            assert.deepEqual(await lookup(service, tenantId, 'user_PaidOnly', credential, operation), [
+              200,
+              { access: ending ? expectedAccess : 'open', allowed: !ending || allowedOperations.includes(operation) },
+            ], `${service}/${operation}`);
+          }
+        }
+      });
+    }
+  }
   await checkPersonal();
   assert.deepEqual((await db.prepare('SELECT * FROM account_grants ORDER BY id').all()).results, original);
 });
