@@ -106,6 +106,38 @@ test.describe('Alpine without CDN (ADR-0017)', () => {
     await context.close();
   });
 
+  for (const width of [320, 390]) {
+    for (const javaScriptEnabled of [false, true]) {
+      test(`keeps consent reachable at ${width}px with JavaScript ${javaScriptEnabled ? 'on' : 'off'}`, async ({ browser, baseURL }) => {
+        const context = await browser.newContext({ javaScriptEnabled, baseURL, viewport: { width, height: 844 } });
+        try {
+          const page = await context.newPage();
+          await page.goto('/contact/materials/');
+          await expect(page.locator('header')).toHaveCSS('position', javaScriptEnabled ? 'sticky' : 'static');
+          const menuToggle = page.locator('button[aria-controls="website-menu"]');
+          if (javaScriptEnabled) {
+            await waitForAlpine(page);
+            await menuToggle.click();
+            await expect(page.locator('#website-menu a').first()).toBeVisible();
+            await menuToggle.click();
+            await expect(page.locator('#website-menu')).toBeHidden();
+          } else {
+            await expect(menuToggle).toBeHidden();
+            await expect(page.locator('#website-menu a').first()).toBeVisible();
+          }
+          const consent = page.locator('#document-request-consent');
+          await consent.check({ timeout: 4000 });
+          await expect(consent).toBeChecked();
+          await consent.focus();
+          await page.keyboard.press('Space');
+          await expect(consent).not.toBeChecked();
+        } finally {
+          await context.close();
+        }
+      });
+    }
+  }
+
   test('shows reveal content with reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
