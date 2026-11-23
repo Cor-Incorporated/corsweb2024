@@ -16,7 +16,7 @@ import {
   WEBSITE_ID,
 } from '../config/organization';
 import { KOUSUKE_TERADA } from '../config/author';
-import { getExistingCustomerContactUrl, isContactChatPrimary } from '../config/site';
+import { getGeneralConsultationUrl, isContactChatPrimary } from '../config/site';
 import { getTranslations, type Locale } from './i18n';
 
 export type JsonLd = Record<string, unknown>;
@@ -47,12 +47,12 @@ export function buildOrganizationJsonLd(locale: Locale): JsonLd {
     url: `${SITE_ORIGIN}/`,
     logo: ORGANIZATION_LOGO,
     description: getTranslations(locale).meta.home.description,
-    // 表示上の既存利用者の窓口はフッターと同じURLを示す。
+    // 問い合わせ窓口はフッターと同じURLを示す。
     ...(isContactChatPrimary() && {
       contactPoint: {
         '@type': 'ContactPoint',
-        contactType: 'customer service',
-        url: `${SITE_ORIGIN}${getExistingCustomerContactUrl(locale)}`,
+        contactType: 'general inquiries',
+        url: `${SITE_ORIGIN}${getGeneralConsultationUrl(locale, 'footer')}`,
         availableLanguage: ['Japanese', 'English'],
       },
     }),

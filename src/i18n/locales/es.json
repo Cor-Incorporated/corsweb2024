@@ -512,7 +512,7 @@
             "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de pacientes, historias clínicas ni credenciales de acceso."
           }
         ],
-        "primary": "Contacto (recepción con IA)",
+        "primary": "Contacto por chat con IA",
         "downloadButton": "Descargar materiales"
       },
       "sourcesTitle": "Referencias",
@@ -838,7 +838,7 @@
             "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de sus clientes ni credenciales de acceso."
           }
         ],
-        "primary": "Contacto (recepción con IA)",
+        "primary": "Contacto por chat con IA",
         "downloadButton": "Descargar materiales"
       },
       "sourcesTitle": "Referencias",
@@ -1179,7 +1179,7 @@
             "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la obra ni documentos confidenciales."
           }
         ],
-        "primary": "Contacto (recepción con IA)",
+        "primary": "Contacto por chat con IA",
         "downloadButton": "Descargar materiales"
       },
       "sourcesTitle": "Referencias",
@@ -1488,7 +1488,7 @@
             "p": "Al principio basta con una descripción general de las tareas. No es necesario adjuntar datos reales de la planta ni documentos confidenciales."
           }
         ],
-        "primary": "Contacto (recepción con IA)",
+        "primary": "Contacto por chat con IA",
         "downloadButton": "Descargar materiales"
       },
       "sourcesTitle": "Referencias",
@@ -1787,7 +1787,7 @@
             "p": "Al principio basta con una descripción general de las tareas. No incluya datos reales de estudiantes ni alumnos, documentos confidenciales ni credenciales de acceso."
           }
         ],
-        "primary": "Contacto (recepción con IA)",
+        "primary": "Contacto por chat con IA",
         "downloadButton": "Descargar materiales"
       },
       "sourcesTitle": "Referencias",
@@ -2014,8 +2014,8 @@
       "about": "Sobre Cor.Inc.",
       "products": "Productos&Insights",
       "news": "Noticias",
-      "contact": "Contacto",
-      "calendar": "Disponibilidad para reuniones",
+      "contact": "Contacto por chat con IA",
+      "calendar": "Agenda del representante",
       "privacy": "Privacidad",
       "security": "Seguridad",
       "legal": "Aviso Legal",
@@ -2211,6 +2211,7 @@
     ]
   },
   "calendar": {
+    "openStandalone": "Ver la agenda en Google Calendar",
     "title": "Agenda del CEO",
     "description": "Esta es la agenda pública del CEO. Si desea programar una reunión, consulte los horarios disponibles y contáctenos.",
     "ariaLabel": "Calendario de agenda del CEO",

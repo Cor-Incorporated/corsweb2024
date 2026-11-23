@@ -235,12 +235,12 @@ describe('ランチャーのボタンは開いている間「閉じる」の文�
     closeLauncherRun(run);
   });
 
-  it.each(['zh', 'ko', 'es'] as const)('%s の旧URLから業種を選ぶリンクが表示言語と一致する', (locale) => {
-    const english = loadDistPage(CONTACT_PAGE_PATHS.en).document.querySelector('[data-legacy-industry-link]');
-    const link = loadDistPage(CONTACT_PAGE_PATHS[locale]).document.querySelector('[data-legacy-industry-link]');
+  it.each(['zh', 'ko', 'es'] as const)('%s の旧URLのチャットリンクが表示言語と一致する', (locale) => {
+    const english = loadDistPage(CONTACT_PAGE_PATHS.en).document.querySelector('[data-legacy-chat-link]');
+    const link = loadDistPage(CONTACT_PAGE_PATHS[locale]).document.querySelector('[data-legacy-chat-link]');
     expect(link?.textContent?.trim()).toBeTruthy();
     expect(link?.textContent?.trim()).not.toBe(english?.textContent?.trim());
-    expect(link?.getAttribute('href')).toBe(`/${locale}/?source=contact-industry#home-industry-entry`);
+    expect(link?.getAttribute('href')).toBe(`/contact/chat/?source=contact-legacy&locale=${locale}`);
   });
 
   // ランチャーの無いページを経て戻ると、スクリプトがもう一度実行される。開閉を 2 回束縛すると、

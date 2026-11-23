@@ -1,5 +1,6 @@
 ---
 import { CONTACT_CALENDAR_VISIBLE } from '../../config/contact';
+import { CONTACT_CALENDAR_ANCHOR } from '../../config/site';
 import { getCurrentLocale, getTranslations } from '../../utils/i18n';
 import LbHeading from '../common/LbHeading.astro';
 import LbText from '../common/LbText.astro';
@@ -7,73 +8,51 @@ import LbText from '../common/LbText.astro';
 const currentLocale = getCurrentLocale(Astro.url);
 const t = getTranslations(currentLocale);
 
-const calendarId = import.meta.env.PUBLIC_GCAL_ID;
-const calendarTz = import.meta.env.PUBLIC_GCAL_TZ || 'Asia/Tokyo';
-const calendarParams = import.meta.env.PUBLIC_GCAL_PARAMS || '';
-
-// カレンダーIDが設定されていない場合は表示しない（判定は config に集約。
-// フッターのリンクと同じ条件を使う）。
-const showCalendar = CONTACT_CALENDAR_VISIBLE;
-
-// カレンダーIDが設定されている場合のみURL構築
-let calendarSrc = '';
-if (showCalendar) {
-  const baseUrl = 'https://calendar.google.com/calendar/embed';
-  const url = new URL(baseUrl);
-  const params = new URLSearchParams();
-  params.set('src', calendarId);
-  params.set('ctz', calendarTz);
-
-  // calendarParamsが存在する場合はパースして追加
-  if (calendarParams) {
-    const extraParams = new URLSearchParams(calendarParams);
-    for (const [key, value] of extraParams.entries()) {
-      if (!params.has(key)) {
-        params.set(key, value);
-      }
-    }
+const calendarUrl = new URL('https://calendar.google.com/calendar/embed');
+if (CONTACT_CALENDAR_VISIBLE) {
+  const params = calendarUrl.searchParams;
+  params.set('src', import.meta.env.PUBLIC_GCAL_ID);
+  params.set('ctz', import.meta.env.PUBLIC_GCAL_TZ || 'Asia/Tokyo');
+  for (const [key, value] of new URLSearchParams(import.meta.env.PUBLIC_GCAL_PARAMS || '')) {
+    if (!params.has(key)) params.set(key, value);
   }
-  url.search = params.toString();
-  calendarSrc = url.toString();
+  if (!params.has('hl')) params.set('hl', currentLocale === 'zh' ? 'zh-CN' : currentLocale);
 }
 
-// Googleカレンダー埋め込み用コンポーネント
-
+const calendarFrame = (mode: 'AGENDA' | 'MONTH') => {
+  const url = new URL(calendarUrl);
+  url.searchParams.set('mode', mode);
+  return url.href;
+};
+const agendaUrl = calendarFrame('AGENDA');
 ---
 
-{showCalendar && (
-  <section id="contact-calendar" class="scroll-mt-24 py-16 sm:py-20">
-    <div class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-content lg:px-8">
-      <div class="flex flex-col gap-8">
-        <div class="text-center">
-          <LbHeading as="h2" class="text-3xl font-medium tracking-tight sm:text-4xl" text={t.calendar.title} />
-          <LbText class="mx-auto mt-4 max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.calendar.description} />
-        </div>
-        
-        <div class="mx-auto w-full max-w-4xl lg:max-w-content">
-          <div class="relative overflow-hidden rounded-3xl bg-white shadow-lg dark:bg-primary-900">
-            <!-- レスポンシブ対応のためのコンテナ -->
-            <div class="relative pb-[56.25%] h-0"> <!-- 16:9 アスペクト比 -->
-              <iframe
-                src={calendarSrc}
-                style="border: 0; overflow: hidden;"
-                class="absolute top-0 left-0 w-full h-full"
-                title={t.calendar.title}
-                loading="lazy"
-                allowfullscreen
-                referrerpolicy="no-referrer"
-                role="region"
-                aria-label={t.calendar.ariaLabel}
-              ></iframe>
-            </div>
-          </div>
-          
-          <!-- カレンダー下部の説明 -->
-          <div class="mt-6 text-center">
-            <LbText class="mx-auto max-w-[40em] text-sm text-primary-950/60 dark:text-primary-200/60" text={t.calendar.note} />
-          </div>
-        </div>
+{CONTACT_CALENDAR_VISIBLE && (
+  <section id={CONTACT_CALENDAR_ANCHOR} tabindex="-1" aria-labelledby="contact-calendar-title" class="scroll-mt-24 px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-6">
+      <div class="mx-auto w-full max-w-[40em] text-center">
+        <LbHeading id="contact-calendar-title" as="h2" class="text-3xl font-medium tracking-tight sm:text-4xl" text={t.calendar.title} />
+        <LbText class="mt-4 text-lg text-primary-950/70 dark:text-primary-200/70" text={t.calendar.description} />
+        <a href={agendaUrl} class="mt-3 inline-flex min-h-11 items-center rounded px-2 font-medium text-primary-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:text-primary-200 dark:focus-visible:outline-primary-200">
+          {t.calendar.openStandalone}
+        </a>
       </div>
+
+      <div class="rounded-2xl bg-white shadow-lg ring-1 ring-primary-950/15 dark:ring-primary-200/30">
+        {(['AGENDA', 'MONTH'] as const).map((mode) => (
+          <iframe
+            src={calendarFrame(mode)}
+            class:list={[
+              'h-[min(42rem,100svh)] min-h-[31.25rem] w-full rounded-2xl border-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-200',
+              mode === 'AGENDA' ? 'block md:hidden' : 'hidden md:block',
+            ]}
+            title={t.calendar.ariaLabel}
+            loading="lazy"
+            referrerpolicy="no-referrer"
+          ></iframe>
+        ))}
+      </div>
+      <LbText class="mx-auto max-w-[40em] text-center text-sm text-primary-950/70 dark:text-primary-200/70" text={t.calendar.note} />
     </div>
   </section>
 )}

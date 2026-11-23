@@ -62,7 +62,7 @@ describe('rewriteContactHref: 同じ site の問い合わせページだけを�
     'https://cor-jp.com/contact',
     '/contact#form',
   ])('%s → 記事と同じ言語の業種一覧', (href) => {
-    expect(rewriteContactHref(href, EN)).toBe('/en/?source=blog%2Fsome-post#home-industry-entry');
+    expect(rewriteContactHref(href, EN)).toBe('/contact/chat/?source=blog%2Fsome-post&locale=en');
   });
 
   it('元の intent を保ち、intent のほかの query と hash は運ばない', () => {
@@ -78,8 +78,8 @@ describe('rewriteContactHref: 同じ site の問い合わせページだけを�
   });
 
   it('言語はその記事の file の言語（ja の記事は ja、訳の記事はその言語）', () => {
-    expect(rewriteContactHref('/contact', { locale: 'ja', source: 'blog/x' })).toBe('/?source=blog%2Fx#home-industry-entry');
-    expect(rewriteContactHref('/contact', { locale: 'ko', source: 'blog/x' })).toBe('/ko/?source=blog%2Fx#home-industry-entry');
+    expect(rewriteContactHref('/contact', { locale: 'ja', source: 'blog/x' })).toBe('/contact/chat/?source=blog%2Fx&locale=ja');
+    expect(rewriteContactHref('/contact', { locale: 'ko', source: 'blog/x' })).toBe('/contact/chat/?source=blog%2Fx&locale=ko');
   });
 
   it.each([
@@ -146,13 +146,13 @@ describe('rehypeContactLinks: file の path で言語を決める', () => {
   it('訳の記事は、その言語で書き換える', () => {
     const node = tree();
     rehypeContactLinks()(node, { path: '/repo/src/content/blog/zh/some-post.md' });
-    expect(hrefOf(node)).toBe('/zh/?source=blog%2Fsome-post#home-industry-entry');
+    expect(hrefOf(node)).toBe('/contact/chat/?source=blog%2Fsome-post&locale=zh');
   });
 
   it('path が history にしか無くても読む', () => {
     const node = tree();
     rehypeContactLinks()(node, { history: ['/repo/src/content/blog/es/some-post.md'] });
-    expect(hrefOf(node)).toBe('/es/?source=blog%2Fsome-post#home-industry-entry');
+    expect(hrefOf(node)).toBe('/contact/chat/?source=blog%2Fsome-post&locale=es');
   });
 
   it('src/content の外の file は変えない', () => {

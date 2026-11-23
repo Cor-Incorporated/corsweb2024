@@ -6,7 +6,6 @@ import {
   CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS,
 } from '../../config/contact';
 import { industryContactSource, industrySlugFromPath } from '../../config/industry-context';
-import { CONTACT_INTENTS, getGeneralConsultationUrl, isContactChatPrimary } from '../../config/site';
 import { LAUNCHER_COPY, type LauncherCopy } from './cloudia-launcher-copy';
 import { CLOUDIA_UNAVAILABLE_PHONE_VISIBLE } from './chat/cloudiaUnavailableCopy';
 import { buildUnavailableNotice } from './chat/cloudiaUnavailableNotice';
@@ -58,7 +57,6 @@ const unavailableNotice = buildUnavailableNotice({
 });
 
 const copy: LauncherCopy = LAUNCHER_COPY[currentLocale];
-const industrySelection = !industrySlug && isContactChatPrimary();
 const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:bg-primary-400 dark:text-primary-950 dark:hover:bg-primary-300';
 ---
 
@@ -136,7 +134,7 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
       </div>
     </div>
   </div>
-  <div class="shrink-0" hidden={industrySelection}>
+  <div class="shrink-0">
     <button
       type="button"
       id="cloudia-launcher-open"
@@ -149,18 +147,6 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
       {copy.label}
     </button>
   </div>
-  {
-    industrySelection && (
-      <a
-        id="cloudia-launcher-industry"
-        class={launcherClass}
-        href={getGeneralConsultationUrl(currentLocale, 'corsweb-launcher')}
-        data-contact-intents={CONTACT_INTENTS.join(' ')}
-      >
-        {copy.industryLink}
-      </a>
-    )
-  }
 </aside>
 
 <script is:inline>
@@ -219,13 +205,6 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
       fallbackLink.href = `${fallbackTarget.pathname}${fallbackTarget.search}${fallbackTarget.hash}`;
     };
 
-    // 既知の目的を伴う入口では、目的・流入元を埋め込みと復旧用リンクへ渡す。
-    const industryLink = document.getElementById('cloudia-launcher-industry');
-    const incomingIntent = new URLSearchParams(window.location.search).get('intent');
-    if (industryLink && incomingIntent && industryLink.dataset.contactIntents.split(' ').includes(incomingIntent)) {
-      industryLink.remove();
-      openButton.parentElement.hidden = false;
-    }
     applyIncomingContext();
 
     const fallbackMessage = fallback.querySelector('[data-cloudia-fallback-message]');
@@ -443,7 +422,8 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
     window.addEventListener('message', window.__cloudiaMessageHandler);
   }
 
-  // astro:page-load は初回ロードと ViewTransitions の各遷移後に必ず発火する。
+  // 初回はマークアップ直後に操作できるようにし、画面遷移後にも束縛する。
+  initCloudiaLauncher();
   document.addEventListener('astro:page-load', initCloudiaLauncher);
 </script>
 

@@ -2,7 +2,7 @@ import { test, type Page } from '@playwright/test';
 
 import { installLineBreakProbe } from './helpers/line-break-probe';
 
-// LP と一覧の page（top・about・サービス・contact・実績・お知らせ・blog）の、配置と改行の決まり
+// LP と一覧の page（top・about・サービス・会社概要・実績・お知らせ・blog）の、配置と改行の決まり
 // （docs/design/layout-rules.md の R1・R2）を見る。手本は e2e/visual-text.spec.ts の
 // 「line breaks」の試験（待ち方・animation を止める・許す幅は同じ）。
 // 幅を測る関数と「1 行のはず」の決め（幅が箱より 1px 以上小さい物だけ判定。判定した文が
@@ -11,7 +11,8 @@ const LP_ROUTES = [
   '/',
   '/about/',
   '/services/ai-development/',
-  '/contact/',
+  // 旧問い合わせURLの転送は contact-cloudia.spec.ts で検査する。
+  '/company/',
   '/works/',
   '/news/',
   '/blog/',
