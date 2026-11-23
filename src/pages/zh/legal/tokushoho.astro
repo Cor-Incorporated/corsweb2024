@@ -16,7 +16,7 @@ import { ORGANIZATION_NAMES } from '../../../config/organization';
     <p class="mb-6 rounded-md border border-primary-900/15 bg-primary-900/[0.03] px-4 py-3 text-sm dark:border-primary-300/15 dark:bg-primary-300/[0.04]">本页面适用日本法律。日语版本为正式文本，本中文译文仅供参考。</p>
 
     <ScrollableTable labelledBy="legal-notice-table">
-    <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
+    <table class="w-full table-fixed border-collapse text-left [overflow-wrap:anywhere] sm:table-auto">
       <caption id="legal-notice-table" class="sr-only">根据日本特定商业交易法要求的卖方信息</caption>
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
         <tr><th class="py-4 pr-6 align-top font-medium">卖方</th><td class="py-4">{ORGANIZATION_NAMES.zh}</td></tr>

@@ -17,8 +17,9 @@ const { labelledBy } = Astro.props;
 
 <style>
   scrollable-table :global(tbody th) {
-    /* Keep row headings readable when a long value competes for space. */
-    min-width: 8.5em;
+    /* Leave room for both the field name and its value on small screens. */
+    width: 38%;
+    padding-inline-end: 1rem;
   }
 </style>
 
