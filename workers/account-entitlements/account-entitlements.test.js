@@ -10,11 +10,12 @@ const issuer = 'https://clerk.example.invalid';
 const bd = 'business-dossier';
 const bdToken = randomBytes(32).toString('base64url');
 const xesmToken = randomBytes(32).toString('base64url');
+const harborToken = randomBytes(32).toString('base64url');
 const requestUrl = 'https://entitlements.example.invalid/v1/entitlements/check';
 const known = { service: bd, issuer, subject: 'user_LegacyFixture', tenantId: 'ws-a' };
 
 test('product query against local Workers and D1 runtime', async (t) => {
-  const mf = new Miniflare(convertV4MiniflareOptions({
+  const options = {
     modules: true,
     scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
     compatibilityDate: '2026-10-26',
@@ -23,10 +24,12 @@ test('product query against local Workers and D1 runtime', async (t) => {
       CLERK_ISSUER: issuer,
       BD_ENTITLEMENT_QUERY_TOKEN: bdToken,
       XESM_ENTITLEMENT_QUERY_TOKEN: xesmToken,
+      HARBOR_ENTITLEMENT_QUERY_TOKEN: harborToken,
     },
     cf: false,
     telemetry: { enabled: false },
-  }));
+  };
+  const mf = new Miniflare(convertV4MiniflareOptions(options));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
   const migration = await readFile(new URL('migrations/0001_account_grants.sql', import.meta.url), 'utf8');
@@ -102,8 +105,42 @@ test('product query against local Workers and D1 runtime', async (t) => {
     await assert.rejects(db.prepare("UPDATE account_grants SET revoked_at=datetime('now') WHERE id='staff-bd'").run());
   });
 
+  await t.test('Harbor grants retain workspace boundaries and can be withdrawn independently', async () => {
+    const shared = { service: 'harbor', issuer, subject: 'user_StaffFixture', tenantId: 'harbor-team' };
+    await grant('harbor-staff', shared.subject, 'harbor', shared.tenantId, 'staff', today, today);
+    await grant('harbor-existing', known.subject, 'harbor', shared.tenantId, 'legacy', today, today);
+    assert.deepEqual(await query(shared, harborToken), [200, { allowed: true }]);
+    assert.deepEqual(await query({ ...shared, subject: known.subject }, harborToken), [200, { allowed: true }]);
+    assert.deepEqual(await query({ ...shared, tenantId: 'other-team' }, harborToken), [200, { allowed: false }]);
+    for (const wrongToken of [bdToken, xesmToken]) {
+      assert.deepEqual(await query(shared, wrongToken), [401, { error: 'unauthorized' }]);
+    }
+    assert.deepEqual(await query(known, harborToken), [401, { error: 'unauthorized' }]);
+    await db.prepare("UPDATE account_grants SET revoked_at=datetime('now'), revocation_ref=? WHERE id=?")
+      .bind('withdrawal', 'harbor-staff').run();
+    assert.deepEqual(await query(shared, harborToken), [200, { allowed: false }]);
+    assert.deepEqual(await query({ ...shared, subject: known.subject }, harborToken), [200, { allowed: true }]);
+    assert.deepEqual(await query({ ...shared, service: bd, tenantId: 'ws-b' }, bdToken), [200, { allowed: true }]);
+    assert.deepEqual(await query({ ...shared, service: 'xesm', tenantId: 'org-a' }, xesmToken), [200, { allowed: true }]);
+  });
+
+  await t.test('a missing or duplicated Harbor credential leaves independently configured products usable', async () => {
+    for (const value of ['', bdToken]) {
+      await mf.setOptions(convertV4MiniflareOptions({
+        ...options, bindings: { ...options.bindings, HARBOR_ENTITLEMENT_QUERY_TOKEN: value },
+      }));
+      assert.deepEqual(await query({ ...known, service: 'harbor' }, harborToken),
+        [503, { error: 'unavailable' }]);
+      if (value === bdToken) assert.deepEqual(await query(known), [503, { error: 'unavailable' }]);
+      const xesm = { ...known, service: 'xesm', subject: 'user_StaffFixture', tenantId: 'org-a' };
+      assert.deepEqual(await query(xesm, xesmToken), [200, { allowed: true }]);
+    }
+    await mf.setOptions(convertV4MiniflareOptions(options));
+  });
+
   await t.test('a missing or inaccessible grant database yields 503 and never allowed', async () => {
-    await db.prepare('DROP TABLE account_grants').run();
+    const activeDb = await mf.getD1Database('ACCOUNT_GRANTS');
+    await activeDb.prepare('DROP TABLE account_grants').run();
     assert.deepEqual(await query(known), [503, { error: 'unavailable' }]);
   });
 });

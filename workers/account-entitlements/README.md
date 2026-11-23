@@ -4,7 +4,7 @@
 
 ## 製品サーバーとの契約
 
-`POST /v1/entitlements/check` に `Content-Type: application/json` と製品専用の `Authorization: Bearer …` を付ける。BDとXESMそれぞれ独立した機械間の値を配備側に設定し、サーバーでのみ扱う。値は256ビット以上のbase64urlで、最大128文字。両製品に同じ値を設定した場合は503。公開ブラウザから直接呼び出す設計は採らない。
+`POST /v1/entitlements/check` に `Content-Type: application/json` と製品専用の `Authorization: Bearer …` を付ける。BD・XESM・Harborの製品サーバーは、それぞれ独立した機械間の値を使う。値は256ビット以上のbase64urlで、最大128文字。設定が空または他製品と重複する製品には503を返す。異なる値を持つ製品は引き続き照会できる。
 
 ```json
 {
@@ -15,7 +15,7 @@
 }
 ```
 
-- BDの `service` は `business-dossier`、XESMは `xesm`。製品サーバーが署名を検証したClerkの `issuer`・`subject` と既存テナントIDを渡す。別のIdPを介す場合は、本人確認済みの対応を製品サーバーで解決する。テナントIDやClerk主体をブラウザ入力から直接採用しない。
+- BDの `service` は `business-dossier`、XESMは `xesm`、Harborは `harbor`。製品サーバーが署名を検証したClerkの `issuer`・`subject` と既存テナントIDを渡す。別のIdPを介す場合は、本人確認済みの対応を製品サーバーで解決する。Harborの共有利用では `tenantId` は既存のworkspace ID。中央の `HARBOR_ENTITLEMENT_QUERY_TOKEN` はHarborのサーバーが使う製品専用資格に対応する。テナントIDやClerk主体をブラウザ入力から直接採用しない。
 - `200 {"allowed":true}` は指定した4項目に一致する期限内の付与あり。製品の役割・所属・案件や資料の個別認可は引き続き製品側で行う。独立付与で既存ロールの範囲を広げない。
 - `200 {"allowed":false}` は一致する期限内の付与なし。認証・構成・通信・データベースの異常も中央付与は認めない。独立に有効な既存の有償契約の判断は製品側に残す。中央方式へ移行した対象を古いローカル台帳へ戻して再許可しない。
 - 応答は保存せず、保護操作ごとに問合せる。中央はD1のprimaryを参照する。撤回がコミットされた後、次の問合せに反映される。
