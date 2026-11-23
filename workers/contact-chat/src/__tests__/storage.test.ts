@@ -184,5 +184,13 @@ describe('encrypted contact storage primitives', () => {
     const receipt = await getSubmissionForNotification(env, 'submission-1', 'receipt');
     expect(receipt?.inquiry.conversationExcerpt).toBeUndefined();
     expect(receipt?.inquiry.structuredLead).toEqual({ discoverySource: '検索', contactReason: '導入相談' });
+
+    // A pending notification can outlive removal of its original conversation context.
+    const reviewedRow = { ...row, summary_ciphertext: await encryptText(secret, ''), structured_lead_json: '{}' };
+    const reviewedDb = mockDb(() => reviewedRow);
+    const delivery = await getSubmissionForNotification({ ...env, DB: reviewedDb } as unknown as Env, 'submission-1');
+    expect(delivery?.inquiry.message).toBe('補足');
+    expect(delivery?.inquiry.shareConversation).toBe(false);
+    expect(delivery?.inquiry.conversationExcerpt).toBeUndefined();
   });
 });
