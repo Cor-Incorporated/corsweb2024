@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
+import { once } from 'node:events';
+import { createServer } from 'node:http';
+import { Readable } from 'node:stream';
 import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,7 +13,7 @@ import { promisify } from 'node:util';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { writePaidProjection } from './paid-projection.js';
 import { createClerkPaidProjector } from '../../docs/billing/project-paid-contracts.mjs';
-import { createSandboxBillingReconciler } from '../../docs/billing/notification-reconcile.mjs';
+import { createSandboxBillingRuntime } from '../../docs/billing/notification-reconcile.mjs';
 
 const run = promisify(execFile);
 const billing = fileURLToPath(new URL('../../docs/billing/', import.meta.url));
@@ -114,7 +117,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
       });
     },
   });
-  const accept = createSandboxBillingReconciler({ secret, customer: CUSTOMER, now: () => NOW, project,
+  const runtime = createSandboxBillingRuntime({ secret, customer: CUSTOMER, now: () => NOW, project,
     reconcile: async customer => {
     assert.equal(customer, CUSTOMER);
     const log = join(scratch, `curl-${++calls}`);
@@ -159,13 +162,35 @@ test('billing notifications reconcile current paid rights and preserve personal 
     return { organizationId: 'org_fixture', resyncAt };
   } });
 
-  const send = (id, type, payload, options = {}) => {
+  const listener = createServer(async (request, response) => {
+    try {
+      const method = request.method;
+      const result = await runtime.fetch(new Request('http://127.0.0.1' + request.url, {
+        method, headers: request.headers,
+        ...(method === 'GET' ? {} : { body: Readable.toWeb(request), duplex: 'half' }),
+      }));
+      response.writeHead(result.status, Object.fromEntries(result.headers));
+      response.end(Buffer.from(await result.arrayBuffer()));
+    } catch {
+      response.writeHead(500).end();
+    }
+  });
+  listener.listen(0, '127.0.0.1');
+  await once(listener, 'listening');
+  t.after(() => new Promise(resolve => listener.close(resolve)));
+  const base = `http://127.0.0.1:${listener.address().port}`;
+  const webhook = base + '/webhooks/stripe/billing';
+  const send = async (id, type, payload, options = {}) => {
     const { signedAt = NOW, secretOverride = secret, ...overrides } = options;
     const body = Buffer.from(JSON.stringify({
       object: 'event', livemode: false, id, type, created: NOW - 5000, data: { object: payload }, ...overrides,
     }));
     const signature = createHmac('sha256', secretOverride).update(signedAt + '.').update(body).digest('hex');
-    return accept(body, `t=${signedAt},v1=${signature}`);
+    const response = await fetch(webhook, {
+      method: 'POST', body,
+      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': `t=${signedAt},v1=${signature}` },
+    });
+    return { status: response.status, ...await response.json() };
   };
   const invoice = { object: 'invoice', customer: CUSTOMER, status: 'paid' };
   const customer = { object: 'customer', id: CUSTOMER, metadata: { 'contract_business-dossier_end': '' } };
@@ -174,6 +199,12 @@ test('billing notifications reconcile current paid rights and preserve personal 
 
   await checkPersonal();
   await checkPaid('closed', []);
+  assert.equal((await fetch(base + '/other')).status, 404);
+  assert.equal((await fetch(webhook)).status, 405);
+  assert.equal((await fetch(webhook, { method: 'POST', body: 'text' })).status, 415);
+  assert.equal((await fetch(webhook, {
+    method: 'POST', body: 'x'.repeat(262145), headers: { 'Content-Type': 'application/json' },
+  })).status, 413);
   assert.deepEqual(await send('evt_bad', 'invoice.paid', invoice, { secretOverride: 'wrong' }),
     { status: 400, result: 'bad_signature' });
   assert.deepEqual(await send('evt_stale', 'invoice.paid', invoice, { signedAt: NOW - 301 }),
@@ -303,6 +334,19 @@ test('billing notifications reconcile current paid rights and preserve personal 
       approvedBindings: [], members: [],
     });
     assert.equal(outcome, false);
+    await checkPaid('open', ['view', 'edit', 'export']);
+  });
+
+  await t.test('the periodic trigger refreshes the same snapshot before normal reads', async () => {
+    await db.prepare("UPDATE paid_contract_snapshots SET expires_at = datetime('now', '-1 second')").run();
+    await checkPaid('closed', []);
+    const scheduled = new Promise(resolve => {
+      const timer = setInterval(() => {
+        clearInterval(timer);
+        resolve(runtime.scheduled());
+      }, 10);
+    });
+    assert.equal((await scheduled).result, 'reconciled');
     await checkPaid('open', ['view', 'edit', 'export']);
   });
 
