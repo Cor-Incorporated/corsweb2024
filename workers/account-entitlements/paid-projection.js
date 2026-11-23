@@ -49,7 +49,7 @@ function activeApprovals(approvedBindings, members) {
 // Treat observation order as independent of delivery order and only write when confirmed.
 export async function writePaidProjection(db, {
   issuer, confirmedOrganization, approvedBindings, members, observedAtMs,
-}, { now = Date.now(), syncId = globalThis.crypto.randomUUID() } = {}) {
+}, { now = Date.now(), syncId = globalThis.crypto.randomUUID(), lease } = {}) {
   const origin = new URL(issuer);
   if (origin.protocol !== 'https:' || issuer !== origin.origin ||
       !organizationId.test(confirmedOrganization?.id ?? '') ||
@@ -63,13 +63,17 @@ export async function writePaidProjection(db, {
   const guard = `EXISTS (SELECT 1 FROM paid_contract_snapshots
     WHERE issuer = ? AND organization_id = ? AND sync_id = ?)`;
 
+  // Check ownership inside the D1 write, including time spent waiting for D1.
+  const currentLease = lease ? `EXISTS (SELECT 1 FROM billing_reconciliation_leases
+    WHERE customer_id = ? AND owner = ? AND expires_at_ms > unixepoch('subsec') * 1000)` : '1';
+  const leaseParameters = lease ? [lease.customer, lease.owner] : [];
   const snapshot = db.prepare(`INSERT INTO paid_contract_snapshots
     (issuer, organization_id, services_json, expires_at, observed_at_ms, sync_id)
-    VALUES (?, ?, ?, ?, ?, ?)
+    SELECT ?, ?, ?, ?, ?, ? WHERE ${currentLease}
     ON CONFLICT (issuer, organization_id) DO UPDATE SET services_json = excluded.services_json,
       expires_at = excluded.expires_at, observed_at_ms = excluded.observed_at_ms, sync_id = excluded.sync_id
     WHERE excluded.observed_at_ms > paid_contract_snapshots.observed_at_ms`)
-    .bind(issuer, org, services, expiration, observedAtMs, syncId);
+    .bind(issuer, org, services, expiration, observedAtMs, syncId, ...leaseParameters);
   const revoke = db.prepare(`UPDATE paid_contract_members AS member SET revoked_at = datetime('now')
     WHERE issuer = ? AND organization_id = ? AND revoked_at IS NULL AND ${guard}
       AND NOT EXISTS (SELECT 1 FROM json_each(?) AS approved

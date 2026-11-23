@@ -94,6 +94,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
   let approvalRef = 'fixture';
   let incompleteMemberships = false;
   let beforeReconciliation;
+  let beforeMemberRead;
   const project = createClerkPaidProjector({
     db, issuer: ISSUER, clerkSecret: 'sk_test_fixture',
     loadApprovedBindings: async (issuer, org) => {
@@ -111,6 +112,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
         id: 'org_fixture', object: 'organization', public_metadata: { services, resync_at: resyncAt },
       });
       assert.equal(url, path + '/memberships?limit=100&offset=0');
+      if (beforeMemberRead) await beforeMemberRead();
       return Response.json({
         total_count: members.length + Number(incompleteMemberships),
         data: members.map(subject => ({
@@ -408,6 +410,43 @@ test('billing notifications reconcile current paid rights and preserve personal 
     assert.equal(calls, previous + 1);
     await checkPaid('open', ['view', 'edit', 'export']);
   });
+
+  for (const takeover of [false, true]) {
+    await t.test(`an expired receiver cannot project paid rights (takeover=${takeover})`, async () => {
+      const before = await db.prepare('SELECT * FROM paid_contract_snapshots').all();
+      const beforeMembers = await db.prepare('SELECT * FROM paid_contract_members ORDER BY subject, service').all();
+      const id = takeover ? 'evt_FenceTakeover' : 'evt_FenceExpired';
+      const ready = Promise.withResolvers();
+      const resume = Promise.withResolvers();
+      beforeMemberRead = () => { ready.resolve(); return resume.promise; };
+      const old = send(id, 'invoice.paid', invoice);
+      let newLease;
+      const receipts = createD1NotificationReceipts(db);
+      try {
+        await ready.promise;
+        await db.prepare('UPDATE billing_reconciliation_leases SET expires_at_ms = 0 WHERE customer_id = ?')
+          .bind(CUSTOMER).run();
+        if (takeover) {
+          newLease = await receipts.reserve(CUSTOMER, 'evt_NextOwner');
+          assert.equal(newLease.state, 'reserved');
+        }
+      } finally {
+        beforeMemberRead = undefined;
+        resume.resolve();
+      }
+      try {
+        assert.deepEqual(await old, { status: 503, result: 'retry' });
+        assert.deepEqual((await db.prepare('SELECT * FROM paid_contract_snapshots').all()).results, before.results);
+        assert.deepEqual((await db.prepare('SELECT * FROM paid_contract_members ORDER BY subject, service').all()).results, beforeMembers.results);
+        assert.equal(await db.prepare('SELECT event_id FROM billing_notification_receipts WHERE event_id = ?').bind(id).first(), null);
+        if (takeover) {
+          assert.equal((await db.prepare('SELECT owner FROM billing_reconciliation_leases WHERE customer_id = ?').bind(CUSTOMER).first()).owner, newLease.owner);
+        }
+      } finally {
+        if (newLease?.owner) await receipts.abandon(CUSTOMER, newLease.owner);
+      }
+    });
+  }
 
   await checkPersonal();
   assert.deepEqual((await db.prepare('SELECT * FROM account_grants ORDER BY id').all()).results, original);

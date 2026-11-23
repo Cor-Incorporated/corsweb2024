@@ -44,7 +44,7 @@ export function createSandboxBillingReconciler({ secret, customer, reconcile, pr
         if (lease.state === 'duplicate') return { status: 200, result: 'duplicate' };
         if (lease.state !== 'reserved') return { status: 503, result: 'retry' };
         const confirmed = await reconcile(customer);
-        if (project) await project(confirmed);
+        if (project) await project(confirmed, { customer, owner: lease.owner });
         await receipts.complete(customer, eventId, lease.owner);
       } catch {
         if (lease?.owner) {

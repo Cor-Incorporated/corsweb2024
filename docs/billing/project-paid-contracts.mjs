@@ -46,7 +46,8 @@ async function readOrganizationMembers(read, path, id) {
 export function createClerkPaidProjector({
   db, issuer, clerkSecret, loadApprovedBindings, fetchClerk = fetch, now = Date.now,
 }) {
-  return async function project({ organizationId, resyncAt }) {
+  return async function project({ organizationId, resyncAt }, lease) {
+    if (!lease?.customer || !lease.owner) throw new Error('Missing billing reconciliation lease');
     if (typeof organizationId !== 'string' || !orgPattern.test(organizationId) ||
         typeof resyncAt !== 'string' || !resyncAt || typeof clerkSecret !== 'string' || !clerkSecret) {
       throw new Error('Missing confirmed billing reconciliation');
@@ -61,6 +62,6 @@ export function createClerkPaidProjector({
       throw new Error('Clerk organization or billing revision did not match');
     }
     return writePaidProjection(db, { issuer, confirmedOrganization, approvedBindings, members, observedAtMs },
-      { now: now() });
+      { now: now(), lease });
   };
 }
