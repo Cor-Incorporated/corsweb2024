@@ -114,6 +114,25 @@ describe('labelTaskListCheckboxes: 各 checkbox にその項目の文を名前�
     expect(wrapped.children?.[0].properties?.ariaLabel).toBe('First second');
   });
 
+  it('先頭の段落以外に置かれた別の checkbox は変更しない', () => {
+    const later = el('input', { type: 'checkbox', disabled: true });
+    const tree = root(el('li', { className: ['task-list-item'] }, [
+      el('p', {}, [text('導入')]),
+      el('p', {}, [later, text(' 別の入力')]),
+    ]));
+    expect(labelTaskListCheckboxes(tree)).toBe(0);
+    expect(later.properties?.ariaLabel).toBeUndefined();
+  });
+
+  it('タスクの下の引用・コード・リストを項目名に含めない', () => {
+    const quote = render('- [ ] 手順を確認\n  > 補足の引用文');
+    const code = render('- [x] 設定を確認\n  ```txt\n  例示の値\n  ```');
+    expect(quote).toContain('aria-label="手順を確認"');
+    expect(code).toContain('aria-label="設定を確認"');
+    expect(quote).toContain('補足の引用文');
+    expect(code).toContain('例示の値');
+  });
+
   it('rehype の部品として、木を受け取って同じように付ける', () => {
     const tree = root(el('ul', {}, [item(false, text(' 項目'))]));
     rehypeTaskListLabels()(tree);

@@ -56,33 +56,37 @@ function hasName(node: HastNode): boolean {
   return false;
 }
 
-/**
- * 項目自身の checkbox。緩い list では最初の paragraph の中にある。
- * 入れ子の list の中の checkbox は拾わない（子の項目は子で名付ける）。
- */
-function ownCheckboxOf(item: HastNode): HastNode | undefined {
-  for (const child of item.children ?? []) {
-    if (isDisabledCheckbox(child)) return child;
-    if (isElement(child, 'p')) {
-      const checkbox = (child.children ?? []).find(isDisabledCheckbox);
-      if (checkbox) return checkbox;
-    }
-  }
-  return undefined;
+// Tight list の先頭段落には p 要素がない。次のブロックが段落の終端になる。
+const markdownBlocks = new Set([
+  'blockquote', 'div', 'figure', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
+  'ol', 'p', 'pre', 'section', 'table', 'ul',
+]);
+
+function firstContentIndex(children: HastNode[]): number {
+  return children.findIndex((child) => child.type !== 'comment'
+    && !(child.type === 'text' && !child.value?.trim()));
 }
 
-/** 項目自身の文。入れ子の list と checkbox は除く（子の項目名を親に混ぜない） */
-function itemTextOf(item: HastNode): string {
-  const firstParagraph = (item.children ?? []).find((child) => isElement(child, 'p'));
-  if (firstParagraph) return textOf(firstParagraph).replace(/\s+/g, ' ').trim();
+function labelTaskItem(item: HastNode): number {
+  let content = item.children ?? [];
+  let start = firstContentIndex(content);
+  if (start < 0) return 0;
+  if (isElement(content[start], 'p')) {
+    content = content[start].children ?? [];
+    start = firstContentIndex(content);
+  }
+  const checkbox = content[start];
+  if (!checkbox || !isDisabledCheckbox(checkbox) || hasName(checkbox)) return 0;
 
   let text = '';
-  for (const child of item.children ?? []) {
-    if (isElement(child, 'input')) continue;
-    if (isElement(child, 'ul') || isElement(child, 'ol')) continue;
+  for (const child of content.slice(start + 1)) {
+    if (child.tagName && markdownBlocks.has(child.tagName)) break;
     text += textOf(child);
   }
-  return text.replace(/\s+/g, ' ').trim();
+  const label = text.replace(/\s+/g, ' ').trim();
+  if (!label) return 0;
+  checkbox.properties!.ariaLabel = label;
+  return 1;
 }
 
 /**
@@ -92,13 +96,7 @@ function itemTextOf(item: HastNode): string {
 export function labelTaskListCheckboxes(node: HastNode): number {
   let changed = 0;
   if (isElement(node, 'li') && classesOf(node).includes('task-list-item')) {
-    const checkbox = ownCheckboxOf(node);
-    const label = itemTextOf(node);
-    if (checkbox && label !== '' && !hasName(checkbox)) {
-      checkbox.properties = checkbox.properties ?? {};
-      checkbox.properties.ariaLabel = label;
-      changed += 1;
-    }
+    changed = labelTaskItem(node);
   }
   for (const child of node.children ?? []) changed += labelTaskListCheckboxes(child);
   return changed;
