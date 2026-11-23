@@ -1,0 +1,60 @@
+---
+interface Props {
+  labelledBy: string;
+}
+
+const { labelledBy } = Astro.props;
+---
+
+<scrollable-table
+  class="block scroll-mt-24 overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-200"
+  role="region"
+  aria-labelledby={labelledBy}
+  tabindex="0"
+>
+  <slot />
+</scrollable-table>
+
+<style>
+  scrollable-table :global(tbody th) {
+    /* Keep row headings readable when a long value competes for space. */
+    min-width: 8.5em;
+  }
+</style>
+
+<script>
+  class ScrollableTable extends HTMLElement {
+    #observer = new ResizeObserver(() => this.#updateTabOrder());
+
+    connectedCallback() {
+      this.addEventListener('keydown', this.#onKeyDown);
+      this.#updateTabOrder();
+      this.#observer.observe(this);
+      const table = this.querySelector('table');
+      if (table) this.#observer.observe(table);
+    }
+
+    disconnectedCallback() {
+      this.removeEventListener('keydown', this.#onKeyDown);
+      this.#observer.disconnect();
+    }
+
+    #onKeyDown = (event: KeyboardEvent) => {
+      if (event.target !== this || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (this.scrollWidth <= this.clientWidth || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+
+      // WebKit lets this region receive focus but does not scroll it with arrow keys.
+      event.preventDefault();
+      this.scrollLeft += event.key === 'ArrowRight' ? 40 : -40;
+    };
+
+    #updateTabOrder() {
+      // Keep the table in the tab order only while it has off-screen columns.
+      this.tabIndex = this.scrollWidth > this.clientWidth ? 0 : -1;
+    }
+  }
+
+  if (!customElements.get('scrollable-table')) {
+    customElements.define('scrollable-table', ScrollableTable);
+  }
+</script>

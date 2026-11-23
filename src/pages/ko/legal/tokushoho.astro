@@ -1,6 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import LbHeading from '../../../components/common/LbHeading.astro';
+import ScrollableTable from '../../../components/common/ScrollableTable.astro';
 import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
 ---
@@ -14,9 +15,9 @@ import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
 
     <p class="mb-6 rounded-md border border-primary-900/15 bg-primary-900/[0.03] px-4 py-3 text-sm dark:border-primary-300/15 dark:bg-primary-300/[0.04]">이 페이지에는 일본 법률이 적용됩니다. 일본어판이 정본이며, 본 한국어 번역은 참고용입니다.</p>
 
-    <div class="overflow-x-auto">
+    <ScrollableTable labelledBy="legal-notice-table">
     <table class="min-w-[42rem] w-full table-auto border-collapse text-left">
-      <caption class="sr-only">일본 특정상거래법에 따라 요구되는 판매자 정보</caption>
+      <caption id="legal-notice-table" class="sr-only">일본 특정상거래법에 따라 요구되는 판매자 정보</caption>
       <tbody class="divide-y divide-primary-200 dark:divide-primary-800">
         <tr><th class="py-4 pr-6 align-top font-medium">판매자</th><td class="py-4">{`${ORGANIZATION_NAMES.ko} (${LEGAL_NAME})`}</td></tr>
         <tr><th class="py-4 pr-6 align-top font-medium">운영 책임자</th><td class="py-4">대표이사&nbsp;테라다&nbsp;코스케</td></tr>
@@ -43,6 +44,6 @@ import { LEGAL_NAME, ORGANIZATION_NAMES } from '../../../config/organization';
         <tr><th class="py-4 pr-6 align-top font-medium">중고품 영업법 허가번호</th><td class="py-4">해당 없음</td></tr>
       </tbody>
     </table>
-    </div>
+    </ScrollableTable>
   </div>
 </Layout>
