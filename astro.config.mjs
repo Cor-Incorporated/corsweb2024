@@ -7,6 +7,7 @@ import { remarkHasMath } from './src/utils/remark-has-math';
 import { remarkArticleSources } from './src/utils/remark-article-sources';
 import { rehypeContactLinks } from './src/utils/rehype-contact-links';
 import { rehypeLineBreaks } from './src/utils/rehype-line-breaks';
+import { rehypeTaskListLabels } from './src/utils/rehype-task-list-labels';
 import { fileURLToPath } from 'node:url';
 import { includeInSitemap } from './src/config/indexing';
 import { collectBlogLastmod } from './src/config/sitemap';
@@ -112,6 +113,8 @@ export default defineConfig({
       rehypeContactLinks,
       // 本文と題に、文と塊の印を付ける（docs/design/layout-rules.md の R1）。文字は変えない
       rehypeLineBreaks,
+      // タスクリストの checkbox に、その項目の文を読み上げ名として付ける（内容・checked・disabled は変えない）
+      rehypeTaskListLabels,
       // 題の名前の参照先の span（rehypeHeadingNameSpan を参照）。line-breaks の後で掛け、塊の構造を残す
       rehypeHeadingNameSpan,
     ],
