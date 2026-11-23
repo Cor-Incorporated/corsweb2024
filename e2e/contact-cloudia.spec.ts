@@ -157,16 +157,13 @@ test.describe('Cloudia contact routing', () => {
     expect(localizedUrl.searchParams.get('locale')).toBe('en');
   });
 
-  // お問い合わせページの上でも、逃げ道は自分のページ（/contact/）を指さない。
-  // 直接 /contact/ を開くケースだけだと偽 green になる。サイト内リンクの大半は末尾スラッシュ無しの
-  // /contact で、ViewTransitions 遷移では location.pathname も /contact になるため、その経路も固定する。
+  // 旧URLの両表記から直接受付へ進み、受付が開けない場合にも旧URLへ戻さない。
   for (const path of ['/contact/', '/contact']) {
-    test(`does not link back to the contact page from the contact page (${path})`, async ({ page }) => {
+    test(`does not link back to a legacy contact URL when reception is unavailable (${path})`, async ({ page }) => {
       await page.goto(`${path}${query}`);
-      const link = page.locator('[data-cloudia-fallback-link]');
-      await expect(link).toHaveCount(1);
-      expect(new URL((await link.getAttribute('href')) ?? '', page.url()).pathname).toBe('/contact/chat/');
-      await expect(page.locator('#cloudia-launcher-fallback a[href^="/contact/?"], #cloudia-launcher-fallback a[href="/contact/"]')).toHaveCount(0);
+      await expect(page).toHaveURL((url) => url.pathname === '/contact/chat/');
+      await expect(page.locator('[data-cloudia-unavailable-page]')).toBeVisible();
+      await expect(page.locator('main a[href="/contact"], main a[href="/contact/"], main a[href^="/contact/?"], main a[href^="/contact?"]')).toHaveCount(0);
     });
   }
 
