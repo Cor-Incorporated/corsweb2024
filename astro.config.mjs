@@ -3,6 +3,7 @@ import tailwind from '@astrojs/tailwind';
 import compress from 'astro-compress';
 import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
+import { accountServicesRoute } from './src/config/account-services-route.mjs';
 import { remarkHasMath } from './src/utils/remark-has-math';
 import { remarkArticleSources } from './src/utils/remark-article-sources';
 import { rehypeContactLinks } from './src/utils/rehype-contact-links';
@@ -125,6 +126,7 @@ export default defineConfig({
     },
   },
   integrations: [
+    accountServicesRoute,
     tailwind(), 
     // HTML キーは指定しない（= astro-compress 既定の html-minifier-terser 設定。これまでの実効設定と同じ）。
     // 以前ここにあった 'remove-comments' / 'remove-tags' / 'minify-js' / 'minify-css' は astro-compress 2.x が
