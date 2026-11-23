@@ -100,6 +100,8 @@ export default {
       return json({ error: 'invalid_input' }, 400);
     }
     const { service, issuer, subject, tenantId, organizationId, operation } = body;
+    const staffOnboarding = versioned && ['business-dossier', 'xesm'].includes(service)
+      && operation === 'staff_onboarding' && organizationId === null;
     const credentials = {
       'business-dossier': env.BD_ENTITLEMENT_QUERY_TOKEN,
       xesm: env.XESM_ENTITLEMENT_QUERY_TOKEN,
@@ -110,7 +112,7 @@ export default {
         || typeof issuer !== 'string' || issuer.length > 255
         || typeof subject !== 'string' || !/^user_[A-Za-z0-9_]{1,123}$/.test(subject)
         || typeof tenantId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(tenantId)
-        || (versioned && (!['view', 'edit', 'export'].includes(operation)
+        || (versioned && ((!staffOnboarding && !['view', 'edit', 'export'].includes(operation))
           || (organizationId !== null && (typeof organizationId !== 'string'
             || !/^org_[A-Za-z0-9_]{1,123}$/.test(organizationId)))))) {
       return json({ error: 'invalid_input' }, 400);
@@ -126,7 +128,7 @@ export default {
       }
     }
     if (!(await tokensMatch(expected, supplied))) return json({ error: 'unauthorized' }, 401);
-    const decision = access => json(versioned ? { allowed: permits(access, operation), access } : {
+    const decision = access => json(versioned ? { allowed: staffOnboarding ? access === 'open' : permits(access, operation), access } : {
       allowed: access === 'open',
     }, 200);
     if (issuer !== env.CLERK_ISSUER) return decision('closed');
@@ -138,10 +140,10 @@ export default {
         SELECT EXISTS (
           SELECT 1 FROM account_grants
           WHERE issuer = ?1 AND subject = ?2 AND service = ?3 AND tenant_id = ?4
-            AND revoked_at IS NULL
+            AND revoked_at IS NULL AND (?5 = 0 OR kind = 'staff')
             AND starts_on <= date('now', '+9 hours') AND ends_on >= date('now', '+9 hours')
         ) AS allowed
-      `).bind(issuer, subject, service, tenantId).first();
+      `).bind(issuer, subject, service, tenantId, staffOnboarding ? 1 : 0).first();
       if (row?.allowed !== 0 && row?.allowed !== 1) return json({ error: 'unavailable' }, 503);
       if (row.allowed === 1) return decision('open');
       if (!versioned || organizationId === null) return decision('closed');
