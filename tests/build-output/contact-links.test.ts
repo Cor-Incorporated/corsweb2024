@@ -164,21 +164,21 @@ const pages = files.map((file) => {
   };
 });
 
-const contactPathOf = (locale: Locale) => (locale === 'ja' ? '/contact/' : `/${locale}/contact/`);
+const calendarPathOf = (locale: Locale) => (locale === 'ja' ? '/company/' : `/${locale}/company/`);
 
 /**
- * そのページの言語の問い合わせページの、カレンダーの区画へ向く 1 本か。path は末尾の / まで同じであること
+ * そのページの言語の会社概要の、カレンダーの区画へ向く 1 本か。path は末尾の / まで同じであること
  * （/contact は本番で /contact/ へ転送され、ページ遷移の間に hash が落ちて区画に着かない）。
  */
 const isCalendarLinkFor = (locale: Locale) => (link: Link) =>
   link.kind === 'a' &&
-  link.url.pathname === contactPathOf(locale) &&
+  link.url.pathname === calendarPathOf(locale) &&
   link.url.searchParams.get('source') === CALENDAR_SOURCE &&
   link.url.hash === `#${CALENDAR_ANCHOR}`;
 
-/** その言語の問い合わせページに、id の区画が在り、その中にカレンダーの埋め込みが在るか（link の着く先が実在するか） */
+/** その言語の会社概要に、id の区画が在り、その中にカレンダーの埋め込みが在るか（link の着く先が実在するか） */
 function calendarSectionExists(locale: Locale): boolean {
-  const file = path.join(DIST_DIR, ...contactPathOf(locale).split('/').filter(Boolean), 'index.html');
+  const file = path.join(DIST_DIR, ...calendarPathOf(locale).split('/').filter(Boolean), 'index.html');
   if (!existsSync(file)) return false;
   const section = new JSDOM(readFileSync(file, 'utf8')).window.document.getElementById(CALENDAR_ANCHOR);
   return section !== null && hasCalendarEmbed(section);
@@ -229,21 +229,24 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     expect(articlesWithBodyLinks.length).toBeGreaterThan(0);
   });
 
-  it.each(articlesWithBodyLinks)('記事の本文の link: $slug（5 言語のページで、その言語のチャットへ・元の intent を保つ）', ({ slug, intents }) => {
+  it.each(articlesWithBodyLinks)('記事の本文の link: $slug（5 言語のページで、その言語の業種一覧またはチャットへ）', ({ slug, intents }) => {
     const localized = ['ja', ...NON_JA].map((locale) => (locale === 'ja' ? `/blog/${slug}/` : `/${locale}/blog/${slug}/`));
     const problems = localized
       .filter((pagePath) => byPath.has(pagePath))
       .flatMap((pagePath) => {
         const page = byPath.get(pagePath)!;
-        const fromArticle = page.links.filter(isChatLink).filter((link) => link.url.searchParams.get('source') === `blog/${slug}`);
+        const home = page.locale === 'ja' ? '/' : `/${page.locale}/`;
+        const fromArticle = page.links.filter((link) => link.url.searchParams.get('source') === `blog/${slug}`);
+        const selection = fromArticle.filter((link) => link.url.pathname === home && link.url.hash === `#${HOME_INDUSTRY_ENTRY_ID}`);
+        const chat = fromArticle.filter(isChatLink);
         const count = (intent: string | null) =>
-          fromArticle.filter((link) => link.url.searchParams.get('intent') === intent).length;
+          intent === null ? selection.length : chat.filter((link) => link.url.searchParams.get('intent') === intent).length;
         const wanted = new Map<string | null, number>();
         for (const intent of intents) wanted.set(intent, (wanted.get(intent) ?? 0) + 1);
         return [
           // 本文の link と、本文の下の相談の箱（BlogCta）の 1 本
           ...(fromArticle.length === intents.length + 1 ? [] : [`${pagePath}: blog/${slug} の link が ${fromArticle.length} 本（本文 ${intents.length} + 箱 1 のはず）`]),
-          ...fromArticle.filter((link) => link.url.searchParams.get('locale') !== page.locale).map((link) => `${pagePath}: locale が違う ${link.raw}`),
+          ...chat.filter((link) => link.url.searchParams.get('locale') !== page.locale).map((link) => `${pagePath}: locale が違う ${link.raw}`),
           ...[...wanted].filter(([intent, n]) => count(intent) < n).map(([intent, n]) => `${pagePath}: intent=${intent} が ${count(intent)} 本（本文に ${n} 本）`),
         ];
       });
@@ -306,6 +309,17 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
     }
   });
 
+  it.each(['ja', ...NON_JA])('%s の会社概要と About の一般相談は同じ言語の業種一覧へ進む', (locale) => {
+    const home = locale === 'ja' ? '/' : `/${locale}/`;
+    const sources = locale === 'ja' ? ['company'] : ['company', 'about'];
+    for (const source of sources) {
+      const links = byPath.get(`${home}${source}/`)?.links.filter((link) => link.url.searchParams.get('source') === source);
+      expect(links?.map((link) => [link.url.pathname, link.url.hash])).toEqual([
+        [home, `#${HOME_INDUSTRY_ENTRY_ID}`],
+      ]);
+    }
+  });
+
   // 主な入口と、そこから出る source（と intent）。問い合わせページを通していた頃は、source の無い入口は
   // ページの主ボタンの corsweb-contact-primary になっていた。今は入口ごとに付ける。
   const ENTRIES: ReadonlyArray<{ name: string; pagePath: string; expected: ReadonlyArray<Partial<ReturnType<typeof describeLink>>> }> = [
@@ -329,9 +343,6 @@ describe('サイト内の問い合わせの link（Cloudia のチャットへ直
           .map((item) => ({ source: 'final-cta', intent: item.intent, locale: 'en' })),
       ],
     },
-    { name: 'ja の会社概要', pagePath: '/company/', expected: [{ source: 'company', locale: 'ja' }] },
-    { name: 'zh の会社概要', pagePath: '/zh/company/', expected: [{ source: 'company', locale: 'zh' }] },
-    { name: 'en の About', pagePath: '/en/about/', expected: [{ source: 'about', locale: 'en' }] },
     { name: 'ja のセキュリティ', pagePath: '/security/', expected: [{ source: 'security', locale: 'ja' }] },
     { name: 'ko のセキュリティ', pagePath: '/ko/security/', expected: [{ source: 'security', locale: 'ko' }] },
     { name: 'ja の投げ銭の取り消し', pagePath: '/tip-cancelled/', expected: [{ source: 'tip-cancelled', locale: 'ja' }] },

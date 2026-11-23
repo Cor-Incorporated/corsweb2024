@@ -6,53 +6,45 @@ const query = '?intent=grift-team-beta&source=grift-lp-hero&utm_source=grift&utm
 test.describe('Cloudia contact routing', () => {
   for (const locale of ['ja', 'en', 'zh', 'ko', 'es']) {
     for (const width of [320, 1280]) {
-      test(`routes direct contact through industry selection (${locale}, ${width}px)`, async ({ page }) => {
+      test(`retires the general contact screen and keeps dedicated links (${locale}, ${width}px)`, async ({ page }) => {
         const prefix = locale === 'ja' ? '' : `/${locale}`;
         await page.setViewportSize({ width, height: 800 });
         await page.route('https://calendar.google.com/**', (route) => route.abort());
         await page.goto(`${prefix}/contact/`);
-        const link = page.locator('[data-contact-industry-link]');
-        await expect(link).toBeVisible();
-        await expect(page.locator('[data-cloudia-query-link]')).toBeHidden();
-        const support = page.locator('[data-existing-customer-link]');
+        await expect(page).toHaveURL(`${prefix}/?source=contact-industry#home-industry-entry`);
+        await expect(page.locator('[data-home-industry-entry] a')).toHaveCount(5);
+        await expect(page.locator('[data-legacy-industry-link]')).toHaveCount(0);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+        const support = page.locator('footer a[href*="source=corsweb-contact-primary"]');
         await expect(support).toBeVisible();
         const supportUrl = new URL((await support.getAttribute('href')) ?? '', page.url());
         expect(supportUrl.pathname).toBe('/contact/chat/');
         expect(supportUrl.searchParams.get('locale')).toBe(locale);
-        await expect(page.locator(`main a[href="${prefix}/contact/materials/"]`)).toBeVisible();
         for (const path of ['/privacy', '/legal/tokushoho']) {
           await expect(page.locator(`footer a[href="${prefix}${path}"]`).first()).toBeVisible();
         }
-        const calendar = page.locator('#contact-calendar');
-        await expect(calendar).toHaveCount(process.env.PUBLIC_GCAL_ID ? 1 : 0);
+
+        await page.goto(`${prefix}/contact/?source=footer-calendar#contact-calendar`);
         if (process.env.PUBLIC_GCAL_ID) {
-          const embed = new URL((await calendar.locator('iframe').getAttribute('src')) ?? '');
+          await expect(page).toHaveURL(`${prefix}/company/?source=footer-calendar#contact-calendar`);
+          const embed = new URL((await page.locator('#contact-calendar iframe').getAttribute('src')) ?? '');
           expect(embed.hostname).toBe('calendar.google.com');
           expect(embed.searchParams.get('src')).toBe(process.env.PUBLIC_GCAL_ID);
+        } else {
+          await expect(page).toHaveURL(`${prefix}/company/#company-profile`);
+          await expect(page.locator('#company-profile')).toBeVisible();
         }
-        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-
-        for (let tabs = 0; tabs < 100 && !(await link.evaluate((element) => element === document.activeElement)); tabs += 1) {
-          await page.keyboard.press('Tab');
-        }
-        await expect(link).toBeFocused();
-        await page.keyboard.press('Enter');
-        await expect(page).toHaveURL(new RegExp(`${prefix}/\\?source=contact-industry#home-industry-entry$`));
-        await expect(page.locator('[data-home-industry-entry] a')).toHaveCount(5);
-        await page.keyboard.press('Tab');
-        await expect(page.locator('[data-industry-entry="medical"]')).toBeFocused();
       });
     }
   }
 
-  test('keeps the existing-customer entry with an unrelated contact query', async ({ page }) => {
+  test('unknown intent goes to industries and support keeps its own context', async ({ page }) => {
     await page.route('**/contact/chat/**', (route) =>
       route.fulfill({ contentType: 'text/html', body: '<title>Existing customer support</title>' })
     );
     await page.goto('/contact/?intent=unknown&source=grift-lp-hero');
-    await expect(page.locator('[data-contact-industry-link]')).toBeVisible();
-    await expect(page.locator('[data-cloudia-query-link]')).toBeHidden();
-    await page.locator('[data-existing-customer-link]').click();
+    await expect(page).toHaveURL('/?source=contact-industry#home-industry-entry');
+    await page.locator('footer a[href*="source=corsweb-contact-primary"]').click();
     await expect(page).toHaveURL(/\/contact\/chat\/\?source=corsweb-contact-primary&locale=ja$/);
     await expect(page).toHaveTitle('Existing customer support');
   });
@@ -90,7 +82,7 @@ test.describe('Cloudia contact routing', () => {
 
   test('opens the approved Grift launcher with context and a separate-chat fallback', async ({ page }) => {
     await page.route('**/contact/chat/**', (route) => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
-    await page.goto(`/contact/${query}`);
+    await page.goto(`/${query}`);
     await page.locator('#cloudia-launcher-open').click();
     await expect(page.locator('#cloudia-launcher-panel')).toBeVisible();
     const frame = new URL((await page.locator('#cloudia-launcher-frame').getAttribute('src')) ?? '', page.url());
@@ -105,28 +97,39 @@ test.describe('Cloudia contact routing', () => {
     }
   });
 
-  test('keeps LP intent and source in the primary link and launcher iframe', async ({ page }) => {
-    await page.goto(`/contact/${query}`);
-
-    const primaryLink = page.locator(
-      'section[aria-labelledby="cloudia-contact-entry-title"] [data-cloudia-query-link]'
+  test('redirects a previous Grift link directly and keeps its allowed identifiers', async ({ page }) => {
+    await page.route('**/contact/chat/**', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<title>Cloudia fixture</title>' })
     );
-    await expect(primaryLink).toBeVisible();
-    await expect(page.locator('[data-contact-industry-link]')).toBeHidden();
-    await expect(primaryLink).toHaveAttribute('href', /\/contact\/chat\/\?/);
+    await page.goto(`/contact/${query}`);
+    await expect(page).toHaveURL((url) => url.pathname === '/contact/chat/');
+    await expect(page).toHaveTitle('Cloudia fixture');
+    const target = new URL(page.url());
+    expect(Object.fromEntries(target.searchParams)).toEqual({
+      locale: 'ja', intent: 'grift-team-beta', source: 'grift-lp-hero', utm_source: 'grift', utm_medium: 'cta',
+    });
+  });
 
-    const primaryUrl = new URL((await primaryLink.getAttribute('href')) ?? '', page.url());
-    expect(primaryUrl.searchParams.get('intent')).toBe('grift-team-beta');
-    expect(primaryUrl.searchParams.get('source')).toBe('grift-lp-hero');
-    expect(primaryUrl.searchParams.get('locale')).toBe('ja');
+  test('drops duplicate and unknown tracking data on the direct route', async ({ page }) => {
+    await page.route('**/contact/chat/**', (route) => route.fulfill({ body: 'Cloudia fixture' }));
+    await page.goto('/contact/?intent=grift-team-beta&source=grift-lp-hero&source=other&utm_source=grift&utm_source=other&utm_medium=wrong&utm_campaign=private&embed=1&locale=en');
+    await expect(page).toHaveURL((url) => url.pathname === '/contact/chat/');
+    expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ locale: 'ja', intent: 'grift-team-beta' });
+    await page.goto('/contact/?intent=grift-team-beta&intent=contract-dev');
+    await expect(page).toHaveURL('/?source=contact-industry#home-industry-entry');
+  });
 
-    const frame = page.locator('#cloudia-launcher-frame');
-    await expect(frame).toHaveAttribute('src', /embed=1/);
-    const frameUrl = new URL((await frame.getAttribute('src')) ?? '', page.url());
-    expect(frameUrl.searchParams.get('intent')).toBe('grift-team-beta');
-    expect(frameUrl.searchParams.get('source')).toBe('grift-lp-hero');
-    expect(frameUrl.searchParams.get('locale')).toBe('ja');
-    expect(frameUrl.searchParams.get('embed')).toBe('1');
+  test('offers the localized industry list when JavaScript is unavailable', async ({ browser, baseURL }) => {
+    const noJs = await browser.newPage({ javaScriptEnabled: false });
+    try {
+      await noJs.goto(new URL('/es/contact/?intent=grift-team-beta', baseURL).href);
+      const industry = noJs.getByRole('link', { name: 'Elegir sector', exact: true }).first();
+      await expect(industry).toHaveAttribute('href', '/es/?source=contact-industry#home-industry-entry');
+      await industry.click();
+      await expect(noJs).toHaveURL(/\/es\/\?source=contact-industry#home-industry-entry$/);
+    } finally {
+      await noJs.close();
+    }
   });
 
   // 枠の中だけ開けないときの逃げ道は、単独の /contact/chat/（embed なし）。/contact/ へは戻さない
@@ -154,23 +157,19 @@ test.describe('Cloudia contact routing', () => {
     expect(localizedUrl.searchParams.get('locale')).toBe('en');
   });
 
-  // お問い合わせページの上でも、逃げ道は自分のページ（/contact/）を指さない。
-  // 直接 /contact/ を開くケースだけだと偽 green になる。サイト内リンクの大半は末尾スラッシュ無しの
-  // /contact で、ViewTransitions 遷移では location.pathname も /contact になるため、その経路も固定する。
+  // 旧URLの両表記から直接受付へ進み、受付が開けない場合にも旧URLへ戻さない。
   for (const path of ['/contact/', '/contact']) {
-    test(`does not link back to the contact page from the contact page (${path})`, async ({ page }) => {
-      await page.goto(path);
-      const link = page.locator('[data-cloudia-fallback-link]');
-      await expect(link).toHaveCount(1);
-      expect(new URL((await link.getAttribute('href')) ?? '', page.url()).pathname).toBe('/contact/chat/');
-      await expect(page.locator('#cloudia-launcher-fallback a[href^="/contact/?"], #cloudia-launcher-fallback a[href="/contact/"]')).toHaveCount(0);
+    test(`does not link back to a legacy contact URL when reception is unavailable (${path})`, async ({ page }) => {
+      await page.goto(`${path}${query}`);
+      await expect(page).toHaveURL((url) => url.pathname === '/contact/chat/');
+      await expect(page.locator('[data-cloudia-unavailable-page]')).toBeVisible();
+      await expect(page.locator('main a[href="/contact"], main a[href="/contact/"], main a[href^="/contact/?"], main a[href^="/contact?"]')).toHaveCount(0);
     });
   }
 
-  // サイト内の link は、どれも問い合わせページを通さずチャットへ向く（フッターも同じ）。問い合わせページへ
-  // クライアント遷移で入るのは、古い URL で来た人が別のページへ移り、ブラウザで戻るときだけ。その経路を固定する。
-  test('keeps the separate chat link on /contact after a ViewTransitions back navigation', async ({ page }) => {
-    await page.goto('/contact');
+  // 既知の目的を持つページの浮きボタンを、別ページから戻ったときにも使えるようにする。
+  test('keeps the separate chat link on the home page after a ViewTransitions back navigation', async ({ page }) => {
+    await page.goto(`/${query}`);
     await expect(page.locator('[data-cloudia-fallback-link]')).toHaveCount(1);
     // クライアント遷移だったことを証明する目印。フルリロードなら window が作り直されて消える。
     const sentinel = `vt-${Date.now()}-${Math.random()}`;
@@ -180,18 +179,18 @@ test.describe('Cloudia contact routing', () => {
     await page.locator('footer a[href="/about"]').first().click();
     await expect(page).toHaveURL(/\/about\/?$/);
     await page.goBack();
-    await expect(page).toHaveURL(/\/contact\/?$/);
+    await expect(page).toHaveURL(`/${query}`);
     expect(
       await page.evaluate(() => (window as unknown as { __vtSentinel?: string }).__vtSentinel)
     ).toBe(sentinel);
-    // astro:page-load で再初期化され、/contact でも逃げ道は単独のチャットを指す。
+    // astro:page-load で再初期化され、逃げ道は単独のチャットを指す。
     const link = page.locator('[data-cloudia-fallback-link]');
     await expect(link).toHaveCount(1);
     expect(new URL((await link.getAttribute('href')) ?? '', page.url()).pathname).toBe('/contact/chat/');
   });
 
-  test('uses the localized copy for the separate chat link on the localized contact page', async ({ page }) => {
-    await page.goto('/en/contact/');
+  test('uses the localized copy for the separate chat link on the localized home page', async ({ page }) => {
+    await page.goto(`/en/${query}`);
     const link = page.locator('[data-cloudia-fallback-link]');
     await expect(link).toHaveText('Open the chat on a separate page');
     expect(new URL((await link.getAttribute('href')) ?? '', page.url()).searchParams.get('locale')).toBe('en');
@@ -222,6 +221,49 @@ test.describe('Cloudia contact routing', () => {
     await expect(openButton).toHaveText('お問い合わせ（AI受付）');
   });
 
+  test('keeps the embedded draft and launcher title accessible at 200% text size', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.route('**/contact/chat/**', (route) => route.fulfill({
+      contentType: 'text/html',
+      body: '<div id="root"><input aria-label="相談の下書き"></div>',
+    }));
+    await page.goto('/industries/medical/');
+
+    const launcher = page.locator('#cloudia-launcher');
+    await launcher.locator('h2, button, button span').evaluateAll((elements) => {
+      const sizes = elements.map((element) => parseFloat(getComputedStyle(element).fontSize));
+      elements.forEach((element, index) => {
+        (element as HTMLElement).style.fontSize = `${sizes[index] * 2}px`;
+      });
+    });
+    const openButton = page.locator('#cloudia-launcher-open');
+    await openButton.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'お問い合わせ（AI受付）' });
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+
+    const titleLine = await dialog.locator('h2').evaluate((title) => {
+      const style = getComputedStyle(title);
+      return { font: parseFloat(style.fontSize), line: parseFloat(style.lineHeight) };
+    });
+    expect(titleLine.font).toBe(28);
+    expect(titleLine.line).toBeGreaterThanOrEqual(titleLine.font);
+
+    const draft = page.frameLocator('#cloudia-launcher-frame').getByRole('textbox', { name: '相談の下書き' });
+    await draft.fill('合成の下書き');
+    await draft.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(openButton).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(draft).toHaveValue('合成の下書き');
+    await draft.evaluate((input) => input.addEventListener('keydown', (event) => {
+      if (event instanceof KeyboardEvent && event.key === 'Escape') event.preventDefault();
+    }, { once: true }));
+    await draft.press('Escape');
+    await expect(dialog).toBeVisible();
+    await expect(draft).toHaveValue('合成の下書き');
+  });
+
   // 開いている間もボタンの文字が開く前のままだと、もう一度押すと何が起きるか分からない。
   // 開いている間は問い合わせを閉じる旨の文字を表示し（× ボタンの「閉じる」とは名前を分ける）、押せば閉じてラベルが戻ることを固定する。
   test('turns the launcher button into a close button while the panel is open', async ({ page }) => {
@@ -245,18 +287,13 @@ test.describe('Cloudia contact routing', () => {
   });
 
   // zh・ko・es のページには、以前は英語の案内とボタンが出ていた。各言語で出ることを固定する。
-  for (const { lang, title, cta, launcher, close, closeLauncher } of [
-    { lang: 'zh', title: '请先联系我们', cta: '开始联系', launcher: '联系我们（AI 接待）', close: '关闭', closeLauncher: '关闭联系窗口' },
-    { lang: 'ko', title: '먼저 문의해 주세요', cta: '문의 시작하기', launcher: '문의하기 (AI 접수)', close: '닫기', closeLauncher: '문의 닫기' },
-    { lang: 'es', title: 'Empiece contactándonos', cta: 'Iniciar contacto', launcher: 'Contacto (recepción con IA)', close: 'Cerrar', closeLauncher: 'Cerrar contacto' },
+  for (const { lang, launcher, close, closeLauncher } of [
+    { lang: 'zh', launcher: '联系我们（AI 接待）', close: '关闭', closeLauncher: '关闭联系窗口' },
+    { lang: 'ko', launcher: '문의하기 (AI 접수)', close: '닫기', closeLauncher: '문의 닫기' },
+    { lang: 'es', launcher: 'Contacto (recepción con IA)', close: 'Cerrar', closeLauncher: 'Cerrar contacto' },
   ]) {
-    test(`shows the Cloudia entry and launcher in the page language (${lang})`, async ({ page }) => {
-      await page.goto(`/${lang}/contact/${query}`);
-
-      const entry = page.locator('section[aria-labelledby="cloudia-contact-entry-title"]');
-      await expect(entry.locator('#cloudia-contact-entry-title')).toHaveText(title);
-      await expect(entry.locator('[data-cloudia-query-link]')).toHaveText(cta);
-      await expect(entry).not.toContainText('Start by contacting us');
+    test(`shows the launcher in the page language (${lang})`, async ({ page }) => {
+      await page.goto(`/${lang}/${query}`);
 
       const openButton = page.locator('#cloudia-launcher-open');
       await expect(openButton).toHaveText(launcher);
@@ -268,7 +305,7 @@ test.describe('Cloudia contact routing', () => {
 
   test('fits a mobile safe-area viewport without horizontal scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`/contact/${query}`);
+    await page.goto(`/${query}`);
     const openButton = page.locator('#cloudia-launcher-open');
     await openButton.click();
     await expect(openButton).toHaveAttribute('aria-expanded', 'true');
@@ -287,40 +324,23 @@ test.describe('Cloudia contact routing', () => {
   });
 
   for (const width of [320, 390]) {
-    test(`puts the primary contact action before materials and above the launcher at ${width}px`, async ({ page }) => {
+    test(`keeps the first industry action reachable at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/contact/');
-
-      const primary = page.locator('main').getByRole('link', { name: '業種を選ぶ', exact: true });
-      await expect(primary).toBeInViewport({ ratio: 1 });
-      const materials = page.getByRole('link', { name: '会社紹介資料の請求', exact: true });
-      const launcher = page.locator('#cloudia-launcher-industry');
-      const [primaryBox, materialsBox, launcherBox] = await Promise.all(
-        [primary, materials, launcher].map((locator) => locator.boundingBox()),
-      );
-      expect(primaryBox).not.toBeNull();
-      expect(materialsBox).not.toBeNull();
-      expect(launcherBox).not.toBeNull();
-      const primaryBottom = primaryBox!.y + primaryBox!.height;
-      expect(primaryBox!.height).toBeGreaterThanOrEqual(44);
-      expect(primaryBottom).toBeLessThan(materialsBox!.y);
-      expect(primaryBottom).toBeLessThan(launcherBox!.y);
-
-      await primary.focus();
-      await expect(primary).toBeFocused();
-      await expect(primary).toHaveCSS('outline-style', 'solid');
-      await primary.click({ trial: true });
+      await expect(page).toHaveURL('/?source=contact-industry#home-industry-entry');
+      const medical = page.locator('[data-industry-entry="medical"]');
+      await expect(medical).toBeInViewport({ ratio: 1 });
+      await medical.focus();
+      await expect(medical).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL(/\/industries\/medical\/?$/);
     });
   }
 
   test('uses the localized route locale for Cloudia', async ({ page }) => {
-    await page.goto('/en/contact/?intent=estimate-audit&source=grift-lp-estimate');
-    const primaryUrl = new URL(
-      (await page
-        .locator('section[aria-labelledby="cloudia-contact-entry-title"] [data-cloudia-query-link]')
-        .getAttribute('href')) ?? '',
-      page.url()
-    );
+    await page.goto('/en/contact/?intent=estimate-audit&source=grift-lp-estimate&locale=ja');
+    await expect(page).toHaveURL((url) => url.pathname === '/contact/chat/');
+    const primaryUrl = new URL(page.url());
 
     expect(primaryUrl.searchParams.get('intent')).toBe('estimate-audit');
     expect(primaryUrl.searchParams.get('source')).toBe('grift-lp-estimate');
@@ -334,7 +354,7 @@ test.describe('Cloudia contact routing', () => {
     await page.route('https://app.griftai.org/**', async (route) => {
       await route.fulfill({ contentType: 'text/html', body: '<title>Grift portal</title>' });
     });
-    await page.goto('/contact/');
+    await page.goto(`/${query}`);
 
     await Promise.all([
       page.waitForURL(handoffUrl),
@@ -362,7 +382,7 @@ test.describe('Cloudia contact routing', () => {
   test('rejects forged sources, origins, URL variants, and invalid handoff TTLs', async ({
     page,
   }) => {
-    await page.goto('/contact/');
+    await page.goto(`/${query}`);
     const originalUrl = page.url();
     const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const cases: Array<{
@@ -424,7 +444,7 @@ test.describe('Cloudia contact routing', () => {
   test('keeps the existing cloudia:ready message contract with same-origin checks', async ({
     page,
   }) => {
-    await page.goto('/contact/');
+    await page.goto(`/${query}`);
     const fallback = page.locator('#cloudia-launcher-fallback');
     await fallback.evaluate((element) => element.classList.remove('hidden'));
 

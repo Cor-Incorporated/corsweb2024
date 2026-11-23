@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { GRIFT_CLI_RELEASE } from '../config/grift-cli';
-import { GRIFT_CLI_GITHUB_URL, getGriftBaseUrl } from '../config/site';
+import { GRIFT_CLI_GITHUB_URL, getGeneralConsultationUrl, getGriftBaseUrl } from '../config/site';
 import { SERVICE_PAGES, getServiceBasePath } from '../config/services';
 import { getJaTranslations } from '../utils/i18n';
 
@@ -14,11 +14,12 @@ import { getJaTranslations } from '../utils/i18n';
  * Grift CLI の版は正本（src/config/grift-cli.ts、ADR-0023）から入れ、行に公開日を書く。版だけが変わったときは
  * CONTENT_AS_OF を変えない。
  */
-const CONTENT_AS_OF = '2026-11-15';
+const CONTENT_AS_OF = '2026-11-23';
 
 export const GET: APIRoute = () => {
   const site = (import.meta.env.SITE || 'https://cor-jp.com').replace(/\/$/, '');
   const grift = getGriftBaseUrl();
+  const consultation = getGeneralConsultationUrl('ja', 'llms-txt');
   // サービスのページ（ADR-0024）。ページ名と説明は、ページの見出しと meta description と同じ ja の文言
   const ja = getJaTranslations();
   const serviceLines = SERVICE_PAGES.map(
@@ -37,7 +38,7 @@ Cor.株式会社（読み: コー株式会社、英文表記: Cor.Inc.）は福�
 - 代表者: 代表取締役 寺田 康佑
 - 所在地: 〒810-0001 福岡県福岡市中央区天神2丁目3-10 天神パインクレスト719号
 - 対応地域: 福岡を拠点に全国対応（オンライン可）
-- 問い合わせ: ${site}/contact/ （AI受付「Cloudia」）
+- 業種別の相談: ${site}${consultation}
 - 情報セキュリティ: ${ja.companyPage.securityBody}
 - 選出: 福岡を代表する企業100選 2026-2027（Made In Local）
 
@@ -66,7 +67,7 @@ ${serviceLines}
 - [セキュリティ方針](${site}/security/)
 - [ニュース](${site}/news/)
 - [ブログ](${site}/blog/)
-- [お問い合わせ](${site}/contact/)
+- [業種別の相談](${site}${consultation})
 - English: ${site}/en/ ・ 中文: ${site}/zh/ ・ 한국어: ${site}/ko/ ・ Español: ${site}/es/
 
 ## 関連サイト・一次情報

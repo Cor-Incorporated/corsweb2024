@@ -9,7 +9,7 @@ import { safeJsonLd } from '../../utils/json-ld'
 import { organizationRef } from '../../utils/structured-data'
 import { ORGANIZATION_LOGO } from '../../config/organization'
 import { findServiceByCaseCategory, formatServiceLinkLabel, getServiceUrl } from '../../config/services'
-import { getContactUrl } from '../../config/site'
+import { getContactUrl, getGeneralConsultationUrl } from '../../config/site'
 
 // /works/<slug>（ja）と /[lang]/works/<slug>（非ja）で共有する実績記事本体。
 // 本文の見出し（## 課題 / アプローチ / 実装 / 成果）は markdown 側にある。
@@ -26,7 +26,7 @@ const t = getTranslations(currentLocale)
 // OG画像: ogImage 優先、なければ heroImage。og:image と JSON-LD image で共用。
 const ogImageUrl = data.ogImage ?? data.heroImage?.url
 
-// CTA 出し分け（ctaType > category）。問い合わせは Cloudia のチャットへ直接（tech-culture のみ /about + チャット）。
+// CTA 出し分け（ctaType > category）。目的付き相談は Cloudia へ、tech-culture の一般相談は業種一覧へ。
 type CtaKey =
   | 'grift'
   | 'confidential-ai'
@@ -42,7 +42,8 @@ interface Cta {
 }
 
 // source は記事ごと（ブログの記事の blog/<slug> と同じ形）。intent は今までどおり付けない。
-const contactHref = getContactUrl(currentLocale, { source: `works/${toCleanSlug(entry.slug)}` })
+const contactSource = `works/${toCleanSlug(entry.slug)}`
+const contactHref = getContactUrl(currentLocale, { source: contactSource })
 const aboutHref = getLocalizedUrl('/about', currentLocale)
 
 const CTA_MAP: Record<CtaKey, Cta[]> = {
@@ -58,7 +59,7 @@ const CTA_MAP: Record<CtaKey, Cta[]> = {
   ],
   'tech-culture': [
     { label: t.caseStudy.ctas.techCultureAbout, href: aboutHref, primary: true },
-    { label: t.caseStudy.ctas.techCultureContact, href: contactHref },
+    { label: t.caseStudy.ctas.techCultureContact, href: getGeneralConsultationUrl(currentLocale, contactSource) },
   ],
 }
 

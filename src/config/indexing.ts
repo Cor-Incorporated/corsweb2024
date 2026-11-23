@@ -16,7 +16,9 @@ const NOINDEX_PATTERNS: readonly RegExp[] = [
   new RegExp(`^${LOCALE_PREFIX}/blog/tags(?:/|$)`),
   // 検証用ページ・決済コールバック・404（ロケール直下のみ。/blog/test-blog-xxx 等の記事は対象外）
   new RegExp(`^${LOCALE_PREFIX}/(?:test-blog|styleguide|tip-success|tip-cancelled|404)(?:/|\\.html)?$`),
-  // Cloudia チャット本体（ランチャーの iframe 埋め込み先 / フォールバック）。検索の入口は /contact
+  // 目的付きの旧 URL は互換用に保持し、一般相談の検索入口には使わない。
+  new RegExp(`^${LOCALE_PREFIX}/contact(?:/|/index\\.html)?$`),
+  // Cloudia チャット本体（ランチャーの iframe 埋め込み先 / フォールバック）。
   new RegExp(`^${LOCALE_PREFIX}/contact/chat(?:/|$)`),
 ];
 

@@ -11,7 +11,7 @@ tags: ["見積もり", "受託開発", "Grift", "ナレッジ"]
 lang: "ko"
 featured: false
 isDraft: false
-translationSourceHash: "246c11fb7726ed09c0d91d13d600d615714ef7162889006cdd1ccf49b4e2048e"
+translationSourceHash: "f14b0407a5716bcca80ea70e6f3816f1bb5d02b5e4510dfd566ea394535b4a10"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 외주 개발 견적은 왜 개인의 역량에 의존하게(속인화) 되는 것일까요? 이유는 단순합니다. 견적에 필요한 정보가 과거 프로젝트, GitHub, 공수, 리스크, 영업 담당자의 기억, 실무자의 경험 등에 흩어져 있기 때문입니다. 이를 개인의 머릿속에만 둔 채로는 팀의 제안 품질이 안정될 수 없습니다.
 
 > **2026년 10월 20일 추가**
-> Grift는 2026년 9월 견적 지원 웹 애플리케이션 제공을 종료하였으며, 현재는 엔지니어의 git 이력에서 검증 가능한 사실을 추출하는 오픈소스 CLI([griftai.org](https://griftai.org))로 방향을 전환했습니다. 본 글의 Grift 관련 내용은 공개 당시의 기준입니다. 외주 개발·AI 개발 견적에 대한 상담은 AI 외주 개발 차원에서 [문의하기](/contact)를 통해 접수하고 있습니다.
+> Grift는 2026년 9월 견적 지원 웹 애플리케이션 제공을 종료하였으며, 현재는 엔지니어의 git 이력에서 검증 가능한 사실을 추출하는 오픈소스 CLI([griftai.org](https://griftai.org))로 방향을 전환했습니다. 본 글의 Grift 관련 내용은 공개 당시의 기준입니다. 외주 개발·AI 개발 견적에 대한 상담은 AI 외주 개발 차원에서 [문의하기](/contact?intent=contract-dev)를 통해 접수하고 있습니다.
 
 본 글의 초판은 당시 제공하던 Grift 견적 지원 웹 앱을 소개했습니다. 그 제공은 2026년 9월에 끝났습니다. 지금의 Grift CLI는 개발 기록에서 확인할 수 있는 사실을 정리하는 다른 제공 형태입니다. 본 글은 견적의 생각을 남기고, 지금의 상담처를 갱신했습니다. 지금의 상담처는 AI 수탁 개발·도입 지원입니다.
 

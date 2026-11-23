@@ -11,7 +11,7 @@ tags: ["稟議", "費用対効果", "AI導入"]
 lang: "es"
 featured: false
 isDraft: false
-translationSourceHash: "06e5d92ec6cd4290f94fedf9bf2e984d9d98db5f6a075431516de3deb48de333"
+translationSourceHash: "29ef0f3e93e446d17a788bbfeed88aa5253376a2e167d514062604997ae4a760"
 translatedAt: "2026-10-29T05:20:00.000Z"
 translationModel: "manual-i18n-sync"
 ---
@@ -19,7 +19,7 @@ translationModel: "manual-i18n-sync"
 Lo que una solicitud de aprobación para adoptar IA debe responder primero no es la explicación técnica. Es «¿por qué hacerlo ahora?», «¿cuánto costará?» y «¿se pueden gestionar los riesgos?». Hace falta un documento que resista una decisión empresarial, no una expectativa.
 
 > **Nota agregada el 20 de octubre de 2026**
-> En septiembre de 2026, Grift finalizó el suministro de su aplicación web para el soporte de presupuestos y actualmente ha cambiado su orientación hacia una CLI de código abierto ([griftai.org](https://griftai.org)) que extrae hechos verificables del historial de Git de los ingenieros. Las menciones relativas a Grift en este artículo corresponden al contenido vigente en el momento de su publicación. Para consultas sobre presupuestos de desarrollo a medida y desarrollo de IA, las recibimos a través de nuestro [formulario de contacto](/contact) como desarrollo de IA a medida.
+> En septiembre de 2026, Grift finalizó el suministro de su aplicación web para el soporte de presupuestos y actualmente ha cambiado su orientación hacia una CLI de código abierto ([griftai.org](https://griftai.org)) que extrae hechos verificables del historial de Git de los ingenieros. Las menciones relativas a Grift en este artículo corresponden al contenido vigente en el momento de su publicación. Para consultas sobre presupuestos de desarrollo a medida y desarrollo de IA, las recibimos a través de nuestro [formulario de contacto](/contact?intent=contract-dev) como desarrollo de IA a medida.
 
 La primera versión de este artículo presentaba la aplicación web de Grift para apoyar estimaciones, que se ofrecía entonces. Esa oferta terminó en septiembre de 2026. El Grift CLI actual es otra forma de oferta: ordena hechos comprobables a partir de los registros de desarrollo. Este artículo conserva la forma de pensar la aprobación y actualiza a dónde consultar ahora. El destino actual es el desarrollo de IA por encargo y el apoyo a la adopción.
 

@@ -1,5 +1,5 @@
 /**
- * 記事の本文（Markdown）の中の問い合わせの link を、build の時にそのページの言語の Cloudia のチャットへ向ける rehype の部品。
+ * 記事の本文（Markdown）の中の問い合わせの link を、build の時にそのページの言語で業種一覧または Cloudia へ向ける rehype の部品。
  *
  * サイトの問い合わせの入口は、問い合わせページ（/contact、/<lang>/contact）を通さずチャット（/contact/chat/）へ直接向ける
  * （src/config/site.ts の getContactUrl）。記事の本文は人と CMS が書き、訳は翻訳の CI が作る。翻訳の CI は link の行き先を
@@ -8,7 +8,7 @@
  *
  * 書き換えるもの:
  * - 同じ site の問い合わせページへの a の href（/contact、/<lang>/contact、末尾の /、index.html、query・hash つき）
- *   → getContactUrl(<その file の言語>, { intent: <元の intent>, source: '<blog|news|works>/<slug>' })。
+ *   → intent があればチャット、なければ業種一覧。source は記事の種類と slug を使う。
  *   元の query から運ぶのは intent だけ。hash は落とす（チャットの画面では使わない）。
  * - 同じ site のチャット（/contact/chat/）への a の href → source と locale が無いときだけ足す（在る値は変えない）。
  * 変えないもの: 外の site の link、似た path（/contacts、/contact-us など）、code の中の文字（a ではない）、画像の src、
@@ -18,7 +18,7 @@
  */
 import { SITE_ORIGIN } from '../config/organization';
 import { CLOUDIA_CHAT_PATH, isContactPagePath, normalizeSitePath } from '../config/contact-guards';
-import { getContactUrl, isContactChatPrimary } from '../config/site';
+import { getContactUrl, getGeneralConsultationUrl, isContactChatPrimary } from '../config/site';
 import type { Locale } from './i18n';
 
 type HastNode = {
@@ -62,7 +62,9 @@ export function rewriteContactHref(href: string, context: ContactLinkContext): s
 
   if (isContactPagePath(url.pathname)) {
     const intent = url.searchParams.get('intent') ?? undefined;
-    return getContactUrl(context.locale, { intent, source: context.source });
+    return intent
+      ? getContactUrl(context.locale, { intent, source: context.source })
+      : getGeneralConsultationUrl(context.locale, context.source);
   }
   if (normalizeSitePath(url.pathname) === normalizeSitePath(CLOUDIA_CHAT_PATH)) {
     const params = new URLSearchParams(url.search);
