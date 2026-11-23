@@ -59,7 +59,7 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
 
 <aside
   id="cloudia-launcher"
-  class="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex w-max max-w-[calc(100vw-2rem)] flex-col items-end sm:right-5"
+  class="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-max max-w-[calc(100vw-2rem)] flex-col items-end sm:right-5"
   data-chat-path={embedChatPath}
   data-grift-handoff-origins={JSON.stringify(CLOUDIA_GRIFT_HANDOFF_ALLOWED_ORIGINS)}
   data-grift-handoff-max-ttl-ms={CLOUDIA_GRIFT_HANDOFF_MAX_TTL_MS}
@@ -67,23 +67,25 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
 >
   <div
     id="cloudia-launcher-panel"
-    class="pointer-events-auto ring-primary-950/15 dark:ring-primary-200/15 mb-3 hidden w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-primary-50 shadow-2xl ring-1 dark:bg-primary-950"
+    role="dialog"
+    aria-labelledby="cloudia-launcher-title"
+    class="pointer-events-auto ring-primary-950/15 dark:ring-primary-200/15 mb-3 hidden min-h-0 w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-primary-50 shadow-2xl ring-1 dark:bg-primary-950"
     aria-hidden="true"
   >
     <div
-      class="flex items-center justify-between gap-3 border-b border-primary-950/10 px-4 py-3 dark:border-primary-200/10"
+      class="flex shrink-0 items-center justify-between gap-3 border-b border-primary-950/10 px-4 py-3 dark:border-primary-200/10"
     >
-      <h2 class="text-sm font-semibold text-primary-950 dark:text-primary-100">{copy.title}</h2>
+      <h2 id="cloudia-launcher-title" class="min-w-0 break-words text-balance text-sm font-semibold leading-snug text-primary-950 dark:text-primary-100">{copy.title}</h2>
       <button
         type="button"
         id="cloudia-launcher-close"
-        class="min-h-9 min-w-9 inline-flex items-center justify-center rounded-full text-primary-950/70 hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200/70 dark:hover:bg-primary-400/10"
+        class="min-h-9 min-w-9 inline-flex shrink-0 items-center justify-center rounded-full text-primary-950/70 hover:bg-primary-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-200/70 dark:hover:bg-primary-400/10"
         aria-label={copy.close}
       >
         <span aria-hidden="true" class="text-xl leading-none">×</span>
       </button>
     </div>
-    <div class="relative h-[min(38rem,70dvh)] max-h-[70dvh] bg-primary-950/5 dark:bg-primary-50/5">
+    <div class="relative h-[min(38rem,70dvh)] min-h-0 bg-primary-950/5 dark:bg-primary-50/5">
       <iframe
         id="cloudia-launcher-frame"
         title={copy.title}
@@ -126,7 +128,7 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
       </div>
     </div>
   </div>
-  <div hidden={industrySelection}>
+  <div class="shrink-0" hidden={industrySelection}>
     <button
       type="button"
       id="cloudia-launcher-open"
@@ -330,7 +332,7 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
 
     const openPanel = () => {
       opened = true;
-      panel.classList.remove('hidden');
+      panel.classList.replace('hidden', 'flex');
       panel.setAttribute('aria-hidden', 'false');
       openButton.setAttribute('aria-expanded', 'true');
       setOpenButtonLabel(true);
@@ -344,11 +346,26 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
 
     const closePanel = () => {
       opened = false;
-      panel.classList.add('hidden');
-      panel.setAttribute('aria-hidden', 'true');
       openButton.setAttribute('aria-expanded', 'false');
       setOpenButtonLabel(false);
       openButton.focus();
+      panel.classList.replace('flex', 'hidden');
+      panel.setAttribute('aria-hidden', 'true');
+    };
+
+    const closeOnEscape = (event) => {
+      if (!opened || event.defaultPrevented || event.isComposing || event.key !== 'Escape') return;
+      event.preventDefault();
+      closePanel();
+    };
+
+    // 子文書のキーは親に伝播しない。同一オリジンの受付文書だけに同じ操作を登録する。
+    // 開閉では iframe を作り直さないので、入力途中の内容は子文書に残る。
+    const bindFrameEscape = () => {
+      const child = frame.contentDocument;
+      if (child?.location.origin !== window.location.origin ||
+          normalizePath(child.location.pathname) !== '/contact/chat') return;
+      child.addEventListener('keydown', closeOnEscape);
     };
 
     const parseHandoffUrl = (value) => {
@@ -377,7 +394,11 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
     // open/close/frame は遷移のたびに新しい要素になるので、毎回この要素に束縛する。
     openButton.addEventListener('click', () => (opened ? closePanel() : openPanel()));
     closeButton.addEventListener('click', closePanel);
-    frame.addEventListener('load', inspectFrame);
+    frame.addEventListener('load', () => {
+      bindFrameEscape();
+      inspectFrame();
+    });
+    bindFrameEscape();
 
     // keydown / message は window/document に付くため遷移で破棄されない。前回のハンドラを外して
     // から現在のクロージャ（現在の frame / state を参照）で付け直す。これをしないと遷移ごとに
@@ -385,9 +406,7 @@ const launcherClass = 'pointer-events-auto min-h-[3rem] inline-flex items-center
     if (window.__cloudiaKeydownHandler) {
       document.removeEventListener('keydown', window.__cloudiaKeydownHandler);
     }
-    window.__cloudiaKeydownHandler = (event) => {
-      if (opened && event.key === 'Escape') closePanel();
-    };
+    window.__cloudiaKeydownHandler = closeOnEscape;
     document.addEventListener('keydown', window.__cloudiaKeydownHandler);
 
     if (window.__cloudiaMessageHandler) {
