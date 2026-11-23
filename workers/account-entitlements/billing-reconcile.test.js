@@ -451,3 +451,75 @@ test('billing notifications reconcile current paid rights and preserve personal 
   await checkPersonal();
   assert.deepEqual((await db.prepare('SELECT * FROM account_grants ORDER BY id').all()).results, original);
 });
+
+test('a projection that is not applied keeps the receipt open for the same event', async t => {
+  const mf = new Miniflare(convertV4MiniflareOptions({
+    modules: true, script: 'export default { fetch() { return new Response("ok"); } }',
+    compatibilityDate: '2026-10-26', d1Databases: ['ACCOUNT_GRANTS'],
+    cf: false, telemetry: { enabled: false },
+  }));
+  t.after(() => mf.dispose());
+  const db = await mf.getD1Database('ACCOUNT_GRANTS');
+  for (const file of ['0002_paid_contract_projection.sql', '0003_paid_projection_revision.sql', '0004_billing_notification_receipts.sql']) {
+    const migration = await readFile(new URL('migrations/' + file, import.meta.url), 'utf8');
+    await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
+  }
+
+  const secret = randomBytes(32).toString('hex');
+  const customerId = 'cus_projection';
+  const confirmed = { organizationId: 'org_fixture', resyncAt: 'resync_fixture' };
+  const observedAtMs = Date.now() - 1000;
+  const observation = {
+    issuer: ISSUER, observedAtMs, members: [], approvedBindings: [],
+    confirmedOrganization: { id: confirmed.organizationId, object: 'organization', public_metadata: { services: {} } },
+  };
+  assert.equal(await writePaidProjection(db, observation), true);
+  let projections = 0;
+  const receivers = {
+    secret, customer: customerId, now: () => NOW,
+    reconcile: async customer => {
+      assert.equal(customer, customerId);
+      return confirmed;
+    },
+    receipts: createD1NotificationReceipts(db),
+  };
+  assert.throws(() => createSandboxBillingRuntime(receivers), /Invalid sandbox configuration/);
+
+  const runtime = createSandboxBillingRuntime({
+    ...receivers,
+    project: async (observed, lease) => {
+      assert.deepEqual(observed, confirmed);
+      assert.equal(lease.customer, customerId);
+      assert.match(lease.owner, /^[0-9a-f-]{36}$/);
+      const timestamp = observedAtMs + projections++;
+      return writePaidProjection(db, { ...observation, observedAtMs: timestamp }, { lease });
+    },
+  });
+  const send = async () => {
+    const body = Buffer.from(JSON.stringify({
+      object: 'event', livemode: false, id: 'evt_projectionGate', type: 'invoice.paid',
+      created: NOW - 1, data: { object: { object: 'invoice', customer: customerId, status: 'paid' } },
+    }));
+    const signature = createHmac('sha256', secret).update(NOW + '.').update(body).digest('hex');
+    const response = await runtime.fetch(new Request('https://worker.example.invalid/webhooks/stripe/billing', {
+      method: 'POST', body,
+      headers: { 'Content-Type': 'application/json', 'Stripe-Signature': `t=${NOW},v1=${signature}` },
+    }));
+    return { status: response.status, ...await response.json() };
+  };
+
+  assert.deepEqual(await send(), { status: 503, result: 'retry' });
+  assert.equal(projections, 1);
+  assert.equal(await db.prepare('SELECT event_id FROM billing_notification_receipts WHERE customer_id = ?')
+    .bind(customerId).first(), null);
+  assert.equal(await db.prepare('SELECT owner FROM billing_reconciliation_leases WHERE customer_id = ?')
+    .bind(customerId).first(), null);
+
+  assert.deepEqual(await send(), { status: 200, result: 'reconciled' });
+  assert.equal(projections, 2);
+  assert.deepEqual(await db.prepare('SELECT event_id FROM billing_notification_receipts WHERE customer_id = ?')
+    .bind(customerId).first(), { event_id: 'evt_projectionGate' });
+
+  assert.deepEqual(await send(), { status: 200, result: 'duplicate' });
+  assert.equal(projections, 2);
+});

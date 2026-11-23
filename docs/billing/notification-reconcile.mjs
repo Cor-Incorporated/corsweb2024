@@ -27,7 +27,7 @@ function customerFor(event) {
 export function createSandboxBillingReconciler({ secret, customer, reconcile, project, receipts, now = () => Date.now() / 1000 }) {
   if (typeof secret !== 'string' || secret.length < 32 ||
       typeof customer !== 'string' || !/^cus_[A-Za-z0-9]{1,64}$/.test(customer) ||
-      typeof reconcile !== 'function' || (project !== undefined && typeof project !== 'function') ||
+      typeof reconcile !== 'function' || typeof project !== 'function' ||
       !['reserve', 'complete', 'abandon'].every(method => typeof receipts?.[method] === 'function')) {
     throw new Error('Invalid sandbox configuration');
   }
@@ -44,7 +44,9 @@ export function createSandboxBillingReconciler({ secret, customer, reconcile, pr
         if (lease.state === 'duplicate') return { status: 200, result: 'duplicate' };
         if (lease.state !== 'reserved') return { status: 503, result: 'retry' };
         const confirmed = await reconcile(customer);
-        if (project) await project(confirmed, { customer, owner: lease.owner });
+        if (await project(confirmed, { customer, owner: lease.owner }) !== true) {
+          throw new Error('Billing projection was not applied');
+        }
         await receipts.complete(customer, eventId, lease.owner);
       } catch {
         if (lease?.owner) {
