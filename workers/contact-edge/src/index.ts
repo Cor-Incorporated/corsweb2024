@@ -92,8 +92,9 @@ function fallbackResponse(request: Request, response: Response): Response {
 
 export async function fetchContactEdge(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  if (url.pathname === CHAT_PREFIX && (request.method === 'GET' || request.method === 'HEAD')) {
-    url.pathname = `${CHAT_PREFIX}/`;
+  const canonicalPath = `${url.pathname}/`;
+  if (isChatDocumentPath(canonicalPath) && (request.method === 'GET' || request.method === 'HEAD')) {
+    url.pathname = canonicalPath;
     return Response.redirect(url.toString(), 301);
   }
   if (url.pathname !== `${CHAT_PREFIX}/` && !url.pathname.startsWith(`${CHAT_PREFIX}/`)) {
