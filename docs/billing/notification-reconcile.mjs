@@ -21,10 +21,12 @@ function customerFor(event) {
   return undefined;
 }
 
-export function createSandboxBillingReconciler({ secret, customer, reconcile, now = () => Date.now() / 1000 }) {
+export function createSandboxBillingReconciler({ secret, customer, reconcile, project, now = () => Date.now() / 1000 }) {
   if (typeof secret !== 'string' || secret.length < 32 ||
       typeof customer !== 'string' || !/^cus_[A-Za-z0-9]{1,64}$/.test(customer) ||
-      typeof reconcile !== 'function') throw new Error('Invalid sandbox configuration');
+      typeof reconcile !== 'function' || (project !== undefined && typeof project !== 'function')) {
+    throw new Error('Invalid sandbox configuration');
+  }
 
   const completed = new Set();
   let pending = Promise.resolve();
@@ -45,7 +47,10 @@ export function createSandboxBillingReconciler({ secret, customer, reconcile, no
     queued++;
     const run = pending.then(async () => {
       if (completed.has(event.id)) return { status: 200, result: 'duplicate' };
-      try { await reconcile(customer); } catch { return { status: 503, result: 'retry' }; }
+      try {
+        const confirmed = await reconcile(customer);
+        if (project) await project(confirmed);
+      } catch { return { status: 503, result: 'retry' }; }
       completed.add(event.id);
       if (completed.size > 1000) completed.delete(completed.values().next().value);
       return { status: 200, result: 'reconciled' };

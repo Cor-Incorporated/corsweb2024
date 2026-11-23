@@ -8,6 +8,8 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+import { writePaidProjection } from './paid-projection.js';
+import { createClerkPaidProjector } from '../../docs/billing/project-paid-contracts.mjs';
 import { createSandboxBillingReconciler } from '../../docs/billing/notification-reconcile.mjs';
 
 const run = promisify(execFile);
@@ -33,13 +35,9 @@ test('billing notifications reconcile current paid rights and preserve personal 
   }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
-  for (const name of ['0001_account_grants.sql', '0002_paid_contract_projection.sql']) {
+  for (const name of ['0001_account_grants.sql', '0002_paid_contract_projection.sql', '0003_paid_projection_revision.sql']) {
     const migration = await readFile(new URL('migrations/' + name, import.meta.url), 'utf8');
     await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
-  }
-  for (const [service, tenant] of PRODUCTS) {
-    await db.prepare("INSERT INTO paid_contract_members VALUES (?, 'org_fixture', 'user_PaidOnly', ?, ?, 'fixture', NULL)")
-      .bind(ISSUER, service, tenant).run();
   }
   for (const [service, tenantId] of PRODUCTS) {
     for (const [subject, kind] of [['user_Staff', 'staff'], ['user_Legacy', 'legacy']]) {
@@ -87,7 +85,37 @@ test('billing notifications reconcile current paid rights and preserve personal 
   };
   let rejectNext = false;
   let services = {};
-  const accept = createSandboxBillingReconciler({ secret, customer: CUSTOMER, now: () => NOW, reconcile: async customer => {
+  let resyncAt;
+  let members = ['user_PaidOnly', 'user_Unbound'];
+  let approvalRef = 'fixture';
+  let incompleteMemberships = false;
+  const project = createClerkPaidProjector({
+    db, issuer: ISSUER, clerkSecret: 'sk_test_fixture',
+    loadApprovedBindings: async (issuer, org) => {
+      assert.equal(issuer, ISSUER);
+      assert.equal(org, 'org_fixture');
+      return PRODUCTS.map(([service, tenantId]) => ({
+        service, tenantId, subject: 'user_PaidOnly', approvalRef,
+      }));
+    },
+    fetchClerk: async (url, request) => {
+      assert.equal(request.headers.Authorization, 'Bearer sk_test_fixture');
+      assert.equal(request.redirect, 'error');
+      const path = 'https://api.clerk.com/v1/organizations/org_fixture';
+      if (url === path) return Response.json({
+        id: 'org_fixture', object: 'organization', public_metadata: { services, resync_at: resyncAt },
+      });
+      assert.equal(url, path + '/memberships?limit=100&offset=0');
+      return Response.json({
+        total_count: members.length + Number(incompleteMemberships),
+        data: members.map(subject => ({
+          organization: { id: 'org_fixture' }, public_user_data: { user_id: subject },
+        })),
+      });
+    },
+  });
+  const accept = createSandboxBillingReconciler({ secret, customer: CUSTOMER, now: () => NOW, project,
+    reconcile: async customer => {
     assert.equal(customer, CUSTOMER);
     const log = join(scratch, `curl-${++calls}`);
     const metadata = {
@@ -124,14 +152,11 @@ test('billing notifications reconcile current paid rights and preserve personal 
     assert.match(stdout, /Clerk へ送った顧客 1 件/);
     const bodies = (await readFile(log, 'utf8')).split('\n').filter(line => line.startsWith('CLERK_BODY '));
     assert.equal(bodies.length, 1);
-    services = JSON.parse(bodies[0].slice('CLERK_BODY '.length)).public_metadata.services;
-    // subscribe.sh has compared the Clerk response against the outgoing document.
-    // Only the sandbox adapter writes that confirmed result into the local projection.
-    await db.prepare(`INSERT INTO paid_contract_snapshots VALUES (?, 'org_fixture', ?, datetime('now', '+1 minute'))
-      ON CONFLICT (issuer, organization_id) DO UPDATE
-      SET services_json = excluded.services_json, expires_at = excluded.expires_at`)
-      .bind(ISSUER, JSON.stringify(services)).run();
+    const confirmed = JSON.parse(bodies[0].slice('CLERK_BODY '.length)).public_metadata;
+    services = confirmed.services;
+    resyncAt = confirmed.resync_at;
     await writeFile(servicesFile, JSON.stringify(services));
+    return { organizationId: 'org_fixture', resyncAt };
   } });
 
   const send = (id, type, payload, options = {}) => {
@@ -249,6 +274,38 @@ test('billing notifications reconcile current paid rights and preserve personal 
       });
     }
   }
+  await t.test('fresh Clerk organization readback drives removal and requires new approval to rejoin', async () => {
+    state = 'paid';
+    assert.equal((await send('evt_beforeMembershipRemoval', 'invoice.paid', invoice)).result, 'reconciled');
+    await checkPaid('open', ['view', 'edit', 'export']);
+
+    members = ['user_Unbound'];
+    incompleteMemberships = true;
+    assert.equal((await send('evt_removeMembership', 'customer.updated', customer)).result, 'retry');
+    await checkPaid('open', ['view', 'edit', 'export']);
+    incompleteMemberships = false;
+    assert.equal((await send('evt_removeMembership', 'customer.updated', customer)).result, 'reconciled');
+    await checkPaid('closed', []);
+    assert.equal((await send('evt_removeMembership', 'customer.updated', customer)).result, 'duplicate');
+    members = ['user_PaidOnly', 'user_Unbound'];
+    assert.equal((await send('evt_rejoin', 'customer.updated', customer)).result, 'reconciled');
+    await checkPaid('closed', []);
+    approvalRef = 'new-owner-approval';
+    assert.equal((await send('evt_reapprove', 'customer.updated', customer)).result, 'reconciled');
+    await checkPaid('open', ['view', 'edit', 'export']);
+  });
+
+  await t.test('an earlier observation cannot overwrite confirmed rights or revoke membership', async () => {
+    const latest = await db.prepare('SELECT observed_at_ms FROM paid_contract_snapshots').first();
+    const outcome = await writePaidProjection(db, {
+      issuer: ISSUER, observedAtMs: latest.observed_at_ms - 1,
+      confirmedOrganization: { id: 'org_fixture', object: 'organization', public_metadata: { services: {} } },
+      approvedBindings: [], members: [],
+    });
+    assert.equal(outcome, false);
+    await checkPaid('open', ['view', 'edit', 'export']);
+  });
+
   await checkPersonal();
   assert.deepEqual((await db.prepare('SELECT * FROM account_grants ORDER BY id').all()).results, original);
 });
