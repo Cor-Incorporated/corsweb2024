@@ -2,14 +2,14 @@
 import Layout from '../../layouts/Layout.astro';
 ---
 <Layout title="利用できるサービス | Cor." description="利用できるCor.のサービスを開きます。" availableLocales={['ja']} analytics={false} cloudiaLauncher={false}>
-  <main class="mx-auto w-full max-w-3xl px-5 py-12 sm:py-20">
+  <div class="mx-auto w-full max-w-3xl px-5 py-12 sm:py-20">
     <h1 class="text-balance text-3xl font-semibold sm:text-4xl">利用できるサービス</h1>
     <div class="mt-6" id="account-context-switcher" aria-label="個人と組織の切り替え"></div>
-    <p class="mt-4 text-pretty" id="account-status" role="status">利用できるサービスを確認しています。</p>
+    <p class="mt-4 text-pretty" id="account-status" role="status"></p>
     <a class="mt-6 inline-flex min-h-11 items-center underline" id="account-sign-in" hidden>Cor.アカウントでログイン</a>
     <ul id="account-services" class="mt-6 grid gap-3"></ul>
     <noscript>サービスの確認にはJavaScriptが必要です。</noscript>
-  </main>
+  </div>
 </Layout>
 
 <style>
@@ -43,6 +43,7 @@ import Layout from '../../layouts/Layout.astro';
     const switcher = document.querySelector<HTMLDivElement>('#account-context-switcher');
     if (!status || !list || !signIn || !switcher) return;
     const currentRequest = ++requestNumber;
+    status.textContent = '利用できるサービスを確認しています。';
     list.replaceChildren();
     signIn.hidden = true;
     try {
