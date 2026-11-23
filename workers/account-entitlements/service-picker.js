@@ -1,4 +1,7 @@
 import { verifyToken } from '@clerk/backend';
+import { paidEntitlement } from './index.js';
+
+export { paidEntitlement };
 
 const products = {
   'business-dossier': 'BD_SERVICE_URL',
@@ -6,25 +9,6 @@ const products = {
 };
 const dayMs = 86_400_000;
 const subjectPattern = /^user_[A-Za-z0-9_]{1,123}$/;
-const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-
-function dateEpoch(value) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
-  const epoch = Date.parse(value + 'T00:00:00Z');
-  return Number.isFinite(epoch) && new Date(epoch).toISOString().slice(0, 10) === value ? epoch : NaN;
-}
-
-export function paidEntitlement(services, service, today) {
-  const row = object(services) && Object.hasOwn(services, service) ? services[service] : null;
-  if (!object(row) || typeof row.hold !== 'boolean') return 'closed';
-  const now = dateEpoch(today);
-  const from = dateEpoch(row.from);
-  const until = row.until == null ? null : dateEpoch(row.until);
-  if (!Number.isFinite(now) || !Number.isFinite(from) || (until !== null && !Number.isFinite(until)) || now < from) return 'closed';
-  if (until !== null && now > until) return now <= until + 30 * dayMs ? 'read_export_only' : 'closed';
-  return row.hold ? 'view_only' : 'open';
-}
-
 function httpsUrl(value) {
   try {
     const url = new URL(value);
@@ -85,22 +69,32 @@ export async function fetchServicePicker(request, env) {
 
   try {
     const today = new Date(Date.now() + 9 * dayMs / 24).toISOString().slice(0, 10);
-    const individualServices = new Set();
-    if (!organizationId) {
-      const { results } = await env.ACCOUNT_GRANTS.withSession('first-primary').prepare(`
+    const db = env.ACCOUNT_GRANTS.withSession('first-primary');
+    const accessByService = new Map();
+    if (organizationId) {
+      // Product roots resolve the user's existing workspace. An organization subscription
+      // can list a product only when this user is enrolled in one of its product tenants.
+      const { results } = await db.prepare(`
+        SELECT DISTINCT m.service, s.services_json
+        FROM paid_contract_members AS m
+        JOIN paid_contract_snapshots AS s ON s.issuer = m.issuer AND s.organization_id = m.organization_id
+        WHERE m.issuer = ?1 AND m.subject = ?2 AND m.organization_id = ?3 AND m.revoked_at IS NULL
+          AND unixepoch(s.expires_at) > unixepoch('now')
+      `).bind(issuer.origin, claims.sub, organizationId).all();
+      for (const row of results) {
+        accessByService.set(row.service, paidEntitlement(JSON.parse(row.services_json), row.service, today));
+      }
+    } else {
+      const { results } = await db.prepare(`
         SELECT DISTINCT service FROM account_grants
         WHERE issuer = ?1 AND subject = ?2 AND kind IN ('staff', 'legacy')
           AND revoked_at IS NULL AND starts_on <= ?3 AND ends_on >= ?3
       `).bind(issuer.origin, claims.sub, today).all();
-      for (const row of results) individualServices.add(row.service);
+      for (const row of results) accessByService.set(row.service, 'open');
     }
-    // cor_svc = the selected organization's public_metadata.services, set by the Clerk session template.
-    // Cap willingness to use paid metadata at the ADR's 60-second refresh window.
-    const freshPaidClaim = organizationId && Number.isInteger(claims.iat) && Date.now() < (claims.iat + 60) * 1000;
-    const organizationServices = freshPaidClaim ? claims.cor_svc : undefined;
     const services = [];
     for (const [id, binding] of Object.entries(products)) {
-      const access = individualServices.has(id) ? 'open' : paidEntitlement(organizationServices, id, today);
+      const access = accessByService.get(id) ?? 'closed';
       if (access === 'closed') continue;
       const target = httpsUrl(env[binding]);
       if (!target || target.port || !target.hostname.endsWith('.cor-jp.com') || target.hostname === site.hostname) {

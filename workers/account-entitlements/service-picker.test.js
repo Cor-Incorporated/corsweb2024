@@ -47,8 +47,16 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
-  const migration = await readFile(new URL('migrations/0001_account_grants.sql', import.meta.url), 'utf8');
-  await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
+  for (const file of ['0001_account_grants.sql', '0002_paid_contract_projection.sql']) {
+    const migration = await readFile(new URL('migrations/' + file, import.meta.url), 'utf8');
+    await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
+  }
+  const setSnapshot = async (org, services, expires = Date.now() + 300_000) =>
+    db.prepare('INSERT OR REPLACE INTO paid_contract_snapshots VALUES (?,?,?,?)')
+      .bind(issuer, org, JSON.stringify(services), new Date(expires).toISOString()).run();
+  const bind = (org, subject, service, tenant) => db.prepare(
+    'INSERT INTO paid_contract_members VALUES (?,?,?,?,?,?,NULL)'
+  ).bind(issuer, org, subject, service, tenant, 'fixture-approval').run();
   const grant = async (id, subject, service, kind = 'staff') => db.prepare(`
     INSERT INTO account_grants VALUES (?1, ?2, ?3, ?4, 'tenant-fixture', ?5, '2020-01-01', '2099-01-01', 'fixture', NULL, NULL)
   `).bind(id, issuer, subject, service, kind).run();
@@ -109,11 +117,40 @@ test('self-service route and browser use signed user plus active D1 grants', asy
       xesm: { from: '2020-01-01', until: '2020-02-01', hold: false },
     },
   };
+  await setSnapshot('org_Fixture', paidClerkClaims.cor_svc);
+  await bind('org_Fixture', 'user_Two', 'business-dossier', 'tenant-company');
+  const unassigned = session('user_Unassigned', paidClerkClaims);
+  assert.deepEqual(await rows(unassigned), [], 'an organization contract alone does not enroll a user');
+  const productAccess = async (subject, organizationId, service, tenantId, operation = 'view') => {
+    const key = service === 'xesm' ? xesmKey : productKey;
+    const product = await mf.dispatchFetch('https://entitlements.example.invalid/v2/entitlements/check', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issuer, subject, organizationId, service, tenantId, operation }),
+    });
+    assert.equal(product.status, 200);
+    return product.json();
+  };
+  for (const service of ['business-dossier', 'xesm']) {
+    assert.equal((await productAccess('user_Unassigned', 'org_Fixture', service, 'tenant-company')).allowed, false);
+  }
+  for (const [subject, expected] of [['user_Two', ['business-dossier', 'xesm']], ['user_One', ['xesm']]]) {
+    const visible = await rows(session(subject));
+    assert.deepEqual(visible, expected);
+    for (const service of ['business-dossier', 'xesm']) {
+      assert.equal((await productAccess(subject, null, service, 'tenant-fixture')).allowed, visible.includes(service));
+    }
+  }
   const paidResponse = await request(session('user_Two', paidClerkClaims));
   assert.equal(paidResponse.status, 200);
   assert.deepEqual((await paidResponse.json()).services, [{ id: 'business-dossier', access: 'view_only', href: env.BD_SERVICE_URL }]);
-  assert.deepEqual(await rows(session('user_Two', { ...paidClerkClaims, cor_svc: null })), []);
-  assert.deepEqual(await rows(session('user_Two', { ...paidClerkClaims, iat: Math.floor(Date.now() / 1000) - 61 })), []);
+  assert.deepEqual(await rows(session('user_Two', { ...paidClerkClaims, cor_svc: null })), ['business-dossier']);
+  assert.deepEqual(await productAccess('user_Two', 'org_Fixture', 'business-dossier', 'tenant-company'),
+    { allowed: true, access: 'view_only' });
+  assert.equal((await productAccess('user_Two', 'org_Fixture', 'business-dossier', 'another-tenant')).allowed, false);
+  await setSnapshot('org_Fixture', paidClerkClaims.cor_svc, Date.now() - 1000);
+  assert.deepEqual(await rows(session('user_Two', paidClerkClaims)), []);
+  assert.equal((await productAccess('user_Two', 'org_Fixture', 'business-dossier', 'tenant-company')).allowed, false);
+  await setSnapshot('org_Fixture', paidClerkClaims.cor_svc);
   assert.deepEqual(await rows(session('user_Two')), ['business-dossier', 'xesm']);
   assert.deepEqual(await rows(session('user_None', { cor_svc: paidClerkClaims.cor_svc })), []);
   assert.equal((await account.fetch(new Request(origin + '/api/account/services', {
@@ -139,13 +176,20 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     o: { id: 'org_PaidOnly' },
     cor_svc: { 'business-dossier': { from: jstDate(-90), until, hold } },
   });
+  await bind('org_PaidOnly', paidSubject, 'business-dossier', 'tenant-company');
+  const applyPaidPhase = phase => setSnapshot('org_PaidOnly', {
+    'business-dossier': { from: jstDate(-90), until: phase.until, hold: phase.hold },
+  });
   const products = [['business-dossier', productKey], ['xesm', xesmKey]];
   const grantSubjects = [['user_Two', [true, true]], ['user_One', [false, true]], [paidSubject, [false, false]]];
   const grantRows = () => db.prepare('SELECT * FROM account_grants ORDER BY id').all().then(result => result.results);
   const initialGrants = await grantRows();
   await t.test('paid stop and grace do not mutate independent personal product grants', async () => {
     for (const phase of paidPhases) {
+      await applyPaidPhase(phase);
       const response = await request(paidPhaseSession(phase));
+      assert.deepEqual(await productAccess(paidSubject, 'org_PaidOnly', 'business-dossier', 'tenant-company'),
+        { allowed: Boolean(phase.access), access: phase.access ?? 'closed' });
       assert.equal(response.status, 200);
       assert.deepEqual((await response.json()).services, phase.access
         ? [{ id: 'business-dossier', href: env.BD_SERVICE_URL, access: phase.access }]
@@ -168,7 +212,7 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     }
     console.log('Paid lifecycle: open → held → read/export → closed; staff 2 and legacy 1 stable at both entry points; paid-only personal 0; D1 unchanged.');
   });
-  console.log('D1 revocation reflected on the next request; stopped or stale paid claims exposed zero links; personal access only for the granted tenant.');
+  console.log('D1 revocation reflected on the next request; unassigned users and expired snapshots exposed zero links; personal access only for the granted tenant.');
   const output = process.env.ACCOUNT_PICKER_BROWSER_OUTPUT;
   if (!output) return;
   await mkdir(output, { recursive: true });
@@ -201,13 +245,14 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   await grant('browser-revoke', 'user_BrowserRevoke', 'business-dossier', 'legacy');
   for (const [name, expected] of [
     ['Two', ['Business Dossier', 'XESM']], ['One', ['XESM']], ['None', []],
-    ['Outside', []], ['BrowserRevoke', ['Business Dossier']], ['Guest', []],
+    ['Outside', []], ['Unassigned', []], ['BrowserRevoke', ['Business Dossier']], ['Guest', []],
   ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
     await context.route('**/*', route => route.request().url().startsWith(localUrl + '/') ? route.continue() : route.abort());
-    if (name !== 'Guest') await context.addCookies([{ name: '__session', value: session('user_' + name), url: localUrl, httpOnly: true }]);
+    if (name !== 'Guest') await context.addCookies([{ name: '__session', value: name === 'Unassigned' ? unassigned : session('user_' + name), url: localUrl, httpOnly: true }]);
     const page = await context.newPage();
     await page.goto(localUrl + '/account/services/');
+    await page.getByRole('heading', { level: 1, name: '利用できるサービス' }).waitFor();
     if (name === 'Guest') await page.getByRole('link', { name: 'Cor.アカウントでログイン' }).waitFor();
     if (name !== 'Guest' && !expected.length) await page.getByText('現在利用できるサービスはありません。').waitFor();
     if (expected.length) await page.getByText('開くサービスを選んでください。').waitFor();
@@ -242,6 +287,7 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   await paidContext.route('**/*', route => route.request().url().startsWith(localUrl + '/') ? route.continue() : route.abort());
   const paidPage = await paidContext.newPage();
   for (const phase of paidPhases) {
+    await applyPaidPhase(phase);
     await paidContext.addCookies([{ name: '__session', value: paidPhaseSession(phase), url: localUrl, httpOnly: true }]);
     await paidPage.goto(localUrl + '/account/services/');
     const links = paidPage.locator('#account-services a');
