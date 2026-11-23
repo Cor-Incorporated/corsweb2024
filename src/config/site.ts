@@ -154,6 +154,10 @@ export function getContactUrl(locale: Locale, opts: ContactUrlOptions = {}): str
   return `/contact/chat/?${params.toString()}`;
 }
 
+export function getExistingCustomerContactUrl(locale: Locale): string {
+  return getContactUrl(locale, { source: 'corsweb-contact-primary' });
+}
+
 export const HOME_INDUSTRY_ENTRY_ID = 'home-industry-entry';
 
 /** 一般の相談リンクを、同じ言語の業種一覧へ向ける。 */
@@ -244,20 +248,13 @@ export function isFukuoka100EmblemVisible(now: Date = new Date()): boolean {
   return FUKUOKA100_EMBLEM_ENABLED && isWithinFukuoka100DisplayPeriod(now);
 }
 
-/** フッターから、問い合わせページのカレンダーの区画（代表の公開スケジュール）へ向ける link の source。 */
+/** フッターのカレンダーへのリンクを識別する source。 */
 export const CONTACT_CALENDAR_SOURCE = 'footer-calendar';
 
-/** カレンダーの区画の id（src/components/contact/Calendar.astro の section）。 */
+/** Calendar.astro の区画 ID。 */
 export const CONTACT_CALENDAR_ANCHOR = 'contact-calendar';
 
-/**
- * 問い合わせページのカレンダーの区画への URL（その言語の問い合わせページ）。
- * カレンダーを見て打ち合わせの日を探す人のための 1 本で、旗によらず問い合わせページへ向ける
- * （切り戻しの build でも、カレンダーは所在地の下・フォームの上に在る）。
- * カレンダーは PUBLIC_GCAL_ID がある build にだけ在るので、link を描くかは呼ぶ側が CONTACT_CALENDAR_VISIBLE で決める。
- * path は末尾の / まで書く。/contact は Firebase Hosting が /contact/ へ転送し、ページ遷移（ViewTransitions）の間に
- * hash（#contact-calendar）が落ちて、区画に着かない。
- */
+/** 通常は会社概要のカレンダー、フォームへ切り戻した場合は旧ページのカレンダーを開く。 */
 export function getContactCalendarUrl(locale: Locale): string {
-  return `${getLocalizedUrl('/contact/', locale)}?source=${CONTACT_CALENDAR_SOURCE}#${CONTACT_CALENDAR_ANCHOR}`;
+  return `${getLocalizedUrl(isContactChatPrimary() ? '/company/' : '/contact/', locale)}?source=${CONTACT_CALENDAR_SOURCE}#${CONTACT_CALENDAR_ANCHOR}`;
 }

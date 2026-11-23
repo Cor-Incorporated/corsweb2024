@@ -35,19 +35,6 @@ function loadIndustryPrimary(
   return section.proposal.cta.primary;
 }
 
-// /contact/ の入口の部品の文字は .astro の中にあるので、source から取り出す。
-// 説明文（description）は受付 AI を説明する文で対象外のため、title・cta だけを数える。
-function loadEntryCopyValues(): string[] {
-  const source = readFileSync(join(here, '../CloudiaContactEntry.astro'), 'utf8');
-  const block = source.split('const ENTRY_COPY = {')[1]?.split('} as const')[0] ?? '';
-  const values: string[] = [];
-  const pattern = /(?:title|cta): '([^']*)'/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(block)) !== null) values.push(match[1]);
-  expect(values).toHaveLength(LOCALES.length * 2);
-  return values;
-}
-
 describe('Cloudia のボタンの文字（浮きボタンの開く前と開いている間・業界 page の CTA・/contact/ の入口）', () => {
   for (const locale of LOCALES) {
     it(`${locale}: 浮きボタンの開く前の文字（label・title）が 5 つの業界 page の CTA と同じ文字`, () => {
@@ -63,11 +50,10 @@ describe('Cloudia のボタンの文字（浮きボタンの開く前と開い�
     const buttonCopy: string[] = [];
     for (const locale of LOCALES) {
       const launcher = LAUNCHER_COPY[locale];
-      buttonCopy.push(launcher.label, launcher.title, launcher.closeLauncher);
+      buttonCopy.push(launcher.label, launcher.title, launcher.closeLauncher, launcher.industryLink);
       for (const key of INDUSTRY_KEYS) buttonCopy.push(loadIndustryPrimary(locale, key));
     }
-    buttonCopy.push(...loadEntryCopyValues());
-    expect(buttonCopy).toHaveLength(5 * (3 + 5 + 2));
+    expect(buttonCopy).toHaveLength(5 * (4 + 5));
     for (const value of buttonCopy) expect(value, JSON.stringify(value)).not.toMatch(/Cloudia/);
   });
 });

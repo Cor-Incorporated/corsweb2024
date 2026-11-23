@@ -51,9 +51,9 @@ describe('buildOrganizationJsonLd', () => {
     }
   });
 
-  it.each(LOCALES)('%s: contactPoint points to the localized contact page', (locale) => {
+  it.each(LOCALES)('%s: contactPoint uses the existing customer route and the page locale', (locale) => {
     const contact = buildOrganizationJsonLd(locale).contactPoint as Record<string, unknown>;
-    expect(contact.url).toBe(locale === 'ja' ? 'https://cor-jp.com/contact/' : `https://cor-jp.com/${locale}/contact/`);
+    expect(contact.url).toBe(`https://cor-jp.com/contact/chat/?source=corsweb-contact-primary&locale=${locale}`);
   });
 
   it.each(LOCALES)('%s: organizationRef uses the same @id and name as the Organization node', (locale) => {

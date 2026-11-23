@@ -114,8 +114,7 @@ describe('資料請求のページ', () => {
     expect(script).toContain('.delivered');
   });
 
-  it('問い合わせページから資料請求へ進める', () => {
-    expect(page('contact/index.html')).toContain('href=/contact/materials/');
-    expect(page('en/contact/index.html')).toContain('href=/en/contact/materials/');
+  it.each(['', 'en/', 'zh/', 'ko/', 'es/'])('%s会社概要から資料請求へ進める', (prefix) => {
+    expect(page(`${prefix}company/index.html`)).toContain(`href=/${prefix}contact/materials/`);
   });
 });

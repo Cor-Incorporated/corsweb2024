@@ -239,10 +239,7 @@ function normalizeReadable(text: string | null): string {
 export const CALENDAR_EMBED_HOST = 'calendar.google.com';
 
 /**
- * 「打ち合わせ可能な時間を確認できる」系の断言。CloudiaContactEntry.astro の
- * FALLBACK_WITH_CALENDAR（カレンダーあり）の文言には一致し、FALLBACK_WITHOUT_CALENDAR
- * （カレンダーなし）の文言には一致しないこと。この対応は src/config/__tests__/contact-guards.test.ts が
- * ソースを読んで検証する（文言だけ書き換わって判定が空振りするのを防ぐ）。
+ * 旧問い合わせ案内に戻った打ち合わせ時間の断言を見つける。
  */
 export const AVAILABILITY_CLAIM_PATTERNS = {
   ja: /打ち合わせ可能|打合せ可能|空き時間/iu,
