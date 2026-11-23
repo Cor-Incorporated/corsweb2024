@@ -10,7 +10,7 @@ test('メール保護による置換後も開示窓口を本文から読める',
       const response = await route.fetch();
       // Cloudflareは通常のアドレスをリンクへ置換し、noscriptの内容は保持する。
       const body = (await response.text()).replace(
-        /(<span\b[^>]*class="privacy-decoded-address"[^>]*>)company@cor-jp\.com(<\/span>)/,
+        /(<span\b[^>]*class="privacy-decoded-address"[^>]*>[^<]*)company@cor-jp\.com([^<]*<\/span>)/,
         '$1<a href="/cdn-cgi/l/email-protection">[email protected]</a>$2',
       );
       await route.fulfill({ response, body });

@@ -4,12 +4,13 @@ interface Props {
 }
 
 const { value } = Astro.props;
-const mailbox = 'company@cor-jp.com';
-const index = value.indexOf(mailbox);
+const containsMailbox = value.includes('company@cor-jp.com');
 ---
 
-{/* Cloudflareは標準の本文中のアドレスをJSで復号する。noscriptは変換せずに配信する。 */}
-{index < 0 ? value : <>{value.slice(0, index)}<span class="privacy-decoded-address">{mailbox}</span><noscript>{mailbox}</noscript>{value.slice(index + mailbox.length)}</>}
+{/* Cloudflareの復号が動かない場合は、noscriptの同じ原文を表示する。 */}
+{containsMailbox ? (
+  <><span class="privacy-decoded-address">{value}</span><noscript>{value}</noscript></>
+) : value}
 
 <style>
   @media (scripting: none) {
