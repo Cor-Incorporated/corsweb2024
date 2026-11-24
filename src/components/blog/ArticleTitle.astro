@@ -13,14 +13,14 @@ const headingClass = 'mb-4 max-w-reading text-balance text-3xl font-bold leading
   <div id={anchor + '--text'} class="article-title-links mb-4 scroll-mt-20 sm:mb-0 sm:flex sm:items-start sm:gap-2">
     <LbHeading as="h1" id={anchor} class={headingClass + ' inline min-w-0 scroll-mt-20 sm:block sm:flex-1'} text={title} />
     <a href={'#' + anchor} aria-labelledby={anchor} data-astro-reload
-      class="ml-2 inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-sm align-middle text-stone-600 underline focus-visible:outline sm:ml-0 dark:text-stone-300">
+      class="mt-2 flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-sm text-stone-600 underline focus-visible:outline sm:mt-0 dark:text-stone-300">
       <span aria-hidden="true">#</span>
     </a>
   </div>
 ) : <LbHeading as="h1" class={headingClass} text={title} />}
 
 <style>
-  /* 携帯では題を全幅で読み、その末尾から固定リンクへ続ける。複数の文節のまとまりは保つ。 */
+  /* 携帯では題を全幅で読む。44px の固定リンクを行の中に置くと、次の行へ回ったとき文字矩形との間隔が 0.25px まで縮み、Firefox では重なる。題の下に置く。 */
   @media (max-width: 639px) {
     .article-title-links :global(h1 .lb-clause:only-child) {
       display: inline;

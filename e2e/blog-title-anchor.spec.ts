@@ -46,6 +46,8 @@ test('390pxの記事見出しは固定リンクと重ならず、最終行に話
       const range = document.createRange();
       const byLine = new Map<number, string>();
       let overlaps = false;
+      let clearance = Number.POSITIVE_INFINITY;
+      let nearest = '';
       for (let i = 0; i < text.length; i++) {
         range.setStart(text, i);
         range.setEnd(text, i + 1);
@@ -53,13 +55,32 @@ test('390pxの記事見出しは固定リンクと重ならず、最終行に話
         const box = Array.from(range.getClientRects()).find(rect => rect.width > 0);
         if (!box) continue;
         byLine.set(box.top, (byLine.get(box.top) ?? '') + text.data[i]);
-        overlaps ||= box.top < link.bottom && box.bottom > link.top &&
-          box.left < link.right && box.right > link.left;
+        const overlapX = Math.min(box.right, link.right) - Math.max(box.left, link.left);
+        const overlapY = Math.min(box.bottom, link.bottom) - Math.max(box.top, link.top);
+        overlaps ||= overlapX > 0 && overlapY > 0;
+        if (overlapX > 0) {
+          const gap = link.top - box.bottom;
+          if (gap < clearance) {
+            clearance = gap;
+            nearest = text.data[i];
+          }
+        }
       }
-      return { last: [...byLine.values()].at(-1), overlaps, linkWidth: link.width, linkHeight: link.height };
+      if (!Number.isFinite(clearance)) clearance = 44;
+      return {
+        last: [...byLine.values()].at(-1),
+        overlaps,
+        clearance,
+        nearest,
+        linkWidth: link.width,
+        linkHeight: link.height,
+      };
     }, spacing);
     expect(lines.last).toMatch(/.話$/u);
     expect(lines.overlaps).toBe(false);
+    // 折り返したリンクは文字矩形と 0.25px まで近づき、Firefox では交差する。間隔を残す。
+    expect(lines.clearance).toBeGreaterThanOrEqual(4);
+    expect(lines.nearest.length).toBeGreaterThan(0);
     expect(Math.min(lines.linkWidth, lines.linkHeight)).toBeGreaterThanOrEqual(44);
   }
 });
