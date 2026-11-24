@@ -40,7 +40,7 @@ const { c, isDev, turnstileSiteKey } = Astro.props;
   >
     <!-- 初期グリーティング（assistant・PLAIN TEXT で挿入） -->
     <div class="flex flex-col items-start gap-1">
-      <span class="text-xs font-medium text-primary-950/50 dark:text-primary-200/50">{c.assistantLabel}</span>
+      <span class="text-xs font-medium text-primary-950/70 dark:text-primary-200/70">{c.assistantLabel}</span>
       <div
         class="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-base text-primary-950 shadow-sm dark:bg-primary-900 dark:text-primary-100"
       >
@@ -69,7 +69,7 @@ const { c, isDev, turnstileSiteKey } = Astro.props;
       rows="1"
       placeholder={c.placeholder}
       autocomplete="off"
-      class="block max-h-40 min-h-[48px] w-full resize-none appearance-none rounded-xl border-0 bg-white px-4 py-3 text-base text-primary-950 ring-1 ring-primary-900/20 transition placeholder:text-primary-950/50 focus:outline-none focus:ring-2 focus:ring-primary-600 dark:bg-primary-900 dark:text-primary-100 dark:ring-primary-200/20 dark:placeholder:text-primary-200/50 dark:focus:ring-primary-400"
+      class="block max-h-40 min-h-[48px] w-full resize-none appearance-none rounded-xl border-0 bg-white px-4 py-3 text-base text-primary-950 ring-1 ring-primary-900/20 transition placeholder:text-primary-950/70 focus:outline-none focus:ring-2 focus:ring-primary-600 dark:bg-primary-900 dark:text-primary-100 dark:ring-primary-200/20 dark:placeholder:text-primary-200/60 dark:focus:ring-primary-400"
     ></textarea>
     <button
       type="submit"

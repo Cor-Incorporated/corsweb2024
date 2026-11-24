@@ -18,7 +18,7 @@ jobs:
     name: Chromium visual text audit
     # Playwright 1.53.1 は ubuntu 26.04 に未対応のため 24.04 に固定。対応版へ上げたら ubuntu-latest に戻す。
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 55
 
     steps:
       - name: Checkout repository
@@ -41,9 +41,28 @@ jobs:
       - name: Unit and link tests (vitest)
         run: npm run test:run
 
-      - name: Run responsive visual text audit
-        run: npm run verify:visual-text
+      - name: Build site for preview audits
+        run: npm run build
         env:
+          PUBLIC_GCAL_ID: ''
+          PUBLIC_GCAL_TZ: Asia/Tokyo
+          PUBLIC_GCAL_PARAMS: ''
+          PUBLIC_STRIPE_PAYMENT_LINK: ''
+          PUBLIC_YOUTUBE_API_KEY: ''
+
+      - name: Run responsive visual text audit
+        run: npm run test:visual-text
+        env:
+          PUBLIC_GCAL_ID: ''
+          PUBLIC_GCAL_TZ: Asia/Tokyo
+          PUBLIC_GCAL_PARAMS: ''
+          PUBLIC_STRIPE_PAYMENT_LINK: ''
+          PUBLIC_YOUTUBE_API_KEY: ''
+
+      - name: Run WCAG 2.2 a11y audit (axe + Playwright)
+        run: npm run test:e2e:a11y
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
           PUBLIC_GCAL_ID: ''
           PUBLIC_GCAL_TZ: Asia/Tokyo
           PUBLIC_GCAL_PARAMS: ''
@@ -68,5 +87,7 @@ jobs:
             test-results/visual-text/
             playwright-report/visual-text/
             test-results/admin-cms/
+            test-results/a11y/
+            playwright-report/a11y/
           if-no-files-found: ignore
           retention-days: 14

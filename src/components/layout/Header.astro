@@ -160,8 +160,15 @@ const langOptions = localeOrder.map((loc) => ({
 <a class="skip-to-content" href="#main-content" data-astro-reload>{t.header.skipToContent}</a>
 <header
   x-data="{ open: false }"
+  x-effect="
+    if (typeof document === 'undefined') return;
+    const mobile = window.matchMedia('(max-width: 1023px)').matches;
+    const lock = open && mobile;
+    document.documentElement.style.overflow = lock ? 'hidden' : '';
+    document.body.style.overflow = lock ? 'hidden' : '';
+  "
   class="sticky top-0 z-40 border-b border-primary-900/10 bg-primary-50 transition dark:border-primary-300/10 dark:bg-primary-950"
-  :class="{ 'bg-primary-500/10 dark:bg-primary-400/10': open, 'bg-primary-50 dark:bg-primary-950': !(open) }"
+  :class="{ 'lg:bg-primary-500/10 lg:dark:bg-primary-400/10': open }"
 >
   <!-- 1 段の bar。高さは 1024px 未満 56px・以上 64px（下の border 1px を含む）。横の padding は 12px / 24px。 -->
   <div
@@ -257,9 +264,9 @@ const langOptions = localeOrder.map((loc) => ({
       }
     </nav>
 
-    <!-- Actions: 40×40 の丸 button → 言語 pill → CTA（1024px 以上）→ menu button（1024px 未満） -->
+    <!-- Actions: 44px の丸 button → 言語 pill → CTA（1024px 以上）→ menu button（1024px 未満） -->
     <div class="flex items-center gap-2 sm:gap-2 lg:gap-3">
-      <!-- Theme toggle: 40×40 の丸。role/aria-checked/store の動きは従来どおり -->
+      <!-- Theme toggle: 44×44 の丸。role/aria-checked/store の動きは従来どおり -->
       <button
         type="button"
         x-data
@@ -268,7 +275,7 @@ const langOptions = localeOrder.map((loc) => ({
         aria-checked="false"
         :aria-checked="($store.theme?.isDark || false).toString()"
         @click="$store.theme?.toggle()"
-        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary-900/10 bg-primary-500/10 text-primary-950 transition focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10 dark:text-primary-200"
+        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary-900/10 bg-primary-500/10 text-primary-950 transition focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 ring-primary-950 dark:border-primary-300/10 dark:bg-primary-400/10 dark:text-primary-200"
       >
         <span class="sr-only">ライト / ダークモード切り替え</span>
         <!-- Moon (dark時)。Alpine 起動前も dark: バリアントで正しい方を出す -->
@@ -308,11 +315,12 @@ const langOptions = localeOrder.map((loc) => ({
         <button
           type="button"
           x-ref="trigger"
+          data-lang-switch
           @click="langOpen = !langOpen"
           aria-expanded="false"
           :aria-expanded="langOpen.toString()"
           aria-haspopup="true"
-          class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-primary-900/10 px-3.5 text-sm font-medium text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
+          class="inline-flex h-11 min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-primary-900/10 px-3.5 py-2 text-sm font-medium text-primary-950 ring-primary-950 transition hover:bg-primary-500/10 focus:outline-none focus-visible:ring-2 dark:focus-visible:ring-primary-200 dark:border-primary-300/10 dark:text-primary-200 dark:hover:bg-primary-400/10"
         >
           <span class="sr-only">言語を切り替え / Language（{langShort[currentLocale]}）</span>
           <span class="text-base leading-none" aria-hidden="true">{langFlags[currentLocale]}</span>
@@ -376,7 +384,7 @@ const langOptions = localeOrder.map((loc) => ({
       <!-- CTA（パソコンだけ。nav の末尾からここへ移した） -->
       <a
         href={contactCta.href}
-        class="hidden h-10 min-w-[2.75rem] items-center justify-center rounded-full bg-[#2d4a6b] px-[18px] text-sm font-semibold whitespace-nowrap text-white no-underline transition hover:opacity-90 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-950 lg:inline-flex dark:focus-visible:outline-primary-200"
+        class="hidden h-11 min-h-[44px] min-w-[2.75rem] items-center justify-center rounded-full bg-[#2d4a6b] px-[18px] text-sm font-semibold whitespace-nowrap text-white no-underline transition hover:opacity-90 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-950 lg:inline-flex dark:focus-visible:outline-primary-200"
       >
         {contactCta.name}
       </a>
@@ -419,7 +427,7 @@ const langOptions = localeOrder.map((loc) => ({
 
   <!-- Menu content -->
   <div
-    class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 overflow-hidden transition-all"
+    class="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8 max-lg:fixed max-lg:inset-x-0 max-lg:top-[calc(3.5rem-1px)] max-lg:bottom-0 max-lg:z-50 max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:bg-primary-50 max-lg:dark:bg-primary-950 lg:relative lg:overflow-hidden transition-all"
     id="website-menu"
     x-cloak
     x-show="open"

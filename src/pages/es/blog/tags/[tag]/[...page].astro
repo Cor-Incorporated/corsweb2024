@@ -85,7 +85,7 @@ const availableLocales = await blogIndexLocales((d) => d.tags.includes(tag), pag
           href={page.url.prev || '#'}
           class={`rounded-lg px-3 py-2 text-sm font-medium ${
             !page.url.prev 
-              ? 'cursor-not-allowed bg-stone-100 text-stone-400 dark:bg-stone-700 dark:text-stone-500' 
+              ? 'cursor-not-allowed bg-stone-100 text-stone-600 dark:bg-stone-700 dark:text-stone-300' 
               : 'bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-200 dark:ring-stone-800 dark:hover:bg-stone-800'
           }`}
           aria-disabled={!page.url.prev}
@@ -115,7 +115,7 @@ const availableLocales = await blogIndexLocales((d) => d.tags.includes(tag), pag
           href={page.url.next || '#'}
           class={`rounded-lg px-3 py-2 text-sm font-medium ${
             !page.url.next 
-              ? 'cursor-not-allowed bg-stone-100 text-stone-400 dark:bg-stone-700 dark:text-stone-500' 
+              ? 'cursor-not-allowed bg-stone-100 text-stone-600 dark:bg-stone-700 dark:text-stone-300' 
               : 'bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-200 dark:ring-stone-800 dark:hover:bg-stone-800'
           }`}
           aria-disabled={!page.url.next}
