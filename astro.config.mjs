@@ -6,6 +6,7 @@ import { defineConfig } from 'astro/config';
 import { accountServicesRoute } from './src/config/account-services-route.mjs';
 import { remarkHasMath } from './src/utils/remark-has-math';
 import { remarkArticleSources } from './src/utils/remark-article-sources';
+import { rehypeBlogTitle } from './src/utils/rehype-blog-title';
 import { rehypeContactLinks } from './src/utils/rehype-contact-links';
 import { rehypeLineBreaks } from './src/utils/rehype-line-breaks';
 import { rehypeTaskListLabels } from './src/utils/rehype-task-list-labels';
@@ -104,6 +105,7 @@ export default defineConfig({
     ],
     rehypePlugins: [
       'rehype-slug',
+      rehypeBlogTitle,
       ['rehype-autolink-headings', {
         behavior: 'append',
         // aria-labelledby は rehypeHeadingNameSpan で題と一緒に付ける（参照先の決め方を 1 つに揃えるため）
