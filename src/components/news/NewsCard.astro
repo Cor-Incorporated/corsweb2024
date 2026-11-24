@@ -31,7 +31,7 @@ const formattedDate = new Date(data.publishedAt).toLocaleDateString(DATE_LOCALES
     <span class="inline-flex w-fit rounded-full bg-primary-500/15 px-3 py-1 text-xs font-medium text-primary-950/70 dark:bg-primary-400/15 dark:text-primary-200/70">
       {categoryLabel}
     </span>
-    <time datetime={data.publishedAt.toISOString()} class="text-primary-950/50 dark:text-primary-200/50">
+    <time datetime={data.publishedAt.toISOString()} class="text-primary-950/70 dark:text-primary-200/70">
       {formattedDate}
     </time>
   </div>
@@ -50,7 +50,7 @@ const formattedDate = new Date(data.publishedAt).toLocaleDateString(DATE_LOCALES
     <LbText class="type-copy text-sm leading-6 text-primary-950/70 dark:text-primary-200/70" text={data.description} />
   </div>
 
-  <div class="mt-auto flex flex-wrap items-center gap-2 text-xs text-primary-950/50 dark:text-primary-200/50">
+  <div class="mt-auto flex flex-wrap items-center gap-2 text-xs text-primary-950/70 dark:text-primary-200/70">
     {data.source && <span>{data.source}</span>}
     {isExternal && (
       <span class="inline-flex items-center gap-1">

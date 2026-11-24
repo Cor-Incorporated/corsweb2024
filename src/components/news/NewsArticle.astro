@@ -106,11 +106,11 @@ const breadcrumbJsonLd = {
       <span class="inline-flex w-fit rounded-full bg-primary-500/15 px-3 py-1 text-xs font-medium text-primary-950/70 dark:bg-primary-400/15 dark:text-primary-200/70">
         {categoryLabel}
       </span>
-      <time datetime={data.publishedAt.toISOString()} class="text-primary-950/50 dark:text-primary-200/50">
+      <time datetime={data.publishedAt.toISOString()} class="text-primary-950/70 dark:text-primary-200/70">
         {formattedPublishedAt}
       </time>
       {formattedUpdatedAt && (
-        <span class="text-primary-950/50 dark:text-primary-200/50">{t.news.updatedLabel}: {formattedUpdatedAt}</span>
+        <span class="text-primary-950/70 dark:text-primary-200/70">{t.news.updatedLabel}: {formattedUpdatedAt}</span>
       )}
     </div>
 

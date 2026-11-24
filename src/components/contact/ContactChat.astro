@@ -110,7 +110,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? '';
         'flex flex-col gap-1 ' + (role === 'user' ? 'items-end' : 'items-start');
 
       var label = document.createElement('span');
-      label.className = 'text-xs font-medium text-primary-950/50 dark:text-primary-200/50';
+      label.className = 'text-xs font-medium text-primary-950/70 dark:text-primary-200/70';
       label.textContent = role === 'user' ? strings.youLabel : strings.assistantLabel;
 
       var bubble = document.createElement('div');
