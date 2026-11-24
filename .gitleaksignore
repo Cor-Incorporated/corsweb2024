@@ -14,3 +14,8 @@
 # 試験専用トークン（接頭辞 TEST_ONLY_NOT_A_SECRET_）の SHA256 定数。秘密ではない。
 # この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
 90d4359f4ab194449c902ebf3f4f3871e7615134:workers/contact-chat/src/__tests__/case-sync.test.ts:generic-api-key:86
+#
+# a0755685 の workers/contact-chat/src/__tests__/document-request-provenance.test.ts 20 行目:
+# 試験専用フォームトークン（32 桁 hex。DOCUMENT_FORM_TOKEN_PATTERN の検査用）。秘密ではない。
+# この commit は develop にあり、main への PR の検査範囲に入るので、ここで除く。
+a075568579af06eee4abed5a857435f5e321b4c3:workers/contact-chat/src/__tests__/document-request-provenance.test.ts:generic-api-key:20

@@ -6,7 +6,9 @@
 #   1. 除く検出は docs/billing/plans.json の税率の識別子と、
 #      workers/contact-chat/src/__tests__/storage.test.ts の試験の冪等の key と、
 #      workers/contact-chat/src/__tests__/case-sync.test.ts の試験専用トークンの
-#      SHA256 定数の generic-api-key だけ（ほかのファイルや規則を除かない）
+#      SHA256 定数と、
+#      workers/contact-chat/src/__tests__/document-request-provenance.test.ts の
+#      試験用フォームトークンの generic-api-key だけ（ほかのファイルや規則を除かない）
 #   2. 除く commit がこのリポジトリの履歴にある
 #   3. 除く行の中身が、どれも秘密でないと分かる形である
 #      （plans.json は今の tax_rate.id と同じ値、storage は試験の作り物の値、
@@ -21,6 +23,7 @@ IGNORE="${GITLEAKSIGNORE:-$ROOT/.gitleaksignore}"
 PLANS="$ROOT/docs/billing/plans.json"
 IDEMPOTENCY_PATH="workers/contact-chat/src/__tests__/storage.test.ts"
 CASE_SYNC_PATH="workers/contact-chat/src/__tests__/case-sync.test.ts"
+DOCUMENT_PROVENANCE_PATH="workers/contact-chat/src/__tests__/document-request-provenance.test.ts"
 FIXTURE_PREFIX="TEST_ONLY_NOT_A_SECRET_"
 # 期待する行は key 名と値に分けて持ち、検査の file 自身が秘密と見なされない形にする
 IDEMPOTENCY_FIELD="idempotencyKey"
@@ -93,13 +96,21 @@ while IFS= read -r line || [ -n "$line" ]; do
       fi
     fi
     ;;
+  "$DOCUMENT_PROVENANCE_PATH")
+    trimmed="${got#"${got%%[![:space:]]*}"}"
+    if printf '%s\n' "$trimmed" | grep -Eq "^const TOKEN_A = '[0-9a-f]{32}';$"; then
+      ok "$commit の $lineno 行目は試験用フォームトークン（32 桁 hex の作り物）"
+    else
+      ng "$commit の $lineno 行目が試験用フォームトークンでない（期待: const TOKEN_A = '<32桁hex>'; 観測: ${got}）"
+    fi
+    ;;
   *)
     ng "$commit の対象が想定の file でない（観測: ${path}）"
     ;;
   esac
 done <"$IGNORE"
 
-[ "$entries" -eq 3 ] && ok ".gitleaksignore の検出は $entries 件" || ng ".gitleaksignore の検出が 3 件でない（観測: ${entries} 件）"
+[ "$entries" -eq 4 ] && ok ".gitleaksignore の検出は $entries 件" || ng ".gitleaksignore の検出が 4 件でない（観測: ${entries} 件）"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
