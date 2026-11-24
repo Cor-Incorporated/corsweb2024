@@ -212,3 +212,40 @@ test.describe('design contrast — no horizontal overflow at 390px', () => {
     });
   }
 });
+
+test.describe('mobile menu — no body overlap at 390px', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  async function assertMenuDoesNotCoverBody(page: Page, path: string) {
+    await settlePageForAudit(page, path);
+    await page.locator('button[aria-controls="website-menu"]').click();
+    await page.waitForFunction(
+      () => document.querySelector('button[aria-controls="website-menu"]')?.getAttribute('aria-expanded') === 'true',
+    );
+    const chrome = await page.evaluate(() => ({
+      headerHeight: document.querySelector('header')?.getBoundingClientRect().height ?? 0,
+      menuPosition: getComputedStyle(document.querySelector('#website-menu')!).position,
+      htmlOverflow: getComputedStyle(document.documentElement).overflow,
+      scrollY: window.scrollY,
+    }));
+    expect(chrome.headerHeight).toBeLessThan(80);
+    expect(chrome.menuPosition).toBe('fixed');
+    expect(chrome.htmlOverflow).toBe('hidden');
+
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const afterScroll = await page.evaluate(() => ({
+      headerHeight: document.querySelector('header')?.getBoundingClientRect().height ?? 0,
+      menuPosition: getComputedStyle(document.querySelector('#website-menu')!).position,
+    }));
+    expect(afterScroll.headerHeight).toBeLessThan(80);
+    expect(afterScroll.menuPosition).toBe('fixed');
+  }
+
+  test('home', async ({ page }) => {
+    await assertMenuDoesNotCoverBody(page, '/');
+  });
+
+  test('company', async ({ page }) => {
+    await assertMenuDoesNotCoverBody(page, '/company/');
+  });
+});
