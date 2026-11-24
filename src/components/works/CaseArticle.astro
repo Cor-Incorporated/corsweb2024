@@ -8,6 +8,7 @@ import { DATE_LOCALES, localizeEntries, toCleanSlug } from '../../utils/content-
 import { safeJsonLd } from '../../utils/json-ld'
 import { organizationRef } from '../../utils/structured-data'
 import { ORGANIZATION_LOGO } from '../../config/organization'
+import { GRIFT_CLI_RELEASE } from '../../config/grift-cli'
 import { findServiceByCaseCategory, formatServiceLinkLabel, getServiceUrl } from '../../config/services'
 import { getContactUrl, getGeneralConsultationUrl } from '../../config/site'
 
@@ -168,16 +169,26 @@ const articleJsonLd = {
           {categoryLabel}
         </span>
       )}
-      <time datetime={data.publishedAt.toISOString()} class="text-primary-950/50 dark:text-primary-200/50">
+      <time datetime={data.publishedAt.toISOString()} class="text-primary-950/70 dark:text-primary-200/70">
         {formattedPublishedAt}
       </time>
       {formattedUpdatedAt && (
-        <span class="text-primary-950/50 dark:text-primary-200/50">{t.caseStudy.updatedLabel}: {formattedUpdatedAt}</span>
+        <span class="text-primary-950/70 dark:text-primary-200/70">{t.caseStudy.updatedLabel}: {formattedUpdatedAt}</span>
       )}
     </div>
 
     <LbHeading as="h1" class="type-heading mb-4 text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={data.title} />
     <LbText class="type-copy text-lg text-primary-950/70 dark:text-primary-200/70" text={data.summary} />
+    {currentSlug === 'grift' && (
+      <p class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <a href={GRIFT_CLI_RELEASE.releaseNotesUrl} class="font-medium underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+          {t.caseStudy.griftReleaseNotes.replace('{version}', `v${GRIFT_CLI_RELEASE.version}`)}
+        </a>
+        <time datetime={GRIFT_CLI_RELEASE.releasedOn} class="text-sm">
+          {new Date(GRIFT_CLI_RELEASE.releasedOn).toLocaleDateString(DATE_LOCALES[currentLocale], { dateStyle: 'long', timeZone: 'UTC' })}
+        </time>
+      </p>
+    )}
   </header>
 
   <!-- Hero image -->

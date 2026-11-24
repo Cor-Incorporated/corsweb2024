@@ -30,7 +30,12 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
   **必須の Cloudflare WAF レート制限ルール（`cor-jp.com/api/contact/*`）** で担保する（下記チェックリスト参照）。
 
 ### POST /api/contact/submit
-- リクエスト: `{ "name", "email", "company"?, "message", "summaryText"?, "conversationSummary"?, "classification"?, "intent"?, "source"?, "structuredLead"?, "utm"?, "turnstileToken"?, "website"? }`
+
+`shareConversation: false` は、本人が確認した用件（`message`）だけを担当へ引き継ぐ指定。提出時に会話要約・抜粋・構造化された発言を受付行やメールに転記しない。受付番号・連絡先・サーバーが決定した業種と分類は従来どおり。5業種ではサーバーに記録した業種を照合し、旧画面から指定を省いたときも同じ扱いにする。一般受付で指定を省く既存クライアントは従来の処理に従う。この指定は相談履歴とその保存期限を変更しない。
+
+再配送時も、確認済み用件のみの受付には過去の会話抜粋を含めない。
+
+- リクエスト: `{ "name", "email", "company"?, "message", "shareConversation"?, "summaryText"?, "conversationSummary"?, "classification"?, "intent"?, "source"?, "structuredLead"?, "utm"?, "turnstileToken"?, "website"? }`
   - 新規クライアントは `summaryText` を正本として送る。形式は `{ version: 1, locale: "ja"|"en", intent, classification, readyForContact, stage, structuredLead, text }`（`text` はPIIなしの要約本文）。`summaryText` が無い場合のみ旧 `conversationSummary` を受理する。
   - roleラベル付き会話全文やPIIを含む要約は保存・メール本文への採用を拒否し、構造化フィールドから決定的fallbackを生成する。
   - `intent` / `source` / `structuredLead` / `utm`: 構造化リード（非PII）。メール件名・本文に載る。PII ではない。
@@ -45,8 +50,13 @@ HP本体（静的・Firebase）には一切触れず、`cor-jp.com/api/contact/*
 
 会社紹介資料（`company-deck`。公開 URL はサイトの `COMPANY_DECK_URL`）の請求を、問い合わせと同じ暗号化 D1 に記録する。受付の成功は保存できたときだけ。`delivered` は常に `false`。資料を送ったとは返さない。
 
-- JSON または `application/x-www-form-urlencoded`。項目は氏名、メール、会社名（任意）、業種（5つのいずれかまたは空）、同意、ハニーポット `website`。
-- 同じメールと資料は、東京の暦日で1件。メールは問い合わせの HMAC と同じく小文字にしてから鍵にする。再送は同じ受付番号（202）。
+- JSON または `application/x-www-form-urlencoded`。項目は氏名、メール、会社名（任意）、業種（5つのいずれかまたは空）、同意、ハニーポット `website`。任意で、フォームを表示するたびに画面が発行する `formToken`（16 バイトの乱数を hex にした 32 文字）と、元のページの path `pagePath`。
+- 受付を 1 件にまとめる単位は 2 つある（#537）。
+  - `formToken` があるときは、同じトークンと同じ内容の再送だけを 1 件にまとめる。再送は同じ受付番号（202）。別のトークンなら、同じ日・メール・業種・資料・版でも別の受付。同じトークンでも内容が違えば別の受付にして、先の申込者の受付番号は返さない。鍵はトークンと内容の HMAC（`PII_HMAC_KEY`）で、平文は保存しない。形が違うトークンは 400 `invalid`（「無い」扱いにして従来の規則でまとめ直さないため）。
+  - `formToken` がないとき（JS 無しのフォーム送信、既存の API クライアント）は、同じ日（東京の暦日）・メール・資料・版・業種で 1 件。メールは問い合わせの HMAC と同じく小文字にしてから鍵にする。再送か新たな依頼かは区別できない。業種が違えば別の受付。旧い鍵（メール・資料・日。業種を含まない）で保存された行は、業種が同じで版が未記録のときだけ同じ受付として返す。
+  - 画面のトークンは表示のたびに発行する。静的な HTML には置かない（ビルドした瞬間に全員共通になるため）。JS 無しではトークンを作れないので、上の「ないとき」の規則になる。
+- `entry_path` には、同じ origin にある会社情報・5業種の各5言語の標準パスだけを記録する。query と hash は省き、対象外や不明の参照元は空にする。資料ID は `document_id`、版は `document_version`（migration 0011）。現行の公開スライドは同じURLで中身が変わるため、新規受付の版は空。版を設定できるのは、配布する実物が固定URLまたは配布元の不変revisionで特定でき、フォームと受付で同じ版を確認できる場合。既存の版付き受付は書き換えない。0011 が未適用でも受付は止まらない。
+  - 元のページが分かるのは、資料請求のページを通常のページ読み込みで開いたときだけ。View Transitions のページ内遷移で開いたときは `document.referrer` が初回の読み込みのまま残るため、画面は空を送る。JS 無しも空。
 - この POST は他の `/api/contact/*` と同じく、`Origin` が `cor-jp.com` か `www.cor-jp.com` のときだけ通る。別サイトのブラウザ投稿は 403。Origin が無い POST も 403。クッキーは使わないので CSRF nonce は置かない。Turnstile は非JSの送信を止めるので置かない。
 - Queue へ出すのは `{ submissionId, messageType: "internal" }` だけ。氏名やメールは載せない。登録に失敗しても保存は残し、応答は `status: "stored"` と `notification: "pending"`。
 - 社内通知は `DOCUMENT_REQUEST_NOTIFY_MODE` と `DOCUMENT_REQUEST_NOTIFY_RELEASED_AT` で決まる。この変更は、どちらも wrangler.toml に書かない（未設定 = hold = 送らない）。live にするときは、専用の PR で、本番側の `[vars]` に 2 つを対で書く（`keep_vars` が無いので dashboard の値は次の配備で消える）。片方だけ、preview の `[vars]` に live、10 桁でない解放時刻は、`document-notice-config.test.ts` が落とす。mode は小文字の `live` だけ。解放時刻は配備が終わる予定より後にし、止めて再び live にするときは必ず新しくする。`live` で、行が解放時刻（10 桁の unix 秒）以降に作られているときだけ、キュー消費が既存の問い合わせと同じ送信器・宛先（`CONTACT_TO_EMAIL` / `CONTACT_CC_EMAILS`）へ送る。解放時刻より前の行（hold の時期の受付）は、重複の再申込みでも cron でも送らず `held` のまま。送れても `accepted` は送信器の受付で、担当が読んだことではない。請求者への受付メールは作らない。

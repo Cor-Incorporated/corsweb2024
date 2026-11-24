@@ -162,11 +162,15 @@ export async function decryptText(secret: string | undefined, encoded: string): 
   return new TextDecoder().decode(plaintext);
 }
 
-async function emailHmac(secret: string | undefined, email: string): Promise<string> {
+async function textHmac(secret: string | undefined, value: string): Promise<string> {
   if (!secret) throw new Error('PII storage is not configured');
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const digest = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(email.toLowerCase()));
+  const digest = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function emailHmac(secret: string | undefined, email: string): Promise<string> {
+  return textHmac(secret, email.toLowerCase());
 }
 
 export async function upsertContactSession(env: Env, state: SessionState): Promise<void> {
@@ -298,7 +302,7 @@ export async function createSubmission(
     ).bind(sessionId).first<{ session_id: string; conversation_excerpt_ciphertext?: string }>();
     if (!session) {
       sessionId = null;
-    } else {
+    } else if (inquiry.shareConversation !== false) {
       conversationExcerptCiphertext = session.conversation_excerpt_ciphertext || '';
     }
   }
@@ -395,6 +399,12 @@ export interface DocumentRequestRecord {
   discoveryOther: string;
   documentId: string;
   consentVersion: string;
+  /** 資料の版。未指定は ''（記録なし）。 */
+  documentVersion?: string;
+  /** 元のページの path。自社の同一 origin のもので、検査を通ったものだけ。未指定は ''（記録なし）。 */
+  entryPath?: string;
+  /** フォームを表示するたびに発行される乱数。未指定は ''（トークンなし）。 */
+  formToken?: string;
   /** 資料請求の画面の言語。担当が返信の言語を決めるために保存する。未指定は ''（記録なし）。 */
   locale?: string;
 }
@@ -408,18 +418,102 @@ export function tokyoDayKey(now: Date): string {
   }).format(now);
 }
 
+/**
+ * トークン付きの受付で「同じ内容」を見る並び。トークンと合わせて鍵にする（平文は保存しない）。
+ * メールは問い合わせの email_hmac と同じく小文字にそろえる。日は入れない（表示のたびにトークンが変わるため）。
+ */
+function documentRequestContent(record: DocumentRequestRecord): string {
+  return JSON.stringify([
+    record.email.toLowerCase(),
+    record.name,
+    record.company,
+    record.industry,
+    record.discoverySource,
+    record.discoveryOther,
+    record.documentId,
+    record.documentVersion ?? '',
+    record.consentVersion,
+    record.locale ?? '',
+    record.entryPath ?? '',
+  ]);
+}
+
+/**
+ * 受付を 1 件にまとめる単位（#537）。
+ * - トークン付き: 同じトークン（＝同じ表示のフォーム）と同じ内容の再送だけをまとめる。
+ *   別のトークンなら、同じ日・メール・業種・資料・版でも別の受付。同じトークンでも内容が違えば別の受付
+ *   （先の申込者の受付番号を返さない）。
+ * - トークンなし（JS 無し・既存の API クライアント）: 同じ日・メール・資料・版・業種を 1 件にまとめる。
+ *   再送か新たな依頼かは区別できない。旧い鍵（メール・資料・日。業種を含まない）の行は、業種が同じときだけ引き継ぐ。
+ */
+async function documentRequestKeys(
+  env: Env,
+  record: DocumentRequestRecord,
+  day: string,
+): Promise<{ idempotencyKey: string; legacyKey: string }> {
+  if (record.formToken) {
+    const digest = await textHmac(env.PII_HMAC_KEY, `${record.formToken}|${documentRequestContent(record)}`);
+    return { idempotencyKey: `doc.t.${digest}`, legacyKey: '' };
+  }
+  // トークンなしの鍵は、既存の受付と同じ小文字化を保つ。
+  const hmac = (value: string): Promise<string> => emailHmac(env.PII_HMAC_KEY, value);
+  const parts = [record.email, record.documentId];
+  return {
+    idempotencyKey: `doc.${await hmac([...parts, record.documentVersion ?? '', record.industry, day].join('|'))}`,
+    legacyKey: `doc.${await hmac([...parts, day].join('|'))}`,
+  };
+}
+
+interface StoredIntakeId {
+  submission_id: string;
+  receipt_id: string;
+}
+
+async function findIntake(env: Env, idempotencyKey: string): Promise<StoredIntakeId | null> {
+  if (!env.DB) return null;
+  return env.DB.prepare(
+    'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
+  ).bind(idempotencyKey).first<StoredIntakeId>();
+}
+
+/** 旧鍵との互換は、同じ業種で、版が記録されていない行に限る。 */
+async function findLegacyDocumentIntake(
+  env: Env,
+  legacyKey: string,
+  industry: string,
+): Promise<StoredIntakeId | null> {
+  if (!env.DB || !legacyKey) return null;
+  const lookup = `
+    SELECT submission_id, receipt_id FROM submission_intake
+    WHERE idempotency_key = ? AND request_kind = 'document' AND industry = ?
+  `;
+  try {
+    return await env.DB.prepare(lookup + " AND document_version = '' LIMIT 1")
+      .bind(legacyKey, industry).first<StoredIntakeId>();
+  } catch (error) {
+    // 0011 の適用前は全行が版未記録なので、従来の検索が使える。
+    if (!(error instanceof Error) || !/no such column: document_version/i.test(error.message)) throw error;
+    return env.DB.prepare(lookup + ' LIMIT 1').bind(legacyKey, industry).first<StoredIntakeId>();
+  }
+}
+
+async function findStoredDocumentIntake(
+  env: Env,
+  keys: { idempotencyKey: string; legacyKey: string },
+  industry: string,
+): Promise<StoredIntakeId | null> {
+  return await findIntake(env, keys.idempotencyKey)
+    ?? await findLegacyDocumentIntake(env, keys.legacyKey, industry);
+}
+
 export async function createDocumentRequest(
   env: Env,
   record: DocumentRequestRecord,
   now: Date = new Date(),
 ): Promise<CreateSubmissionResult> {
   if (!env.DB) throw new Error('D1 is not configured');
-  const day = tokyoDayKey(now);
-  // 問い合わせの email_hmac と同じく、文字列全体を小文字にしてから HMAC する。
-  const idempotencyKey = `doc.${await emailHmac(env.PII_HMAC_KEY, `${record.email}|${record.documentId}|${day}`)}`;
-  const existing = await env.DB.prepare(
-    'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
-  ).bind(idempotencyKey).first<{ submission_id: string; receipt_id: string }>();
+  const keys = await documentRequestKeys(env, record, tokyoDayKey(now));
+  const existing = await findStoredDocumentIntake(env, keys, record.industry);
   if (existing) return { submissionId: existing.submission_id, receiptId: existing.receipt_id, duplicate: true };
 
   const submissionId = crypto.randomUUID();
@@ -449,11 +543,11 @@ export async function createDocumentRequest(
          structured_lead_json, utm_json, classification, status,
          created_at, updated_at, expires_at,
          request_kind, document_id, industry, consent_version,
-         discovery_source, discovery_other_ciphertext)
-      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'document-request', '{}', '{}', '', 'stored', ?, ?, ?, 'document', ?, ?, ?, ?, ?)
+         discovery_source, discovery_other_ciphertext, entry_path)
+      VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, '', 'document-request', '{}', '{}', '', 'stored', ?, ?, ?, 'document', ?, ?, ?, ?, ?, ?)
     `).bind(
       submissionId,
-      idempotencyKey,
+      keys.idempotencyKey,
       receiptId,
       name,
       email,
@@ -470,6 +564,7 @@ export async function createDocumentRequest(
       record.consentVersion,
       record.discoverySource,
       discoveryOtherCipher,
+      record.entryPath ?? '',
     ),
     env.DB.prepare(`
       INSERT INTO notification_outbox
@@ -488,6 +583,8 @@ export async function createDocumentRequest(
         industry: record.industry,
         consentVersion: record.consentVersion,
         locale: record.locale ?? '',
+        entryPath: record.entryPath ?? '',
+        documentVersion: record.documentVersion ?? '',
       }),
       createdAt,
     ),
@@ -495,26 +592,31 @@ export async function createDocumentRequest(
   try {
     await env.DB.batch(statements);
   } catch (error) {
-    const raced = await env.DB.prepare(
-      'SELECT submission_id, receipt_id FROM submission_intake WHERE idempotency_key = ? LIMIT 1',
-    ).bind(idempotencyKey).first<{ submission_id: string; receipt_id: string }>();
+    // 同時の再送が鍵の競合に勝った可能性がある。あればその行を返す。
+    const raced = await findStoredDocumentIntake(env, keys, record.industry);
     if (raced) return { submissionId: raced.submission_id, receiptId: raced.receipt_id, duplicate: true };
     throw error;
   }
-  await saveDocumentLocale(env, submissionId, record.locale ?? '');
+  await saveDocumentColumn(env, 'locale', submissionId, record.locale ?? '');
+  await saveDocumentColumn(env, 'document_version', submissionId, record.documentVersion ?? '');
   return { submissionId, receiptId, duplicate: false };
 }
 
 /**
- * 受付言語は、migration 0010 が当たる前の DB でも受付を止めないよう、保存とは別に書く。
- * 列が無い・書けないときは '' のまま（通知は「記録なし」と書く）。受付の成否には影響しない。
+ * 受付言語（migration 0010）と資料の版（migration 0011）は、migration が当たる前の DB でも
+ * 受付を止めないよう、保存とは別に書く。列が無い・書けないときは '' のまま（記録なし）。受付の成否には影響しない。
  */
-async function saveDocumentLocale(env: Env, submissionId: string, locale: string): Promise<void> {
-  if (!env.DB || !locale) return;
+async function saveDocumentColumn(
+  env: Env,
+  column: 'locale' | 'document_version',
+  submissionId: string,
+  value: string,
+): Promise<void> {
+  if (!env.DB || !value) return;
   try {
-    await env.DB.prepare('UPDATE submission_intake SET locale = ? WHERE submission_id = ?').bind(locale, submissionId).run();
+    await env.DB.prepare(`UPDATE submission_intake SET ${column} = ? WHERE submission_id = ?`).bind(value, submissionId).run();
   } catch {
-    // migration 0010 が未適用。言語は記録なしのまま。
+    // migration が未適用。記録なしのまま。
   }
 }
 
@@ -651,20 +753,23 @@ export async function getSubmissionForNotification(
     LIMIT 1
   `).bind(submissionId, messageType).first<SubmissionRow>();
   if (!row) return null;
-  const [name, email, company, message, conversationSummary, conversationExcerpt] = await Promise.all([
+  const [name, email, company, message, conversationSummary] = await Promise.all([
     decryptText(env.PII_ENCRYPTION_KEY, row.name_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.email_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.company_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.message_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.summary_ciphertext),
-    messageType === 'internal' && row.conversation_excerpt_ciphertext
-      ? decryptText(env.PII_ENCRYPTION_KEY, row.conversation_excerpt_ciphertext)
-      : Promise.resolve(''),
   ]);
   let structuredLead: StructuredLead = {};
   let utm: Record<string, string> = {};
   try { structuredLead = normalizeStructuredLead(JSON.parse(row.structured_lead_json)); } catch { /* safe default */ }
   try { utm = JSON.parse(row.utm_json) as Record<string, string>; } catch { /* safe default */ }
+  // Legacy shared inquiries contain a summary or structured lead. A residual
+  // encrypted excerpt alone does not establish permission to forward it.
+  const reviewedOnly = row.request_kind !== 'document' && !conversationSummary && !Object.keys(structuredLead).length;
+  const conversationExcerpt = !reviewedOnly && messageType === 'internal' && row.conversation_excerpt_ciphertext
+    ? await decryptText(env.PII_ENCRYPTION_KEY, row.conversation_excerpt_ciphertext)
+    : '';
   return {
     submissionId: row.submission_id,
     receiptId: row.receipt_id,
@@ -681,6 +786,7 @@ export async function getSubmissionForNotification(
       email,
       company,
       message,
+      ...(reviewedOnly ? { shareConversation: false } : {}),
       summaryText: conversationSummary,
       conversationSummary,
       classification: row.classification,

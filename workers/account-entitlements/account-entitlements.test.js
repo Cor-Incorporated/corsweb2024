@@ -49,8 +49,8 @@ test('product query against local Workers and D1 runtime', async (t) => {
   await grant('expired', 'user_Expired', bd, 'ws-a', 'legacy', '2000-01-01', '2001-01-01');
   await grant('future', 'user_Future', bd, 'ws-a', 'staff', '2099-01-01', '2099-12-31');
 
-  const query = async (body, token = bdToken) => {
-    const res = await mf.dispatchFetch(requestUrl, {
+  const query = async (body, token = bdToken, url = requestUrl) => {
+    const res = await mf.dispatchFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -78,6 +78,30 @@ test('product query against local Workers and D1 runtime', async (t) => {
       assert.deepEqual(await query({ ...known, ...scope }), [200, { allowed: false }]);
     }
     assert.deepEqual(await query({ ...known, service: 'xesm' }, xesmToken), [200, { allowed: false }]);
+  });
+
+  await t.test('staff onboarding requires the current personal staff grant in this product tenant', async () => {
+    const endpoint = requestUrl.replace('/v1/', '/v2/');
+    await grant('fresh-staff-onboard', 'user_FreshFixture', 'xesm', 'org-a', 'staff', today, today);
+    const operation = { issuer, subject: 'user_FreshFixture', service: 'xesm', tenantId: 'org-a',
+      organizationId: null, operation: 'staff_onboarding' };
+    const run = body => query(body, xesmToken, endpoint);
+    assert.deepEqual(await run(operation), [200, { allowed: true, access: 'open' }]);
+    await grant('legacy-onboard', 'user_LegacyFixture', 'xesm', 'org-a', 'legacy', today, today);
+    for (const scope of [{ subject: 'user_LegacyFixture' }, { tenantId: 'other' },
+      { subject: 'user_Unassigned' }, { issuer: 'https://other.example.invalid' }]) {
+      assert.deepEqual(await run({ ...operation, ...scope }), [200, { allowed: false, access: 'closed' }]);
+    }
+    assert.equal((await run({ ...operation, organizationId: 'org_fixture' }))[0], 400);
+    const bdOperation = { ...operation, service: bd, tenantId: 'ws-a' };
+    assert.deepEqual(await query(bdOperation, bdToken, endpoint), [200, { allowed: false, access: 'closed' }]);
+    await grant('fresh-staff-bd', operation.subject, bd, 'ws-a', 'staff', today, today);
+    assert.deepEqual(await query(bdOperation, bdToken, endpoint), [200, { allowed: true, access: 'open' }]);
+    assert.deepEqual(await query({ ...bdOperation, subject: known.subject }, bdToken, endpoint),
+      [200, { allowed: false, access: 'closed' }]);
+    assert.equal((await query(operation, bdToken, endpoint))[0], 401);
+    await db.prepare("UPDATE account_grants SET revoked_at=datetime('now'), revocation_ref='fixture' WHERE id='fresh-staff-onboard'").run();
+    assert.deepEqual(await run(operation), [200, { allowed: false, access: 'closed' }]);
   });
 
   await t.test('requests require the product credential and reject caller-supplied role or paid status', async () => {
@@ -110,6 +134,8 @@ test('product query against local Workers and D1 runtime', async (t) => {
     await grant('harbor-staff', shared.subject, 'harbor', shared.tenantId, 'staff', today, today);
     await grant('harbor-existing', known.subject, 'harbor', shared.tenantId, 'legacy', today, today);
     assert.deepEqual(await query(shared, harborToken), [200, { allowed: true }]);
+    assert.deepEqual(await query({ ...shared, organizationId: null, operation: 'view' },
+      harborToken, requestUrl.replace('/v1/', '/v2/')), [400, { error: 'invalid_input' }]);
     assert.deepEqual(await query({ ...shared, subject: known.subject }, harborToken), [200, { allowed: true }]);
     assert.deepEqual(await query({ ...shared, tenantId: 'other-team' }, harborToken), [200, { allowed: false }]);
     for (const wrongToken of [bdToken, xesmToken]) {

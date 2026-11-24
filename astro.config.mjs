@@ -3,10 +3,13 @@ import tailwind from '@astrojs/tailwind';
 import compress from 'astro-compress';
 import compressor from "astro-compressor";
 import { defineConfig } from 'astro/config';
+import { accountServicesRoute } from './src/config/account-services-route.mjs';
 import { remarkHasMath } from './src/utils/remark-has-math';
 import { remarkArticleSources } from './src/utils/remark-article-sources';
+import { rehypeBlogTitle } from './src/utils/rehype-blog-title';
 import { rehypeContactLinks } from './src/utils/rehype-contact-links';
 import { rehypeLineBreaks } from './src/utils/rehype-line-breaks';
+import { rehypeTaskListLabels } from './src/utils/rehype-task-list-labels';
 import { fileURLToPath } from 'node:url';
 import { includeInSitemap } from './src/config/indexing';
 import { collectBlogLastmod } from './src/config/sitemap';
@@ -102,6 +105,7 @@ export default defineConfig({
     ],
     rehypePlugins: [
       'rehype-slug',
+      rehypeBlogTitle,
       ['rehype-autolink-headings', {
         behavior: 'append',
         // aria-labelledby は rehypeHeadingNameSpan で題と一緒に付ける（参照先の決め方を 1 つに揃えるため）
@@ -112,6 +116,8 @@ export default defineConfig({
       rehypeContactLinks,
       // 本文と題に、文と塊の印を付ける（docs/design/layout-rules.md の R1）。文字は変えない
       rehypeLineBreaks,
+      // タスクリストの checkbox に、その項目の文を読み上げ名として付ける（内容・checked・disabled は変えない）
+      rehypeTaskListLabels,
       // 題の名前の参照先の span（rehypeHeadingNameSpan を参照）。line-breaks の後で掛け、塊の構造を残す
       rehypeHeadingNameSpan,
     ],
@@ -122,6 +128,7 @@ export default defineConfig({
     },
   },
   integrations: [
+    accountServicesRoute,
     tailwind(), 
     // HTML キーは指定しない（= astro-compress 既定の html-minifier-terser 設定。これまでの実効設定と同じ）。
     // 以前ここにあった 'remove-comments' / 'remove-tags' / 'minify-js' / 'minify-css' は astro-compress 2.x が

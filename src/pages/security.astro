@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import NextStep from '../components/common/NextStep.astro';
 import LbHeading from '../components/common/LbHeading.astro';
+import ScrollableTable from '../components/common/ScrollableTable.astro';
 import LbText from '../components/common/LbText.astro';
 import { getCurrentLocale, getLocalizedUrl, getTranslations } from '../utils/i18n';
 import { getContactUrl } from '../config/site';
@@ -47,7 +48,7 @@ const t = getTranslations(currentLocale);
           <p class="mt-1">{t.security.basicPolicy.signatureCompany}</p>
           <p class="mt-1 font-medium">{t.security.basicPolicy.signatureName}</p>
         </div>
-        <p class="mt-6 text-sm text-primary-950/50 dark:text-primary-200/50">{t.security.basicPolicy.meta}</p>
+        <p class="mt-6 text-sm text-primary-950/70 dark:text-primary-200/70">{t.security.basicPolicy.meta}</p>
       </section>
 
       <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.pillarsTitle} />
@@ -68,8 +69,8 @@ const t = getTranslations(currentLocale);
       <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.governanceTitle} />
       <LbText class="mb-4" text={t.security.governanceDescription} />
 
-      <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.tableTitle} />
-      <div class="overflow-x-auto">
+      <LbHeading as="h2" id="security-measures-table" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.tableTitle} />
+      <ScrollableTable labelledBy="security-measures-table">
         <table class="w-full border-collapse text-left text-sm sm:text-base">
           <thead>
             <tr class="border-b border-primary-900/20 dark:border-primary-300/20">
@@ -90,10 +91,10 @@ const t = getTranslations(currentLocale);
             }
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
 
       <LbHeading as="h2" class="type-heading mb-6 mt-12 text-xl font-medium sm:text-2xl" text={t.security.privacyTitle} />
-      <p class="mb-2 text-sm text-primary-950/50 dark:text-primary-200/50">{t.security.privacyLead}</p>
+      <p class="mb-2 text-sm text-primary-950/70 dark:text-primary-200/70">{t.security.privacyLead}</p>
       <LbText
         class="mb-4"
         parts={[

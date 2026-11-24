@@ -10,7 +10,7 @@ import ArticleSummary from '../../../components/blog/ArticleSummary.astro';
 import BlogCta from '../../../components/blog/BlogCta.astro';
 import TipButton from '../../../components/blog/TipButton.astro';
 import BlogLayout from '../../../layouts/BlogLayout.astro';
-import LbHeading from '../../../components/common/LbHeading.astro';
+import ArticleTitle from '../../../components/blog/ArticleTitle.astro';
 import LbText from '../../../components/common/LbText.astro';
 
 export async function getStaticPaths() {
@@ -92,7 +92,7 @@ const ctaSlug = post.slug.replace(/^[a-z]{2}\//, '');
         <time datetime={post.data.pubDate.toISOString()} class="shrink-0 text-stone-500 dark:text-stone-400">{formattedPubDate}</time>
         <span class="shrink-0 text-stone-500 dark:text-stone-400">{readingTime} min de lectura</span>
       </div>
-      <LbHeading as="h1" class="mb-4 max-w-reading text-balance text-3xl font-bold leading-tight text-stone-900 dark:text-stone-100 sm:text-4xl" text={post.data.title} />
+      <ArticleTitle title={post.data.title} anchor={remarkPluginFrontmatter.articleTitleAnchor} />
       <LbText class="mb-6 max-w-reading text-pretty text-lg leading-8 text-stone-600 dark:text-stone-300" text={post.data.description} />
       <div class="flex flex-col gap-4 border-b border-stone-200 pb-6 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0 text-sm font-medium text-stone-900 dark:text-stone-100">{post.data.author}</div>

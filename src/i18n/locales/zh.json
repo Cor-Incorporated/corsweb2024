@@ -2026,6 +2026,7 @@
     "description": "Cor.株式会社是一家扎根福冈、专注 AI 落地的公司，以本地 LLM、自研产品「Grift」和 AI 受托开发为核心，同时也在教育与地区层面营造学习与交流的场所。"
   },
   "header": {
+    "skipToContent": "跳至主要内容",
     "mobileMenuDescription": "Cor.株式会社是一家扎根福冈、专注 AI 落地的公司。以本地 LLM・安全 AI、自研产品「Grift」、AI 受托开发・导入支援为核心，同时也在推进硬件 AI，并在教育与地区层面营造学习与交流的场所。"
   },
   "aboutPage": {
@@ -2697,6 +2698,7 @@
     "contactLabel": "媒体咨询"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Grift CLI {version} 发行说明",
     "breadcrumbWorks": "实绩",
     "ndaHeading": "※ 因 NDA・机密案件，部分内容已作抽象化处理。",
     "updatedLabel": "更新",

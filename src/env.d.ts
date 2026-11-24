@@ -2,6 +2,7 @@
 /// <reference types="astro/client" />
 
 interface ImportMetaEnv {
+  readonly PUBLIC_CLERK_PUBLISHABLE_KEY?: string;
   readonly PUBLIC_GRIFT_BASE_URL?: string;
   readonly PUBLIC_SITE_ENV?: 'production' | 'preview' | 'development';
   readonly PUBLIC_CF_BEACON_TOKEN?: string;

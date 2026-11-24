@@ -2026,6 +2026,7 @@
     "description": "Cor.Inc. es una empresa de implementación de IA de Fukuoka centrada en LLM locales, nuestro producto propio «Grift» y el desarrollo de IA a medida, que también impulsa espacios de aprendizaje y comunidad en la región."
   },
   "header": {
+    "skipToContent": "Saltar al contenido principal",
     "mobileMenuDescription": "Cor.Inc. es una empresa de implementación de IA con sede en Fukuoka. Nos centramos en LLM locales e IA segura, nuestro producto propio «Grift» y el desarrollo de IA a medida y el apoyo a su adopción; también trabajamos en IA en hardware y en crear espacios de aprendizaje y comunidad en la región."
   },
   "aboutPage": {
@@ -2697,6 +2698,7 @@
     "contactLabel": "Consultas de prensa"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Notas de la versión {version} de Grift CLI",
     "breadcrumbWorks": "Proyectos",
     "ndaHeading": "* Parte de este caso se presenta de forma abstracta por NDA y confidencialidad.",
     "updatedLabel": "Actualizado",

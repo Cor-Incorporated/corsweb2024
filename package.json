@@ -26,7 +26,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:admin": "playwright test --config=playwright.admin.config.ts",
     "test:visual-text": "playwright test --config=playwright.visual.config.ts",
+    "test:e2e:a11y": "playwright test --config=playwright.a11y.config.ts",
     "verify:visual-text": "npm run build && npm run test:visual-text",
+    "verify:a11y": "npm run build && npm run test:e2e:a11y",
     "check:links": "node scripts/check-external-links.mjs",
     "check:grift-version": "node scripts/check-grift-version-claims.mjs",
     "seo:snapshot": "node scripts/seo-snapshot.mjs",
@@ -42,6 +44,7 @@
     "@astrojs/sitemap": "^3.4.1",
     "@astrojs/tailwind": "^5.1.2",
     "@astrojs/ts-plugin": "^1.8.0",
+    "@clerk/clerk-js": "6.46.3",
     "@fontsource/inter": "5.0.8",
     "@google/genai": "2.24.0",
     "@resvg/resvg-js": "^2.6.2",
@@ -71,6 +74,8 @@
     "typescript": "^5.3.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@clerk/shared": "4.48.3",
     "@playwright/test": "^1.53.1",
     "@sveltia/cms": "0.221.7",
     "@testing-library/dom": "^10.4.0",

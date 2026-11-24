@@ -313,7 +313,7 @@ const robotsContent = getRobotsContent({ noindex: isNoindexPath(Astro.url.pathna
   >
     <div class="scroll-progress" aria-hidden="true"></div>
     <Header availableLocales={availableLocales} />
-    <main>
+    <main id="main-content" tabindex="-1" class="scroll-mt-16">
       <slot />
     </main>
     <Footer />

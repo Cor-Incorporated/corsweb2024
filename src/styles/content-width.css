@@ -31,6 +31,33 @@ main .type-copy.text-balance {
   text-wrap: pretty;
 }
 
+/* GFM のチェック欄は箇条書きの印の位置に置く。項目文には段落の幅を使える。 */
+li.task-list-item {
+  position: relative;
+  overflow-wrap: anywhere;
+}
+
+li.task-list-item::marker {
+  content: "";
+}
+
+:is(li.task-list-item, li.task-list-item > p:first-child) > input[type="checkbox"]:disabled {
+  position: absolute;
+  inset-inline-start: -1.15em;
+  inset-block-start: .5lh;
+  transform: translateY(-50%);
+  font: inherit;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+}
+
+/* 空の擬似要素が長いコード名の前に一行を占めるのを防ぐ。 */
+li.task-list-item code::before,
+li.task-list-item code::after {
+  content: none;
+}
+
 /* 狭い画面（幅 640px 未満。本文の文字を 16px にする Tailwind の sm と同じ境）では、
    本文は文の終わり（句点）でだけ行を替える（docs/design/layout-rules.md の R1）。
    文の中の塊を通常の折り方に戻し、文に text-wrap: pretty を当てて

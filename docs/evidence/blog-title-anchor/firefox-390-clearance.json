@@ -1,0 +1,94 @@
+{
+  "measuredAt": "2026-11-24T01:20:36.854Z",
+  "browser": "playwright firefox",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "url": "http://127.0.0.1:4324/blog/zundamon-lt-project/",
+  "page": "/blog/zundamon-lt-project/",
+  "status": 200,
+  "before": {
+    "source": "https://cor-jp-main--pr671-fix-blog-title-ancho-zvd4lg1a.web.app/blog/zundamon-lt-project/",
+    "head": "0c9c0c0e665c86ee2905078654cdc81362cf8f37",
+    "savedPreviewRun": "overlaps true (記事タイトル_671_固定プレビュー18検査.txt)",
+    "remeasuredClearancePx": { "0px": 4.3, "0.5px": 0.25, "1px": 0.25 },
+    "remeasuredOverlaps": false
+  },
+  "screenshot": "docs/evidence/blog-title-anchor/firefox-390-after.png",
+  "note": "letter-spacing 0.5px is the captured frame. Rows include 0px, 0.5px, and 1px.",
+  "rows": [
+    {
+      "letterSpacing": "0px",
+      "lastLine": "LT発表してもらった話",
+      "overlaps": false,
+      "clearancePx": 8.25,
+      "nearest": {
+        "ch": "L",
+        "index": 33,
+        "top": 263.25,
+        "right": 29.98,
+        "bottom": 300.25,
+        "left": 16
+      },
+      "link": {
+        "top": 308.5,
+        "left": 16,
+        "right": 60,
+        "bottom": 352.5,
+        "width": 44,
+        "height": 44,
+        "display": "flex",
+        "marginTop": "8px"
+      }
+    },
+    {
+      "letterSpacing": "0.5px",
+      "lastLine": "LT発表してもらった話",
+      "overlaps": false,
+      "clearancePx": 8.25,
+      "nearest": {
+        "ch": "L",
+        "index": 33,
+        "top": 263.25,
+        "right": 30.48,
+        "bottom": 300.25,
+        "left": 16
+      },
+      "link": {
+        "top": 308.5,
+        "left": 16,
+        "right": 60,
+        "bottom": 352.5,
+        "width": 44,
+        "height": 44,
+        "display": "flex",
+        "marginTop": "8px"
+      }
+    },
+    {
+      "letterSpacing": "1px",
+      "lastLine": "にLT発表してもらった話",
+      "overlaps": false,
+      "clearancePx": 8.25,
+      "nearest": {
+        "ch": "に",
+        "index": 32,
+        "top": 263.25,
+        "right": 47,
+        "bottom": 300.25,
+        "left": 16
+      },
+      "link": {
+        "top": 308.5,
+        "left": 16,
+        "right": 60,
+        "bottom": 352.5,
+        "width": 44,
+        "height": 44,
+        "display": "flex",
+        "marginTop": "8px"
+      }
+    }
+  ]
+}

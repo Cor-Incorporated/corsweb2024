@@ -178,6 +178,7 @@
     "description": "Cor.株式会社は、ローカルLLM・自社プロダクト「Grift」・AI受託開発を軸に、教育や地域での場づくりにも取り組む福岡のAI実装会社です。"
   },
   "header": {
+    "skipToContent": "本文へ移動",
     "mobileMenuDescription": "Cor.株式会社は、福岡のAI実装会社です。ローカルLLM・セキュアAI、自社プロダクト「Grift」、AI受託開発・導入支援を軸に、ハードウェアAIや教育・地域での場づくりにも取り組んでいます。"
   },
   "aboutPage": {
@@ -2705,6 +2706,7 @@
     "contactLabel": "プレスに関するお問い合わせ"
   },
   "caseStudy": {
+    "griftReleaseNotes": "Grift CLI {version} の変更点",
     "breadcrumbWorks": "実績",
     "ndaHeading": "※ NDA・機密案件のため一部を抽象化しています。",
     "updatedLabel": "更新",

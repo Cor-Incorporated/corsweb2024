@@ -289,19 +289,24 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
         border-radius: 0.5rem;
         padding: 1rem;
         overflow-x: auto;
+        color: #f8f8f2;
       }
-      
-      /* Light mode: override background and adjust colors */
+
+      .prose pre.astro-code span:not([style*='color']) {
+        color: #f8f8f2;
+      }
+
+      /* Dracula comment (#6272a4) on #282a36 is ~3:1; brighten for WCAG AA on code blocks. */
+      .prose pre.astro-code span[style*='color:#6272a4'],
+      .prose pre.astro-code span[style*='color:#6272A4'] {
+        color: #a8b4d6 !important;
+      }
+
+      /* Light mode keeps Dracula on a dark pre surface so inline token colors meet contrast (axe WCAG AA). */
       html:not(.dark) .prose pre {
-        background-color: #f6f8fa !important;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #44403c;
       }
-      
-      /* Light mode: darken code colors for better contrast */
-      html:not(.dark) .prose pre code {
-        filter: brightness(0.6) saturate(1.5) contrast(1.2);
-      }
-      
+
       /* Keep pre code background transparent */
       .prose pre code {
         background-color: transparent !important;
@@ -324,12 +329,12 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
       }
       
       .prose a {
-        color: #3b82f6;
+        color: #1d4ed8;
         text-decoration: underline;
       }
       
       .prose a:hover {
-        color: #2563eb;
+        color: #1e40af;
       }
       
       .dark .prose a {
@@ -504,7 +509,7 @@ const pageTitle = `${title}${brandSep}${ORGANIZATION_NAMES[currentLocale]}`;
   </head>
   <body class="bg-primary-50 text-primary-950 antialiased transition dark:bg-primary-950 dark:text-primary-200">
     <Header availableLocales={articleLocales} />
-    <main>
+    <main id="main-content" tabindex="-1" class="scroll-mt-16">
       <slot />
     </main>
     <Footer />

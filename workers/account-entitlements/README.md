@@ -29,3 +29,105 @@
 ## ローカルでの確認
 
 Node.js 22以上でこのディレクトリの依存を解決し、`npm test` を実行する。テストはMiniflareのローカルWorkerとD1に実際のSQL移行を適用し、発行元、製品、テナント、期限、明示的な撤回、DB異常を通常のHTTP入口から確認する。配備時のDB bindingは `ACCOUNT_GRANTS`、固定された正規Clerk issuerは `CLERK_ISSUER`。信頼できる実発行元、製品サーバーの接続、管理経路と監査記録は配備候補を検収する時点で確認する。
+
+## 有償契約の製品照会（隔離候補）
+
+`POST /v2/entitlements/check` は v1 の4項目に `organizationId` と
+`operation`（`view`、`edit`、`export`）を加える。組織なしは
+`organizationId: null`。製品ごとのサーバー資格情報は v1 と共通。
+署名・セッションを検証した主体と、製品の正規権限で解決したテナント・組織を渡す。
+中央照会の許可後も製品自身の役割・案件・文書の境界が適用される。
+
+| 応答の `access` | 閲覧 | 編集 | 書き出し |
+|---|---|---|---|
+| `open` | 可 | 可 | 可 |
+| `view_only` | 可 | 拒否 | 拒否 |
+| `read_export_only` | 可 | 拒否 | 可 |
+| `closed` | 拒否 | 拒否 | 拒否 |
+
+`allowed` は要求された操作に対する真偽値。v1 の `{allowed}` は既存の個別付与専用。
+v2 でも有効な従来・スタッフの個別付与があれば `open` となる。個別付与の失効と、
+有償契約の期間・保留は独立している。
+
+有償判定の前提は、承認済みの `paid_contract_members` に対象の
+issuer・主体・サービス・製品テナント・組織の全てが一致し、同じ組織に有効期限内の
+`paid_contract_snapshots` があること。対応の欠落、撤回、不一致、スナップショットの
+期限切れは権利を付けない。日付は日本時間で判定する。期間・保留の規則は ADR-0028
+および既存のサービス選択の判定と同じ。サービスIDは既存 `docs/billing/plans.json` の
+`business-dossier` と `xesm`。
+
+ローカル試験では署名検証後に既存 `subscribe.sh resync` を合成CLIで実行する。
+CLIが照合した組織の `public_metadata.services` と同じ内容を合成アダプターが
+D1に記録する。イベント本文の契約情報は書き込まない。実運用の配備前には、決済側顧客と
+Clerk組織の対応、両製品の実テナントと承認済み主体、組織メンバー撤回の反映、成功した
+照合だけを順序保証付きで反映し期限内に更新する同期経路が要る。現時点の移行SQLには
+実データを含めていない。BD・XESMの実呼び出しは v1 が対象のまま。
+
+### 確認済みの契約と所属を D1 に反映
+
+`createClerkPaidProjector` は既存の決済再照合から、書き込み応答の確認を終えた組織IDと `resync_at` を受ける。
+同じClerk組織をBackend APIで読み戻して時刻を突合し、全ページの現行組織所属を承認台帳と照合する。
+承認台帳の読み込み元は呼び出し側が提供する。組織 ID と利用者 ID で照合し、メールや組織内の役割では承認しない。
+[Clerk 組織所属の参照](https://clerk.com/docs/reference/backend/organization/get-organization-membership-list)
+
+スナップショットと有償対応の追加・撤回を D1 の一つのバッチで反映する。古い観測結果は現在の行に影響しない。
+承認または所属が消えた対応は撤回し、所属が戻っても同じ承認番号で復活しない。
+個別無課金の `account_grants` は更新対象外。新リビジョンは `0003_paid_projection_revision.sql` を先に適用する。
+
+開発試験では署名済みの試験通知、既存の `subscribe.sh resync`、合成Clerk応答、実workerdと使い捨てD1を使用する。
+本番で使う承認台帳の接続、通知の運用入口と定期更新、実リソースへの接続は未設定。
+
+通知と定期更新の開発試験では、ループバックの `POST /webhooks/stripe/billing` にStripe形式の署名済み試験通知を送る。
+定期更新は同じ直列キューを通り、署名や通知本文を使わずに現時点の契約を再照合する。
+試験のタイマーは期限切れの状態から定期更新で権限が戻ることまで確認する。開発用ランタイムはStripeのlive通知を拒否する。
+
+### 再送とプロセス再起動の扱い
+
+通知の実行側は `createD1NotificationReceipts` と `0004_billing_notification_receipts.sql` を使う。
+署名と顧客を確認した後、同一顧客の再照合をD1のリースで直列化し、定期更新も同じリースを取る。
+リース有効中に別の受信器が到着した場合は503で再試行を促す。確認済みの投影後に完了済みイベントIDを記録し、
+再起動後に同じイベントを受け取っても、現行の台帳を変更せず200で完了済み応答を返す。
+契約の反映関数を設定しない場合、受信器は起動しない。反映した行が0件の場合はリースを返して503を応答する。送信元が同じ通知を再送すると、現在の契約を改めて照合し、反映成功時に初めて受領済みとする。
+
+D1は契約を更新するSQLの中で、通知の処理者とリースの残り時間を照合する。
+所属の読み取り中に期限を過ぎた処理からは、契約・対応表・通知の完了記録が変わらない。
+途中で停止したリースは120秒で切れる。未完了通知を受け直した場合は現行の情報を再照合する。
+このため、Clerk更新とD1記録の間で停止した場合はClerk確認を再実行することがある。
+本番接続時は、処理がリースを超えない実行上限と停止時の監視、受領記録の保存期間を決める。
+受領記録は顧客ID・イベントID・完了時刻のみを保存する。
+
+## #539 サービス選択画面
+
+静的 Astro の `/account/services/` から同じオリジンの `GET /api/account/services` を読む。Worker の入口は `account.js`。製品サーバー用の `index.js` とは別の Worker として構成し、製品用照会キーをこの入口へ付与しない。
+
+サービス一覧は `workers/account-services/wrangler.toml` から組み立てる。リポジトリのルートで
+`wrangler deploy --dry-run --config workers/account-services/wrangler.toml --outdir /tmp/cor-account-services`
+を実行すると、配備せずに一覧専用の生成物を確認できる。配備時は、既存の利用権台帳と同じD1を
+`ACCOUNT_GRANTS` に結び、`GET /api/account/services` を同一オリジンに割り当てる。
+生成後、`workers/account-entitlements` から
+`ACCOUNT_PICKER_BUNDLE=/tmp/cor-account-services/account.js npm run test:picker-bundle` を実行すると、
+署名済みの合成セッションで付与・撤回を確かめ、製品サーバー用の照会がこの入口に届かないことも確認できる。
+
+- `ACCOUNT_SITE_ORIGIN` にサイトの HTTPS origin、`CLERK_ISSUER` に正規 Clerk issuer の origin、`CLERK_JWT_KEY` に同じインスタンスの署名検証用公開鍵、`CLERK_SIGN_IN_URL` に正規のログイン URL を設定する。Astro 側の `PUBLIC_CLERK_PUBLISHABLE_KEY` は公開可能なキーだけを使う。ClerkJS の組織切替から個人へ戻るには Clerk の Personal Accounts を有効にする。
+- 選択組織は署名済みセッションの `o.id` から取得する。署名・有効期限・発行元・正規オリジン・本人を照合し、保留中のセッションを拒否する。利用可能な製品と操作は、本人・組織・製品テナントの有効な対応とD1の期限内の契約から算出する。
+- 個人モードは `ACCOUNT_GRANTS` の primary にあり、撤回されていない期限内の明示的な staff/legacy 付与から製品を選ぶ。組織の有償権利の停止で個別付与の行は変更しない。選択組織の停止を別テナントの個別付与で上書きすることもない。個人モードで表示されるリンク先でも、製品が既存の対象テナント・所属・操作権限を再検証する。
+- Worker の `BD_SERVICE_URL` と `XESM_SERVICE_URL` に、対象環境とテナントに対応する HTTPS の製品入口を設定する。必要な設定を欠くとサービス一覧のAPIは503を返す。入口の値は環境別の配備設定で管理し、静的配信側に秘密値や製品用機械キーを入れない。
+
+一覧と製品の v2 照会は同じ契約の終了日・保持期間・利用停止の判定関数を使う。組織メンバーへの入場は、各製品でも要求ごとに対象テナントを含めて照合する。
+
+配備前に、独立 Worker を `cor-jp.com/api/account/services` だけへルーティングし、他の公開経路や製品のサーバー間APIは既存設定を確認する。現在はローカル候補。実ルート、Clerk Production のログイン・組織選択・個人選択、実契約・承認済み製品テナントと D1、上記入口への実ログインと製品側の拒否は未検証。公開前に同一ユーザーで組織の hold と個人の適用テナントを確認する。
+
+Astroの通常ビルドはサービス一覧を一般公開用の成果物から除く。開発サーバーと `PUBLIC_SITE_ENV=preview npm run build` では同じURLを検証できる。本番に掲載するときは、同一オリジンのAPIと共通ログインを先に照合し、本番ビルドへ `PUBLIC_ACCOUNT_SERVICES_ENABLED=true` 、本番の `PUBLIC_CLERK_PUBLISHABLE_KEY`、契約APIが使う正規発行元のorigin `CLERK_ISSUER` を渡す。有効化を指定して本番キーがないか発行元が一致しなければビルドは停止する。現在のHosting配備はこの公開を有効にしていない。
+
+ローカルでは Worker ディレクトリの `npm test` で既存の製品照会と #539 のAPIを確認する。上記のプレビュー用ビルド後、`ACCOUNT_PICKER_BROWSER_OUTPUT` を設定すると同じテストでChromium表示も検査する。ブラウザ証跡は合成セッションと隔離D1に限定し、実Clerk・実製品への通信を行わない。既定のリンクは試験用の値。配備設定との照合が必要な場合は、同じ試験の環境変数 `BD_SERVICE_URL` と `XESM_SERVICE_URL` で検証対象の値を渡す。ブラウザ試験はリンクの値を検査し、リンク先への通信は遮断する。
+
+選択した組織の承認済みテナントにも個別の有効な無課金付与がある場合は、製品用v2照会と同様にその付与を優先する。対象外テナントの個別付与は、別組織の表示には加わらない。
+
+## BD・XESMの社員初回利用
+
+BD・XESMの製品サーバーは、それぞれ自製品の資格情報を使い、共通Clerkで確認済みの利用者に対して
+`POST /v2/entitlements/check` を `operation=staff_onboarding`、
+`organizationId=null` で呼べる。該当する製品・テナント・発行元・主体の
+有効な `staff` 個別付与だけが `allowed=true, access=open` を返す。
+旧利用者への無課金付与と有償契約は、それぞれの通常の製品利用に適用する。
+他製品のサーバーや利用者向けの一覧からこの操作を実行する構成はない。

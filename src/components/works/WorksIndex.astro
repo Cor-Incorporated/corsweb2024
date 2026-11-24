@@ -46,7 +46,7 @@ const moreHref = t.works.moreHref.startsWith('/')
     <LbText class="type-copy max-w-[40em] text-lg text-primary-950/70 dark:text-primary-200/70" text={t.works.intro} />
   </div>
 
-  <LbText class="type-copy mb-12 max-w-[40em] text-sm text-primary-950/50 dark:text-primary-200/50" text={t.works.note} />
+  <LbText class="type-copy mb-12 max-w-[40em] text-sm text-primary-950/70 dark:text-primary-200/70" text={t.works.note} />
 
   <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {
@@ -66,7 +66,7 @@ const moreHref = t.works.moreHref.startsWith('/')
               {item.description}
             </p>
             {isNda && (
-              <p class="type-copy mt-auto text-xs text-primary-950/50 dark:text-primary-200/50">
+              <p class="type-copy mt-auto text-xs text-primary-950/70 dark:text-primary-200/70">
                 {item.note || t.works.ndaNote}
               </p>
             )}

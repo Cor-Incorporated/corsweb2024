@@ -46,7 +46,7 @@ const jsonLd = {
 };
 ---
 
-<main class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-content lg:px-8">
+<div class="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20 lg:max-w-content lg:px-8">
   <div class="flex max-w-3xl flex-col gap-4 pb-10 sm:pb-12 lg:max-w-content">
     <p class="text-sm font-medium uppercase tracking-widest text-primary-600 dark:text-primary-400">{t.press.eyebrow}</p>
     <LbHeading as="h1" class="type-heading text-3xl font-medium tracking-tight sm:text-4xl md:text-5xl" text={t.press.title} />
@@ -73,6 +73,6 @@ const jsonLd = {
       </a>
     </div>
   )}
-</main>
+</div>
 
 <script type="application/ld+json" set:html={safeJsonLd(jsonLd)} is:inline />

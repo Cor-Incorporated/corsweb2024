@@ -118,7 +118,7 @@ const checkReal = (worker: string) => checkWorker(worker, filesOf(worker), readW
 
 describe('workers.dev とプレビュー URL の公開は wrangler.toml で明示し、許可したものだけにする（#362）', () => {
   it('対象の Worker がある（照合が空回りしていない）', () => {
-    expect(workerDirs()).toEqual(['account-entitlements', 'contact-chat', 'contact-edge', 'sveltia-cms-auth']);
+    expect(workerDirs()).toEqual(['account-entitlements', 'account-services', 'contact-chat', 'contact-edge', 'sveltia-cms-auth']);
   });
 
   it.each(workerDirs())('%s', (worker) => {
