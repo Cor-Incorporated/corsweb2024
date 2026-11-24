@@ -17,8 +17,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const TOKEN_A = '0f1e2d3c4b5a69788796a5b4c3d2e1f0';
-const TOKEN_B = 'ffffffffffffffffffffffffffffffff';
+// 32 桁の小文字 hex（DOCUMENT_FORM_TOKEN_PATTERN）。見た目が API 鍵と誤検出されないよう繰り返しにする。
+const TOKEN_A = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const TOKEN_B = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const RECEIPT = /COR-\d{8}-[A-Z0-9]{8}/;
 
 const MIGRATIONS = resolve(__dirname, '../../migrations');
