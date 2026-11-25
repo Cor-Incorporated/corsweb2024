@@ -110,6 +110,12 @@ html {
   scroll-padding-top: 4rem;
 }
 
+/* Tab で移ったリンクが、画面下に固定した相談ランチャー（CloudiaLauncher.astro）に隠れないための空き。
+   ランチャーの下余白 1rem + ボタンの高さ 3rem + 8px。CloudiaLauncher.astro の bottom と min-h と合わせる。 */
+html:has(#cloudia-launcher) {
+  scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+}
+
 @media (min-width: 1024px) {
   html {
     scroll-padding-top: 4.5rem;

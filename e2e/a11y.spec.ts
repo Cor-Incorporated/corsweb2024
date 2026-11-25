@@ -249,3 +249,34 @@ test.describe('mobile menu — no body overlap at 390px', () => {
     await assertMenuDoesNotCoverBody(page, '/company/');
   });
 });
+test.describe('focus not obscured by the Cloudia launcher (WCAG 2.4.11, 390px)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  for (const route of ['/', '/industries/construction/', '/en/']) {
+    test(route, async ({ page }) => {
+      await settlePageForAudit(page, route);
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+        (document.activeElement as HTMLElement | null)?.blur();
+      });
+      const hidden: string[] = [];
+      for (let stop = 0; stop < 120; stop++) {
+        await page.keyboard.press('Tab');
+        const covered = await page.evaluate(() => {
+          const el = document.activeElement as HTMLElement | null;
+          const launcher = document.getElementById('cloudia-launcher');
+          if (!el || !launcher || launcher.contains(el) || el.tagName === 'IFRAME') return null;
+          const box = el.getBoundingClientRect();
+          const cover = launcher.getBoundingClientRect();
+          const visible = Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0)) * box.width;
+          if (!visible) return null;
+          const x = Math.max(0, Math.min(box.right, cover.right) - Math.max(box.left, cover.left));
+          const y = Math.max(0, Math.min(box.bottom, cover.bottom, innerHeight) - Math.max(box.top, cover.top, 0));
+          return (x * y) / visible >= 0.99 ? (el.innerText || el.getAttribute('aria-label') || el.tagName).trim().slice(0, 40) : null;
+        });
+        if (covered) hidden.push(covered);
+      }
+      expect(hidden).toEqual([]);
+    });
+  }
+});
