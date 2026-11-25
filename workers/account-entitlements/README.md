@@ -1,6 +1,27 @@
 # Cor Account の個別利用権の問い合わせ
 
-この候補は、Cor’s Projects の組織機能に依存せず、確認済みのスタッフと既存利用者に製品別の利用権を付与する。中央D1の `account_grants` を認可の問い合わせで参照する。実アプリの設定、実利用者の取込み、DB作成、配備はこの候補の検証に含まない。
+この候補は、Cor’s Projects の組織機能に依存せず、確認済みのスタッフと既存利用者に製品別の利用権を付与する。中央D1の `account_grants` を認可の問い合わせで参照する。実利用者の取込みはこの候補の検証に含まない。
+
+## 本番の配備
+
+`wrangler.toml` のとおり、`https://entitlements.cor-jp.com` のカスタムドメインに置き、D1 `cor-account-grants` を `ACCOUNT_GRANTS` に結ぶ。workers.dev とプレビューは無効。製品の照会トークンは Worker の secret にだけ置き、同じ値を製品側の照会トークンに渡す。値を替えるときは Worker の secret と製品側を同じ手順で入れ替える。
+
+`cor-jp.com` ゾーンは Browser Integrity Check が有効で、製品サーバーの既定の User-Agent を 1010 で拒否する。`entitlements.cor-jp.com/*` だけ、ページルールでこの検査を外している。製品の照会はトークン必須の機械間通信で、ブラウザは来ない。
+
+## 無料の組織契約
+
+Cor 自身の組織(`cor-jp.com`)のように課金しない組織契約は、Stripe の照合を通さず、`paid_contract_snapshots` に 0 円の契約行を、`paid_contract_members` に承認済みのメンバーを入れる。照会は有償の契約と同じ判定(`open`・`view_only`・`read_export_only`・`closed`)を通る。メールのドメインだけからメンバーを作らない。メンバーは Clerk の組織所属と承認参照で 1 人ずつ入れる。Clerk の Verified Domains(ドメインでの自動参加)は有料の追加機能なので使わない。
+
+```sql
+INSERT INTO paid_contract_snapshots (issuer, organization_id, services_json, expires_at, observed_at_ms, sync_id)
+VALUES ('https://clerk.cor-jp.com', '<org_…>',
+        '{"business-dossier":{"from":"<開始日>","until":null,"hold":false}}',
+        '<見直し日の ISO 8601>', 0, 'free-<承認参照>');
+INSERT INTO paid_contract_members (issuer, organization_id, subject, service, tenant_id, approval_ref)
+VALUES ('https://clerk.cor-jp.com', '<org_…>', '<user_…>', 'business-dossier', '<製品の workspace id>', '<承認参照>');
+```
+
+`expires_at` を過ぎると、契約行は無いのと同じに閉じる。無料の契約にも見直し日を入れ、続けるなら更新する。
 
 ## 製品サーバーとの契約
 
