@@ -18,7 +18,7 @@ import {
 } from '../launcherSubmitAnalytics';
 
 // ランチャー（iframe, ?embed=1）からの受付成功を、親ページの GA4 に 1 回だけ送る。
-// 2026-11-18 の統括判断: GA4 に渡すのは entry_surface だけ。intent は受け取る条件にだけ使い、
+// GA4 に渡すのは entry_surface だけ。intent は受け取る条件にだけ使い、
 // 送らない。entry_surface は候補（LAUNCHER_ENTRY_SURFACES）の中だけに寄せる。
 // 落ちるべき変更:
 //   - origin / source を見ずに message を受ける（別の枠・別のページからの偽装）
