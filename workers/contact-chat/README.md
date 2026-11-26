@@ -155,6 +155,18 @@ D1を使わない互換経路では、両通知と画面応答で番号が一致
 
 Queue payloadに氏名・メール・本文・会話抜粋は含めない。D1ではセッションの暗号化済み安全化抜粋をsubmissionへ引き継ぎ、Queue consumerがinternal通知時だけ復号する。receiptでは復号せず、メールにも載せない。各行にはResendの `provider_message_id` と `delivery_status`（`queued` → `sending` → `accepted`、失敗時 `failed`）を保存する。`accepted` はResend API受付済みを意味し、最終配信確認にはResendの配信イベント連携が必要。
 
+### 通常の相談の入口
+
+Cloudiaは、URLに `utm_source=grift` が1個だけあれば `griftaiLink`、それ以外なら `corJpDirect` を申告する。相談の目的・業態の `source` は別に保持する。Workerは会話の作成時に経路を保存し、有効な会話の受付では保存値を使う。会話のない代替フォームでは許可した申告だけを使い、旧版の送信や不明な値は `unknown` とする。申告は担当が入口を知るために使い、ログインや権利判定には使わない。
+
+担当向けの内向き通知ではGriftからの申告を `[griftai]` と表示し、受付番号と相談元を本文に載せる。本人向けの通知には追加しない。受付の非個人情報の写しは `site`・`entryRoute`・`provenance` を含む。
+
+- 配備の順序は、D1 の `0012_inquiry_entry_route.sql` → この Worker → Cloudia（経路を送る版）。Cloudia が経路を送る版になるまでは、経路を送らない会話は `unknown` で保存され、件名に `[griftai]` は付かない（受付・保存は従来どおり動く）。
+- 既存の会話への start は、従来どおり要約・回数・期限を更新する。経路は更新しないので、開始時の値が残る。
+- この Worker の配備より先に、D1 の `0012_inquiry_entry_route.sql` を当てる（既存の migration と同じ順序）。
+- 旧版の Worker は列を明示した SQL だけを読み書きし、追加列（`entry_route`、既定 `unknown`）は使わないため、既存行の読みも、新しい列を持つ行の読みも壊れない。
+- 逆の順序で配備すると、新しい列への書き込みが失敗して `/chat` と `/submit` が 503 になる。
+
 ## デプロイ手順（初回）
 
 Node.js 22.12 以上で実行する（wrangler 4 は Node.js 22 以上、vitest 5 は 22.12 以上を求める）。

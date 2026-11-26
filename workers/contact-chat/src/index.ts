@@ -39,6 +39,7 @@ import { chatDailyModelCallLimit, reserveDailyModelCall } from './daily-cap';
 import { logContactFailure, notificationFailureCode } from './log';
 import { industryStartReply, readTrafficSource, type TrafficReading } from './industry-context';
 import { classifyFromModel, unclassified } from './inquiry-classification';
+import { readEntryRoute } from './entry-route';
 import { entryContextFromTraffic } from './inquiry-context';
 import { buildSystemPrompt, getProvider, VertexResponseError } from './llm';
 import { getEmailProvider, sendInquiryEmail, sendReceiptEmail } from './email';
@@ -347,9 +348,22 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
   // UIがこの応答を最初のCloudiaメッセージとして表示し、続く発話から通常の
   // /chat 経路へ入る。外部プロバイダ障害でもヒアリング導線を止めない。
   const isStart = forceStart || body.start === true || body.event === 'intent_selected';
+  const requestedSessionId = normalizeSessionId(body.sessionId);
+  // The route comes from the first request of a server-created session.
+  // A submitted body cannot reclassify it, and a stale ID cannot revive it.
+  let existingSession;
+  try {
+    existingSession = await readTrustedSession(env, requestedSessionId);
+  } catch {
+    logContactFailure('session_storage_failed');
+    return json({ error: 'チャットを開始できません。時間をおいて再試行してください' }, 503);
+  }
+  const sessionId = ((existingSession || !env.DB) && requestedSessionId) || newSessionId();
+  const entryRoute = existingSession
+    ? readEntryRoute(existingSession.context.entryRoute)
+    : readEntryRoute(body.entryRoute);
   if (isStart) {
     const reply = startReply(mode, locale, initialIntent, traffic);
-    const sessionId = normalizeSessionId(body.sessionId) || newSessionId();
     const result: ChatResult = {
       reply,
       classification: 'genuine',
@@ -362,6 +376,8 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
       stage: 'intent',
       missingFields: ['purpose'],
     };
+    // 既存の会話への start も、従来どおり要約・回数・期限を更新する。
+    // 入口の経路（entry_route）は ON CONFLICT で更新しないので、開始時の値が残る。
     try {
       await upsertContactSession(env, {
         sessionId,
@@ -377,6 +393,7 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
         summary: result.summary,
         conversationExcerpt: '',
         entry: entryContextFromTraffic(traffic),
+        entryRoute,
         machineClassification: unclassified('no_model_turn'),
       });
     } catch {
@@ -436,7 +453,6 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
   }
   const result = parsedChat.result;
   result.reply = normalizeCompanyNameReply(result.reply, norm.messages);
-  const sessionId = normalizeSessionId(body.sessionId) || newSessionId();
   result.sessionId = sessionId;
   result.missingFields = leadMissingFields(result.structuredLead);
   // A direct request for the form takes precedence over optional intake questions.
@@ -480,6 +496,7 @@ async function handleChat(req: Request, env: Env, forceStart = false): Promise<R
       summary: result.summary,
       conversationExcerpt: buildConversationExcerpt(norm.messages),
       entry: entryContextFromTraffic(traffic),
+      entryRoute,
       machineClassification: classifyFromModel(parsedChat.modelClassification),
     });
   } catch {
@@ -505,6 +522,7 @@ async function readTrustedInquiry(
   env: Env,
   inquiry: NormalizedInquiry,
   sessionId: string | null,
+  declaredRoute: unknown,
 ): Promise<{ inquiry: NormalizedInquiry; context: InquiryRecordContext }> {
   const session = await readTrustedSession(env, sessionId);
   // サーバー上の分類・業種は処理に使う。確認画面から提出されなかった会話内容は引き渡さない。
@@ -520,7 +538,7 @@ async function readTrustedInquiry(
         structuredLead: {},
         classification: session?.classification ?? '',
       },
-      context: session?.context ?? NO_SESSION_CONTEXT,
+      context: session?.context ?? { ...NO_SESSION_CONTEXT, entryRoute: readEntryRoute(declaredRoute) },
     };
   }
   const sessionLead = session ? parseTrustedLead(session.structuredLeadJson) : undefined;
@@ -540,7 +558,7 @@ async function readTrustedInquiry(
       ...(structuredLead ? { structuredLead } : {}),
       ...(session ? { classification: session.classification } : {}),
     },
-    context: session ? session.context : NO_SESSION_CONTEXT,
+    context: session?.context ?? { ...NO_SESSION_CONTEXT, entryRoute: readEntryRoute(declaredRoute) },
   };
 }
 
@@ -592,7 +610,7 @@ async function handleSubmit(req: Request, env: Env): Promise<Response> {
   let trusted: { inquiry: NormalizedInquiry; context: InquiryRecordContext } | null = null;
   if (env.DB) {
     try {
-      trusted = await readTrustedInquiry(env, norm.inquiry, normalizeSessionId(body.sessionId));
+      trusted = await readTrustedInquiry(env, norm.inquiry, normalizeSessionId(body.sessionId), body.entryRoute);
     } catch {
       logContactFailure('submission_storage_failed');
       return json({ error: 'お問い合わせを受け付けられません。時間をおいて再試行してください' }, 503);

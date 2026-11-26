@@ -237,6 +237,8 @@ export interface InquiryInput {
 // 検証・正規化済みの問い合わせ（メール本文に使う）。
 export interface NormalizedInquiry {
   shareConversation?: false;
+  /** Only set from stored server-side attribution for the internal handoff. */
+  entryRoute?: import('./entry-route').EntryRoute;
   name: string;
   email: string;
   company: string;

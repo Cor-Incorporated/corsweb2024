@@ -1,4 +1,5 @@
 import type { Env, NormalizedInquiry } from './types';
+import { entryAttribution } from './entry-route';
 import {
   buildDeterministicSummary,
   canonicalizeSummaryText,
@@ -115,6 +116,7 @@ export function getInternalCcRecipients(env: Env): string[] {
 // 件名: 分類・intent を含め、社内でトリアージしやすくする。
 export function buildSubject(inquiry: NormalizedInquiry): string {
   const tags: string[] = [];
+  if (inquiry.entryRoute === 'griftaiLink') tags.push('griftai');
   if (inquiry.classification) tags.push(inquiry.classification);
   if (inquiry.intent) tags.push(inquiry.intent);
   const prefix = tags.length ? `[${tags.join('][')}] ` : '';
@@ -152,8 +154,10 @@ export function getConversationExcerptText(inquiry: NormalizedInquiry): string {
 // 本文: 構造化した問い合わせ＋会話サマリ＋分類メモ。
 // PII（name/email/company/message）はこのメール本文にのみ載る。LLM には絶対に渡さない。
 export function buildBody(inquiry: NormalizedInquiry): string {
+  const attribution = inquiry.entryRoute ? entryAttribution(inquiry.entryRoute) : null;
   const lines = [
     'cor-jp.com のお問い合わせフォーム（AIチャット）から新しい問い合わせが届きました。',
+    ...(attribution ? [`相談元（自己申告）: ${attribution.site} / ${attribution.entryRoute}`] : []),
     '',
     '── お問い合わせ内容 ──',
     `お名前　: ${inquiry.name}`,

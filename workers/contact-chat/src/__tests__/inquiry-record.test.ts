@@ -4,12 +4,13 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { INDUSTRY_SLUGS as SITE_INDUSTRY_SLUGS, industrySlugFromPath } from '../../../../src/config/industry-context';
 import { buildInquiryCaseCopy } from '../case-copy';
+import { buildBody, buildSubject, sendInquiryEmail } from '../email';
 import { INDUSTRY_SLUGS } from '../industry-context';
 import { INQUIRY_CLASSIFICATION_VERSION } from '../inquiry-classification';
 import { industryPagePath } from '../inquiry-context';
 import worker from '../index';
 import { resetRateLimits } from '../security';
-import { decryptText, getInquiryCaseCopySource } from '../storage';
+import { decryptText, getInquiryCaseCopySource, getSubmissionForNotification } from '../storage';
 import type { Env, NotificationMessage } from '../types';
 
 afterEach(() => {
@@ -249,11 +250,11 @@ describe('受付の分類はサーバーが決め、ブラウザの値で変わ�
   });
 });
 
-const CASE_COPY_FIELDS = ['receiptId', 'industry', 'entryPath', 'classification', 'classificationVersion', 'createdAt'];
+const CASE_COPY_FIELDS = ['receiptId', 'entryRoute', 'site', 'provenance', 'industry', 'entryPath', 'classification', 'classificationVersion', 'createdAt'];
 const PII_LIKE = /name|mail|phone|tel|company|message|summary|excerpt|body|text|cipher|hmac/i;
 
 describe('案件へ渡す写し', () => {
-  it('写しの欄は 6 つだけで、個人情報の欄は 0', async () => {
+  it('写しの欄は一覧の項目だけで、個人情報の欄は 0', async () => {
     const db = openDatabase();
     const env = testEnv(db);
     const { receiptId } = await runInquiry(env, db, { source: 'industry-manufacturing', modelText: modelJson('genuine') });
@@ -422,13 +423,13 @@ describe('保存した行の読み戻しは、壊れた値を写しに入れな�
     expect(copy).toMatchObject(expected);
   });
 
-  it('写しの元は、決めた 8 列だけを読む（ブラウザ由来の列も個人情報の列も読まない）', async () => {
+  it('写しの元は、決めた列だけを読む（ブラウザ由来の列も個人情報の列も読まない）', async () => {
     const db = openDatabase();
     const env = testEnv(db);
     const receiptId = await storedReceipt(db, env);
     const source = await getInquiryCaseCopySource(env, receiptId);
     expect(Object.keys(source ?? {})).toEqual([
-      'receipt_id', 'industry', 'entry_path', 'machine_classification',
+      'receipt_id', 'industry', 'entry_path', 'entry_route', 'machine_classification',
       'classification_reason', 'classification_origin', 'classification_version', 'created_at',
     ]);
   });
@@ -816,5 +817,131 @@ describe('一般相談の送信時に、会話が取りこぼした受付の欄�
     expect(mail.text).not.toContain(rawPhone);
     expect(mail.text).not.toContain(rawLong);
     expect(mail.text).not.toContain('許可リスト外の欄');
+  });
+});
+
+describe('通常の相談フォームの入口識別', () => {
+  it.each(['griftaiLink', 'corJpDirect'] as const)('%s を保存し担当の件名・本文・写しに渡す', async (entryRoute) => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const site = entryRoute === 'griftaiLink' ? 'griftai' : 'corJp';
+    const initial = await worker.fetch(post('/api/contact/chat/start', {
+      intent: 'grift-team-beta', source: 'cloudia', entryRoute,
+    }), env);
+    expect(initial.status).toBe(200);
+    const { sessionId } = await initial.json() as { sessionId: string };
+    const differentRoute = entryRoute === 'griftaiLink' ? 'corJpDirect' : 'griftaiLink';
+    const restart = await worker.fetch(post('/api/contact/chat/start', {
+      intent: 'grift-team-beta', source: 'cloudia', entryRoute: differentRoute, sessionId,
+    }), env);
+    expect(await restart.json()).toMatchObject({ sessionId });
+    stubModel(modelJson('genuine'));
+    const chat = await worker.fetch(post('/api/contact/chat', {
+      sessionId, entryRoute: differentRoute, intent: 'grift-team-beta', source: 'cloudia',
+      messages: [{ role: 'user', content: '採用について相談したい' }],
+    }), env);
+    expect(chat.status).toBe(200);
+    const submit = await submitOnce(env, sessionId, 'cloudia', { entryRoute: differentRoute });
+    expect(submit.status).toBe(200);
+    const { receiptId } = await submit.json() as { receiptId: string };
+    expect(db.prepare('SELECT entry_route FROM contact_sessions').get()).toEqual({ entry_route: entryRoute });
+    const row = db.prepare('SELECT submission_id, entry_route FROM submission_intake').get() as {
+      submission_id: string; entry_route: string;
+    };
+    expect(row.entry_route).toBe(entryRoute);
+    const projection = buildInquiryCaseCopy((await getInquiryCaseCopySource(env, receiptId))!);
+    expect(projection).toMatchObject({ site, entryRoute, provenance: 'declared', receiptId });
+    const internal = await getSubmissionForNotification(env, row.submission_id);
+    // 送る内向き通知そのもの（件名・本文の合成結果）で確かめる。受付番号は本文の先頭行。
+    const sentMail: { subject: string; text: string }[] = [];
+    await sendInquiryEmail(env, {
+      async send(_to, _from, subject, text) {
+        sentMail.push({ subject, text });
+        return { messageId: 'mock', deliveryStatus: 'accepted' };
+      },
+    }, internal!.inquiry, receiptId);
+    expect(sentMail[0]?.subject.startsWith('[griftai]')).toBe(site === 'griftai');
+    expect(sentMail[0]?.text).toContain(`受付番号: ${receiptId}`);
+    expect(sentMail[0]?.text).toContain(`相談元（自己申告）: ${site} / ${entryRoute}`);
+    const receipt = await getSubmissionForNotification(env, row.submission_id, 'receipt');
+    expect(receipt!.inquiry).not.toHaveProperty('entryRoute');
+  });
+
+  it('既存の会話への start は要約・回数・期限を従来どおり更新し、入口の経路は開始時の値のまま', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const initial = await worker.fetch(post('/api/contact/chat/start', {
+      intent: 'grift-team-beta', source: 'cloudia', entryRoute: 'griftaiLink',
+    }), env);
+    const { sessionId } = await initial.json() as { sessionId: string };
+    stubModel(modelJson('genuine'));
+    const chat = await worker.fetch(post('/api/contact/chat', {
+      sessionId, intent: 'grift-team-beta', source: 'cloudia',
+      messages: [{ role: 'user', content: '採用について相談したい' }],
+    }), env);
+    expect(chat.status).toBe(200);
+    const before = db.prepare('SELECT summary_text, turn_count FROM contact_sessions').get() as {
+      summary_text: string; turn_count: number;
+    };
+    expect(before).toEqual({ summary_text: '業務の整理の相談', turn_count: 1 });
+    // 期限が近い（まだ有効な）会話に、もう一度 start が来る。
+    const soon = Math.floor(Date.now() / 1000) + 5;
+    db.prepare('UPDATE contact_sessions SET expires_at = ? WHERE session_id = ?').run(soon, sessionId);
+    const restart = await worker.fetch(post('/api/contact/chat/start', {
+      intent: 'grift-team-beta', source: 'cloudia', entryRoute: 'corJpDirect', sessionId,
+    }), env);
+    expect(await restart.json()).toMatchObject({ sessionId });
+    const after = db.prepare('SELECT summary_text, turn_count, stage, expires_at, entry_route FROM contact_sessions').get() as {
+      summary_text: string; turn_count: number; stage: string; expires_at: number; entry_route: string;
+    };
+    expect(after.turn_count).toBe(0);
+    expect(after.summary_text).not.toBe('業務の整理の相談');
+    expect(after.stage).toBe('intent');
+    expect(after.expires_at).toBeGreaterThan(soon);
+    expect(after.entry_route).toBe('griftaiLink');
+  });
+
+  it('期限切れの会話を復活させず、代替フォームの申告と旧版の未記録を区別する', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const initial = await worker.fetch(post('/api/contact/chat/start', {
+      intent: 'grift-team-beta', entryRoute: 'griftaiLink', sessionId: 'browser-id',
+    }), env);
+    const { sessionId } = await initial.json() as { sessionId: string };
+    expect(sessionId).not.toBe('browser-id');
+    db.prepare('UPDATE contact_sessions SET expires_at = 0 WHERE session_id = ?').run(sessionId);
+    const declared = await submitOnce(env, sessionId, 'cloudia', { entryRoute: 'corJpDirect' });
+    expect(declared.status).toBe(200);
+    const legacy = await submitOnce(env, sessionId, 'cloudia');
+    expect(legacy.status).toBe(200);
+    expect(db.prepare('SELECT session_id, entry_route FROM submission_intake ORDER BY rowid').all())
+      .toEqual([{ session_id: null, entry_route: 'corJpDirect' }, { session_id: null, entry_route: 'unknown' }]);
+  });
+
+  it('Grift 発でない相談（source=footer）は corJpDirect で受け、件名に griftai を出さない', async () => {
+    const db = openDatabase();
+    const env = testEnv(db);
+    const initial = await worker.fetch(post('/api/contact/chat/start', {
+      intent: 'contract-dev', source: 'footer', entryRoute: 'corJpDirect', locale: 'ja',
+    }), env);
+    expect(initial.status).toBe(200);
+    const { sessionId } = await initial.json() as { sessionId: string };
+    stubModel(modelJson('genuine'));
+    const chat = await worker.fetch(post('/api/contact/chat', {
+      sessionId, intent: 'contract-dev', source: 'footer', locale: 'ja',
+      messages: [{ role: 'user', content: '相談です' }],
+    }), env);
+    expect(chat.status).toBe(200);
+    // 提出時に別の経路を送っても、開始時に固定した値が勝つ。
+    const submit = await submitOnce(env, sessionId, 'footer', { entryRoute: 'griftaiLink' });
+    expect(submit.status).toBe(200);
+    expect(db.prepare('SELECT entry_route FROM contact_sessions').get()).toEqual({ entry_route: 'corJpDirect' });
+    const row = db.prepare('SELECT submission_id, entry_route FROM submission_intake').get() as {
+      submission_id: string; entry_route: string;
+    };
+    expect(row.entry_route).toBe('corJpDirect');
+    const internal = await getSubmissionForNotification(env, row.submission_id);
+    expect(buildSubject(internal!.inquiry)).not.toContain('griftai');
+    expect(buildBody(internal!.inquiry)).toContain('相談元（自己申告）: corJp / corJpDirect');
   });
 });
