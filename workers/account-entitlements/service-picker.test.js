@@ -318,3 +318,58 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   console.log('Chromium paid-only: open 1 → held 1 → read/export 1 → closed 0, same user and organization.');
   console.log('Chromium: staff 2, legacy 1, outside 0, same-session revocation 1 → 0, signed-out 0; configured hrefs; same user personal 2 → organization hold 1 → personal 2; live Clerk requests 0');
 });
+
+test('a staff grant revoked with revoked_at and revocation_ref closes every v2 operation', async t => {
+  const productKey = randomBytes(32).toString('base64url');
+  const xesmKey = randomBytes(32).toString('base64url');
+  const mf = new Miniflare(convertV4MiniflareOptions({
+    modules: true, scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
+    bindings: { CLERK_ISSUER: issuer, BD_ENTITLEMENT_QUERY_TOKEN: productKey, XESM_ENTITLEMENT_QUERY_TOKEN: xesmKey },
+    compatibilityDate: '2026-10-26', d1Databases: ['ACCOUNT_GRANTS'], cf: false, telemetry: { enabled: false },
+  }));
+  t.after(() => mf.dispose());
+  const db = await mf.getD1Database('ACCOUNT_GRANTS');
+  for (const file of ['0001_account_grants.sql', '0002_paid_contract_projection.sql',
+    '0003_paid_projection_revision.sql', '0004_billing_notification_receipts.sql']) {
+    const migration = await readFile(new URL('migrations/' + file, import.meta.url), 'utf8');
+    await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
+  }
+  const grant = (id, subject, service, tenantId) => db.prepare(`
+    INSERT INTO account_grants
+      (id, issuer, subject, service, tenant_id, kind, starts_on, ends_on, approval_ref)
+    VALUES (?, ?, ?, ?, ?, 'staff', '2020-01-01', '2099-01-01', 'fixture-approval')
+  `).bind(id, issuer, subject, service, tenantId).run();
+  const revoke = id => db.prepare(
+    "UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture-revocation' WHERE id = ?1"
+  ).bind(id).run();
+  const credential = service => service === 'xesm' ? xesmKey : productKey;
+  const check = (version, body) => mf.dispatchFetch(
+    `https://entitlements.example.invalid/v${version}/entitlements/check`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + credential(body.service), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  ).then(async response => [response.status, await response.json()]);
+  await t.test('N2: a revoked staff grant closes view, edit and export at v2', async () => {
+    const subject = 'user_RevokedStaffV2';
+    await grant('n2-staff', subject, 'business-dossier', 'tenant-n2');
+    for (const operation of ['view', 'edit', 'export']) {
+      assert.deepEqual(await check(2, {
+        service: 'business-dossier', issuer, subject, tenantId: 'tenant-n2',
+        organizationId: 'org_negative', operation,
+      }), [200, { allowed: true, access: 'open' }], operation);
+    }
+    await revoke('n2-staff');
+    const row = await db.prepare(
+      'SELECT revoked_at, revocation_ref FROM account_grants WHERE id = ?1'
+    ).bind('n2-staff').first();
+    assert.ok(row.revoked_at);
+    assert.equal(row.revocation_ref, 'fixture-revocation');
+    for (const operation of ['view', 'edit', 'export']) {
+      assert.deepEqual(await check(2, {
+        service: 'business-dossier', issuer, subject, tenantId: 'tenant-n2',
+        organizationId: 'org_negative', operation,
+      }), [200, { allowed: false, access: 'closed' }], operation);
+    }
+  });
+});
