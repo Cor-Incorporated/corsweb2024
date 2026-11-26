@@ -9,6 +9,7 @@ import type {
   NotificationMessage,
   NotificationType,
 } from './types';
+import { readEntryRoute, type EntryRoute } from './entry-route';
 import { notificationFailureCode } from './log';
 import type { InquiryCaseCopySource } from './case-copy';
 import type { InquiryClassification } from './inquiry-classification';
@@ -38,12 +39,14 @@ export interface SessionState {
   /** 業種と path は最初に決まった値を保つ（後の要求で変えない）。 */
   entry: InquiryEntryContext;
   machineClassification: InquiryClassification;
+  entryRoute?: EntryRoute;
 }
 
 /** 受付の記録へ写す、サーバーが決めた文脈。ブラウザの値からは作らない。 */
 export interface InquiryRecordContext {
   entry: InquiryEntryContext;
   classification: InquiryClassification;
+  entryRoute?: EntryRoute;
 }
 
 export interface StoredSubmission {
@@ -186,8 +189,8 @@ export async function upsertContactSession(env: Env, state: SessionState): Promi
        structured_lead_json, missing_fields_json, classification, summary_text,
        conversation_excerpt_ciphertext, industry, entry_path,
        machine_classification, classification_reason, classification_origin, classification_version,
-       status, created_at, updated_at, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
+       entry_route, status, created_at, updated_at, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
     ON CONFLICT(session_id) DO UPDATE SET
       intent=excluded.intent, mode=excluded.mode, locale=excluded.locale,
       source=excluded.source, stage=excluded.stage, turn_count=excluded.turn_count,
@@ -234,6 +237,7 @@ export async function upsertContactSession(env: Env, state: SessionState): Promi
     state.machineClassification.reason,
     state.machineClassification.origin,
     state.machineClassification.version,
+    state.entryRoute ?? 'unknown',
     now,
     now,
     now + SESSION_TTL_SECONDS,
@@ -251,10 +255,10 @@ export interface TrustedSession {
 export async function readTrustedSession(env: Env, sessionId: string | null): Promise<TrustedSession | null> {
   if (!env.DB || !sessionId) return null;
   const row = await env.DB.prepare(`
-    SELECT summary_text, structured_lead_json, classification, industry, entry_path,
+    SELECT summary_text, structured_lead_json, classification, industry, entry_path, entry_route,
       machine_classification, classification_reason, classification_origin, classification_version
-    FROM contact_sessions WHERE session_id = ? AND status = 'active' LIMIT 1
-  `).bind(sessionId).first<Record<string, unknown>>();
+    FROM contact_sessions WHERE session_id = ? AND status = 'active' AND expires_at > ? LIMIT 1
+  `).bind(sessionId, nowSeconds()).first<Record<string, unknown>>();
   if (!row) return null;
   const classification = row.classification;
   return {
@@ -263,7 +267,8 @@ export async function readTrustedSession(env: Env, sessionId: string | null): Pr
     classification: classification === 'genuine' || classification === 'sales' || classification === 'spam'
       ? classification
       : '',
-    context: { entry: readStoredEntryContext(row), classification: readStoredClassification(row) },
+    context: { entry: readStoredEntryContext(row), classification: readStoredClassification(row),
+      entryRoute: readEntryRoute(row.entry_route) },
   };
 }
 
@@ -271,7 +276,7 @@ export async function readTrustedSession(env: Env, sessionId: string | null): Pr
 export async function getInquiryCaseCopySource(env: Env, receiptId: string): Promise<InquiryCaseCopySource | null> {
   if (!env.DB) return null;
   return env.DB.prepare(`
-    SELECT receipt_id, industry, entry_path, machine_classification, classification_reason,
+    SELECT receipt_id, industry, entry_path, entry_route, machine_classification, classification_reason,
       classification_origin, classification_version, created_at
     FROM submission_intake WHERE receipt_id = ? LIMIT 1
   `).bind(receiptId).first<InquiryCaseCopySource>();
@@ -298,8 +303,8 @@ export async function createSubmission(
   let conversationExcerptCiphertext = '';
   if (sessionId) {
     const session = await env.DB.prepare(
-      'SELECT session_id, conversation_excerpt_ciphertext FROM contact_sessions WHERE session_id = ? LIMIT 1',
-    ).bind(sessionId).first<{ session_id: string; conversation_excerpt_ciphertext?: string }>();
+      "SELECT session_id, conversation_excerpt_ciphertext FROM contact_sessions WHERE session_id = ? AND status = 'active' AND expires_at > ? LIMIT 1",
+    ).bind(sessionId, nowSeconds()).first<{ session_id: string; conversation_excerpt_ciphertext?: string }>();
     if (!session) {
       sessionId = null;
     } else if (inquiry.shareConversation !== false) {
@@ -331,8 +336,8 @@ export async function createSubmission(
          email_hmac, intent, source,
          structured_lead_json, utm_json, classification, industry, entry_path,
          machine_classification, classification_reason, classification_origin, classification_version,
-         status, created_at, updated_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)
+         entry_route, status, created_at, updated_at, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)
     `).bind(
       submissionId,
       options.idempotencyKey,
@@ -356,6 +361,7 @@ export async function createSubmission(
       options.context.classification.reason,
       options.context.classification.origin,
       options.context.classification.version,
+      options.context.entryRoute ?? 'unknown',
       now,
       now,
       now + SUBMISSION_TTL_SECONDS,
@@ -753,6 +759,11 @@ export async function getSubmissionForNotification(
     LIMIT 1
   `).bind(submissionId, messageType).first<SubmissionRow>();
   if (!row) return null;
+  // Document notifications still work on databases predating this web inquiry migration.
+  const attribution = messageType === 'internal' && row.request_kind !== 'document'
+    ? await env.DB.prepare('SELECT entry_route FROM submission_intake WHERE submission_id = ? LIMIT 1')
+      .bind(submissionId).first<{ entry_route?: unknown }>()
+    : null;
   const [name, email, company, message, conversationSummary] = await Promise.all([
     decryptText(env.PII_ENCRYPTION_KEY, row.name_ciphertext),
     decryptText(env.PII_ENCRYPTION_KEY, row.email_ciphertext),
@@ -792,6 +803,8 @@ export async function getSubmissionForNotification(
       classification: row.classification,
       intent: row.intent,
       source: row.source,
+      ...(messageType === 'internal' && row.request_kind !== 'document'
+        ? { entryRoute: readEntryRoute(attribution?.entry_route) } : {}),
       structuredLead,
       utm,
       ...(messageType === 'internal' && conversationExcerpt ? { conversationExcerpt } : {}),
