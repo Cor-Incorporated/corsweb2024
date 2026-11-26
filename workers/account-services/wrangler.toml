@@ -1,5 +1,20 @@
+# 製品の照会 token をこの Worker に付けない（README の決まり）。
 name = "cor-account-services"
 main = "../account-entitlements/account.js"
 compatibility_date = "2026-07-13"
 workers_dev = false
 preview_urls = false
+
+# 共通入口の path だけを割り当てる（custom_domain にはしない）。
+routes = [{ pattern = "cor-jp.com/api/account/services", zone_name = "cor-jp.com" }]
+
+[vars]
+ACCOUNT_SITE_ORIGIN = "https://cor-jp.com"
+CLERK_ISSUER = "https://clerk.cor-jp.com"
+# CLERK_SIGN_IN_URL・BD_SERVICE_URL・XESM_SERVICE_URL は値が決まってから足すか、配備時に --var で渡す。
+# CLERK_JWT_KEY は secret なのでここには書かない。
+
+[[d1_databases]]
+binding = "ACCOUNT_GRANTS"
+database_name = "cor-account-grants"
+database_id = "7852e24d-a9d0-40a9-a0f3-ab3b64adb5c5"

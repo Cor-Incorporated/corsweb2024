@@ -133,6 +133,42 @@ describe('workers.dev とプレビュー URL の公開は wrangler.toml で明�
   });
 });
 
+/**
+ * 共通入口の Worker（#539）は、既存の利用権台帳と同じ D1 を結び、path の route 1 本だけを割り当てる。
+ * database_id が片方だけ変わると、別の D1 を見たまま配備される。
+ */
+describe('共通入口の Worker は既存の台帳と同じ D1 を結び、route は path の 1 本だけにする（#539）', () => {
+  const read = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8');
+
+  /** [[d1_databases]] の binding に対応する database_id（TOML パーサーは入れない） */
+  function databaseId(text: string, binding: string): string | null {
+    const blocks = text.split(/^\[\[d1_databases\]\]\s*$/m).slice(1);
+    for (const block of blocks) {
+      const body = block.split(/^\[/m)[0];
+      const name = /^\s*binding\s*=\s*"([^"]+)"\s*$/m.exec(body)?.[1];
+      if (name === binding) return /^\s*database_id\s*=\s*"([^"]+)"\s*$/m.exec(body)?.[1] ?? null;
+    }
+    return null;
+  }
+
+  it('D1 の database_id が account-entitlements と一致し、route は cor-jp.com/api/account/services の 1 本だけ', () => {
+    const services = read('workers/account-services/wrangler.toml');
+    const entitlements = read('workers/account-entitlements/wrangler.toml');
+
+    const servicesId = databaseId(services, 'ACCOUNT_GRANTS');
+    expect(servicesId).toBeTruthy();
+    expect(servicesId).toBe(databaseId(entitlements, 'ACCOUNT_GRANTS'));
+
+    const routes = /^\s*routes\s*=\s*(\[[^\n]*\])\s*$/m.exec(services)?.[1] ?? '';
+    expect(routes).toContain('pattern = "cor-jp.com/api/account/services"');
+    expect(routes.match(/pattern\s*=/g) ?? []).toHaveLength(1);
+    expect(routes).toContain('zone_name = "cor-jp.com"');
+    expect(routes).not.toContain('custom_domain');
+
+    expect(services).toMatch(/^workers_dev\s*=\s*false\s*$/m);
+  });
+});
+
 describe('F2 変異: 公開を暗黙にしたり、許可なく公開したり、読めない書き方で照合をすり抜けたりすると落ちる', () => {
   const text = (worker: string) => readWrangler(worker) ?? '';
   const replaceLast = (s: string, from: string, to: string) => {
