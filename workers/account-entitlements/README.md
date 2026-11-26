@@ -142,6 +142,10 @@ Astroの通常ビルドはサービス一覧を一般公開用の成果物から
 
 ローカルでは Worker ディレクトリの `npm test` で既存の製品照会と #539 のAPIを確認する。上記のプレビュー用ビルド後、`ACCOUNT_PICKER_BROWSER_OUTPUT` を設定すると同じテストでChromium表示も検査する。ブラウザ証跡は合成セッションと隔離D1に限定し、実Clerk・実製品への通信を行わない。既定のリンクは試験用の値。配備設定との照合が必要な場合は、同じ試験の環境変数 `BD_SERVICE_URL` と `XESM_SERVICE_URL` で検証対象の値を渡す。ブラウザ試験はリンクの値を検査し、リンク先への通信は遮断する。
 
+repository variable `CLERK_ISSUER` は、2 つの `wrangler.toml` の `CLERK_ISSUER` と同じ値にする。
+
+`vars.PUBLIC_ACCOUNT_SERVICES_ENABLED` の比べ方は大文字と小文字を区別しない（`True` でも有効になる）。値は小文字の `true` だけを使う。
+
 選択した組織の承認済みテナントにも個別の有効な無課金付与がある場合は、製品用v2照会と同様にその付与を優先する。対象外テナントの個別付与は、別組織の表示には加わらない。
 
 ## BD・XESMの社員初回利用

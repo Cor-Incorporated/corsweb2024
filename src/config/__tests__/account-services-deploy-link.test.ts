@@ -18,8 +18,10 @@ const ROUTE_MODULE = 'src/config/account-services-route.mjs';
 const EXPECTED_EXPRESSION = {
   PUBLIC_ACCOUNT_SERVICES_ENABLED:
     "${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.PUBLIC_ACCOUNT_SERVICES_ENABLED == 'true' && 'true' || 'false' }}",
-  PUBLIC_CLERK_PUBLISHABLE_KEY: '${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}',
-  CLERK_ISSUER: '${{ vars.CLERK_ISSUER }}',
+  PUBLIC_CLERK_PUBLISHABLE_KEY:
+    "${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.PUBLIC_CLERK_PUBLISHABLE_KEY || '' }}",
+  CLERK_ISSUER:
+    "${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.CLERK_ISSUER || '' }}",
 } as const;
 
 const NAMES = Object.keys(EXPECTED_EXPRESSION) as (keyof typeof EXPECTED_EXPRESSION)[];

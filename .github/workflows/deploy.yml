@@ -66,9 +66,11 @@ jobs:
           PUBLIC_GA4_ID: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && (vars.PUBLIC_GA4_ID || secrets.PUBLIC_GA4_ID) || '' }}
           # #539 サービス選択画面。repository variable を立てるまで有効にしない。
           # 有効時は本番 Clerk の公開キーと issuer が無い/一致しないと build が止まる（fail closed）。
+          # vars.PUBLIC_ACCOUNT_SERVICES_ENABLED の比べ方は大文字と小文字を区別しない（True でも有効になる）。値は小文字の true だけを使う。
           PUBLIC_ACCOUNT_SERVICES_ENABLED: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.PUBLIC_ACCOUNT_SERVICES_ENABLED == 'true' && 'true' || 'false' }}
-          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_ISSUER: ${{ vars.CLERK_ISSUER }}
+          # preview の build は flag に関係なく画面を作る（src/config/account-services-route.mjs:8-9,17）。だから本番の鍵を preview に渡さない。
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.PUBLIC_CLERK_PUBLISHABLE_KEY || '' }}
+          CLERK_ISSUER: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.CLERK_ISSUER || '' }}
 
       - name: Audit build output before deploying
         # デプロイする前にビルド結果を監査する（secret の混入、第三者 CDN からのコード、壊れた JSON-LD、

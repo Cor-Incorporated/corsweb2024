@@ -167,6 +167,23 @@ describe('共通入口の Worker は既存の台帳と同じ D1 を結び、rout
 
     expect(services).toMatch(/^workers_dev\s*=\s*false\s*$/m);
   });
+
+  /** [vars] の下の CLERK_ISSUER（TOML パーサーは入れない） */
+  function clerkIssuer(text: string): string | null {
+    const header = /^\[vars\]\s*$/m.exec(text);
+    if (!header) return null;
+    const body = text.slice(header.index + header[0].length).split(/^\[/m)[0];
+    return /^\s*CLERK_ISSUER\s*=\s*"([^"]+)"\s*$/m.exec(body)?.[1] ?? null;
+  }
+
+  it('2 つの wrangler.toml の [vars] の CLERK_ISSUER が一致する（repository variable も同じ値にする）', () => {
+    const services = clerkIssuer(read('workers/account-services/wrangler.toml'));
+    const entitlements = clerkIssuer(read('workers/account-entitlements/wrangler.toml'));
+    const both = `account-services: ${services ?? '(なし)'} / account-entitlements: ${entitlements ?? '(なし)'}`;
+    expect(services, `[vars] の CLERK_ISSUER が無い（${both}）`).toBeTruthy();
+    expect(entitlements, `[vars] の CLERK_ISSUER が無い（${both}）`).toBeTruthy();
+    expect(services, `2 つの wrangler.toml の [vars] の CLERK_ISSUER が一致しない（${both}）`).toBe(entitlements);
+  });
 });
 
 describe('F2 変異: 公開を暗黙にしたり、許可なく公開したり、読めない書き方で照合をすり抜けたりすると落ちる', () => {
