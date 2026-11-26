@@ -529,10 +529,17 @@ async function readTrustedInquiry(
   // Keep already-open industry tabs on the same disclosure policy as the new form.
   // Only a stored, validated industry can identify those legacy submissions.
   if (inquiry.shareConversation === false || session?.context.entry.industry) {
+    // The legacy industry form prepended one routing tag on the wire. New forms send the reviewed text verbatim.
+    let message = inquiry.message;
+    if (inquiry.shareConversation === undefined && inquiry.intent) {
+      const legacyPrefix = `[intent:${inquiry.intent}] `;
+      if (message.startsWith(legacyPrefix)) message = message.slice(legacyPrefix.length);
+    }
     return {
       inquiry: {
         ...inquiry,
         shareConversation: false,
+        message,
         summaryText: '',
         conversationSummary: '',
         structuredLead: {},

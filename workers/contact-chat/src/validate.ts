@@ -371,7 +371,7 @@ export function normalizeInquiry(input: InquiryInput | undefined): InquiryValida
       email,
       company,
       message,
-      ...(shareConversation ? {} : { shareConversation: false }),
+      ...(typeof input.shareConversation === 'boolean' ? { shareConversation: input.shareConversation } : {}),
       summaryText: conversationSummary,
       conversationSummary,
       classification,
