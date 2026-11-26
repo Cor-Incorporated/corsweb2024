@@ -319,7 +319,7 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   console.log('Chromium: staff 2, legacy 1, outside 0, same-session revocation 1 → 0, signed-out 0; configured hrefs; same user personal 2 → organization hold 1 → personal 2; live Clerk requests 0');
 });
 
-test('a staff grant revoked with revoked_at and revocation_ref closes every v2 operation', async t => {
+test('a staff grant revoked (revoked_at set) closes every v2 operation', async t => {
   const productKey = randomBytes(32).toString('base64url');
   const xesmKey = randomBytes(32).toString('base64url');
   const mf = new Miniflare(convertV4MiniflareOptions({
