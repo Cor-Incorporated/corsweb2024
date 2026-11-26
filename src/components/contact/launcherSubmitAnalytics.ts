@@ -6,7 +6,7 @@ import { isContactIntent, type ContactIntent } from '../../config/site';
  * 枠の中では gtag を読み込まない（同じ訪問者を二重に計測しないため）。受付が成功したら
  * 枠が親へ 1 つの message を送り、親がここで受けて `contact_chat_submit_success` を送る。
  * GA4 に渡すのは `entry_surface` だけ。`intent`（ADR-0014 の 7 キー）は message を
- * 受ける条件としてだけ確かめ、GA4 には渡さない（2026-11-18 統括判断）。
+ * 受ける条件としてだけ確かめ、GA4 には渡さない。
  * 氏名・メール・電話・会社名・会話の本文・受付番号・受付 ID・自由記述は読まない。
  *
  * 受ける条件:

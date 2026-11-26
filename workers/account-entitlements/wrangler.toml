@@ -1,6 +1,18 @@
-# 公開入口は設けず、照会の実装をローカルで検証する。
+# 製品サーバー間の照会だけを受ける。workers.dev とプレビューは使わない。
+# 製品の照会トークン(BD_ENTITLEMENT_QUERY_TOKEN など)は `wrangler secret put` で置き、ここには書かない。
 name = "cor-account-entitlements"
 main = "index.js"
 compatibility_date = "2026-07-13"
 workers_dev = false
 preview_urls = false
+
+routes = [{ pattern = "entitlements.cor-jp.com", custom_domain = true }]
+
+[vars]
+CLERK_ISSUER = "https://clerk.cor-jp.com"
+
+[[d1_databases]]
+binding = "ACCOUNT_GRANTS"
+database_name = "cor-account-grants"
+database_id = "7852e24d-a9d0-40a9-a0f3-ab3b64adb5c5"
+migrations_dir = "migrations"
