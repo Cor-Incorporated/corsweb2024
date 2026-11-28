@@ -1,0 +1,18 @@
+# 利用権の基盤に載せる見本のサービス。workers.dev とプレビュー URL は使わない。
+# secret（`wrangler secret put` で置き、この file には書かない）:
+#   CLERK_JWT_KEY
+#   SAMPLE_ENTITLEMENT_QUERY_TOKEN
+name = "cor-sample-service"
+main = "src/index.js"
+compatibility_date = "2026-10-26"
+workers_dev = false
+preview_urls = false
+
+routes = [{ pattern = "sample.cor-jp.com", custom_domain = true }]
+
+[vars]
+SITE_ORIGIN = "https://sample.cor-jp.com"
+CLERK_ISSUER = "https://clerk.cor-jp.com"
+ENTITLEMENTS_URL = "https://entitlements.cor-jp.com"
+SERVICE_ID = "sample"
+TENANT_ID = "sample"
