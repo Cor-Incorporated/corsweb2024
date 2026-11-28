@@ -94,6 +94,7 @@ jobs:
             workers/contact-chat/package-lock.json
             workers/contact-edge/package-lock.json
             workers/account-entitlements/package-lock.json
+            workers/sample-service/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -150,6 +151,11 @@ jobs:
           npm test --prefix workers/account-entitlements
           npx --no --prefix workers/account-entitlements wrangler deploy --dry-run --config workers/account-services/wrangler.toml --outdir "$RUNNER_TEMP/cor-account-services"
           ACCOUNT_PICKER_BUNDLE="$RUNNER_TEMP/cor-account-services/account.js" npm run test:picker-bundle --prefix workers/account-entitlements
+
+      - name: sample-service worker tests
+        run: |
+          npm ci --prefix workers/sample-service --ignore-scripts --no-audit --no-fund
+          npm test --prefix workers/sample-service
 
       - name: Type check and build
         run: npm run build
