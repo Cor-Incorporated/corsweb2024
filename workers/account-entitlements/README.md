@@ -15,28 +15,28 @@ Cor 自身の組織(`cor-jp.com`)のように課金しない組織契約は、St
 ```sql
 INSERT INTO paid_contract_snapshots (issuer, organization_id, services_json, expires_at, observed_at_ms, sync_id)
 VALUES ('https://clerk.cor-jp.com', '<org_…>',
-        '{"business-dossier":{"from":"<開始日>","until":null,"hold":false}}',
+        '{"<service-id>":{"from":"<開始日>","until":null,"hold":false}}',
         '<見直し日の ISO 8601>', 0, 'free-<承認参照>');
 INSERT INTO paid_contract_members (issuer, organization_id, subject, service, tenant_id, approval_ref)
-VALUES ('https://clerk.cor-jp.com', '<org_…>', '<user_…>', 'business-dossier', '<製品の workspace id>', '<承認参照>');
+VALUES ('https://clerk.cor-jp.com', '<org_…>', '<user_…>', '<service-id>', '<製品の workspace id>', '<承認参照>');
 ```
 
 `expires_at` を過ぎると、契約行は無いのと同じに閉じる。無料の契約にも見直し日を入れ、続けるなら更新する。
 
 ## 製品サーバーとの契約
 
-`POST /v1/entitlements/check` に `Content-Type: application/json` と製品専用の `Authorization: Bearer …` を付ける。BD・XESM・Harborの製品サーバーは、それぞれ独立した機械間の値を使う。値は256ビット以上のbase64urlで、最大128文字。設定が空または他製品と重複する製品には503を返す。異なる値を持つ製品は引き続き照会できる。
+`POST /v1/entitlements/check` に `Content-Type: application/json` と製品専用の `Authorization: Bearer …` を付ける。製品サーバーは、それぞれ独立した機械間の値を使う。値は256ビット以上のbase64urlで、最大128文字。設定が空または他製品と重複する製品には503を返す。異なる値を持つ製品は引き続き照会できる。
 
 ```json
 {
-  "service": "business-dossier",
+  "service": "<service-id>",
   "issuer": "https://clerk.example.invalid",
   "subject": "user_Example",
   "tenantId": "existing-workspace-id"
 }
 ```
 
-- BDの `service` は `business-dossier`、XESMは `xesm`、Harborは `harbor`。製品サーバーが署名を検証したClerkの `issuer`・`subject` と既存テナントIDを渡す。別のIdPを介す場合は、本人確認済みの対応を製品サーバーで解決する。Harborの共有利用では `tenantId` は既存のworkspace ID。中央の `HARBOR_ENTITLEMENT_QUERY_TOKEN` はHarborのサーバーが使う製品専用資格に対応する。テナントIDやClerk主体をブラウザ入力から直接採用しない。
+- `service` は製品のサービスID（Harborは `harbor`）。製品サーバーが署名を検証したClerkの `issuer`・`subject` と既存テナントIDを渡す。別のIdPを介す場合は、本人確認済みの対応を製品サーバーで解決する。Harborの共有利用では `tenantId` は既存のworkspace ID。中央の `HARBOR_ENTITLEMENT_QUERY_TOKEN` はHarborのサーバーが使う製品専用資格に対応する。テナントIDやClerk主体をブラウザ入力から直接採用しない。
 - `200 {"allowed":true}` は指定した4項目に一致する期限内の付与あり。製品の役割・所属・案件や資料の個別認可は引き続き製品側で行う。独立付与で既存ロールの範囲を広げない。
 - `200 {"allowed":false}` は一致する期限内の付与なし。認証・構成・通信・データベースの異常も中央付与は認めない。独立に有効な既存の有償契約の判断は製品側に残す。中央方式へ移行した対象を古いローカル台帳へ戻して再許可しない。
 - 応答は保存せず、保護操作ごとに問合せる。中央はD1のprimaryを参照する。撤回がコミットされた後、次の問合せに反映される。
@@ -74,15 +74,15 @@ v2 でも有効な従来・スタッフの個別付与があれば `open` とな
 issuer・主体・サービス・製品テナント・組織の全てが一致し、同じ組織に有効期限内の
 `paid_contract_snapshots` があること。対応の欠落、撤回、不一致、スナップショットの
 期限切れは権利を付けない。日付は日本時間で判定する。期間・保留の規則は ADR-0028
-および既存のサービス選択の判定と同じ。サービスIDは既存 `docs/billing/plans.json` の
-`business-dossier` と `xesm`。
+および既存のサービス選択の判定と同じ。サービスIDは `docs/billing/plans.json` に
+登録したものを使う。
 
 ローカル試験では署名検証後に既存 `subscribe.sh resync` を合成CLIで実行する。
 CLIが照合した組織の `public_metadata.services` と同じ内容を合成アダプターが
 D1に記録する。イベント本文の契約情報は書き込まない。実運用の配備前には、決済側顧客と
-Clerk組織の対応、両製品の実テナントと承認済み主体、組織メンバー撤回の反映、成功した
+Clerk組織の対応、各製品の実テナントと承認済み主体、組織メンバー撤回の反映、成功した
 照合だけを順序保証付きで反映し期限内に更新する同期経路が要る。現時点の移行SQLには
-実データを含めていない。BD・XESMの実呼び出しは v1 が対象のまま。
+実データを含めていない。製品の実呼び出しは v1 が対象のまま。
 
 ### 確認済みの契約と所属を D1 に反映
 
@@ -132,7 +132,7 @@ D1は契約を更新するSQLの中で、通知の処理者とリースの残り
 - `ACCOUNT_SITE_ORIGIN` にサイトの HTTPS origin、`CLERK_ISSUER` に正規 Clerk issuer の origin、`CLERK_JWT_KEY` に同じインスタンスの署名検証用公開鍵、`CLERK_SIGN_IN_URL` に正規のログイン URL を設定する。Astro 側の `PUBLIC_CLERK_PUBLISHABLE_KEY` は公開可能なキーだけを使う。ClerkJS の組織切替から個人へ戻るには Clerk の Personal Accounts を有効にする。
 - 選択組織は署名済みセッションの `o.id` から取得する。署名・有効期限・発行元・正規オリジン・本人を照合し、保留中のセッションを拒否する。利用可能な製品と操作は、本人・組織・製品テナントの有効な対応とD1の期限内の契約から算出する。
 - 個人モードは `ACCOUNT_GRANTS` の primary にあり、撤回されていない期限内の明示的な staff/legacy 付与から製品を選ぶ。組織の有償権利の停止で個別付与の行は変更しない。選択組織の停止を別テナントの個別付与で上書きすることもない。個人モードで表示されるリンク先でも、製品が既存の対象テナント・所属・操作権限を再検証する。
-- Worker の `BD_SERVICE_URL` と `XESM_SERVICE_URL` に、対象環境とテナントに対応する HTTPS の製品入口を設定する。必要な設定を欠くとサービス一覧のAPIは503を返す。入口の値は環境別の配備設定で管理し、静的配信側に秘密値や製品用機械キーを入れない。
+- Worker の製品ごとの入口の変数（`<SERVICE>_SERVICE_URL` の形。`<SERVICE>` は製品ごとに決めた接頭辞）に、対象環境とテナントに対応する HTTPS の製品入口を設定する。必要な設定を欠くとサービス一覧のAPIは503を返す。入口の値は環境別の配備設定で管理し、静的配信側に秘密値や製品用機械キーを入れない。
 
 一覧と製品の v2 照会は同じ契約の終了日・保持期間・利用停止の判定関数を使う。組織メンバーへの入場は、各製品でも要求ごとに対象テナントを含めて照合する。
 
@@ -140,7 +140,7 @@ D1は契約を更新するSQLの中で、通知の処理者とリースの残り
 
 Astroの通常ビルドはサービス一覧を一般公開用の成果物から除く。開発サーバーと `PUBLIC_SITE_ENV=preview npm run build` では同じURLを検証できる。本番に掲載するときは、同一オリジンのAPIと共通ログインを先に照合し、本番ビルドへ `PUBLIC_ACCOUNT_SERVICES_ENABLED=true` 、本番の `PUBLIC_CLERK_PUBLISHABLE_KEY`、契約APIが使う正規発行元のorigin `CLERK_ISSUER` を渡す。有効化を指定して本番キーがないか発行元が一致しなければビルドは停止する。`.github/workflows/deploy.yml` は main の push のときだけ repository variable `PUBLIC_ACCOUNT_SERVICES_ENABLED` が `true` ならこの公開を有効にし、`PUBLIC_CLERK_PUBLISHABLE_KEY` と `CLERK_ISSUER` も repository variable から渡す。variable を立てるまでは有効にならない。現在のHosting配備はこの公開を有効にしていない。
 
-ローカルでは Worker ディレクトリの `npm test` で既存の製品照会と #539 のAPIを確認する。上記のプレビュー用ビルド後、`ACCOUNT_PICKER_BROWSER_OUTPUT` を設定すると同じテストでChromium表示も検査する。ブラウザ証跡は合成セッションと隔離D1に限定し、実Clerk・実製品への通信を行わない。既定のリンクは試験用の値。配備設定との照合が必要な場合は、同じ試験の環境変数 `BD_SERVICE_URL` と `XESM_SERVICE_URL` で検証対象の値を渡す。ブラウザ試験はリンクの値を検査し、リンク先への通信は遮断する。
+ローカルでは Worker ディレクトリの `npm test` で既存の製品照会と #539 のAPIを確認する。上記のプレビュー用ビルド後、`ACCOUNT_PICKER_BROWSER_OUTPUT` を設定すると同じテストでChromium表示も検査する。ブラウザ証跡は合成セッションと隔離D1に限定し、実Clerk・実製品への通信を行わない。既定のリンクは試験用の値。配備設定との照合が必要な場合は、同じ試験の製品ごとの入口の環境変数（`<SERVICE>_SERVICE_URL` の形）で検証対象の値を渡す。ブラウザ試験はリンクの値を検査し、リンク先への通信は遮断する。
 
 repository variable `CLERK_ISSUER` は、2 つの `wrangler.toml` の `CLERK_ISSUER` と同じ値にする。
 
@@ -148,9 +148,9 @@ repository variable `CLERK_ISSUER` は、2 つの `wrangler.toml` の `CLERK_ISS
 
 選択した組織の承認済みテナントにも個別の有効な無課金付与がある場合は、製品用v2照会と同様にその付与を優先する。対象外テナントの個別付与は、別組織の表示には加わらない。
 
-## BD・XESMの社員初回利用
+## 製品の社員初回利用
 
-BD・XESMの製品サーバーは、それぞれ自製品の資格情報を使い、共通Clerkで確認済みの利用者に対して
+`docs/billing/plans.json` にある製品のサーバーは、それぞれ自製品の資格情報を使い、共通Clerkで確認済みの利用者に対して
 `POST /v2/entitlements/check` を `operation=staff_onboarding`、
 `organizationId=null` で呼べる。該当する製品・テナント・発行元・主体の
 有効な `staff` 個別付与だけが `allowed=true, access=open` を返す。
