@@ -17,10 +17,7 @@ import Layout from '../../layouts/Layout.astro';
 </style>
 
 <script>
-  const labels = new Map([
-    ['business-dossier', 'Business Dossier'],
-    ['xesm', 'XESM'],
-  ]);
+  const serviceId = /^[a-z0-9-]{1,64}$/;
   const accessLabels = new Map([
     ['view_only', '閲覧のみ'],
     ['read_export_only', '閲覧・書き出しのみ'],
@@ -74,8 +71,10 @@ import Layout from '../../layouts/Layout.astro';
       if (!response.ok || !Array.isArray(payload.services)) throw new Error('Unavailable');
       const entries = document.createDocumentFragment();
       for (const service of payload.services) {
-        const label = labels.get(service.id);
-        if (!label || (service.access !== 'open' && !accessLabels.has(service.access))) throw new Error('Invalid service');
+        if (!service || typeof service.id !== 'string' || !serviceId.test(service.id)
+            || typeof service.label !== 'string' || !service.label
+            || (service.access !== 'open' && !accessLabels.has(service.access))) throw new Error('Invalid service');
+        const label = service.label;
         const destination = new URL(service.href);
         if (destination.protocol !== 'https:' || !destination.hostname.endsWith('.cor-jp.com')) throw new Error('Invalid destination');
         const item = document.createElement('li');

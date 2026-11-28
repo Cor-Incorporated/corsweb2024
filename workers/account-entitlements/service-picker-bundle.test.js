@@ -17,7 +17,7 @@ test('一覧の配布物が署名済み主体のサービスを返し、製品�
       ACCOUNT_SITE_ORIGIN: origin, CLERK_ISSUER: issuer,
       CLERK_SIGN_IN_URL: 'https://accounts.example.invalid/sign-in',
       CLERK_JWT_KEY: publicKey.export({ type: 'spki', format: 'pem' }),
-      XESM_SERVICE_URL: 'https://xesm-fixture.cor-jp.com/',
+      SAMPLE_SERVICE_URL: 'https://sample-fixture.cor-jp.com/',
     },
   }));
   t.after(() => worker.dispose());
@@ -32,7 +32,7 @@ test('一覧の配布物が署名済み主体のサービスを返し、製品�
   const migration = await readFile(new URL('./migrations/0001_account_grants.sql', import.meta.url), 'utf8');
   await db.batch(migration.split(';').map(s => s.trim()).filter(Boolean).map(sql => db.prepare(sql)));
   await db.prepare(`INSERT INTO account_grants VALUES
-    ('fixture',?1,'user_Fixture','xesm','tenant-fixture','staff','2020-01-01','2099-01-01','fixture',NULL,NULL)`)
+    ('fixture',?1,'user_Fixture','sample','tenant-fixture','staff','2020-01-01','2099-01-01','fixture',NULL,NULL)`)
     .bind(issuer).run();
   const now = Math.floor(Date.now() / 1000);
   const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -42,7 +42,8 @@ test('一覧の配布物が署名済み主体のサービスを返し、製品�
   const request = () => worker.dispatchFetch(url, { headers: { Cookie: cookie } });
   const allowed = await request();
   assert.equal(allowed.status, 200);
-  assert.deepEqual((await allowed.json()).services, [{ id: 'xesm', href: 'https://xesm-fixture.cor-jp.com/', access: 'open' }]);
+  assert.deepEqual((await allowed.json()).services,
+    [{ id: 'sample', label: '見本のサービス', href: 'https://sample-fixture.cor-jp.com/', access: 'open' }]);
   await db.prepare("UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture' WHERE id = 'fixture'").run();
   assert.deepEqual((await (await request()).json()).services, []);
 });

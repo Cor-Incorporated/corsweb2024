@@ -1,4 +1,6 @@
-const supportedServices = ['business-dossier', 'xesm'];
+import { contractServices } from './services.js';
+
+const supportedServices = contractServices().map(service => service.id);
 const organizationId = /^org_[A-Za-z0-9_]{1,123}$/;
 const subjectId = /^user_[A-Za-z0-9_]{1,123}$/;
 const tenantId = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
