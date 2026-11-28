@@ -366,7 +366,10 @@ describe('資料請求の来歴: schema migration と既存の行', () => {
     // 同じ表に同じ列は 1 回しか足されていない（migration-columns.test.ts と同じ規則）。
     const names = columns.map((column) => column.name);
     expect(new Set(names).size).toBe(names.length);
-    expect(migrationFiles().filter((name) => name > '0010_document_locale.sql')).toEqual(['0011_document_version.sql']);
+    expect(migrationFiles().filter((name) => name > '0010_document_locale.sql')).toEqual([
+      '0011_document_version.sql',
+      '0012_inquiry_entry_route.sql',
+    ]);
   });
 
   it('旧しい鍵の既存の行は、同じ業種の再送なら同じ受付番号を返し、別の業種なら別の受付にする', async () => {

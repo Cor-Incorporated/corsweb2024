@@ -1,3 +1,4 @@
+import { entryAttribution, readEntryRoute } from './entry-route';
 import type { IndustrySlug } from './industry-context';
 import type { MachineClassification } from './inquiry-classification';
 import { readStoredClassification } from './inquiry-classification';
@@ -6,7 +7,7 @@ import { readStoredEntryContext } from './inquiry-context';
 /**
  * 問い合わせの受付を、案件の側へ渡すための写し。個人情報を持たない。
  *
- * - 欄はこの 6 つだけ。名前・メール・会社・電話・本文・要約・会話の抜粋は持たない。
+ * - 欄はこの一覧に限定する。名前・メール・会社・電話・本文・要約・会話の抜粋は持たない。
  * - 送る口はこの file に無い。作るだけで、どこにも送らない。
  * - 欄を足すときは、試験の欄の一覧も同じ commit で直す（個人情報の欄を足すと試験が落ちる）。
  */
@@ -18,6 +19,9 @@ export interface InquiryCaseCopy {
   classification: MachineClassification;
   classificationVersion: string;
   createdAt: string;
+  entryRoute: ReturnType<typeof entryAttribution>['entryRoute'];
+  site: ReturnType<typeof entryAttribution>['site'];
+  provenance: 'declared';
 }
 
 /** 写しの元になる列。暗号文の列は受け取らない。 */
@@ -25,6 +29,7 @@ export interface InquiryCaseCopySource {
   receipt_id: string;
   industry?: unknown;
   entry_path?: unknown;
+  entry_route?: unknown;
   machine_classification?: unknown;
   classification_reason?: unknown;
   classification_origin?: unknown;
@@ -37,6 +42,7 @@ export function buildInquiryCaseCopy(row: InquiryCaseCopySource): InquiryCaseCop
   const classification = readStoredClassification(row);
   return {
     receiptId: row.receipt_id,
+    ...entryAttribution(readEntryRoute(row.entry_route)),
     industry: entry.industry,
     entryPath: entry.entryPath,
     classification: classification.value,
