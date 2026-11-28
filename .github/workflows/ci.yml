@@ -143,11 +143,12 @@ jobs:
       # workers/account-entitlements（利用権の照会の Worker と、サービス一覧の Worker の code）も独自の package.json を持ち、
       # ルートの vitest には含まれない。ローカルの Worker と D1 に実際の migration を当てて、付与・撤回・契約の判定と一覧の API を確かめる。
       # 一覧の試験は、配備と同じ設定（workers/account-services/wrangler.toml）で作った生成物を読む（配備はしない）。
+      # wrangler はこの folder の package-lock.json で固定した版を使う（--no で、無い時に取りに行かずに止める）。
       - name: account-entitlements worker tests
         run: |
           npm ci --prefix workers/account-entitlements --ignore-scripts --no-audit --no-fund
           npm test --prefix workers/account-entitlements
-          npx --prefix workers/account-entitlements wrangler deploy --dry-run --config workers/account-services/wrangler.toml --outdir "$RUNNER_TEMP/cor-account-services"
+          npx --no --prefix workers/account-entitlements wrangler deploy --dry-run --config workers/account-services/wrangler.toml --outdir "$RUNNER_TEMP/cor-account-services"
           ACCOUNT_PICKER_BUNDLE="$RUNNER_TEMP/cor-account-services/account.js" npm run test:picker-bundle --prefix workers/account-entitlements
 
       - name: Type check and build
