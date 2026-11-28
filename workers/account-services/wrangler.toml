@@ -11,7 +11,7 @@ routes = [{ pattern = "cor-jp.com/api/account/services", zone_name = "cor-jp.com
 [vars]
 ACCOUNT_SITE_ORIGIN = "https://cor-jp.com"
 CLERK_ISSUER = "https://clerk.cor-jp.com"
-# CLERK_SIGN_IN_URL・BD_SERVICE_URL・XESM_SERVICE_URL は値が決まってから足すか、配備時に --var で渡す。
+# CLERK_SIGN_IN_URL・SAMPLE_SERVICE_URL は値が決まってから足すか、配備時に --var で渡す。
 # CLERK_JWT_KEY は secret なのでここには書かない。
 
 [[d1_databases]]

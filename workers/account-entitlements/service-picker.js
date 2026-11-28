@@ -1,12 +1,9 @@
 import { verifyToken } from '@clerk/backend';
 import { paidEntitlement } from './index.js';
+import { services } from './services.js';
 
 export { paidEntitlement };
 
-const products = {
-  'business-dossier': 'BD_SERVICE_URL',
-  xesm: 'XESM_SERVICE_URL',
-};
 const dayMs = 86_400_000;
 const subjectPattern = /^user_[A-Za-z0-9_]{1,123}$/;
 function httpsUrl(value) {
@@ -98,17 +95,18 @@ export async function fetchServicePicker(request, env) {
       `).bind(issuer.origin, claims.sub, today).all();
       for (const row of results) accessByService.set(row.service, 'open');
     }
-    const services = [];
-    for (const [id, binding] of Object.entries(products)) {
-      const access = accessByService.get(id) ?? 'closed';
+    const entries = [];
+    for (const product of services) {
+      if (product.status !== 'active' || !product.listed || !product.entryUrlVar) continue;
+      const access = accessByService.get(product.id) ?? 'closed';
       if (access === 'closed') continue;
-      const target = httpsUrl(env[binding]);
+      const target = httpsUrl(env[product.entryUrlVar]);
       if (!target || target.port || !target.hostname.endsWith('.cor-jp.com') || target.hostname === site.hostname) {
         return response({ error: 'unavailable' }, 503);
       }
-      services.push({ id, href: target.href, access });
+      entries.push({ id: product.id, label: product.label, href: target.href, access });
     }
-    return response({ services }, 200);
+    return response({ services: entries }, 200);
   } catch {
     return response({ error: 'unavailable' }, 503);
   }

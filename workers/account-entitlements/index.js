@@ -1,3 +1,5 @@
+import { serviceById, services } from './services.js';
+
 const QUERY_PATH = '/v1/entitlements/check';
 const CONTRACT_QUERY_PATH = '/v2/entitlements/check';
 const MAX_BODY = 2048;
@@ -100,15 +102,10 @@ export default {
       return json({ error: 'invalid_input' }, 400);
     }
     const { service, issuer, subject, tenantId, organizationId, operation } = body;
-    const staffOnboarding = versioned && ['business-dossier', 'xesm'].includes(service)
+    const declared = typeof service === 'string' ? serviceById(service) : null;
+    const staffOnboarding = versioned && Boolean(declared?.staffOnboarding)
       && operation === 'staff_onboarding' && organizationId === null;
-    const credentials = {
-      'business-dossier': env.BD_ENTITLEMENT_QUERY_TOKEN,
-      xesm: env.XESM_ENTITLEMENT_QUERY_TOKEN,
-      harbor: env.HARBOR_ENTITLEMENT_QUERY_TOKEN,
-    };
-    if (typeof service !== 'string' || !Object.hasOwn(credentials, service)
-        || (versioned && service === 'harbor')
+    if (!declared || !declared.queryVersions.includes(versioned ? 'v2' : 'v1')
         || typeof issuer !== 'string' || issuer.length > 255
         || typeof subject !== 'string' || !/^user_[A-Za-z0-9_]{1,123}$/.test(subject)
         || typeof tenantId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(tenantId)
@@ -118,12 +115,19 @@ export default {
       return json({ error: 'invalid_input' }, 400);
     }
 
-    const expected = credentials[service];
+    // A retired service stays closed even when its token secret is gone.
+    if (declared.status === 'retired') {
+      return json(versioned ? { allowed: false, access: 'closed' } : { allowed: false }, 200);
+    }
+
+    const expected = env[declared.queryTokenSecret];
     if (!TOKEN_PATTERN.test(expected ?? '') || !isHttpsOrigin(env.CLERK_ISSUER)) {
       return json({ error: 'unavailable' }, 503);
     }
-    for (const [otherService, token] of Object.entries(credentials)) {
-      if (otherService !== service && token && await tokensMatch(expected, token)) {
+    for (const other of services) {
+      if (other.status !== 'active' || other.id === service) continue;
+      const token = env[other.queryTokenSecret];
+      if (token && await tokensMatch(expected, token)) {
         return json({ error: 'unavailable' }, 503);
       }
     }

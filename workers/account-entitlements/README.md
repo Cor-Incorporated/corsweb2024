@@ -148,11 +148,11 @@ repository variable `CLERK_ISSUER` は、2 つの `wrangler.toml` の `CLERK_ISS
 
 選択した組織の承認済みテナントにも個別の有効な無課金付与がある場合は、製品用v2照会と同様にその付与を優先する。対象外テナントの個別付与は、別組織の表示には加わらない。
 
-## BD・XESMの社員初回利用
+## サービスの宣言
 
-BD・XESMの製品サーバーは、それぞれ自製品の資格情報を使い、共通Clerkで確認済みの利用者に対して
-`POST /v2/entitlements/check` を `operation=staff_onboarding`、
-`organizationId=null` で呼べる。該当する製品・テナント・発行元・主体の
-有効な `staff` 個別付与だけが `allowed=true, access=open` を返す。
-旧利用者への無課金付与と有償契約は、それぞれの通常の製品利用に適用する。
-他製品のサーバーや利用者向けの一覧からこの操作を実行する構成はない。
+利用権の基盤を使うサービスは `services.js` の 1 つの配列で宣言する。照会 Worker・
+一覧 Worker・有償契約の写しはこの宣言だけを読み、service の名前を code に書かない。
+`status: 'retired'` の id は入力の検査の後、token の secret を読む前に `closed`
+（v1 は `{"allowed":false}`、v2 は `{"allowed":false,"access":"closed"}`）を返す。
+`staffOnboarding` が true の `active` なサービスだけが、v2 の
+`operation=staff_onboarding`、`organizationId=null` を受けられる。
