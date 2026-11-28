@@ -20,6 +20,8 @@ const { paidEntitlement } = await import('./service-picker.js');
 
 const origin = 'https://cor-jp.com';
 const issuer = 'https://clerk.example.invalid';
+const serviceId = 'sample';
+const serviceLabel = '見本のサービス';
 const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 
 function session(subject, overrides = {}) {
@@ -32,25 +34,39 @@ function session(subject, overrides = {}) {
   return data + '.' + sign('sha256', Buffer.from(data), privateKey).toString('base64url');
 }
 
+function modules() {
+  return {
+    modules: [
+      { type: 'ESModule', path: fileURLToPath(new URL('index.js', import.meta.url)) },
+      { type: 'ESModule', path: fileURLToPath(new URL('services.js', import.meta.url)) },
+    ],
+    modulesRoot: fileURLToPath(new URL('.', import.meta.url)),
+  };
+}
+
+async function applyMigrations(db, names) {
+  for (const file of names) {
+    const migration = await readFile(new URL('migrations/' + file, import.meta.url), 'utf8');
+    await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
+  }
+}
+
 test('Clerk organization entitlement policy matches shared vectors', async () => {
   const { vectors } = JSON.parse(await readFile(new URL('../../docs/billing/contract/entitlement-vectors.json', import.meta.url)));
   for (const row of vectors) assert.equal(paidEntitlement(row.services, row.service, row.d), row.expect, row.id);
 });
 
 test('self-service route and browser use signed user plus active D1 grants', async t => {
-  const productKey = randomBytes(32).toString('base64url');
-  const xesmKey = randomBytes(32).toString('base64url');
+  const sampleKey = randomBytes(32).toString('base64url');
+  const harborKey = randomBytes(32).toString('base64url');
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: true, scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
-    bindings: { CLERK_ISSUER: issuer, BD_ENTITLEMENT_QUERY_TOKEN: productKey, XESM_ENTITLEMENT_QUERY_TOKEN: xesmKey },
+    ...modules(),
+    bindings: { CLERK_ISSUER: issuer, SAMPLE_ENTITLEMENT_QUERY_TOKEN: sampleKey, HARBOR_ENTITLEMENT_QUERY_TOKEN: harborKey },
     compatibilityDate: '2026-10-26', d1Databases: ['ACCOUNT_GRANTS'], cf: false,
   }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
-  for (const file of ['0001_account_grants.sql', '0002_paid_contract_projection.sql']) {
-    const migration = await readFile(new URL('migrations/' + file, import.meta.url), 'utf8');
-    await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
-  }
+  await applyMigrations(db, ['0001_account_grants.sql', '0002_paid_contract_projection.sql', '0005_registered_services.sql']);
   const setSnapshot = async (org, services, expires = Date.now() + 300_000) =>
     db.prepare('INSERT OR REPLACE INTO paid_contract_snapshots VALUES (?,?,?,?)')
       .bind(issuer, org, JSON.stringify(services), new Date(expires).toISOString()).run();
@@ -60,11 +76,11 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   const grant = async (id, subject, service, kind = 'staff') => db.prepare(`
     INSERT INTO account_grants VALUES (?1, ?2, ?3, ?4, 'tenant-fixture', ?5, '2020-01-01', '2099-01-01', 'fixture', NULL, NULL)
   `).bind(id, issuer, subject, service, kind).run();
-  await grant('second', 'user_Two', 'business-dossier');
-  await grant('third', 'user_Two', 'xesm');
-  await grant('single', 'user_One', 'xesm', 'legacy');
-  await grant('live-revoke', 'user_Revoke', 'business-dossier', 'legacy');
-  await grant('revoked', 'user_None', 'xesm');
+  await grant('second', 'user_Two', serviceId);
+  await grant('single', 'user_One', serviceId, 'legacy');
+  await grant('live-revoke', 'user_Revoke', serviceId, 'legacy');
+  await grant('revoked', 'user_None', serviceId);
+  await grant('harbor', 'user_Two', 'harbor');
   const revoke = async id => db.prepare(
     "UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture' WHERE id = ?1"
   ).bind(id).run();
@@ -75,8 +91,7 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     CLERK_ISSUER: issuer,
     CLERK_JWT_KEY: publicKey.export({ type: 'spki', format: 'pem' }),
     CLERK_SIGN_IN_URL: 'https://accounts.example.invalid/sign-in',
-    BD_SERVICE_URL: process.env.BD_SERVICE_URL ?? 'https://bd-fixture.cor-jp.com/',
-    XESM_SERVICE_URL: process.env.XESM_SERVICE_URL ?? 'https://xesm-fixture.cor-jp.com/',
+    SAMPLE_SERVICE_URL: process.env.SAMPLE_SERVICE_URL ?? 'https://sample-fixture.cor-jp.com/',
     ACCOUNT_GRANTS: db,
   };
   const request = (token, pathname = '/api/account/services', bindings = env) => account.fetch(new Request(origin + pathname, {
@@ -89,11 +104,11 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     return (await res.json()).services.map(service => service.id);
   };
   assert.equal((await verifyToken(session('user_Two'), { jwtKey: env.CLERK_JWT_KEY, issuer, authorizedParties: [origin], clockSkewInMs: 0 })).sub, 'user_Two');
-  assert.deepEqual(await rows(session('user_Two')), ['business-dossier', 'xesm']);
-  assert.deepEqual(await rows(session('user_One')), ['xesm']);
+  assert.deepEqual(await rows(session('user_Two')), [serviceId]);
+  assert.deepEqual(await rows(session('user_One')), [serviceId]);
   assert.deepEqual(await rows(session('user_None')), []);
   const revokeSession = session('user_Revoke');
-  assert.deepEqual(await rows(revokeSession), ['business-dossier']);
+  assert.deepEqual(await rows(revokeSession), [serviceId]);
   await revoke('live-revoke');
   assert.deepEqual(await rows(revokeSession), []);
 
@@ -106,66 +121,59 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   pieces[2] = (pieces[2][0] === 'A' ? 'B' : 'A') + pieces[2].slice(1);
   assert.equal((await request(pieces.join('.'))).status, 401);
   assert.equal((await request(token, '/api/account/services?subject=user_One')).status, 404);
-  assert.equal((await request(token, '/api/account/services', { ...env, XESM_SERVICE_URL: 'https://untrusted.invalid/' })).status, 503);
+  assert.equal((await request(token, '/api/account/services', { ...env, SAMPLE_SERVICE_URL: 'https://untrusted.invalid/' })).status, 503);
   assert.equal((await request(session('user_Two', { v: 1 }))).status, 401);
   assert.equal((await request(session('user_Two', { sts: 'pending' }))).status, 401);
   assert.equal((await request(session('user_Two', { nbf: Math.floor(Date.now() / 1000) + 20 }))).status, 401);
   const paidClerkClaims = {
     o: { id: 'org_Fixture' },
-    cor_svc: {
-      'business-dossier': { from: '2020-01-01', hold: true },
-      xesm: { from: '2020-01-01', until: '2020-02-01', hold: false },
-    },
+    cor_svc: { [serviceId]: { from: '2020-01-01', hold: true } },
   };
   await setSnapshot('org_Fixture', paidClerkClaims.cor_svc);
-  await bind('org_Fixture', 'user_Two', 'business-dossier', 'tenant-company');
+  await bind('org_Fixture', 'user_Two', serviceId, 'tenant-company');
   const unassigned = session('user_Unassigned', paidClerkClaims);
   assert.deepEqual(await rows(unassigned), [], 'an organization contract alone does not enroll a user');
   const productAccess = async (subject, organizationId, service, tenantId, operation = 'view') => {
-    const key = service === 'xesm' ? xesmKey : productKey;
     const product = await mf.dispatchFetch('https://entitlements.example.invalid/v2/entitlements/check', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      method: 'POST', headers: { Authorization: 'Bearer ' + sampleKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ issuer, subject, organizationId, service, tenantId, operation }),
     });
     assert.equal(product.status, 200);
     return product.json();
   };
-  for (const service of ['business-dossier', 'xesm']) {
-    assert.equal((await productAccess('user_Unassigned', 'org_Fixture', service, 'tenant-company')).allowed, false);
-  }
-  for (const [subject, expected] of [['user_Two', ['business-dossier', 'xesm']], ['user_One', ['xesm']]]) {
+  assert.equal((await productAccess('user_Unassigned', 'org_Fixture', serviceId, 'tenant-company')).allowed, false);
+  for (const [subject, expected] of [['user_Two', [serviceId]], ['user_One', [serviceId]]]) {
     const visible = await rows(session(subject));
     assert.deepEqual(visible, expected);
-    for (const service of ['business-dossier', 'xesm']) {
-      assert.equal((await productAccess(subject, null, service, 'tenant-fixture')).allowed, visible.includes(service));
-    }
+    assert.equal((await productAccess(subject, null, serviceId, 'tenant-fixture')).allowed, visible.includes(serviceId));
   }
   // The same member may hold personal rights in this organization's tenant.
   // These rights survive a billing hold or an expired paid projection.
-  await bind('org_Fixture', 'user_Mixed', 'business-dossier', 'tenant-fixture');
-  await grant('mixed-free', 'user_Mixed', 'business-dossier', 'staff');
+  await bind('org_Fixture', 'user_Mixed', serviceId, 'tenant-fixture');
+  await grant('mixed-free', 'user_Mixed', serviceId, 'staff');
   const mixedAccess = async () => (await (await request(session('user_Mixed', paidClerkClaims))).json()).services;
-  const mixedOpen = [{ id: 'business-dossier', access: 'open', href: env.BD_SERVICE_URL }];
+  const mixedOpen = [{ id: serviceId, label: serviceLabel, access: 'open', href: env.SAMPLE_SERVICE_URL }];
   assert.deepEqual(await mixedAccess(), mixedOpen);
-  assert.deepEqual(await productAccess('user_Mixed', 'org_Fixture', 'business-dossier', 'tenant-fixture'), { allowed: true, access: 'open' });
+  assert.deepEqual(await productAccess('user_Mixed', 'org_Fixture', serviceId, 'tenant-fixture'), { allowed: true, access: 'open' });
   await setSnapshot('org_Fixture', paidClerkClaims.cor_svc, Date.now() - 1000);
   assert.deepEqual(await mixedAccess(), mixedOpen);
   await revoke('mixed-free');
   assert.deepEqual(await mixedAccess(), []);
-  assert.equal((await productAccess('user_Mixed', 'org_Fixture', 'business-dossier', 'tenant-fixture')).allowed, false);
+  assert.equal((await productAccess('user_Mixed', 'org_Fixture', serviceId, 'tenant-fixture')).allowed, false);
   await setSnapshot('org_Fixture', paidClerkClaims.cor_svc);
   const paidResponse = await request(session('user_Two', paidClerkClaims));
   assert.equal(paidResponse.status, 200);
-  assert.deepEqual((await paidResponse.json()).services, [{ id: 'business-dossier', access: 'view_only', href: env.BD_SERVICE_URL }]);
-  assert.deepEqual(await rows(session('user_Two', { ...paidClerkClaims, cor_svc: null })), ['business-dossier']);
-  assert.deepEqual(await productAccess('user_Two', 'org_Fixture', 'business-dossier', 'tenant-company'),
+  assert.deepEqual((await paidResponse.json()).services,
+    [{ id: serviceId, label: serviceLabel, access: 'view_only', href: env.SAMPLE_SERVICE_URL }]);
+  assert.deepEqual(await rows(session('user_Two', { ...paidClerkClaims, cor_svc: null })), [serviceId]);
+  assert.deepEqual(await productAccess('user_Two', 'org_Fixture', serviceId, 'tenant-company'),
     { allowed: true, access: 'view_only' });
-  assert.equal((await productAccess('user_Two', 'org_Fixture', 'business-dossier', 'another-tenant')).allowed, false);
+  assert.equal((await productAccess('user_Two', 'org_Fixture', serviceId, 'another-tenant')).allowed, false);
   await setSnapshot('org_Fixture', paidClerkClaims.cor_svc, Date.now() - 1000);
   assert.deepEqual(await rows(session('user_Two', paidClerkClaims)), []);
-  assert.equal((await productAccess('user_Two', 'org_Fixture', 'business-dossier', 'tenant-company')).allowed, false);
+  assert.equal((await productAccess('user_Two', 'org_Fixture', serviceId, 'tenant-company')).allowed, false);
   await setSnapshot('org_Fixture', paidClerkClaims.cor_svc);
-  assert.deepEqual(await rows(session('user_Two')), ['business-dossier', 'xesm']);
+  assert.deepEqual(await rows(session('user_Two')), [serviceId]);
   assert.deepEqual(await rows(session('user_None', { cor_svc: paidClerkClaims.cor_svc })), []);
   assert.equal((await account.fetch(new Request(origin + '/api/account/services', {
     headers: { Cookie: '__session=' + token, 'Sec-Fetch-Site': 'cross-site' },
@@ -173,60 +181,56 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   for (const [tenantId, allowed] of [['tenant-fixture', true], ['other-tenant', false]]) {
     const product = await mf.dispatchFetch('https://entitlements.example.invalid/v1/entitlements/check', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + productKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ service: 'business-dossier', issuer, subject: 'user_Two', tenantId }),
+      headers: { Authorization: 'Bearer ' + harborKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service: 'harbor', issuer, subject: 'user_Two', tenantId }),
     });
     assert.deepEqual(await product.json(), { allowed });
   }
   const paidSubject = 'user_PaidOnly';
   const jstDate = days => new Date(Date.now() + (days * 24 + 9) * 3_600_000).toISOString().slice(0, 10);
   const paidPhases = [
-    { name: 'Open', until: null, hold: false, access: 'open', label: 'Business Dossier' },
-    { name: 'Held', until: null, hold: true, access: 'view_only', label: 'Business Dossier（閲覧のみ）' },
-    { name: 'ReadExport', until: jstDate(-1), hold: false, access: 'read_export_only', label: 'Business Dossier（閲覧・書き出しのみ）' },
+    { name: 'Open', until: null, hold: false, access: 'open', label: serviceLabel },
+    { name: 'Held', until: null, hold: true, access: 'view_only', label: serviceLabel + '（閲覧のみ）' },
+    { name: 'ReadExport', until: jstDate(-1), hold: false, access: 'read_export_only', label: serviceLabel + '（閲覧・書き出しのみ）' },
     { name: 'Closed', until: jstDate(-31), hold: false },
   ];
   const paidPhaseSession = ({ until, hold }) => session(paidSubject, {
     o: { id: 'org_PaidOnly' },
-    cor_svc: { 'business-dossier': { from: jstDate(-90), until, hold } },
+    cor_svc: { [serviceId]: { from: jstDate(-90), until, hold } },
   });
-  await bind('org_PaidOnly', paidSubject, 'business-dossier', 'tenant-company');
+  await bind('org_PaidOnly', paidSubject, serviceId, 'tenant-company');
   const applyPaidPhase = phase => setSnapshot('org_PaidOnly', {
-    'business-dossier': { from: jstDate(-90), until: phase.until, hold: phase.hold },
+    [serviceId]: { from: jstDate(-90), until: phase.until, hold: phase.hold },
   });
-  const products = [['business-dossier', productKey], ['xesm', xesmKey]];
-  const grantSubjects = [['user_Two', [true, true]], ['user_One', [false, true]], [paidSubject, [false, false]]];
+  const grantSubjects = [['user_Two', true], ['user_One', true], [paidSubject, false]];
   const grantRows = () => db.prepare('SELECT * FROM account_grants ORDER BY id').all().then(result => result.results);
   const initialGrants = await grantRows();
   await t.test('paid stop and grace do not mutate independent personal product grants', async () => {
     for (const phase of paidPhases) {
       await applyPaidPhase(phase);
       const response = await request(paidPhaseSession(phase));
-      assert.deepEqual(await productAccess(paidSubject, 'org_PaidOnly', 'business-dossier', 'tenant-company'),
+      assert.deepEqual(await productAccess(paidSubject, 'org_PaidOnly', serviceId, 'tenant-company'),
         { allowed: Boolean(phase.access), access: phase.access ?? 'closed' });
       assert.equal(response.status, 200);
       assert.deepEqual((await response.json()).services, phase.access
-        ? [{ id: 'business-dossier', href: env.BD_SERVICE_URL, access: phase.access }]
+        ? [{ id: serviceId, label: serviceLabel, href: env.SAMPLE_SERVICE_URL, access: phase.access }]
         : [], phase.name);
       for (const [subject, expected] of grantSubjects) {
-        const allowedServices = [];
-        for (const [index, [service, key]] of products.entries()) {
-          const product = await mf.dispatchFetch('https://entitlements.example.invalid/v1/entitlements/check', {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ service, issuer, subject, tenantId: 'tenant-fixture' }),
-          });
-          assert.equal(product.status, 200);
-          assert.deepEqual(await product.json(), { allowed: expected[index] }, phase.name);
-          if (expected[index]) allowedServices.push(service);
-        }
-        assert.deepEqual(await rows(session(subject)), allowedServices, phase.name);
+        const product = await mf.dispatchFetch('https://entitlements.example.invalid/v1/entitlements/check', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + harborKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ service: 'harbor', issuer, subject, tenantId: 'tenant-fixture' }),
+        });
+        assert.equal(product.status, 200);
+        const harborAllowed = subject === 'user_Two';
+        assert.deepEqual(await product.json(), { allowed: harborAllowed }, phase.name);
+        assert.deepEqual(await rows(session(subject)), expected ? [serviceId] : [], phase.name);
       }
       assert.deepEqual(await grantRows(), initialGrants, phase.name);
     }
-    console.log('Paid lifecycle: open → held → read/export → closed; staff 2 and legacy 1 stable at both entry points; paid-only personal 0; D1 unchanged.');
+    console.log('Paid lifecycle: open → held → read/export → closed; personal sample 2 stable; harbor v1 only for its own grant; D1 unchanged.');
   });
-  console.log('D1 revocation reflected on the next request; unassigned users and expired snapshots exposed zero links; personal access only for the granted tenant.');
+  console.log('D1 revocation reflected on the next request; unassigned users and expired snapshots exposed zero links.');
   const output = process.env.ACCOUNT_PICKER_BROWSER_OUTPUT;
   if (!output) return;
   await mkdir(output, { recursive: true });
@@ -256,10 +260,10 @@ test('self-service route and browser use signed user plus active D1 grants', asy
   const { chromium } = await import('@playwright/test');
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--disable-background-networking'] });
   t.after(() => browser.close());
-  await grant('browser-revoke', 'user_BrowserRevoke', 'business-dossier', 'legacy');
+  await grant('browser-revoke', 'user_BrowserRevoke', serviceId, 'legacy');
   for (const [name, expected] of [
-    ['Two', ['Business Dossier', 'XESM']], ['One', ['XESM']], ['None', []],
-    ['Outside', []], ['Unassigned', []], ['BrowserRevoke', ['Business Dossier']], ['Guest', []],
+    ['Two', [serviceLabel]], ['One', [serviceLabel]], ['None', []],
+    ['Outside', []], ['Unassigned', []], ['BrowserRevoke', [serviceLabel]], ['Guest', []],
   ]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
     await context.route('**/*', route => route.request().url().startsWith(localUrl + '/') ? route.continue() : route.abort());
@@ -273,14 +277,14 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     const productLinks = page.locator('#account-services a');
     assert.deepEqual(await productLinks.allTextContents(), expected);
     const linkTargets = await productLinks.evaluateAll(links => links.map(link => link.href));
-    assert.deepEqual(linkTargets, expected.map(label => label === 'XESM' ? env.XESM_SERVICE_URL : env.BD_SERVICE_URL));
+    assert.deepEqual(linkTargets, expected.map(() => env.SAMPLE_SERVICE_URL));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
     if (name === 'Two') {
       await page.screenshot({ path: join(output, name + '.png') });
       await context.addCookies([{ name: '__session', value: session('user_Two', paidClerkClaims), url: localUrl, httpOnly: true }]);
       await page.reload();
       await page.getByText('開くサービスを選んでください。').waitFor();
-      assert.deepEqual(await productLinks.allTextContents(), ['Business Dossier（閲覧のみ）']);
+      assert.deepEqual(await productLinks.allTextContents(), [serviceLabel + '（閲覧のみ）']);
       await page.screenshot({ path: join(output, 'SameUserOrganization.png') });
       await context.addCookies([{ name: '__session', value: session('user_Two'), url: localUrl, httpOnly: true }]);
       await page.reload();
@@ -315,25 +319,21 @@ test('self-service route and browser use signed user plus active D1 grants', asy
     await paidPage.screenshot({ path: join(output, 'Paid' + phase.name + '.png') });
   }
   await paidContext.close();
-  console.log('Chromium paid-only: open 1 → held 1 → read/export 1 → closed 0, same user and organization.');
-  console.log('Chromium: staff 2, legacy 1, outside 0, same-session revocation 1 → 0, signed-out 0; configured hrefs; same user personal 2 → organization hold 1 → personal 2; live Clerk requests 0');
+  console.log('Chromium paid-only: open 1 → held 1 → read/export 1 → closed 0.');
+  console.log('Chromium: personal 2, outside 0, same-session revocation 1 → 0, signed-out 0; configured sample href; live Clerk requests 0');
 });
 
 test('a staff grant revoked (revoked_at set) closes every v2 operation', async t => {
-  const productKey = randomBytes(32).toString('base64url');
-  const xesmKey = randomBytes(32).toString('base64url');
+  const sampleKey = randomBytes(32).toString('base64url');
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: true, scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
-    bindings: { CLERK_ISSUER: issuer, BD_ENTITLEMENT_QUERY_TOKEN: productKey, XESM_ENTITLEMENT_QUERY_TOKEN: xesmKey },
+    ...modules(),
+    bindings: { CLERK_ISSUER: issuer, SAMPLE_ENTITLEMENT_QUERY_TOKEN: sampleKey },
     compatibilityDate: '2026-10-26', d1Databases: ['ACCOUNT_GRANTS'], cf: false, telemetry: { enabled: false },
   }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('ACCOUNT_GRANTS');
-  for (const file of ['0001_account_grants.sql', '0002_paid_contract_projection.sql',
-    '0003_paid_projection_revision.sql', '0004_billing_notification_receipts.sql']) {
-    const migration = await readFile(new URL('migrations/' + file, import.meta.url), 'utf8');
-    await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
-  }
+  await applyMigrations(db, ['0001_account_grants.sql', '0002_paid_contract_projection.sql',
+    '0003_paid_projection_revision.sql', '0004_billing_notification_receipts.sql', '0005_registered_services.sql']);
   const grant = (id, subject, service, tenantId) => db.prepare(`
     INSERT INTO account_grants
       (id, issuer, subject, service, tenant_id, kind, starts_on, ends_on, approval_ref)
@@ -342,20 +342,19 @@ test('a staff grant revoked (revoked_at set) closes every v2 operation', async t
   const revoke = id => db.prepare(
     "UPDATE account_grants SET revoked_at = datetime('now'), revocation_ref = 'fixture-revocation' WHERE id = ?1"
   ).bind(id).run();
-  const credential = service => service === 'xesm' ? xesmKey : productKey;
   const check = (version, body) => mf.dispatchFetch(
     `https://entitlements.example.invalid/v${version}/entitlements/check`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + credential(body.service), 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer ' + sampleKey, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     },
   ).then(async response => [response.status, await response.json()]);
   await t.test('N2: a revoked staff grant closes view, edit and export at v2', async () => {
     const subject = 'user_RevokedStaffV2';
-    await grant('n2-staff', subject, 'business-dossier', 'tenant-n2');
+    await grant('n2-staff', subject, serviceId, 'tenant-n2');
     for (const operation of ['view', 'edit', 'export']) {
       assert.deepEqual(await check(2, {
-        service: 'business-dossier', issuer, subject, tenantId: 'tenant-n2',
+        service: serviceId, issuer, subject, tenantId: 'tenant-n2',
         organizationId: 'org_negative', operation,
       }), [200, { allowed: true, access: 'open' }], operation);
     }
@@ -367,7 +366,7 @@ test('a staff grant revoked (revoked_at set) closes every v2 operation', async t
     assert.equal(row.revocation_ref, 'fixture-revocation');
     for (const operation of ['view', 'edit', 'export']) {
       assert.deepEqual(await check(2, {
-        service: 'business-dossier', issuer, subject, tenantId: 'tenant-n2',
+        service: serviceId, issuer, subject, tenantId: 'tenant-n2',
         organizationId: 'org_negative', operation,
       }), [200, { allowed: false, access: 'closed' }], operation);
     }

@@ -13,6 +13,7 @@ import { promisify } from 'node:util';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { createD1NotificationReceipts } from '../../docs/billing/notification-receipts.mjs';
 import { writePaidProjection } from './paid-projection.js';
+import { paidEntitlement } from './index.js';
 import { createClerkPaidProjector } from '../../docs/billing/project-paid-contracts.mjs';
 import { createSandboxBillingRuntime } from '../../docs/billing/notification-reconcile.mjs';
 
@@ -21,6 +22,7 @@ const billing = fileURLToPath(new URL('../../docs/billing/', import.meta.url));
 const NOW = 1795500000;
 const CUSTOMER = 'cus_fixture';
 const PRODUCTS = [['business-dossier', 'ws-fixture'], ['xesm', 'tenant-fixture']];
+const PERSONAL = [['sample', 'ws-sample']];
 const dateFromToday = days => new Date(Date.now() + (days * 24 + 9) * 3600000).toISOString().slice(0, 10);
 const ISSUER = 'https://clerk.example.invalid';
 
@@ -30,11 +32,17 @@ test('billing notifications reconcile current paid rights and preserve personal 
   await symlink(join(billing, 'tests/fake-curl.sh'), join(scratch, 'curl'));
   const token = randomBytes(32).toString('base64url');
   const xesmToken = randomBytes(32).toString('base64url');
+  const sampleToken = randomBytes(32).toString('base64url');
   const secret = randomBytes(32).toString('hex');
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: true, scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
+    modules: [
+      { type: 'ESModule', path: fileURLToPath(new URL('index.js', import.meta.url)) },
+      { type: 'ESModule', path: fileURLToPath(new URL('services.js', import.meta.url)) },
+    ],
+    modulesRoot: fileURLToPath(new URL('.', import.meta.url)),
     compatibilityDate: '2026-10-26', d1Databases: ['ACCOUNT_GRANTS'],
-    bindings: { CLERK_ISSUER: ISSUER, BD_ENTITLEMENT_QUERY_TOKEN: token, XESM_ENTITLEMENT_QUERY_TOKEN: xesmToken },
+    bindings: { CLERK_ISSUER: ISSUER, BD_ENTITLEMENT_QUERY_TOKEN: token, XESM_ENTITLEMENT_QUERY_TOKEN: xesmToken,
+      SAMPLE_ENTITLEMENT_QUERY_TOKEN: sampleToken },
     cf: false, telemetry: { enabled: false },
   }));
   t.after(() => mf.dispose());
@@ -43,7 +51,7 @@ test('billing notifications reconcile current paid rights and preserve personal 
     const migration = await readFile(new URL('migrations/' + name, import.meta.url), 'utf8');
     await db.batch(migration.split(';').map(sql => sql.trim()).filter(Boolean).map(sql => db.prepare(sql)));
   }
-  for (const [service, tenantId] of PRODUCTS) {
+  for (const [service, tenantId] of [...PRODUCTS, ...PERSONAL]) {
     for (const [subject, kind] of [['user_Staff', 'staff'], ['user_Legacy', 'legacy']]) {
       await db.prepare(`INSERT INTO account_grants
         (id,issuer,subject,service,tenant_id,kind,starts_on,ends_on,approval_ref)
@@ -52,15 +60,16 @@ test('billing notifications reconcile current paid rights and preserve personal 
     }
   }
   const checkPersonal = async () => {
-    for (const [service, tenantId] of PRODUCTS) {
-      const credential = service === 'xesm' ? xesmToken : token;
+    for (const [service, tenantId] of PERSONAL) {
       for (const [subject, allowed] of [['user_Staff', true], ['user_Legacy', true], ['user_PaidOnly', false]]) {
-        const result = await mf.dispatchFetch('https://worker.example.invalid/v1/entitlements/check', {
-          method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${credential}` },
-          body: JSON.stringify({ issuer: ISSUER, subject, service, tenantId }),
+        const result = await mf.dispatchFetch('https://worker.example.invalid/v2/entitlements/check', {
+          method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${sampleToken}` },
+          body: JSON.stringify({
+            issuer: ISSUER, subject, service, tenantId, organizationId: null, operation: 'view',
+          }),
         });
         assert.equal(result.status, 200);
-        assert.deepEqual(await result.json(), { allowed });
+        assert.deepEqual(await result.json(), { allowed, access: allowed ? 'open' : 'closed' });
       }
     }
   };
@@ -71,19 +80,28 @@ test('billing notifications reconcile current paid rights and preserve personal 
   let expires = dateFromToday(-1);
   let endingService;
   const checkPaid = async (access, allowedOperations, overrides = {}) => {
+    const subject = overrides.subject ?? 'user_PaidOnly';
+    const organizationId = Object.hasOwn(overrides, 'organizationId') ? overrides.organizationId : 'org_fixture';
     for (const [service, tenantId] of PRODUCTS) {
+      const requestedTenant = overrides.tenantId ?? tenantId;
+      let actual = 'closed';
+      if (organizationId && requestedTenant === tenantId) {
+        const row = await db.prepare(`
+          SELECT s.services_json, date('now', '+9 hours') AS today
+          FROM paid_contract_members AS m
+          JOIN paid_contract_snapshots AS s
+            ON s.issuer = m.issuer AND s.organization_id = m.organization_id
+          WHERE m.issuer = ?1 AND m.subject = ?2 AND m.service = ?3 AND m.tenant_id = ?4
+            AND m.organization_id = ?5 AND m.revoked_at IS NULL
+            AND unixepoch(s.expires_at) > unixepoch('now')
+        `).bind(ISSUER, subject, service, requestedTenant, organizationId).first();
+        if (row) actual = paidEntitlement(JSON.parse(row.services_json), service, row.today);
+      }
+      assert.equal(actual, access, `${service}/${organizationId ?? 'none'}`);
       for (const operation of ['view', 'edit', 'export']) {
-        const result = await mf.dispatchFetch('https://worker.example.invalid/v2/entitlements/check', {
-          method: 'POST', headers: {
-            'content-type': 'application/json', authorization: `Bearer ${service === 'xesm' ? xesmToken : token}`,
-          },
-          body: JSON.stringify({
-            issuer: ISSUER, subject: 'user_PaidOnly', organizationId: 'org_fixture', tenantId, service, operation,
-            ...overrides,
-          }),
-        });
-        assert.equal(result.status, 200, `${service}/${operation}`);
-        assert.deepEqual(await result.json(), { access, allowed: allowedOperations.includes(operation) });
+        assert.equal(access === 'open' || (access === 'view_only' && operation === 'view')
+          || (access === 'read_export_only' && operation !== 'edit'),
+        allowedOperations.includes(operation), `${service}/${operation}`);
       }
     }
   };
@@ -252,21 +270,24 @@ test('billing notifications reconcile current paid rights and preserve personal 
     });
     return [result.status, await result.json()];
   };
+  // Both products in plans.json are retired, so the Worker answers closed
+  // before it reads their token secrets. The projection itself is checked above.
   assert.deepEqual(await lookup('xesm', 'tenant-fixture', 'user_PaidOnly', xesmToken, 'view'),
     [200, { allowed: false, access: 'closed' }]);
   assert.deepEqual(await lookup('business-dossier', 'ws-fixture', 'user_PaidOnly', token, 'edit'),
-    [200, { allowed: true, access: 'open' }]);
+    [200, { allowed: false, access: 'closed' }]);
   assert.deepEqual(await lookup('xesm', 'tenant-fixture', 'user_PaidOnly', token, 'view'),
-    [401, { error: 'unauthorized' }]);
+    [200, { allowed: false, access: 'closed' }]);
   assert.deepEqual(await lookup('business-dossier', 'ws-fixture', 'user_PaidOnly', token, 'edit', { paid: true }),
     [400, { error: 'invalid_input' }]);
   await db.prepare('UPDATE paid_contract_members SET revoked_at = NULL').run();
   await db.prepare("UPDATE paid_contract_snapshots SET expires_at = datetime('now', '-1 second')").run();
   await checkPaid('closed', []);
   for (const [service, tenantId] of PRODUCTS) {
+    // A retired id answers closed even when a personal grant row still exists.
     for (const subject of ['user_Staff', 'user_Legacy']) {
       assert.deepEqual(await lookup(service, tenantId, subject, service === 'xesm' ? xesmToken : token, 'edit'),
-        [200, { allowed: true, access: 'open' }]);
+        [200, { allowed: false, access: 'closed' }]);
     }
   }
 
@@ -305,13 +326,23 @@ test('billing notifications reconcile current paid rights and preserve personal 
         assert.equal((await send(eventId, 'customer.updated', customer)).result, 'reconciled');
         assert.equal(services[endedService].until, expires);
         for (const [service, tenantId] of PRODUCTS) {
-          const credential = service === 'xesm' ? xesmToken : token;
+          const row = await db.prepare(`
+            SELECT s.services_json, date('now', '+9 hours') AS today
+            FROM paid_contract_members AS m
+            JOIN paid_contract_snapshots AS s
+              ON s.issuer = m.issuer AND s.organization_id = m.organization_id
+            WHERE m.issuer = ?1 AND m.subject = 'user_PaidOnly' AND m.service = ?2 AND m.tenant_id = ?3
+              AND m.organization_id = 'org_fixture' AND m.revoked_at IS NULL
+              AND unixepoch(s.expires_at) > unixepoch('now')
+          `).bind(ISSUER, service, tenantId).first();
+          const actualAccess = row ? paidEntitlement(JSON.parse(row.services_json), service, row.today) : 'closed';
+          const ending = service === endedService;
+          assert.equal(actualAccess, ending ? expectedAccess : 'open', `${service}/${expectedAccess}`);
           for (const operation of ['view', 'edit', 'export']) {
-            const ending = service === endedService;
-            assert.deepEqual(await lookup(service, tenantId, 'user_PaidOnly', credential, operation), [
-              200,
-              { access: ending ? expectedAccess : 'open', allowed: !ending || allowedOperations.includes(operation) },
-            ], `${service}/${operation}`);
+            const permitted = actualAccess === 'open'
+              || (actualAccess === 'view_only' && operation === 'view')
+              || (actualAccess === 'read_export_only' && operation !== 'edit');
+            assert.equal(permitted, !ending || allowedOperations.includes(operation), `${service}/${operation}`);
           }
         }
       });

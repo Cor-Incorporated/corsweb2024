@@ -7,24 +7,27 @@ import { fileURLToPath } from 'node:url';
 import { convertV4MiniflareOptions, Miniflare } from 'miniflare';
 
 const issuer = 'https://clerk.example.invalid';
-const bd = 'business-dossier';
-const bdToken = randomBytes(32).toString('base64url');
-const xesmToken = randomBytes(32).toString('base64url');
+const harbor = 'harbor';
+const sample = 'sample';
 const harborToken = randomBytes(32).toString('base64url');
+const sampleToken = randomBytes(32).toString('base64url');
 const requestUrl = 'https://entitlements.example.invalid/v1/entitlements/check';
-const known = { service: bd, issuer, subject: 'user_LegacyFixture', tenantId: 'ws-a' };
+const contractUrl = 'https://entitlements.example.invalid/v2/entitlements/check';
+const known = { service: harbor, issuer, subject: 'user_LegacyFixture', tenantId: 'ws-a' };
 
 test('product query against local Workers and D1 runtime', async (t) => {
   const options = {
-    modules: true,
-    scriptPath: fileURLToPath(new URL('index.js', import.meta.url)),
+    modules: [
+      { type: 'ESModule', path: fileURLToPath(new URL('index.js', import.meta.url)) },
+      { type: 'ESModule', path: fileURLToPath(new URL('services.js', import.meta.url)) },
+    ],
+    modulesRoot: fileURLToPath(new URL('.', import.meta.url)),
     compatibilityDate: '2026-10-26',
     d1Databases: ['ACCOUNT_GRANTS'],
     bindings: {
       CLERK_ISSUER: issuer,
-      BD_ENTITLEMENT_QUERY_TOKEN: bdToken,
-      XESM_ENTITLEMENT_QUERY_TOKEN: xesmToken,
       HARBOR_ENTITLEMENT_QUERY_TOKEN: harborToken,
+      SAMPLE_ENTITLEMENT_QUERY_TOKEN: sampleToken,
     },
     cf: false,
     telemetry: { enabled: false },
@@ -43,13 +46,13 @@ test('product query against local Workers and D1 runtime', async (t) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(id, issuer, subject, service, tenant, kind, start, end, 'approval-fixture').run();
 
-  await grant('legacy', known.subject, bd, 'ws-a', 'legacy', today, today);
-  await grant('staff-bd', 'user_StaffFixture', bd, 'ws-b', 'staff', '2000-01-01', '2099-12-31');
-  await grant('staff-xesm', 'user_StaffFixture', 'xesm', 'org-a', 'staff', '2000-01-01', '2099-12-31');
-  await grant('expired', 'user_Expired', bd, 'ws-a', 'legacy', '2000-01-01', '2001-01-01');
-  await grant('future', 'user_Future', bd, 'ws-a', 'staff', '2099-01-01', '2099-12-31');
+  await grant('legacy', known.subject, harbor, 'ws-a', 'legacy', today, today);
+  await grant('staff-harbor', 'user_StaffFixture', harbor, 'ws-b', 'staff', '2000-01-01', '2099-12-31');
+  await grant('staff-sample', 'user_StaffFixture', sample, 'org-a', 'staff', '2000-01-01', '2099-12-31');
+  await grant('expired', 'user_Expired', harbor, 'ws-a', 'legacy', '2000-01-01', '2001-01-01');
+  await grant('future', 'user_Future', harbor, 'ws-a', 'staff', '2099-01-01', '2099-12-31');
 
-  const query = async (body, token = bdToken, url = requestUrl) => {
+  const query = async (body, token = harborToken, url = requestUrl) => {
     const res = await mf.dispatchFetch(url, {
       method: 'POST',
       headers: {
@@ -66,48 +69,56 @@ test('product query against local Workers and D1 runtime', async (t) => {
     assert.deepEqual(await query(known), [200, { allowed: true }]);
     assert.deepEqual(await query({ ...known, subject: 'user_StaffFixture', tenantId: 'ws-b' }),
       [200, { allowed: true }]);
-    assert.deepEqual(await query({ ...known, service: 'xesm', subject: 'user_StaffFixture', tenantId: 'org-a' }, xesmToken),
-      [200, { allowed: true }]);
+    assert.deepEqual(await query({
+      service: sample, issuer, subject: 'user_StaffFixture', tenantId: 'org-a',
+      organizationId: null, operation: 'view',
+    }, sampleToken, contractUrl), [200, { allowed: true, access: 'open' }]);
   });
 
-  await t.test('unapproved subjects, different tenant, issuer, and business product are denied', async () => {
+  await t.test('unapproved subjects, different tenant, issuer, and product are denied', async () => {
     for (const scope of [
       { subject: 'user_OtherFixture' }, { tenantId: 'ws-b' }, { issuer: 'https://other.example.invalid' },
       { subject: 'user_StaffFixture', tenantId: 'ws-a' },
     ]) {
       assert.deepEqual(await query({ ...known, ...scope }), [200, { allowed: false }]);
     }
-    assert.deepEqual(await query({ ...known, service: 'xesm' }, xesmToken), [200, { allowed: false }]);
+    assert.deepEqual(await query({
+      service: sample, issuer, subject: 'user_OtherFixture', tenantId: 'org-a',
+      organizationId: null, operation: 'view',
+    }, sampleToken, contractUrl), [200, { allowed: false, access: 'closed' }]);
   });
 
   await t.test('staff onboarding requires the current personal staff grant in this product tenant', async () => {
-    const endpoint = requestUrl.replace('/v1/', '/v2/');
-    await grant('fresh-staff-onboard', 'user_FreshFixture', 'xesm', 'org-a', 'staff', today, today);
-    const operation = { issuer, subject: 'user_FreshFixture', service: 'xesm', tenantId: 'org-a',
+    await grant('fresh-staff-onboard', 'user_FreshFixture', sample, 'org-a', 'staff', today, today);
+    const operation = { issuer, subject: 'user_FreshFixture', service: sample, tenantId: 'org-a',
       organizationId: null, operation: 'staff_onboarding' };
-    const run = body => query(body, xesmToken, endpoint);
+    const run = body => query(body, sampleToken, contractUrl);
     assert.deepEqual(await run(operation), [200, { allowed: true, access: 'open' }]);
-    await grant('legacy-onboard', 'user_LegacyFixture', 'xesm', 'org-a', 'legacy', today, today);
+    await grant('legacy-onboard', 'user_LegacyFixture', sample, 'org-a', 'legacy', today, today);
     for (const scope of [{ subject: 'user_LegacyFixture' }, { tenantId: 'other' },
       { subject: 'user_Unassigned' }, { issuer: 'https://other.example.invalid' }]) {
       assert.deepEqual(await run({ ...operation, ...scope }), [200, { allowed: false, access: 'closed' }]);
     }
     assert.equal((await run({ ...operation, organizationId: 'org_fixture' }))[0], 400);
-    const bdOperation = { ...operation, service: bd, tenantId: 'ws-a' };
-    assert.deepEqual(await query(bdOperation, bdToken, endpoint), [200, { allowed: false, access: 'closed' }]);
-    await grant('fresh-staff-bd', operation.subject, bd, 'ws-a', 'staff', today, today);
-    assert.deepEqual(await query(bdOperation, bdToken, endpoint), [200, { allowed: true, access: 'open' }]);
-    assert.deepEqual(await query({ ...bdOperation, subject: known.subject }, bdToken, endpoint),
-      [200, { allowed: false, access: 'closed' }]);
-    assert.equal((await query(operation, bdToken, endpoint))[0], 401);
+    // Harbor does not offer staff onboarding, and a retired service is closed
+    // before the token secret is read.
+    assert.equal((await query({ ...operation, service: harbor, tenantId: 'ws-b' }, harborToken, contractUrl))[0], 400);
+    assert.deepEqual(await query({ ...operation, service: 'business-dossier', tenantId: 'ws-a' },
+      sampleToken, contractUrl), [200, { allowed: false, access: 'closed' }]);
+    assert.deepEqual(await query({ ...operation, subject: known.subject, tenantId: 'ws-sample', operation: 'view' },
+      sampleToken, contractUrl), [200, { allowed: false, access: 'closed' }]);
+    assert.equal((await query(operation, harborToken, contractUrl))[0], 401);
     await db.prepare("UPDATE account_grants SET revoked_at=datetime('now'), revocation_ref='fixture' WHERE id='fresh-staff-onboard'").run();
     assert.deepEqual(await run(operation), [200, { allowed: false, access: 'closed' }]);
   });
 
   await t.test('requests require the product credential and reject caller-supplied role or paid status', async () => {
     assert.deepEqual(await query(known, ''), [401, { error: 'unauthorized' }]);
-    assert.deepEqual(await query(known, xesmToken), [401, { error: 'unauthorized' }]);
-    assert.deepEqual(await query({ ...known, service: 'xesm' }), [401, { error: 'unauthorized' }]);
+    assert.deepEqual(await query(known, sampleToken), [401, { error: 'unauthorized' }]);
+    assert.deepEqual(await query({
+      service: sample, issuer, subject: 'user_StaffFixture', tenantId: 'org-a',
+      organizationId: null, operation: 'view',
+    }, harborToken, contractUrl), [401, { error: 'unauthorized' }]);
     assert.deepEqual(await query({ ...known, email: 'staff@example.invalid' }), [400, { error: 'invalid_input' }]);
     assert.deepEqual(await query({ ...known, paid: false }), [400, { error: 'invalid_input' }]);
     assert.deepEqual(await query({ ...known, tenantId: 'w'.repeat(3000) }), [400, { error: 'invalid_input' }]);
@@ -125,41 +136,41 @@ test('product query against local Workers and D1 runtime', async (t) => {
   });
 
   await t.test('a grant without a dated approval cannot become active', async () => {
-    await assert.rejects(grant('long-date', known.subject, bd, 'ws-a', 'legacy', '2000-02-30', '2099-12-31'));
-    await assert.rejects(db.prepare("UPDATE account_grants SET revoked_at=datetime('now') WHERE id='staff-bd'").run());
+    await assert.rejects(grant('long-date', known.subject, harbor, 'ws-a', 'legacy', '2000-02-30', '2099-12-31'));
+    await assert.rejects(db.prepare("UPDATE account_grants SET revoked_at=datetime('now') WHERE id='staff-harbor'").run());
   });
 
-  await t.test('Harbor grants retain workspace boundaries and can be withdrawn independently', async () => {
-    const shared = { service: 'harbor', issuer, subject: 'user_StaffFixture', tenantId: 'harbor-team' };
-    await grant('harbor-staff', shared.subject, 'harbor', shared.tenantId, 'staff', today, today);
-    await grant('harbor-existing', known.subject, 'harbor', shared.tenantId, 'legacy', today, today);
+  await t.test('Harbor keeps its workspace boundary and only accepts version 1', async () => {
+    const shared = { service: harbor, issuer, subject: 'user_StaffFixture', tenantId: 'harbor-team' };
+    await grant('harbor-staff', shared.subject, harbor, shared.tenantId, 'staff', today, today);
+    await grant('harbor-existing', known.subject, harbor, shared.tenantId, 'legacy', today, today);
     assert.deepEqual(await query(shared, harborToken), [200, { allowed: true }]);
     assert.deepEqual(await query({ ...shared, organizationId: null, operation: 'view' },
-      harborToken, requestUrl.replace('/v1/', '/v2/')), [400, { error: 'invalid_input' }]);
+      harborToken, contractUrl), [400, { error: 'invalid_input' }]);
     assert.deepEqual(await query({ ...shared, subject: known.subject }, harborToken), [200, { allowed: true }]);
     assert.deepEqual(await query({ ...shared, tenantId: 'other-team' }, harborToken), [200, { allowed: false }]);
-    for (const wrongToken of [bdToken, xesmToken]) {
-      assert.deepEqual(await query(shared, wrongToken), [401, { error: 'unauthorized' }]);
-    }
-    assert.deepEqual(await query(known, harborToken), [401, { error: 'unauthorized' }]);
+    assert.deepEqual(await query(shared, sampleToken), [401, { error: 'unauthorized' }]);
+    assert.deepEqual(await query({ ...shared, service: sample }, sampleToken, requestUrl),
+      [400, { error: 'invalid_input' }]);
     await db.prepare("UPDATE account_grants SET revoked_at=datetime('now'), revocation_ref=? WHERE id=?")
       .bind('withdrawal', 'harbor-staff').run();
     assert.deepEqual(await query(shared, harborToken), [200, { allowed: false }]);
     assert.deepEqual(await query({ ...shared, subject: known.subject }, harborToken), [200, { allowed: true }]);
-    assert.deepEqual(await query({ ...shared, service: bd, tenantId: 'ws-b' }, bdToken), [200, { allowed: true }]);
-    assert.deepEqual(await query({ ...shared, service: 'xesm', tenantId: 'org-a' }, xesmToken), [200, { allowed: true }]);
   });
 
-  await t.test('a missing or duplicated Harbor credential leaves independently configured products usable', async () => {
-    for (const value of ['', bdToken]) {
+  await t.test('a missing or duplicated active credential leaves the other active product usable', async () => {
+    for (const value of ['', sampleToken]) {
       await mf.setOptions(convertV4MiniflareOptions({
         ...options, bindings: { ...options.bindings, HARBOR_ENTITLEMENT_QUERY_TOKEN: value },
       }));
-      assert.deepEqual(await query({ ...known, service: 'harbor' }, harborToken),
+      assert.deepEqual(await query({ ...known, service: harbor }, harborToken),
         [503, { error: 'unavailable' }]);
-      if (value === bdToken) assert.deepEqual(await query(known), [503, { error: 'unavailable' }]);
-      const xesm = { ...known, service: 'xesm', subject: 'user_StaffFixture', tenantId: 'org-a' };
-      assert.deepEqual(await query(xesm, xesmToken), [200, { allowed: true }]);
+      const active = {
+        service: sample, issuer, subject: 'user_StaffFixture', tenantId: 'org-a',
+        organizationId: null, operation: 'view',
+      };
+      assert.deepEqual(await query(active, sampleToken, contractUrl),
+        value === '' ? [200, { allowed: true, access: 'open' }] : [503, { error: 'unavailable' }]);
     }
     await mf.setOptions(convertV4MiniflareOptions(options));
   });

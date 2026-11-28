@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test account-entitlements.test.js billing-reconcile.test.js service-picker.test.js",
+    "test": "node --test account-entitlements.test.js billing-reconcile.test.js service-picker.test.js service-registry.test.js",
     "test:picker-bundle": "node --test service-picker-bundle.test.js"
   },
   "devDependencies": {
